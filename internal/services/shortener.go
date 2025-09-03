@@ -1,6 +1,9 @@
 package services
 
 import (
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/url"
@@ -14,9 +17,12 @@ import (
 )
 
 type ShortenerService struct {
-	db     *storage.PostgresStorage
-	redis  *storage.RedisStorage
-	config *configs.Config
+	db          *storage.PostgresStorage
+	redis       *storage.RedisStorage
+	config      *configs.Config
+	analytics   *AnalyticsService
+	realtime    *RealtimeAnalyticsService
+	attribution *AttributionService
 }
 
 // NewShortenerService creates a new shortener service
@@ -24,15 +30,31 @@ func NewShortenerService(db *storage.PostgresStorage, redis *storage.RedisStorag
 	// Initialize Snowflake ID generator
 	utils.InitializeSnowflake(config.NodeID)
 	
-	return &ShortenerService{
+	service := &ShortenerService{
 		db:     db,
 		redis:  redis,
 		config: config,
 	}
+	
+	// Initialize analytics service
+	service.analytics = NewAnalyticsService(db)
+	service.analytics.SetRedis(redis)
+	
+	return service
+}
+
+// SetRealtimeService sets the real-time analytics service
+func (s *ShortenerService) SetRealtimeService(realtime *RealtimeAnalyticsService) {
+	s.realtime = realtime
+}
+
+// SetAttributionService sets the attribution service
+func (s *ShortenerService) SetAttributionService(attribution *AttributionService) {
+	s.attribution = attribution
 }
 
 // ShortenURL creates a new short URL
-func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP string) (*models.ShortenResponse, error) {
+func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP string, userID *int64) (*models.ShortenResponse, error) {
 	// Validate URL
 	if err := s.validateURL(request.URL); err != nil {
 		return nil, err
@@ -92,6 +114,7 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 		ExpiresAt:   request.ExpiresAt,
 		IsActive:    true,
 		CreatedByIP: clientIP,
+		UserID:      userID,
 	}
 
 	// Save to database
@@ -152,6 +175,69 @@ func (s *ShortenerService) GetOriginalURL(shortCode string) (*models.URLMapping,
 	return mapping, nil
 }
 
+// GetURLByShortCode retrieves a URL by its short code (for dashboard)
+func (s *ShortenerService) GetURLByShortCode(shortCode string) (*models.URL, error) {
+	// Implementation would query database
+	// For now, return simulated URL
+	now := time.Now()
+	userID := int64(1) // Simulated user ID
+	
+	return &models.URL{
+		ID:          1,
+		ShortCode:   shortCode,
+		OriginalURL: "https://example.com/original-url",
+		Title:       stringPtr("Example Website"),
+		Description: stringPtr("An example website for demonstration"),
+		CreatedBy:   &userID,
+		ClickCount:  25,
+		IsActive:    true,
+		IsPublic:    true,
+		CreatedAt:   now.Add(-7 * 24 * time.Hour),
+		UpdatedAt:   now.Add(-1 * time.Hour),
+		ExpiresAt:   nil,
+	}, nil
+}
+
+// UpdateURL updates a URL's properties
+func (s *ShortenerService) UpdateURL(shortCode string, req *models.UpdateURLRequest) (*models.URL, error) {
+	// Get current URL
+	url, err := s.GetURLByShortCode(shortCode)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update fields if provided
+	if req.Title != nil {
+		url.Title = req.Title
+	}
+	if req.Description != nil {
+		url.Description = req.Description
+	}
+	if req.ExpiresAt != nil {
+		url.ExpiresAt = req.ExpiresAt
+	}
+	if req.IsPublic != nil {
+		url.IsPublic = *req.IsPublic
+	}
+
+	url.UpdatedAt = time.Now()
+
+	// Implementation would save to database
+	return url, nil
+}
+
+// DeleteURL deletes a URL (soft delete)
+func (s *ShortenerService) DeleteURL(shortCode string) error {
+	// Implementation would mark URL as inactive or delete from database
+	// For now, simulate success
+	return nil
+}
+
+// Helper function to create string pointers
+func stringPtr(s string) *string {
+	return &s
+}
+
 // RecordClick records a click event for analytics
 func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string) error {
 	// Generate ID for click event
@@ -178,6 +264,13 @@ func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer 
 		}
 	}()
 
+	// Process enhanced analytics (async operation)
+	go func() {
+		if err := s.analytics.ProcessEnhancedClickEvent(event); err != nil {
+			fmt.Printf("Failed to process enhanced click analytics: %v\n", err)
+		}
+	}()
+
 	// Increment click count in database
 	go func() {
 		if err := s.db.IncrementClickCount(shortCode); err != nil {
@@ -187,6 +280,18 @@ func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer 
 
 	// Increment cached click count for faster analytics
 	s.redis.IncrementClickCount(shortCode)
+	
+	// Broadcast real-time click event if real-time service is available
+	if s.realtime != nil {
+		s.realtime.BroadcastClick(shortCode, clientIP, userAgent, referrer)
+	}
+	
+	// Record attribution touchpoint if attribution service is available
+	if s.attribution != nil {
+		go func() {
+			s.recordAttributionTouchpoint(shortCode, clientIP, userAgent, referrer)
+		}()
+	}
 
 	return nil
 }
@@ -276,4 +381,333 @@ type ServiceError struct {
 
 func (e *ServiceError) Error() string {
 	return e.Message
+}
+
+// GetUserURLs retrieves URLs for a specific user with pagination
+func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*models.UserURLResponse, int64, error) {
+	query := `
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
+		       COALESCE(user_id, 0), COALESCE(is_public, true), COALESCE(custom_alias, ''), 
+		       COALESCE(title, ''), COALESCE(description, '')
+		FROM url_mappings 
+		WHERE user_id = $1 AND is_active = TRUE
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	
+	rows, err := s.db.Query(query, userID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query user URLs: %w", err)
+	}
+	defer rows.Close()
+
+	var urls []*models.UserURLResponse
+	for rows.Next() {
+		var url models.UserURLResponse
+		var userIDDB int64
+		var isPublicDB bool
+		var customAlias, title, description string
+		var expiresAt sql.NullTime
+		
+		err := rows.Scan(
+			&url.ID, &url.ShortCode, &url.OriginalURL, &url.CreatedAt,
+			&expiresAt, &url.ClickCount, &url.IsActive,
+			&userIDDB, &isPublicDB, &customAlias, &title, &description,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan URL row: %w", err)
+		}
+
+		// Set nullable fields
+		if expiresAt.Valid {
+			url.ExpiresAt = &expiresAt.Time
+		}
+		if title != "" {
+			url.Title = &title
+		}
+		if description != "" {
+			url.Description = &description
+		}
+		url.IsPublic = isPublicDB
+
+		// Build short URL
+		url.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, url.ShortCode)
+		
+		urls = append(urls, &url)
+	}
+
+	// Get total count
+	var total int64
+	err = s.db.QueryRow("SELECT COUNT(*) FROM url_mappings WHERE user_id = $1 AND is_active = TRUE", userID).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count user URLs: %w", err)
+	}
+
+	return urls, total, nil
+}
+
+// DeleteUserURL deletes a URL belonging to a specific user
+func (s *ShortenerService) DeleteUserURL(userID int64, shortCode string) error {
+	query := `UPDATE url_mappings SET is_active = FALSE WHERE short_code = $1 AND user_id = $2 AND is_active = TRUE`
+	
+	result, err := s.db.Exec(query, shortCode, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete URL: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return storage.ErrURLNotFound
+	}
+
+	// Remove from cache
+	if s.redis != nil {
+		s.redis.DeleteURLMapping(shortCode)
+	}
+
+	return nil
+}
+
+// UpdateUserURL updates a URL belonging to a specific user
+func (s *ShortenerService) UpdateUserURL(userID int64, shortCode string, req *models.UpdateURLRequest) (*models.UserURLResponse, error) {
+	// First check if the URL exists and belongs to the user
+	var existingURL models.UserURLResponse
+	var userIDDB sql.NullInt64
+	var isPublicDB sql.NullBool
+	var customAlias, title, description sql.NullString
+	var expiresAt sql.NullTime
+
+	checkQuery := `
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
+		       user_id, is_public, custom_alias, title, description
+		FROM url_mappings 
+		WHERE short_code = $1 AND is_active = TRUE
+	`
+	
+	err := s.db.QueryRow(checkQuery, shortCode).Scan(
+		&existingURL.ID, &existingURL.ShortCode, &existingURL.OriginalURL, &existingURL.CreatedAt,
+		&expiresAt, &existingURL.ClickCount, &existingURL.IsActive,
+		&userIDDB, &isPublicDB, &customAlias, &title, &description,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, storage.ErrURLNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+	}
+
+	// Check ownership
+	if !userIDDB.Valid || userIDDB.Int64 != userID {
+		return nil, storage.ErrUnauthorized
+	}
+
+	// Build update query dynamically
+	updates := []string{}
+	args := []interface{}{}
+	argIndex := 1
+
+	if req.Title != nil {
+		updates = append(updates, fmt.Sprintf("title = $%d", argIndex))
+		args = append(args, *req.Title)
+		argIndex++
+	}
+
+	if req.Description != nil {
+		updates = append(updates, fmt.Sprintf("description = $%d", argIndex))
+		args = append(args, *req.Description)
+		argIndex++
+	}
+
+	if req.ExpiresAt != nil {
+		updates = append(updates, fmt.Sprintf("expires_at = $%d", argIndex))
+		args = append(args, *req.ExpiresAt)
+		argIndex++
+	}
+
+	if req.IsPublic != nil {
+		updates = append(updates, fmt.Sprintf("is_public = $%d", argIndex))
+		args = append(args, *req.IsPublic)
+		argIndex++
+	}
+
+	if len(updates) == 0 {
+		// No updates requested, return current data
+		if expiresAt.Valid {
+			existingURL.ExpiresAt = &expiresAt.Time
+		}
+		if title.Valid {
+			existingURL.Title = &title.String
+		}
+		if description.Valid {
+			existingURL.Description = &description.String
+		}
+		if isPublicDB.Valid {
+			existingURL.IsPublic = isPublicDB.Bool
+		} else {
+			existingURL.IsPublic = true
+		}
+		existingURL.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, existingURL.ShortCode)
+		return &existingURL, nil
+	}
+
+	// Add WHERE clause parameters
+	args = append(args, shortCode, userID)
+	
+	updateQuery := fmt.Sprintf(
+		"UPDATE url_mappings SET %s WHERE short_code = $%d AND user_id = $%d AND is_active = TRUE",
+		strings.Join(updates, ", "), argIndex, argIndex+1,
+	)
+
+	_, err = s.db.Exec(updateQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update URL: %w", err)
+	}
+
+	// Remove from cache to force refresh
+	if s.redis != nil {
+		s.redis.DeleteURLMapping(shortCode)
+	}
+
+	// Fetch updated record
+	err = s.db.QueryRow(checkQuery, shortCode).Scan(
+		&existingURL.ID, &existingURL.ShortCode, &existingURL.OriginalURL, &existingURL.CreatedAt,
+		&expiresAt, &existingURL.ClickCount, &existingURL.IsActive,
+		&userIDDB, &isPublicDB, &customAlias, &title, &description,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated URL: %w", err)
+	}
+
+	// Set nullable fields
+	if expiresAt.Valid {
+		existingURL.ExpiresAt = &expiresAt.Time
+	}
+	if title.Valid {
+		existingURL.Title = &title.String
+	}
+	if description.Valid {
+		existingURL.Description = &description.String
+	}
+	if isPublicDB.Valid {
+		existingURL.IsPublic = isPublicDB.Bool
+	} else {
+		existingURL.IsPublic = true
+	}
+	existingURL.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, existingURL.ShortCode)
+
+	return &existingURL, nil
+}
+
+// recordAttributionTouchpoint records a touchpoint for attribution analysis
+func (s *ShortenerService) recordAttributionTouchpoint(shortCode, clientIP, userAgent, referrer string) {
+	if s.attribution == nil {
+		return
+	}
+
+	// For now, we'll just record basic touchpoint info
+	// Device/browser parsing can be added later if needed
+
+	// Create touchpoint data
+	touchpoint := &models.AttributionTouchpoint{
+		SessionID:       generateSessionID(clientIP, userAgent), // Generate session ID from IP and UA
+		ShortCode:      shortCode,
+		UserIP:         clientIP,
+		UserAgent:      userAgent,
+		Referrer:       referrer,
+		CampaignSource: extractSource(referrer),
+		CampaignMedium: extractMedium(referrer),
+		CampaignName:   extractCampaign(referrer),
+		TouchpointTime: time.Now(),
+	}
+
+	// Record the touchpoint asynchronously
+	go func() {
+		if err := s.attribution.RecordTouchpoint(touchpoint); err != nil {
+			// Log error but don't fail the request
+			// In production, use proper logging
+			fmt.Printf("Failed to record attribution touchpoint: %v\n", err)
+		}
+	}()
+}
+
+// generateSessionID creates a session ID from IP and user agent
+func generateSessionID(ip, userAgent string) string {
+	h := sha256.Sum256([]byte(ip + userAgent + fmt.Sprintf("%d", time.Now().Unix()/3600))) // 1-hour sessions
+	return hex.EncodeToString(h[:])[:16] // Use first 16 characters
+}
+
+// determineChannel categorizes the traffic channel from referrer
+func determineChannel(referrer string) string {
+	if referrer == "" {
+		return "direct"
+	}
+	
+	lowerRef := strings.ToLower(referrer)
+	
+	// Social media channels
+	socialDomains := []string{"facebook", "twitter", "linkedin", "instagram", "youtube", "pinterest", "tiktok", "snapchat"}
+	for _, domain := range socialDomains {
+		if strings.Contains(lowerRef, domain) {
+			return "social"
+		}
+	}
+	
+	// Search engines
+	searchDomains := []string{"google", "bing", "yahoo", "duckduckgo", "baidu"}
+	for _, domain := range searchDomains {
+		if strings.Contains(lowerRef, domain) {
+			return "search"
+		}
+	}
+	
+	// Email
+	if strings.Contains(lowerRef, "mail") || strings.Contains(lowerRef, "email") {
+		return "email"
+	}
+	
+	return "referral"
+}
+
+// extractSource extracts the source parameter from referrer URL
+func extractSource(referrer string) string {
+	return extractUTMParam(referrer, "utm_source")
+}
+
+// extractMedium extracts the medium parameter from referrer URL
+func extractMedium(referrer string) string {
+	return extractUTMParam(referrer, "utm_medium")
+}
+
+// extractCampaign extracts the campaign parameter from referrer URL
+func extractCampaign(referrer string) string {
+	return extractUTMParam(referrer, "utm_campaign")
+}
+
+// extractContent extracts the content parameter from referrer URL
+func extractContent(referrer string) string {
+	return extractUTMParam(referrer, "utm_content")
+}
+
+// extractTerm extracts the term parameter from referrer URL
+func extractTerm(referrer string) string {
+	return extractUTMParam(referrer, "utm_term")
+}
+
+// extractUTMParam extracts a specific UTM parameter from URL
+func extractUTMParam(referrer, param string) string {
+	if referrer == "" {
+		return ""
+	}
+	
+	parsedURL, err := url.Parse(referrer)
+	if err != nil {
+		return ""
+	}
+	
+	return parsedURL.Query().Get(param)
 }

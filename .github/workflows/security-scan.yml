@@ -1,0 +1,374 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+
+jobs:
+  sast-analysis:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    # Go Security Analysis
+    - name: Run Gosec Security Scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-fmt sarif -out gosec-results.sarif ./...'
+
+    - name: Upload Gosec SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: gosec-results.sarif
+      if: always()
+
+    # CodeQL Analysis
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: go, javascript
+        queries: security-extended,security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+    # Semgrep SAST
+    - name: Run Semgrep
+      uses: semgrep/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/golang
+          p/javascript
+          p/typescript
+          p/docker
+          p/kubernetes
+          p/secrets
+        publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+        publishDeployment: true
+        generateSarif: "1"
+
+    - name: Upload Semgrep SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: semgrep.sarif
+      if: always()
+
+    # JavaScript/TypeScript Security
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm audit --audit-level high
+        npm ci
+
+    - name: Run ESLint Security Plugin
+      run: |
+        cd frontend
+        npx eslint . --ext .js,.jsx,.ts,.tsx --format @microsoft/eslint-formatter-sarif --output-file ../eslint-results.sarif
+      continue-on-error: true
+
+    - name: Upload ESLint SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: eslint-results.sarif
+      if: always()
+
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    # Go Dependencies
+    - name: Run Go Vulnerability Check
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+
+    - name: Run Nancy (Go dependency scanner)
+      run: |
+        go list -json -deps ./... | docker run --rm -i sonatypecommunity/nancy:latest sleuth
+
+    # Node.js Dependencies
+    - name: Run npm audit
+      run: |
+        cd frontend
+        npm audit --json > npm-audit.json || true
+        # Convert npm audit to SARIF format (custom script or tool needed)
+
+    - name: Run Snyk vulnerability scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --file=frontend/package.json --sarif-file-output=snyk-results.sarif
+      continue-on-error: true
+
+    - name: Upload Snyk SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: snyk-results.sarif
+      if: always()
+
+  secrets-scan:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Run TruffleHog
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+    - name: Run GitLeaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+    - name: Run detect-secrets
+      run: |
+        pip install detect-secrets
+        detect-secrets scan --all-files --baseline .secrets.baseline
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    needs: [sast-analysis]
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build test image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: false
+        tags: urlshortener:test
+        load: true
+
+    # Trivy Container Scan
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'urlshortener:test'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    # Anchore Grype
+    - name: Run Anchore Grype vulnerability scanner
+      uses: anchore/scan-action@v3
+      id: scan
+      with:
+        image: "urlshortener:test"
+        fail-build: false
+        severity-cutoff: high
+
+    - name: Upload Anchore scan SARIF report
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+
+    # Docker Scout (if using Docker Hub)
+    - name: Docker Scout scan
+      uses: docker/scout-action@v1
+      with:
+        command: cves
+        image: urlshortener:test
+        only-severities: critical,high
+        sarif-file: scout-results.sarif
+      continue-on-error: true
+
+    - name: Upload Docker Scout SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: scout-results.sarif
+      if: always()
+
+  infrastructure-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    # Terraform Security
+    - name: Run Checkov on Terraform
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: terraform/
+        framework: terraform
+        output_format: sarif
+        output_file_path: checkov-terraform.sarif
+        quiet: true
+
+    - name: Upload Checkov Terraform SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: checkov-terraform.sarif
+      if: always()
+
+    # Kubernetes Security
+    - name: Run Checkov on Kubernetes manifests
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: k8s/
+        framework: kubernetes
+        output_format: sarif
+        output_file_path: checkov-k8s.sarif
+        quiet: true
+
+    - name: Upload Checkov Kubernetes SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: checkov-k8s.sarif
+      if: always()
+
+    # Kubesec
+    - name: Run Kubesec scan
+      run: |
+        docker run -v ${PWD}:/workspace kubesec/kubesec:latest scan /workspace/k8s/production/*.yaml > kubesec-results.json
+
+    # Polaris
+    - name: Run Polaris
+      run: |
+        docker run --rm -v ${PWD}:/workspace quay.io/fairwinds/polaris:latest polaris audit --audit-path /workspace/k8s/ --format json > polaris-results.json
+
+    # OPA/Conftest
+    - name: Run Conftest
+      run: |
+        docker run --rm -v ${PWD}:/project openpolicyagent/conftest verify --policy policy/ k8s/production/*.yaml
+
+  compliance-scan:
+    name: Compliance & Policy Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    # CIS Benchmarks
+    - name: Run Docker Bench Security
+      run: |
+        docker run --rm --net host --pid host --userns host --cap-add audit_control \
+          -e DOCKER_CONTENT_TRUST=$DOCKER_CONTENT_TRUST \
+          -v /etc:/etc:ro \
+          -v /usr/bin/containerd:/usr/bin/containerd:ro \
+          -v /usr/bin/runc:/usr/bin/runc:ro \
+          -v /usr/lib/systemd:/usr/lib/systemd:ro \
+          -v /var/lib:/var/lib:ro \
+          -v /var/run/docker.sock:/var/run/docker.sock:ro \
+          --label docker_bench_security \
+          docker/docker-bench-security
+
+    # OWASP Dependency Check
+    - name: Run OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'URLShortener'
+        path: '.'
+        format: 'SARIF'
+        out: 'owasp-dependency-check.sarif'
+
+    - name: Upload OWASP Dependency Check SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'owasp-dependency-check.sarif'
+      if: always()
+
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [sast-analysis, dependency-scan, secrets-scan, container-scan, infrastructure-scan, compliance-scan]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Generate Security Summary
+      run: |
+        echo "# Security Scan Summary" >> security-report.md
+        echo "Generated on: $(date)" >> security-report.md
+        echo "" >> security-report.md
+        echo "## Scan Results" >> security-report.md
+        echo "- Static Analysis: ${{ needs.sast-analysis.result }}" >> security-report.md
+        echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> security-report.md
+        echo "- Secrets Scan: ${{ needs.secrets-scan.result }}" >> security-report.md
+        echo "- Container Scan: ${{ needs.container-scan.result }}" >> security-report.md
+        echo "- Infrastructure Scan: ${{ needs.infrastructure-scan.result }}" >> security-report.md
+        echo "- Compliance Scan: ${{ needs.compliance-scan.result }}" >> security-report.md
+
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: security-report.md
+
+    # Send notification on failures
+    - name: Notify on Security Issues
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: '#security-alerts'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        text: '🚨 Security scan failed for URLShortener'

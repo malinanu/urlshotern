@@ -11,6 +11,7 @@ import (
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
+	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -39,9 +40,26 @@ func main() {
 	// Initialize services
 	shortenerService := services.NewShortenerService(db, redis, config)
 	analyticsService := services.NewAnalyticsService(db)
+	advancedAnalyticsService := services.NewAdvancedAnalyticsService(db)
+	userAnalyticsService := services.NewUserAnalyticsService(db.DB)
+	authService := services.NewAuthService(db, config)
+	smsService := services.NewSMSService(db, config)
+	emailService := services.NewEmailService(db, config)
+	conversionTrackingService := services.NewConversionTrackingService(db)
+	abTestingService := services.NewABTestingService(db, redis)
+	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
+	attributionService := services.NewAttributionService(db, conversionTrackingService)
+	
+	// Set real-time service on shortener for click broadcasting
+	shortenerService.SetRealtimeService(realtimeAnalyticsService)
+	
+	// Set attribution service on shortener for attribution tracking
+	shortenerService.SetAttributionService(attributionService)
 
 	// Initialize handlers
-	handler := handlers.NewHandler(shortenerService, analyticsService)
+	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
+	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db)
 
 	// Setup Gin router
 	if config.Environment == "production" {
@@ -50,18 +68,8 @@ func main() {
 
 	router := gin.Default()
 
-	// Health check endpoint
-	router.GET("/health", handler.HealthCheck)
-
-	// API routes
-	v1 := router.Group("/api/v1")
-	{
-		v1.POST("/shorten", handler.ShortenURL)
-		v1.GET("/analytics/:shortCode", handler.GetAnalytics)
-	}
-
-	// Redirect route (catch-all for short codes)
-	router.GET("/:shortCode", handler.RedirectURL)
+	// Setup all routes
+	routes.SetupRoutes(router, handler, authService)
 
 	// Setup server
 	srv := &http.Server{
@@ -86,6 +94,9 @@ func main() {
 	// Shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	// Shutdown real-time analytics service
+	realtimeAnalyticsService.Shutdown()
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)

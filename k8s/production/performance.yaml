@@ -1,0 +1,706 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: performance
+  labels:
+    name: performance
+---
+# Nginx Caching Proxy
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-cache-config
+  namespace: performance
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        # Logging
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+        
+        access_log /var/log/nginx/access.log main;
+        
+        # Performance optimizations
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        client_max_body_size 1m;
+        
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types
+            application/atom+xml
+            application/javascript
+            application/json
+            application/ld+json
+            application/manifest+json
+            application/rss+xml
+            application/vnd.geo+json
+            application/vnd.ms-fontobject
+            application/x-font-ttf
+            application/x-web-app-manifest+json
+            application/xhtml+xml
+            application/xml
+            font/opentype
+            image/bmp
+            image/svg+xml
+            image/x-icon
+            text/cache-manifest
+            text/css
+            text/plain
+            text/vcard
+            text/vnd.rim.location.xloc
+            text/vtt
+            text/x-component
+            text/x-cross-domain-policy;
+        
+        # Rate limiting
+        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+        limit_req_zone $binary_remote_addr zone=redirect:10m rate=100r/s;
+        
+        # Cache settings
+        proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=app_cache:10m 
+                         max_size=1g inactive=60m use_temp_path=off;
+        
+        upstream urlshortener_backend {
+            least_conn;
+            server urlshortener-service.production.svc.cluster.local:80 max_fails=3 fail_timeout=30s;
+            keepalive 32;
+        }
+        
+        # Rate limit maps
+        map $uri $rate_limit_zone {
+            ~^/api/ "api";
+            ~^/[a-zA-Z0-9]+$ "redirect";
+            default "";
+        }
+        
+        server {
+            listen 80;
+            server_name _;
+            
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            
+            # Health check endpoint
+            location /nginx-health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+            
+            # Static assets with long cache
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+                add_header Vary "Accept-Encoding";
+                
+                proxy_pass http://urlshortener_backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+            
+            # API endpoints with minimal cache
+            location /api/ {
+                limit_req zone=api burst=20 nodelay;
+                
+                proxy_cache off;
+                add_header Cache-Control "no-cache, no-store, must-revalidate";
+                add_header Pragma "no-cache";
+                add_header Expires "0";
+                
+                proxy_pass http://urlshortener_backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_connect_timeout 5s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+            }
+            
+            # URL redirects with cache
+            location ~* ^/([a-zA-Z0-9]+)$ {
+                limit_req zone=redirect burst=50 nodelay;
+                
+                proxy_cache app_cache;
+                proxy_cache_valid 200 302 5m;
+                proxy_cache_valid 404 1m;
+                proxy_cache_key "$scheme$host$request_uri";
+                add_header X-Cache-Status $upstream_cache_status;
+                
+                proxy_pass http://urlshortener_backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_connect_timeout 2s;
+                proxy_send_timeout 10s;
+                proxy_read_timeout 10s;
+            }
+            
+            # Default location
+            location / {
+                proxy_cache app_cache;
+                proxy_cache_valid 200 302 10m;
+                proxy_cache_valid 404 1m;
+                proxy_cache_key "$scheme$host$request_uri$is_args$args";
+                add_header X-Cache-Status $upstream_cache_status;
+                
+                proxy_pass http://urlshortener_backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_buffering on;
+                proxy_connect_timeout 5s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cache
+  namespace: performance
+  labels:
+    app: nginx-cache
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-cache
+  template:
+    metadata:
+      labels:
+        app: nginx-cache
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: 128Mi
+            cpu: 100m
+          limits:
+            memory: 256Mi
+            cpu: 200m
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-logs
+          mountPath: /var/log/nginx
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 101
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /nginx-health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /nginx-health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      
+      # Nginx Prometheus Exporter
+      - name: nginx-exporter
+        image: nginx/nginx-prometheus-exporter:0.11.0
+        ports:
+        - containerPort: 9113
+        args:
+        - -nginx.scrape-uri=http://localhost:80/nginx_status
+        resources:
+          requests:
+            memory: 32Mi
+            cpu: 50m
+          limits:
+            memory: 64Mi
+            cpu: 100m
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-cache-config
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-logs
+        emptyDir: {}
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - nginx-cache
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-cache-service
+  namespace: performance
+  labels:
+    app: nginx-cache
+spec:
+  selector:
+    app: nginx-cache
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  - name: metrics
+    port: 9113
+    targetPort: 9113
+---
+# Varnish Cache (alternative/additional caching layer)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: varnish-config
+  namespace: performance
+data:
+  default.vcl: |
+    vcl 4.1;
+    
+    backend default {
+        .host = "nginx-cache-service.performance.svc.cluster.local";
+        .port = "80";
+        .probe = {
+            .url = "/nginx-health";
+            .interval = 5s;
+            .timeout = 3s;
+            .window = 5;
+            .threshold = 3;
+        }
+    }
+    
+    sub vcl_recv {
+        # Remove any cookies for static content
+        if (req.url ~ "\.(css|js|png|gif|jp(e)?g|swf|ico|pdf|mov|fla|zip|torrent)$") {
+            unset req.http.Cookie;
+        }
+        
+        # Handle URL shortening requests
+        if (req.url ~ "^/[a-zA-Z0-9]+$") {
+            # Cache short URL redirects for 5 minutes
+            set req.http.X-Cache-TTL = "300";
+        }
+        
+        # Don't cache API requests except for public analytics
+        if (req.url ~ "^/api/") {
+            if (req.url !~ "^/api/v1/analytics/") {
+                return (pass);
+            }
+        }
+        
+        # Handle compression
+        if (req.http.Accept-Encoding) {
+            if (req.url ~ "\.(jpg|png|gif|gz|tgz|bz2|tbz|mp3|ogg)$") {
+                # No point in compressing these
+                unset req.http.Accept-Encoding;
+            } elsif (req.http.Accept-Encoding ~ "gzip") {
+                set req.http.Accept-Encoding = "gzip";
+            } elsif (req.http.Accept-Encoding ~ "deflate") {
+                set req.http.Accept-Encoding = "deflate";
+            } else {
+                unset req.http.Accept-Encoding;
+            }
+        }
+    }
+    
+    sub vcl_backend_response {
+        # Set cache TTL based on response
+        if (beresp.http.Cache-Control ~ "max-age") {
+            # Use the max-age from backend
+            set beresp.ttl = std.duration(beresp.http.Cache-Control, 1s);
+        } elsif (bereq.url ~ "^/[a-zA-Z0-9]+$") {
+            # Cache redirects for 5 minutes
+            set beresp.ttl = 5m;
+        } elsif (bereq.url ~ "\.(css|js|png|gif|jp(e)?g|ico|svg)$") {
+            # Cache static assets for 1 hour
+            set beresp.ttl = 1h;
+        } else {
+            # Default cache time
+            set beresp.ttl = 2m;
+        }
+        
+        # Enable ESI
+        if (beresp.http.Content-Type ~ "text/html") {
+            set beresp.do_esi = true;
+        }
+    }
+    
+    sub vcl_deliver {
+        # Add cache status header
+        if (obj.hits > 0) {
+            set resp.http.X-Varnish-Cache = "HIT";
+        } else {
+            set resp.http.X-Varnish-Cache = "MISS";
+        }
+        
+        # Set cache hit count
+        set resp.http.X-Varnish-Hits = obj.hits;
+        
+        # Remove backend server header for security
+        unset resp.http.Server;
+        unset resp.http.X-Powered-By;
+    }
+---
+# Performance Testing Jobs
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: performance-test
+  namespace: performance
+spec:
+  schedule: "0 4 * * 1"  # 4 AM UTC on Mondays
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: performance-test-sa
+          containers:
+          - name: performance-test
+            image: grafana/k6:latest
+            env:
+            - name: BASE_URL
+              value: "https://short.ly"
+            - name: INFLUXDB_URL
+              value: "http://influxdb:8086"
+            - name: K6_OUT
+              value: "influxdb=http://influxdb:8086/performance"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              cat > /tmp/performance-test.js << 'EOF'
+              import http from 'k6/http';
+              import { check, sleep } from 'k6';
+              import { Rate } from 'k6/metrics';
+              
+              export let errorRate = new Rate('errors');
+              
+              export let options = {
+                stages: [
+                  { duration: '2m', target: 50 },   // Ramp up
+                  { duration: '5m', target: 100 },  // Stay at 100 users
+                  { duration: '2m', target: 200 },  // Ramp up to 200 users
+                  { duration: '5m', target: 200 },  // Stay at 200 users
+                  { duration: '2m', target: 0 },    // Ramp down
+                ],
+                thresholds: {
+                  http_req_duration: ['p(95)<500'],  // 95% of requests under 500ms
+                  http_req_failed: ['rate<0.01'],    // Error rate under 1%
+                  errors: ['rate<0.01'],             // Error rate under 1%
+                },
+              };
+              
+              const BASE_URL = __ENV.BASE_URL || 'https://short.ly';
+              
+              export default function() {
+                // Test URL shortening
+                let createResponse = http.post(`${BASE_URL}/api/v1/shorten`, 
+                  JSON.stringify({
+                    url: `https://example.com/test-${Math.random()}`
+                  }), {
+                    headers: { 'Content-Type': 'application/json' },
+                  }
+                );
+                
+                let createCheck = check(createResponse, {
+                  'create status is 201': (r) => r.status === 201,
+                  'create response time < 500ms': (r) => r.timings.duration < 500,
+                });
+                errorRate.add(!createCheck);
+                
+                if (createResponse.status === 201) {
+                  let shortCode = JSON.parse(createResponse.body).short_code;
+                  
+                  // Test URL redirect
+                  let redirectResponse = http.get(`${BASE_URL}/${shortCode}`, {
+                    redirects: 0,
+                  });
+                  
+                  let redirectCheck = check(redirectResponse, {
+                    'redirect status is 302': (r) => r.status === 302,
+                    'redirect response time < 200ms': (r) => r.timings.duration < 200,
+                  });
+                  errorRate.add(!redirectCheck);
+                }
+                
+                sleep(1);
+              }
+              EOF
+              
+              echo "Starting performance test..."
+              k6 run /tmp/performance-test.js
+              echo "Performance test completed"
+            resources:
+              requests:
+                memory: 256Mi
+                cpu: 200m
+              limits:
+                memory: 512Mi
+                cpu: 500m
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+---
+# CDN Cache Purge Job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cdn-cache-purge
+  namespace: performance
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cache-purge
+            image: alpine:latest
+            env:
+            - name: CLOUDFLARE_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflare-credentials
+                  key: api-token
+            - name: CLOUDFLARE_ZONE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflare-credentials
+                  key: zone-id
+            command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache curl jq
+              
+              echo "Purging CDN cache for static assets..."
+              
+              # Purge CSS and JS files
+              curl -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
+                -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data '{
+                  "files": [
+                    "https://short.ly/static/css/*",
+                    "https://short.ly/static/js/*",
+                    "https://short.ly/_next/static/*"
+                  ]
+                }'
+              
+              echo "CDN cache purge completed"
+            resources:
+              requests:
+                memory: 64Mi
+                cpu: 50m
+              limits:
+                memory: 128Mi
+                cpu: 100m
+          restartPolicy: OnFailure
+---
+# ServiceAccount for performance testing
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: performance-test-sa
+  namespace: performance
+---
+# InfluxDB for performance metrics storage
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: influxdb
+  namespace: performance
+spec:
+  serviceName: influxdb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      containers:
+      - name: influxdb
+        image: influxdb:2.7-alpine
+        ports:
+        - containerPort: 8086
+        env:
+        - name: DOCKER_INFLUXDB_INIT_MODE
+          value: "setup"
+        - name: DOCKER_INFLUXDB_INIT_USERNAME
+          value: "admin"
+        - name: DOCKER_INFLUXDB_INIT_PASSWORD
+          value: "password"
+        - name: DOCKER_INFLUXDB_INIT_ORG
+          value: "urlshortener"
+        - name: DOCKER_INFLUXDB_INIT_BUCKET
+          value: "performance"
+        - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+          value: "performance-token"
+        volumeMounts:
+        - name: influxdb-data
+          mountPath: /var/lib/influxdb2
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 200m
+          limits:
+            memory: 1Gi
+            cpu: 500m
+  volumeClaimTemplates:
+  - metadata:
+      name: influxdb-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb
+  namespace: performance
+spec:
+  selector:
+    app: influxdb
+  ports:
+  - port: 8086
+    targetPort: 8086
+---
+# CloudFlare credentials secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-credentials
+  namespace: performance
+type: Opaque
+stringData:
+  api-token: "PLACEHOLDER_CLOUDFLARE_API_TOKEN"
+  zone-id: "PLACEHOLDER_CLOUDFLARE_ZONE_ID"
+---
+# Performance monitoring dashboard
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: performance-dashboard
+  namespace: performance
+data:
+  performance-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "URL Shortener Performance Metrics",
+        "panels": [
+          {
+            "title": "Response Times",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "99th percentile"
+              }
+            ]
+          },
+          {
+            "title": "Cache Hit Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(varnish_cache_hit_total[5m]) / (rate(varnish_cache_hit_total[5m]) + rate(varnish_cache_miss_total[5m]))",
+                "legendFormat": "Cache Hit Rate"
+              }
+            ]
+          },
+          {
+            "title": "Throughput",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "Requests/sec"
+              }
+            ]
+          }
+        ]
+      }
+    }

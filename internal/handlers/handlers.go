@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
@@ -12,16 +13,41 @@ import (
 )
 
 type Handler struct {
-	shortenerService *services.ShortenerService
-	analyticsService *services.AnalyticsService
+	shortenerService       *services.ShortenerService
+	analyticsService       *services.AnalyticsService
+	advancedAnalyticsService *services.AdvancedAnalyticsService
+	conversionTrackingService *services.ConversionTrackingService
+	abTestingService       *services.ABTestingService
+	realtimeService        *services.RealtimeAnalyticsService
+	attributionService     *services.AttributionService
+	AuthHandlers           *AuthHandlers
+	AnalyticsHandlers      *AnalyticsHandlers
+	ConversionHandlers     *ConversionTrackingHandler
+	ABTestHandlers         *ABTestingHandler
+	RealtimeHandlers       *RealtimeAnalyticsHandler
+	BillingHandlers        *BillingHandler
+	AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler
+	AttributionHandlers    *AttributionHandler
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService) *Handler {
-	// Set Redis on analytics service if available
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage) *Handler {
 	return &Handler{
-		shortenerService: shortenerService,
-		analyticsService: analyticsService,
+		shortenerService:       shortenerService,
+		analyticsService:       analyticsService,
+		advancedAnalyticsService: advancedAnalyticsService,
+		conversionTrackingService: conversionService,
+		abTestingService:       abTestService,
+		realtimeService:        realtimeService,
+		attributionService:     attributionService,
+		AuthHandlers:           authHandlers,
+		AnalyticsHandlers:      analyticsHandlers,
+		ConversionHandlers:     NewConversionTrackingHandler(conversionService),
+		ABTestHandlers:         NewABTestingHandler(abTestService),
+		RealtimeHandlers:       NewRealtimeAnalyticsHandler(realtimeService),
+		BillingHandlers:        NewBillingHandler(nil), // Will need to fix this properly
+		AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService),
+		AttributionHandlers:    NewAttributionHandler(attributionService),
 	}
 }
 
@@ -49,8 +75,15 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 	// Get client IP
 	clientIP := getClientIP(c)
 
+	// Get user ID if authenticated (optional)
+	userID, _ := middleware.GetUserID(c)
+	var userIDPtr *int64
+	if userID > 0 {
+		userIDPtr = &userID
+	}
+
 	// Shorten the URL
-	response, err := h.shortenerService.ShortenURL(&request, clientIP)
+	response, err := h.shortenerService.ShortenURL(&request, clientIP, userIDPtr)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		errorType := "internal_error"
@@ -168,6 +201,50 @@ func (h *Handler) GetAnalytics(c *gin.Context) {
 	c.JSON(http.StatusOK, analytics)
 }
 
+// GetAdvancedAnalytics handles advanced analytics requests with detailed breakdowns
+func (h *Handler) GetAdvancedAnalytics(c *gin.Context) {
+	shortCode := c.Param("shortCode")
+	
+	if shortCode == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_short_code",
+			Message: "Short code is required",
+		})
+		return
+	}
+
+	// Get days parameter (default to 30 days)
+	daysStr := c.DefaultQuery("days", "30")
+	days, err := strconv.Atoi(daysStr)
+	if err != nil || days < 1 || days > 365 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_days_parameter",
+			Message: "Days must be between 1 and 365",
+		})
+		return
+	}
+
+	// Get advanced analytics data
+	analytics, err := h.analyticsService.GetAdvancedAnalytics(shortCode, days)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		errorType := "internal_error"
+		
+		if err == storage.ErrURLNotFound {
+			statusCode = http.StatusNotFound
+			errorType = "not_found"
+		}
+
+		c.JSON(statusCode, models.ErrorResponse{
+			Error:   errorType,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, analytics)
+}
+
 // GetClickTrends handles click trends requests
 func (h *Handler) GetClickTrends(c *gin.Context) {
 	shortCode := c.Param("shortCode")
@@ -232,11 +309,19 @@ func (h *Handler) BatchShortenURLs(c *gin.Context) {
 	}
 
 	clientIP := getClientIP(c)
+	
+	// Get user ID if authenticated (optional)
+	userID, _ := middleware.GetUserID(c)
+	var userIDPtr *int64
+	if userID > 0 {
+		userIDPtr = &userID
+	}
+	
 	var responses []models.ShortenResponse
 	var errors []models.ErrorResponse
 
 	for _, request := range requests {
-		response, err := h.shortenerService.ShortenURL(&request, clientIP)
+		response, err := h.shortenerService.ShortenURL(&request, clientIP, userIDPtr)
 		if err != nil {
 			errors = append(errors, models.ErrorResponse{
 				Error:   "processing_error",
@@ -253,6 +338,159 @@ func (h *Handler) BatchShortenURLs(c *gin.Context) {
 		"results":    responses,
 		"errors":     errors,
 	})
+}
+
+// GetUserURLs handles requests for user's URL list
+func (h *Handler) GetUserURLs(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	// Parse query parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	offset := (page - 1) * limit
+
+	urls, total, err := h.shortenerService.GetUserURLs(userID, offset, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"urls":       urls,
+		"total":      total,
+		"page":       page,
+		"limit":      limit,
+		"total_pages": (total + int64(limit) - 1) / int64(limit),
+	})
+}
+
+// DeleteURL handles URL deletion requests
+func (h *Handler) DeleteURL(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	shortCode := c.Param("shortCode")
+	if shortCode == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: "Short code is required",
+		})
+		return
+	}
+
+	err := h.shortenerService.DeleteUserURL(userID, shortCode)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == storage.ErrURLNotFound {
+			statusCode = http.StatusNotFound
+		} else if err == storage.ErrUnauthorized {
+			statusCode = http.StatusForbidden
+		}
+
+		c.JSON(statusCode, models.ErrorResponse{
+			Error:   "delete_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "URL deleted successfully",
+	})
+}
+
+// UpdateURL handles URL update requests
+func (h *Handler) UpdateURL(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	shortCode := c.Param("shortCode")
+	if shortCode == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: "Short code is required",
+		})
+		return
+	}
+
+	var updateRequest models.UpdateURLRequest
+	if err := c.ShouldBindJSON(&updateRequest); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	updatedURL, err := h.shortenerService.UpdateUserURL(userID, shortCode, &updateRequest)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err == storage.ErrURLNotFound {
+			statusCode = http.StatusNotFound
+		} else if err == storage.ErrUnauthorized {
+			statusCode = http.StatusForbidden
+		}
+
+		c.JSON(statusCode, models.ErrorResponse{
+			Error:   "update_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedURL)
+}
+
+// GetUserDashboardStats handles user dashboard statistics
+func (h *Handler) GetUserDashboardStats(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	stats, err := h.analyticsService.GetUserDashboardStats(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }
 
 // getClientIP extracts the real client IP from the request

@@ -1,0 +1,390 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'alerts@short.ly'
+      smtp_auth_username: 'alerts@short.ly'
+      smtp_auth_password: 'PLACEHOLDER_SMTP_PASSWORD'
+      smtp_require_tls: true
+      
+      slack_api_url: 'PLACEHOLDER_SLACK_WEBHOOK_URL'
+    
+    templates:
+      - '/etc/alertmanager/templates/*.tmpl'
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'default-receiver'
+      routes:
+      # Critical alerts go to both Slack and email immediately
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+        group_wait: 0s
+        repeat_interval: 5m
+      
+      # Warning alerts go to Slack only
+      - match:
+          severity: warning
+        receiver: 'warning-alerts'
+        group_wait: 5m
+        repeat_interval: 30m
+      
+      # Billing system alerts
+      - match_re:
+          alertname: '.*[Bb]illing.*'
+        receiver: 'billing-alerts'
+        repeat_interval: 15m
+      
+      # Database alerts
+      - match_re:
+          alertname: '.*[Dd]atabase.*|.*[Pp]ostgres.*'
+        receiver: 'database-alerts'
+        repeat_interval: 10m
+    
+    receivers:
+    - name: 'default-receiver'
+      slack_configs:
+      - channel: '#alerts'
+        title: 'URL Shortener Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        send_resolved: true
+    
+    - name: 'critical-alerts'
+      email_configs:
+      - to: 'ops-team@short.ly'
+        subject: '[CRITICAL] URL Shortener Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Critical alert in URL Shortener Production environment.
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Instance: {{ .Labels.instance }}
+          Started: {{ .StartsAt }}
+          {{ if .EndsAt }}Ended: {{ .EndsAt }}{{ end }}
+          {{ end }}
+          
+          Please investigate immediately.
+        send_resolved: true
+      
+      slack_configs:
+      - channel: '#critical-alerts'
+        title: '🚨 CRITICAL ALERT - URL Shortener'
+        text: |
+          <!channel> Critical alert detected!
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Instance:* {{ .Labels.instance }}
+          *Started:* {{ .StartsAt }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+    
+    - name: 'warning-alerts'
+      slack_configs:
+      - channel: '#warnings'
+        title: '⚠️ Warning - URL Shortener'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true
+    
+    - name: 'billing-alerts'
+      email_configs:
+      - to: 'billing-team@short.ly'
+        subject: '[BILLING] URL Shortener Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Billing system alert in URL Shortener.
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Instance: {{ .Labels.instance }}
+          {{ end }}
+        send_resolved: true
+      
+      slack_configs:
+      - channel: '#billing-alerts'
+        title: '💳 Billing Alert - URL Shortener'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        color: '#ff9900'
+        send_resolved: true
+    
+    - name: 'database-alerts'
+      slack_configs:
+      - channel: '#database-alerts'
+        title: '🗄️ Database Alert - URL Shortener'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Instance:* {{ .Labels.instance }}
+          {{ end }}
+        color: '#9900ff'
+        send_resolved: true
+    
+    inhibit_rules:
+    # Inhibit any warning if the same alert is already critical
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'instance']
+    
+    # Inhibit URLShortenerDown if any specific service is down
+    - source_match:
+        alertname: 'URLShortenerDown'
+      target_match_re:
+        alertname: '.*ServiceDown'
+      equal: ['instance']
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-templates
+  namespace: monitoring
+data:
+  default.tmpl: |
+    {{ define "slack.default.title" }}
+    [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join " " }}
+    {{ end }}
+    
+    {{ define "slack.default.text" }}
+    {{ range .Alerts }}
+    {{ if .Annotations.summary }}*Alert:* {{ .Annotations.summary }}{{ end }}
+    {{ if .Annotations.description }}*Description:* {{ .Annotations.description }}{{ end }}
+    *Severity:* {{ .Labels.severity }}
+    {{ if .Labels.instance }}*Instance:* {{ .Labels.instance }}{{ end }}
+    {{ if .Labels.pod }}*Pod:* {{ .Labels.pod }}{{ end }}
+    {{ if .Labels.namespace }}*Namespace:* {{ .Labels.namespace }}{{ end }}
+    {{ end }}
+    {{ end }}
+    
+    {{ define "email.default.subject" }}
+    [{{ .Status | toUpper }}] URL Shortener Alert: {{ .GroupLabels.alertname }}
+    {{ end }}
+    
+    {{ define "email.default.html" }}
+    <h2>URL Shortener Alert</h2>
+    <p><strong>Status:</strong> {{ .Status | toUpper }}</p>
+    
+    {{ range .Alerts }}
+    <div style="border-left: 4px solid #{{ if eq .Labels.severity "critical" }}ff0000{{ else if eq .Labels.severity "warning" }}ff9900{{ else }}00aa00{{ end }}; padding-left: 10px; margin: 10px 0;">
+      <h3>{{ .Annotations.summary }}</h3>
+      <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+      <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+      {{ if .Labels.instance }}<p><strong>Instance:</strong> {{ .Labels.instance }}</p>{{ end }}
+      {{ if .Labels.pod }}<p><strong>Pod:</strong> {{ .Labels.pod }}</p>{{ end }}
+      {{ if .Labels.namespace }}<p><strong>Namespace:</strong> {{ .Labels.namespace }}</p>{{ end }}
+      <p><strong>Started:</strong> {{ .StartsAt }}</p>
+      {{ if .EndsAt }}<p><strong>Ended:</strong> {{ .EndsAt }}</p>{{ end }}
+    </div>
+    {{ end }}
+    {{ end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9093"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.25.0
+        args:
+          - '--config.file=/etc/alertmanager/alertmanager.yml'
+          - '--storage.path=/alertmanager'
+          - '--web.external-url=https://alertmanager.short.ly'
+          - '--web.route-prefix=/'
+          - '--cluster.advertise-address=0.0.0.0:9094'
+          - '--cluster.listen-address=0.0.0.0:9094'
+          - '--cluster.peer=alertmanager-0.alertmanager.monitoring.svc.cluster.local:9094'
+          - '--cluster.peer=alertmanager-1.alertmanager.monitoring.svc.cluster.local:9094'
+        ports:
+        - containerPort: 9093
+          name: web
+        - containerPort: 9094
+          name: mesh
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 100m
+          limits:
+            memory: 512Mi
+            cpu: 200m
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/alertmanager
+        - name: templates-volume
+          mountPath: /etc/alertmanager/templates
+        - name: alertmanager-storage-volume
+          mountPath: /alertmanager
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: web
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: web
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config-volume
+        configMap:
+          name: alertmanager-config
+      - name: templates-volume
+        configMap:
+          name: alertmanager-templates
+      - name: alertmanager-storage-volume
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - alertmanager
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  selector:
+    app: alertmanager
+  ports:
+  - name: web
+    port: 9093
+    targetPort: web
+  - name: mesh
+    port: 9094
+    targetPort: mesh
+  clusterIP: None
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager-ingress
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: alertmanager-auth
+spec:
+  tls:
+  - hosts:
+    - alertmanager.short.ly
+    secretName: alertmanager-tls
+  rules:
+  - host: alertmanager.short.ly
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: alertmanager
+            port:
+              number: 9093
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-auth
+  namespace: monitoring
+type: Opaque
+data:
+  auth: YWRtaW46JGFwcjEkSDZ1c2g2R1AkMnM3MXNlNVdHcHdoWW5qQi9QdldkLg== # admin:admin (change this!)
+---
+# Prometheus rule to send alerts to AlertManager
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      external_labels:
+        cluster: 'urlshortener-production'
+        replica: 'prometheus-1'
+    
+    alerting:
+      alertmanagers:
+      - kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names:
+            - monitoring
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name]
+          action: keep
+          regex: alertmanager
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: web

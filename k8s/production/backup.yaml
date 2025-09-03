@@ -1,0 +1,535 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backup
+  labels:
+    name: backup
+---
+# Velero Backup Storage Location
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: aws-s3
+  namespace: backup
+spec:
+  provider: aws
+  objectStorage:
+    bucket: urlshortener-backups-production
+    prefix: velero-backups
+  config:
+    region: us-east-1
+    s3ForcePathStyle: "false"
+---
+# Velero Volume Snapshot Location
+apiVersion: velero.io/v1
+kind: VolumeSnapshotLocation
+metadata:
+  name: aws-ebs
+  namespace: backup
+spec:
+  provider: aws
+  config:
+    region: us-east-1
+---
+# Daily Backup Schedule
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-backup
+  namespace: backup
+spec:
+  schedule: "0 2 * * *"  # 2 AM UTC daily
+  template:
+    includedNamespaces:
+    - production
+    - green
+    - monitoring
+    excludedResources:
+    - events
+    - events.events.k8s.io
+    storageLocation: aws-s3
+    volumeSnapshotLocations:
+    - aws-ebs
+    ttl: 720h  # 30 days
+    metadata:
+      labels:
+        backup-type: daily
+        environment: production
+---
+# Weekly Backup Schedule (longer retention)
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: weekly-backup
+  namespace: backup
+spec:
+  schedule: "0 3 * * 0"  # 3 AM UTC on Sundays
+  template:
+    includedNamespaces:
+    - production
+    - green
+    - monitoring
+    - backup
+    storageLocation: aws-s3
+    volumeSnapshotLocations:
+    - aws-ebs
+    ttl: 2160h  # 90 days
+    metadata:
+      labels:
+        backup-type: weekly
+        environment: production
+---
+# Database Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: backup
+spec:
+  schedule: "0 1 * * *"  # 1 AM UTC daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: backup-service-account
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            fsGroup: 65534
+          containers:
+          - name: postgres-backup
+            image: postgres:15-alpine
+            env:
+            - name: PGHOST
+              value: postgres-service.production.svc.cluster.local
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: urlshortener
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: urlshortener-secrets
+                  key: DATABASE_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: urlshortener-secrets
+                  key: DATABASE_PASSWORD
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-credentials
+                  key: secret-access-key
+            - name: S3_BUCKET
+              value: urlshortener-db-backups-production
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              
+              # Create backup filename with timestamp
+              BACKUP_FILE="urlshortener-$(date +%Y%m%d-%H%M%S).sql"
+              
+              echo "Starting database backup: $BACKUP_FILE"
+              
+              # Create compressed backup
+              pg_dump --no-password --verbose --clean --no-acl --no-owner \
+                | gzip > "/tmp/$BACKUP_FILE.gz"
+              
+              # Install AWS CLI
+              apk add --no-cache aws-cli
+              
+              # Upload to S3
+              aws s3 cp "/tmp/$BACKUP_FILE.gz" "s3://$S3_BUCKET/daily/$BACKUP_FILE.gz"
+              
+              # Create a weekly backup on Sundays
+              if [ $(date +%u) -eq 7 ]; then
+                aws s3 cp "/tmp/$BACKUP_FILE.gz" "s3://$S3_BUCKET/weekly/$BACKUP_FILE.gz"
+              fi
+              
+              # Create a monthly backup on the 1st of the month
+              if [ $(date +%d) -eq 01 ]; then
+                aws s3 cp "/tmp/$BACKUP_FILE.gz" "s3://$S3_BUCKET/monthly/$BACKUP_FILE.gz"
+              fi
+              
+              echo "Database backup completed successfully"
+              
+              # Cleanup old backups (keep last 7 daily, 4 weekly, 12 monthly)
+              echo "Cleaning up old backups..."
+              
+              # Daily cleanup (keep last 7)
+              aws s3 ls "s3://$S3_BUCKET/daily/" --recursive | sort | head -n -7 | awk '{print $4}' | \
+                while read file; do
+                  if [ ! -z "$file" ]; then
+                    aws s3 rm "s3://$S3_BUCKET/$file"
+                  fi
+                done
+              
+              echo "Backup cleanup completed"
+            resources:
+              requests:
+                memory: 256Mi
+                cpu: 100m
+              limits:
+                memory: 512Mi
+                cpu: 200m
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: tmp
+            emptyDir: {}
+          restartPolicy: OnFailure
+          activeDeadlineSeconds: 3600  # 1 hour timeout
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+---
+# Redis Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: backup
+spec:
+  schedule: "0 1 * * *"  # 1 AM UTC daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: backup-service-account
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            fsGroup: 65534
+          containers:
+          - name: redis-backup
+            image: redis:7-alpine
+            env:
+            - name: REDIS_HOST
+              value: redis-service.production.svc.cluster.local
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: urlshortener-secrets
+                  key: REDIS_PASSWORD
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-credentials
+                  key: secret-access-key
+            - name: S3_BUCKET
+              value: urlshortener-redis-backups-production
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              
+              # Install AWS CLI
+              apk add --no-cache aws-cli
+              
+              # Create backup filename with timestamp
+              BACKUP_FILE="redis-$(date +%Y%m%d-%H%M%S).rdb"
+              
+              echo "Starting Redis backup: $BACKUP_FILE"
+              
+              # Create Redis backup
+              redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD --no-auth-warning BGSAVE
+              
+              # Wait for backup to complete
+              while [ $(redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD --no-auth-warning LASTSAVE) -eq $(redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD --no-auth-warning LASTSAVE) ]; do
+                sleep 1
+              done
+              
+              # Get the RDB file
+              redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD --no-auth-warning --rdb "/tmp/$BACKUP_FILE"
+              
+              # Compress and upload to S3
+              gzip "/tmp/$BACKUP_FILE"
+              aws s3 cp "/tmp/$BACKUP_FILE.gz" "s3://$S3_BUCKET/daily/$BACKUP_FILE.gz"
+              
+              echo "Redis backup completed successfully"
+            resources:
+              requests:
+                memory: 128Mi
+                cpu: 50m
+              limits:
+                memory: 256Mi
+                cpu: 100m
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: tmp
+            emptyDir: {}
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+---
+# Backup Verification Job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-verification
+  namespace: backup
+spec:
+  schedule: "0 6 * * *"  # 6 AM UTC daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: backup-service-account
+          containers:
+          - name: backup-verification
+            image: alpine:latest
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-backup-credentials
+                  key: secret-access-key
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhook
+                  key: webhook-url
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              
+              # Install required tools
+              apk add --no-cache aws-cli curl jq
+              
+              echo "Verifying backup integrity..."
+              
+              # Check if latest database backup exists
+              DB_BACKUP=$(aws s3 ls s3://urlshortener-db-backups-production/daily/ --recursive | sort | tail -n 1)
+              if [ -z "$DB_BACKUP" ]; then
+                echo "ERROR: No database backup found"
+                exit 1
+              fi
+              
+              # Check if latest Redis backup exists
+              REDIS_BACKUP=$(aws s3 ls s3://urlshortener-redis-backups-production/daily/ --recursive | sort | tail -n 1)
+              if [ -z "$REDIS_BACKUP" ]; then
+                echo "ERROR: No Redis backup found"
+                exit 1
+              fi
+              
+              # Check Velero backup status
+              kubectl get backup -n backup -l backup-type=daily --sort-by=.metadata.creationTimestamp -o json | \
+                jq -r '.items[-1] | select(.status.phase == "Completed") | .metadata.name' || {
+                echo "ERROR: Latest Velero backup failed or not found"
+                exit 1
+              }
+              
+              echo "All backups verified successfully"
+              
+              # Send success notification
+              curl -X POST -H 'Content-type: application/json' \
+                --data '{"text":"✅ Daily backup verification completed successfully for URLShortener Production"}' \
+                $SLACK_WEBHOOK_URL
+            resources:
+              requests:
+                memory: 64Mi
+                cpu: 50m
+              limits:
+                memory: 128Mi
+                cpu: 100m
+          restartPolicy: OnFailure
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+---
+# ServiceAccount for backup operations
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-service-account
+  namespace: backup
+automountServiceAccountToken: true
+---
+# ClusterRole for backup operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backup-manager
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list"]
+- apiGroups: ["velero.io"]
+  resources: ["backups", "restores"]
+  verbs: ["get", "list", "create"]
+---
+# ClusterRoleBinding for backup service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup-manager-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backup-manager
+subjects:
+- kind: ServiceAccount
+  name: backup-service-account
+  namespace: backup
+---
+# AWS credentials secret (to be populated by external-secrets-operator)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-backup-credentials
+  namespace: backup
+type: Opaque
+stringData:
+  access-key-id: "PLACEHOLDER_AWS_ACCESS_KEY_ID"
+  secret-access-key: "PLACEHOLDER_AWS_SECRET_ACCESS_KEY"
+---
+# Slack webhook secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: slack-webhook
+  namespace: backup
+type: Opaque
+stringData:
+  webhook-url: "PLACEHOLDER_SLACK_WEBHOOK_URL"
+---
+# Disaster Recovery Runbook ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-runbook
+  namespace: backup
+data:
+  runbook.md: |
+    # Disaster Recovery Runbook for URL Shortener
+    
+    ## Overview
+    This runbook provides step-by-step instructions for recovering the URL Shortener application in case of a disaster.
+    
+    ## Recovery Time Objectives (RTO)
+    - Database Recovery: 30 minutes
+    - Application Recovery: 15 minutes
+    - Complete System Recovery: 1 hour
+    
+    ## Recovery Point Objectives (RPO)
+    - Database: 24 hours (daily backups)
+    - Application State: 24 hours (daily cluster backups)
+    
+    ## Disaster Scenarios and Recovery Procedures
+    
+    ### 1. Database Failure
+    
+    #### Steps:
+    1. Identify the latest database backup:
+       ```bash
+       aws s3 ls s3://urlshortener-db-backups-production/daily/ --recursive | sort
+       ```
+    
+    2. Download the latest backup:
+       ```bash
+       aws s3 cp s3://urlshortener-db-backups-production/daily/BACKUP_FILE.gz /tmp/
+       ```
+    
+    3. Restore the database:
+       ```bash
+       gunzip /tmp/BACKUP_FILE.gz
+       psql -h POSTGRES_HOST -U postgres -d urlshortener < /tmp/BACKUP_FILE
+       ```
+    
+    ### 2. Complete Cluster Failure
+    
+    #### Steps:
+    1. Create new EKS cluster using Terraform:
+       ```bash
+       cd terraform/environments/production
+       terraform apply
+       ```
+    
+    2. Restore from Velero backup:
+       ```bash
+       velero backup get
+       velero restore create --from-backup BACKUP_NAME
+       ```
+    
+    3. Verify application health:
+       ```bash
+       kubectl get pods -n production
+       curl https://short.ly/health
+       ```
+    
+    ### 3. Redis Cache Failure
+    
+    #### Steps:
+    1. Redis will rebuild cache automatically from database
+    2. If manual restore needed:
+       ```bash
+       aws s3 cp s3://urlshortener-redis-backups-production/daily/LATEST.rdb.gz /tmp/
+       gunzip /tmp/LATEST.rdb.gz
+       # Copy to Redis data directory and restart
+       ```
+    
+    ## Recovery Verification Checklist
+    
+    - [ ] Database is accessible and contains recent data
+    - [ ] Redis cache is operational
+    - [ ] All application pods are running
+    - [ ] Health check endpoints return 200 OK
+    - [ ] URL shortening functionality works
+    - [ ] User authentication works
+    - [ ] Analytics data is available
+    - [ ] Billing system is operational
+    
+    ## Emergency Contacts
+    - On-call Engineer: +1-XXX-XXX-XXXX
+    - DevOps Team Lead: devops-lead@company.com
+    - Database Administrator: dba@company.com
+    - Security Team: security@company.com
+    
+    ## Post-Recovery Actions
+    1. Document the incident in post-mortem
+    2. Review and update backup procedures if needed
+    3. Test disaster recovery procedures
+    4. Update monitoring and alerting based on lessons learned

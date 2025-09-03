@@ -201,6 +201,27 @@ func (r *RedisStorage) FlushDB() error {
 	return r.client.FlushDB(r.ctx).Err()
 }
 
+// Get retrieves a value from Redis by key
+func (r *RedisStorage) Get(key string) (string, error) {
+	val, err := r.client.Get(r.ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return "", ErrCacheKeyNotFound
+		}
+		return "", fmt.Errorf("failed to get key from cache: %w", err)
+	}
+	return val, nil
+}
+
+// Set stores a key-value pair in Redis with TTL
+func (r *RedisStorage) Set(key string, value interface{}, ttl time.Duration) error {
+	err := r.client.Set(r.ctx, key, value, ttl).Err()
+	if err != nil {
+		return fmt.Errorf("failed to set key in cache: %w", err)
+	}
+	return nil
+}
+
 // Custom error for cache key not found
 var ErrCacheKeyNotFound = &CacheError{Message: "cache key not found"}
 

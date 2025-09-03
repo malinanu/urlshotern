@@ -1,11 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(go mod init:*)",
-      "Bash(mkdir:*)",
-      "Bash(git init:*)",
-      "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(go:*)",
+      "Bash(tree:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(docker-compose:*)",
+      "Bash(curl:*)",
+      "Bash(docker exec:*)",
+      "Bash(find:*)",
+      "Bash(sed:*)",
+      "Bash(npx create-next-app:*)"
     ],
     "deny": [],
     "ask": []

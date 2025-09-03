@@ -108,7 +108,7 @@ func TestShortenURL_ValidURL(t *testing.T) {
 		URL: "https://www.example.com",
 	}
 
-	response, err := service.ShortenURL(request, "127.0.0.1")
+	response, err := service.ShortenURL(request, "127.0.0.1", nil)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response.ShortCode)
@@ -139,7 +139,7 @@ func TestShortenURL_InvalidURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := &models.ShortenRequest{URL: tt.url}
-			_, err := service.ShortenURL(request, "127.0.0.1")
+			_, err := service.ShortenURL(request, "127.0.0.1", nil)
 			assert.Error(t, err)
 		})
 	}
@@ -164,7 +164,7 @@ func TestShortenURL_CustomCode(t *testing.T) {
 		CustomCode: "custom123",
 	}
 
-	response, err := service.ShortenURL(request, "127.0.0.1")
+	response, err := service.ShortenURL(request, "127.0.0.1", nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "custom123", response.ShortCode)
@@ -188,7 +188,7 @@ func TestShortenURL_CustomCodeAlreadyExists(t *testing.T) {
 		CustomCode: "existing",
 	}
 
-	_, err := service.ShortenURL(request, "127.0.0.1")
+	_, err := service.ShortenURL(request, "127.0.0.1", nil)
 
 	assert.Error(t, err)
 	assert.Equal(t, services.ErrCustomCodeAlreadyExists, err)
@@ -257,7 +257,7 @@ func TestValidateCustomCode(t *testing.T) {
 				CustomCode: tt.code,
 			}
 
-			_, err := service.ShortenURL(request, "127.0.0.1")
+			_, err := service.ShortenURL(request, "127.0.0.1", nil)
 
 			if tt.shouldErr {
 				assert.Error(t, err)

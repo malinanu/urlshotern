@@ -2,6 +2,7 @@
 Write-Host "Setting up URL Shortener local development environment..." -ForegroundColor Green
 
 # Check if Docker is running
+Write-Host "Checking Docker..." -ForegroundColor Blue
 try {
     docker --version | Out-Null
     Write-Host "✓ Docker is available" -ForegroundColor Green
@@ -10,7 +11,6 @@ try {
     exit 1
 }
 
-# Check if Docker is running
 try {
     docker info | Out-Null
     Write-Host "✓ Docker is running" -ForegroundColor Green
@@ -34,6 +34,7 @@ try {
     Write-Host "✓ Docker services started successfully" -ForegroundColor Green
 } catch {
     Write-Host "❌ Failed to start Docker services" -ForegroundColor Red
+    Write-Host "Error details: $_" -ForegroundColor Red
     exit 1
 }
 
@@ -41,35 +42,28 @@ try {
 Write-Host "Waiting for services to be ready..." -ForegroundColor Blue
 Start-Sleep -Seconds 15
 
-# Check service health
+# Simple health check
 Write-Host "Checking service health..." -ForegroundColor Blue
+$postgresRunning = docker-compose -f docker/docker-compose.local.yml ps -q postgres
+$redisRunning = docker-compose -f docker/docker-compose.local.yml ps -q redis
 
-try {
-    $postgresStatus = docker-compose -f docker/docker-compose.local.yml ps postgres --format json | ConvertFrom-Json
-    if ($postgresStatus.Health -eq "healthy") {
-        Write-Host "✓ PostgreSQL is healthy" -ForegroundColor Green
-    } else {
-        Write-Host "⚠️  PostgreSQL status: $($postgresStatus.Health)" -ForegroundColor Yellow
-    }
-} catch {
-    Write-Host "⚠️  Could not check PostgreSQL health" -ForegroundColor Yellow
+if ($postgresRunning) {
+    Write-Host "✓ PostgreSQL container is running" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  PostgreSQL container may not be running" -ForegroundColor Yellow
 }
 
-try {
-    $redisStatus = docker-compose -f docker/docker-compose.local.yml ps redis --format json | ConvertFrom-Json
-    if ($redisStatus.Health -eq "healthy") {
-        Write-Host "✓ Redis is healthy" -ForegroundColor Green
-    } else {
-        Write-Host "⚠️  Redis status: $($redisStatus.Health)" -ForegroundColor Yellow
-    }
-} catch {
-    Write-Host "⚠️  Could not check Redis health" -ForegroundColor Yellow
+if ($redisRunning) {
+    Write-Host "✓ Redis container is running" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  Redis container may not be running" -ForegroundColor Yellow
 }
 
 # Check if Go is installed
+Write-Host "Checking Go installation..." -ForegroundColor Blue
 try {
-    go version | Out-Null
-    Write-Host "✓ Go is available" -ForegroundColor Green
+    $goVersion = go version
+    Write-Host "✓ Go is available: $goVersion" -ForegroundColor Green
     
     # Install Go dependencies if go.mod exists
     if (Test-Path "go.mod") {
@@ -94,12 +88,12 @@ Write-Host ""
 Write-Host "🚀 To start the server:" -ForegroundColor Cyan
 Write-Host "   go run cmd/server/main.go" -ForegroundColor White
 Write-Host ""
-Write-Host "🧪 To test the API:" -ForegroundColor Cyan
+Write-Host "🧪 To test the API (PowerShell):" -ForegroundColor Cyan
 Write-Host "   # Shorten URL" -ForegroundColor White
-Write-Host "   curl -X POST http://localhost:8080/api/v1/shorten -H 'Content-Type: application/json' -d '{`"url`":`"https://www.google.com`"}'" -ForegroundColor Gray
+Write-Host '   Invoke-RestMethod -Uri "http://localhost:8080/api/v1/shorten" -Method Post -ContentType "application/json" -Body ''{"url":"https://www.google.com"}''' -ForegroundColor Gray
 Write-Host ""
 Write-Host "   # Health check" -ForegroundColor White
-Write-Host "   curl http://localhost:8080/health" -ForegroundColor Gray
+Write-Host '   Invoke-RestMethod -Uri "http://localhost:8080/health"' -ForegroundColor Gray
 Write-Host ""
 Write-Host "📝 Adminer login details:" -ForegroundColor Cyan
 Write-Host "   System: PostgreSQL" -ForegroundColor White
@@ -107,3 +101,6 @@ Write-Host "   Server: postgres" -ForegroundColor White
 Write-Host "   Username: urlshortener" -ForegroundColor White
 Write-Host "   Password: password" -ForegroundColor White
 Write-Host "   Database: urlshortener_db" -ForegroundColor White
+Write-Host ""
+Write-Host "🛑 To stop services:" -ForegroundColor Cyan
+Write-Host "   docker-compose -f docker/docker-compose.local.yml down" -ForegroundColor White

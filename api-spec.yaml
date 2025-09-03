@@ -1,0 +1,810 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener API
+  description: |
+    A high-performance URL shortener service with analytics, authentication, and rate limiting.
+    
+    Features:
+    - URL shortening with optional custom codes
+    - User authentication and authorization
+    - Real-time analytics and reporting
+    - Bulk operations
+    - QR code generation
+    - Rate limiting and security
+    
+    ## Authentication
+    Most endpoints support or require JWT Bearer token authentication.
+    Include your token in the Authorization header:
+    ```
+    Authorization: Bearer YOUR_JWT_TOKEN
+    ```
+    
+    ## Rate Limiting  
+    API requests are rate limited to prevent abuse:
+    - General endpoints: Standard rate limiting
+    - Authentication endpoints: More restrictive limits
+    - OTP endpoints: Most restrictive limits
+    
+    ## Error Handling
+    The API returns standard HTTP status codes and JSON error responses:
+    ```json
+    {
+      "error": "error_type",
+      "message": "Human readable error message"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: URL Shortener API
+    url: http://localhost:8080
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://your-domain.com
+    description: Production server
+
+paths:
+  /api/v1/shorten:
+    post:
+      tags:
+        - URLs
+      summary: Shorten a URL
+      description: Creates a shortened URL with optional custom code and expiration
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://example.com/very-long-url"
+                  description: The URL to shorten
+                custom_code:
+                  type: string
+                  pattern: "^[a-zA-Z0-9_-]+$"
+                  minLength: 3
+                  maxLength: 20
+                  example: "my-link"
+                  description: Optional custom short code
+                expires_at:
+                  type: string
+                  format: date-time
+                  example: "2024-12-31T23:59:59Z"
+                  description: Optional expiration date (ISO 8601 format)
+      responses:
+        '201':
+          description: URL shortened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortenResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Custom code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{shortCode}:
+    get:
+      tags:
+        - URLs
+      summary: Redirect to original URL
+      description: Redirects to the original URL and records analytics data
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "abc123"
+          description: The short code to redirect
+      responses:
+        '301':
+          description: Permanent redirect to original URL
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: The original URL
+        '404':
+          description: Short code not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: URL expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/batch-shorten:
+    post:
+      tags:
+        - URLs
+      summary: Shorten multiple URLs
+      description: Creates multiple shortened URLs in a single request (max 100)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              maxItems: 100
+              items:
+                type: object
+                required:
+                  - url
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    example: "https://example.com/url1"
+                  custom_code:
+                    type: string
+                    pattern: "^[a-zA-Z0-9_-]+$"
+                    example: "link1"
+      responses:
+        '200':
+          description: Batch processing completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  successful:
+                    type: integer
+                    example: 8
+                  failed:
+                    type: integer
+                    example: 2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShortenResponse'
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/my-urls:
+    get:
+      tags:
+        - URLs
+      summary: Get user's URLs
+      description: Retrieve paginated list of user's shortened URLs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+      responses:
+        '200':
+          description: User URLs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  urls:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserURL'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total_pages:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/my-urls/{shortCode}:
+    put:
+      tags:
+        - URLs
+      summary: Update a URL
+      description: Update URL properties like title, description, and privacy settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                  example: "My Important Link"
+                description:
+                  type: string
+                  maxLength: 1000
+                  example: "This link contains important information"
+                is_public:
+                  type: boolean
+                  example: true
+                  description: Whether analytics are public
+      responses:
+        '200':
+          description: URL updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserURL'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Not authorized to update this URL
+        '404':
+          description: URL not found
+    delete:
+      tags:
+        - URLs
+      summary: Delete a URL
+      description: Permanently delete a shortened URL
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "URL deleted successfully"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Not authorized to delete this URL
+        '404':
+          description: URL not found
+
+  /api/v1/analytics/{shortCode}:
+    get:
+      tags:
+        - Analytics
+      summary: Get URL analytics
+      description: Retrieve detailed analytics data for a shortened URL
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+          description: Number of days to retrieve analytics for
+      responses:
+        '200':
+          description: Analytics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+        '404':
+          description: URL not found or not accessible
+
+  /api/v1/analytics/{shortCode}/trends:
+    get:
+      tags:
+        - Analytics
+      summary: Get click trends
+      description: Retrieve click trends over time periods
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+          description: Time period for trends
+      responses:
+        '200':
+          description: Click trends retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  short_code:
+                    type: string
+                  period:
+                    type: string
+                  trends:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClickTrend'
+
+  /api/v1/dashboard/stats:
+    get:
+      tags:
+        - Analytics
+      summary: Get user dashboard statistics
+      description: Retrieve user-specific dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDashboardStats'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+                - phone
+                - terms_accepted
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                  example: "John Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "securepassword123"
+                phone:
+                  type: string
+                  pattern: "^\\+?[1-9]\\d{1,14}$"
+                  example: "+1234567890"
+                terms_accepted:
+                  type: boolean
+                  example: true
+                marketing_consent:
+                  type: boolean
+                  example: false
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid registration data
+        '409':
+          description: Email already registered
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and return JWT tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  example: "securepassword123"
+                remember_me:
+                  type: boolean
+                  default: false
+                  example: false
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: Refresh an expired JWT token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid refresh token
+
+  /api/v1/auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get user profile
+      description: Retrieve current user's profile information
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Check service health status
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  service:
+                    type: string
+                    example: "url-shortener"
+                  timestamp:
+                    type: object
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "validation_error"
+        message:
+          type: string
+          example: "Invalid input data"
+        code:
+          type: integer
+          example: 400
+
+    ShortenResponse:
+      type: object
+      properties:
+        short_code:
+          type: string
+          example: "abc123"
+        short_url:
+          type: string
+          example: "http://localhost:8080/abc123"
+        original_url:
+          type: string
+          example: "https://example.com/very-long-url"
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-01T12:00:00Z"
+
+    UserURL:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        short_code:
+          type: string
+          example: "abc123"
+        short_url:
+          type: string
+          example: "http://localhost:8080/abc123"
+        original_url:
+          type: string
+          example: "https://example.com/very-long-url"
+        title:
+          type: string
+          nullable: true
+          example: "My Important Link"
+        description:
+          type: string
+          nullable: true
+          example: "This is an important link"
+        click_count:
+          type: integer
+          example: 42
+        is_active:
+          type: boolean
+          example: true
+        is_public:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-01T12:00:00Z"
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        short_code:
+          type: string
+          example: "abc123"
+        original_url:
+          type: string
+          example: "https://example.com/very-long-url"
+        total_clicks:
+          type: integer
+          example: 1250
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+        last_click_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2023-01-15T14:30:00Z"
+        daily_clicks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyClick'
+        country_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountryStat'
+
+    DailyClick:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2023-01-15"
+        clicks:
+          type: integer
+          example: 45
+
+    CountryStat:
+      type: object
+      properties:
+        country_code:
+          type: string
+          example: "US"
+        clicks:
+          type: integer
+          example: 350
+
+    ClickTrend:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2023-01-15"
+        clicks:
+          type: integer
+          example: 45
+
+    UserDashboardStats:
+      type: object
+      properties:
+        total_urls:
+          type: integer
+          example: 25
+        total_clicks:
+          type: integer
+          example: 1250
+        active_urls:
+          type: integer
+          example: 23
+        today_clicks:
+          type: integer
+          example: 45
+        month_clicks:
+          type: integer
+          example: 450
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          example: "john@example.com"
+        phone:
+          type: string
+          example: "+1234567890"
+        phone_verified:
+          type: boolean
+          example: true
+        email_verified:
+          type: boolean
+          example: true
+        provider:
+          type: string
+          example: "email"
+        avatar_url:
+          type: string
+          nullable: true
+          example: "https://example.com/avatar.jpg"
+        account_type:
+          type: string
+          example: "free"
+        is_active:
+          type: boolean
+          example: true
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2023-01-15T14:30:00Z"
+        created_at:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:00:00Z"
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        access_token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refresh_token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expires_in:
+          type: integer
+          example: 3600
+          description: Token expiration time in seconds
+
+tags:
+  - name: URLs
+    description: URL shortening and management operations
+  - name: Analytics
+    description: Analytics and reporting endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: System
+    description: System health and status endpoints

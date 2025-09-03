@@ -1,0 +1,541 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+  labels:
+    name: security
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# Pod Security Policy (for clusters that still support it)
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: restricted-psp
+  namespace: security
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: true
+  seccompProfile:
+    type: RuntimeDefault
+---
+# Network Policies
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-default
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: urlshortener-api-network-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: urlshortener-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow ingress from monitoring
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Allow egress to PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow egress to Redis
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow HTTPS outbound (for external APIs)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow HTTP outbound (for webhooks, etc.)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-network-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Only allow from API pods
+  - from:
+    - podSelector:
+        matchLabels:
+          app: urlshortener-api
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow from monitoring (postgres exporter)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 5432
+  egress:
+  # Allow DNS only
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-network-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Only allow from API pods
+  - from:
+    - podSelector:
+        matchLabels:
+          app: urlshortener-api
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow from monitoring (redis exporter)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9121
+  egress:
+  # Allow DNS only
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+# RBAC for service accounts
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: production
+  name: urlshortener-api-role
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: urlshortener-api-rolebinding
+  namespace: production
+subjects:
+- kind: ServiceAccount
+  name: urlshortener-api-sa
+  namespace: production
+roleRef:
+  kind: Role
+  name: urlshortener-api-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: urlshortener-api-sa
+  namespace: production
+automountServiceAccountToken: true
+---
+# Security Context Constraints for OpenShift (if applicable)
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: urlshortener-scc
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: false
+allowPrivilegedContainer: false
+allowedCapabilities: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups: []
+priority: null
+readOnlyRootFilesystem: true
+requiredDropCapabilities:
+- ALL
+runAsUser:
+  type: MustRunAsNonRoot
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+users: []
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+---
+# OPA Gatekeeper Policies
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredsecuritycontext
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredSecurityContext
+      validation:
+        type: object
+        properties:
+          runAsNonRoot:
+            type: boolean
+          runAsUser:
+            type: integer
+          fsGroup:
+            type: integer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredsecuritycontext
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.runAsNonRoot
+          msg := "Container must run as non-root user"
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.readOnlyRootFilesystem
+          msg := "Container must have read-only root filesystem"
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.allowPrivilegeEscalation
+          msg := "Container must not allow privilege escalation"
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          "ALL" != container.securityContext.capabilities.drop[_]
+          msg := "Container must drop all capabilities"
+        }
+---
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: K8sRequiredSecurityContext
+metadata:
+  name: must-have-security-context
+spec:
+  match:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+      namespaces: ["production", "green"]
+  parameters:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+---
+# Image Security Policy
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredimages
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredImages
+      validation:
+        type: object
+        properties:
+          allowedRegistries:
+            type: array
+            items:
+              type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredimages
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not starts_with(container.image, input.parameters.allowedRegistries[_])
+          msg := sprintf("Container image '%s' not from allowed registry", [container.image])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          endswith(container.image, ":latest")
+          msg := "Container image must not use 'latest' tag"
+        }
+---
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: K8sRequiredImages
+metadata:
+  name: must-use-approved-images
+spec:
+  match:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+      namespaces: ["production", "green"]
+  parameters:
+    allowedRegistries:
+      - "ghcr.io/yourusername/"
+      - "postgres:"
+      - "redis:"
+      - "prom/"
+      - "grafana/"
+---
+# Resource Limits Policy
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredresources
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredResources
+      validation:
+        type: object
+        properties:
+          limits:
+            type: object
+            properties:
+              memory:
+                type: string
+              cpu:
+                type: string
+          requests:
+            type: object
+            properties:
+              memory:
+                type: string
+              cpu:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredresources
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.resources.limits
+          msg := "Container must have resource limits"
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.resources.requests
+          msg := "Container must have resource requests"
+        }
+---
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: K8sRequiredResources
+metadata:
+  name: must-have-resources
+spec:
+  match:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+      namespaces: ["production", "green"]
+---
+# Falco Rules for Runtime Security
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules
+  namespace: security
+data:
+  custom_rules.yaml: |
+    # Custom rules for URL Shortener
+    - rule: Suspicious Network Activity
+      desc: Detect suspicious network activity in URL Shortener pods
+      condition: >
+        spawned_process and
+        k8s.pod.label.app="urlshortener-api" and
+        ((proc.name in (nc, ncat, netcat)) or
+         (proc.name=wget and proc.args contains "-O-") or
+         (proc.name=curl and proc.args contains "-s"))
+      output: >
+        Suspicious network activity in URL Shortener
+        (user=%user.name command=%proc.cmdline pod=%k8s.pod.name)
+      priority: WARNING
+    
+    - rule: Unexpected File Write in Container
+      desc: Detect unexpected file writes in read-only containers
+      condition: >
+        open_write and
+        container and
+        k8s.pod.label.app="urlshortener-api" and
+        not fd.name startswith "/tmp" and
+        not fd.name startswith "/var/tmp" and
+        not fd.name startswith "/proc/self/fd"
+      output: >
+        Unexpected file write in read-only container
+        (user=%user.name command=%proc.cmdline file=%fd.name pod=%k8s.pod.name)
+      priority: ERROR
+    
+    - rule: Cryptocurrency Mining Activity
+      desc: Detect potential cryptocurrency mining
+      condition: >
+        spawned_process and
+        k8s.pod.label.app="urlshortener-api" and
+        (proc.name in (xmrig, cpuminer, ccminer, cgminer))
+      output: >
+        Potential cryptocurrency mining detected
+        (user=%user.name command=%proc.cmdline pod=%k8s.pod.name)
+      priority: CRITICAL
+---
+# External Secrets Operator for secret management
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: aws-secrets-store
+  namespace: production
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: us-east-1
+      auth:
+        secretRef:
+          accessKeyID:
+            name: aws-secret
+            key: access-key-id
+          secretAccessKey:
+            name: aws-secret
+            key: secret-access-key
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: urlshortener-external-secrets
+  namespace: production
+spec:
+  secretStoreRef:
+    name: aws-secrets-store
+    kind: SecretStore
+  target:
+    name: urlshortener-secrets
+    creationPolicy: Owner
+  data:
+  - secretKey: DATABASE_PASSWORD
+    remoteRef:
+      key: urlshortener/prod
+      property: database_password
+  - secretKey: REDIS_PASSWORD
+    remoteRef:
+      key: urlshortener/prod
+      property: redis_password
+  - secretKey: JWT_SECRET
+    remoteRef:
+      key: urlshortener/prod
+      property: jwt_secret
+  - secretKey: STRIPE_SECRET_KEY
+    remoteRef:
+      key: urlshortener/prod
+      property: stripe_secret_key

@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: gp3
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: production
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "urlshortener"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: urlshortener-secrets
+              key: DATABASE_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: urlshortener-secrets
+              key: DATABASE_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        - name: postgres-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: postgres-config
+        configMap:
+          name: postgres-config
+      - name: postgres-init
+        configMap:
+          name: postgres-init-scripts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: production
+  labels:
+    app: postgres
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: production
+data:
+  postgresql.conf: |
+    # PostgreSQL configuration for production
+    listen_addresses = '*'
+    max_connections = 200
+    shared_buffers = 512MB
+    effective_cache_size = 1536MB
+    maintenance_work_mem = 128MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+    default_statistics_target = 100
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    work_mem = 2621kB
+    min_wal_size = 1GB
+    max_wal_size = 4GB
+    max_worker_processes = 8
+    max_parallel_workers_per_gather = 4
+    max_parallel_workers = 8
+    max_parallel_maintenance_workers = 4
+    
+    # Logging
+    log_destination = 'stderr'
+    log_statement = 'mod'
+    log_min_duration_statement = 1000
+    log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+    
+    # Security
+    ssl = off
+    
+    # Performance monitoring
+    shared_preload_libraries = 'pg_stat_statements'
+    pg_stat_statements.max = 10000
+    pg_stat_statements.track = all
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: production
+data:
+  01-extensions.sql: |
+    -- Enable required extensions
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+    
+    -- Snowflake ID generation function (simplified version)
+    CREATE OR REPLACE FUNCTION generate_snowflake_id()
+    RETURNS BIGINT AS $$
+    DECLARE
+        epoch_offset BIGINT := 1609459200000; -- Jan 1, 2021 00:00:00 UTC in milliseconds
+        seq_bits INTEGER := 12;
+        machine_bits INTEGER := 10;
+        time_shift INTEGER := seq_bits + machine_bits;
+        machine_id INTEGER := 1;
+        sequence_mask BIGINT := (1 << seq_bits) - 1;
+        
+        current_time BIGINT;
+        sequence BIGINT;
+        result BIGINT;
+    BEGIN
+        current_time := (EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::BIGINT - epoch_offset;
+        sequence := nextval('snowflake_sequence') & sequence_mask;
+        
+        result := (current_time << time_shift) | (machine_id << seq_bits) | sequence;
+        
+        RETURN result;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    -- Create sequence for Snowflake IDs
+    CREATE SEQUENCE IF NOT EXISTS snowflake_sequence;
+  
+  02-monitoring.sql: |
+    -- Create monitoring user for metrics collection
+    CREATE USER IF NOT EXISTS postgres_exporter WITH PASSWORD 'exporter_password';
+    GRANT CONNECT ON DATABASE urlshortener TO postgres_exporter;
+    GRANT pg_monitor TO postgres_exporter;
