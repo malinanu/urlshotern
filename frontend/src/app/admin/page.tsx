@@ -17,7 +17,11 @@ import {
   ShieldCheckIcon,
   ServerIcon,
   ClockIcon,
+  DocumentTextIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline';
+import CMSManager from '@/components/cms/CMSManager';
+import APIKeyManager from '@/components/api-keys/APIKeyManager';
 
 interface SystemStats {
   total_users: number;
@@ -222,6 +226,8 @@ export default function AdminPage() {
   const tabs = [
     { id: 'overview', name: 'Overview', icon: ChartBarIcon },
     { id: 'users', name: 'Users', icon: UserGroupIcon },
+    { id: 'cms', name: 'Content', icon: DocumentTextIcon },
+    { id: 'api-keys', name: 'API Keys', icon: KeyIcon },
     { id: 'activity', name: 'Activity', icon: ClockIcon },
     { id: 'system', name: 'System', icon: ServerIcon },
   ];
@@ -501,6 +507,14 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === 'cms' && (
+            <CMSManager />
+          )}
+
+          {activeTab === 'api-keys' && (
+            <APIKeyManager />
           )}
 
           {activeTab === 'system' && (
