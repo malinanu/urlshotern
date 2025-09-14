@@ -72,3 +72,138 @@ coverage.html
 /url-shortener
 /bin/
 /dist/
+
+# Frontend build and dependencies
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Next.js
+.next/
+out/
+
+# Testing
+/coverage/
+/.nyc_output/
+test-results/
+playwright-report/
+coverage.html
+*.lcov
+__tests__/
+
+# Screenshots and images (development)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Temporary and test files
+dummy
+nul
+*.temp
+*.tmp
+*.pid
+test-*.js
+test-*.py
+test-*.go
+
+# Disabled/backup files
+*.disabled*
+*.go.disabled
+*.go.disabled2
+*.backup
+*.bak
+
+# MCP and Playwright
+.mcp.json
+.playwright-mcp/
+playwright.config.js
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environment variables
+.env.*
+!.env.example
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache/
+.parcel-cache/
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
