@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -20,8 +19,8 @@ type AuthService struct {
 	jwtService   *JWTService
 	smsService   *SMSService
 	emailService *EmailService
-	db           storage.PostgresStorageInterface
-	redis        storage.RedisStorageInterface
+	db           *storage.PostgresStorage
+	redis        *storage.RedisStorage
 	config       *configs.Config
 	googleConfig *oauth2.Config
 }
@@ -32,8 +31,8 @@ func NewAuthService(
 	jwtService *JWTService,
 	smsService *SMSService,
 	emailService *EmailService,
-	db storage.PostgresStorageInterface,
-	redis storage.RedisStorageInterface,
+	db *storage.PostgresStorage,
+	redis *storage.RedisStorage,
 	config *configs.Config,
 ) *AuthService {
 	
@@ -81,7 +80,7 @@ func (a *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 	}
 
 	// Log registration event
-	a.logAuditEvent(registrationData.User.ID, "user_registered", "user", fmt.Sprintf("%d", registrationData.User.ID), 
+	a.logAuditEvent(&registrationData.User.ID, "user_registered", "user", fmt.Sprintf("%d", registrationData.User.ID), 
 		map[string]interface{}{
 			"email": registrationData.User.Email,
 			"provider": "email",

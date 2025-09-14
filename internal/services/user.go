@@ -2,7 +2,6 @@ package services
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -27,13 +26,12 @@ var (
 	ErrInvalidOTP         = errors.New("invalid or expired OTP")
 	ErrOTPExpired         = errors.New("OTP has expired")
 	ErrTooManyOTPAttempts = errors.New("too many OTP attempts")
-	ErrInvalidToken       = errors.New("invalid or expired token")
 	ErrTokenUsed          = errors.New("token already used")
 )
 
 type UserService struct {
-	db          storage.PostgresStorageInterface
-	redis       storage.RedisStorageInterface
+	db          *storage.PostgresStorage
+	redis       *storage.RedisStorage
 	jwtService  *JWTService
 	smsService  *SMSService
 	emailService *EmailService
@@ -55,7 +53,7 @@ type UserRegistrationData struct {
 	TempPassword    string // For OAuth users
 }
 
-func NewUserService(db storage.PostgresStorageInterface, redis storage.RedisStorageInterface, 
+func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage, 
 	jwtService *JWTService, smsService *SMSService, emailService *EmailService, config *Config) *UserService {
 	
 	if config == nil {
@@ -101,14 +99,17 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 	}
 
 	// Generate Snowflake ID
-	userID := utils.GenerateSnowflakeID()
+	userID, err := utils.GenerateSnowflakeID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate user ID: %w", err)
+	}
 
 	// Create user
 	user := &models.User{
 		ID:              userID,
 		Name:            req.Name,
 		Email:           req.Email,
-		PasswordHash:    stringPtr(string(hashedPassword)),
+		PasswordHash:    utils.StringPtr(string(hashedPassword)),
 		Phone:           &req.Phone,
 		PhoneVerified:   false,
 		EmailVerified:   false,
@@ -188,7 +189,7 @@ func (u *UserService) AuthenticateUser(req *models.LoginRequest) (*models.User, 
 	}
 
 	// Update last login time
-	user.LastLoginAt = timePtr(time.Now())
+	user.LastLoginAt = utils.TimePtr(time.Now())
 	err = u.db.UpdateUserLastLogin(user.ID, time.Now())
 	if err != nil {
 		// Log but don't fail authentication
@@ -246,7 +247,7 @@ func (u *UserService) IsSessionValid(userID int64, sessionID string) (bool, erro
 		return false, err
 	}
 
-	session, err := u.db.GetSessionByID(sessionUUID)
+	session, err := u.db.GetSessionByID(sessionUUID.String())
 	if err != nil {
 		return false, err
 	}
@@ -301,7 +302,7 @@ func (u *UserService) VerifyEmail(token string) (*models.User, error) {
 	// Mark email as verified
 	now := time.Now()
 	verification.VerifiedAt = &now
-	err = u.db.UpdateEmailVerification(verification)
+	err = u.db.UpdateEmailVerification(verification.ID.String(), now)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +352,7 @@ func (u *UserService) GenerateAndSendOTP(userID int64) error {
 
 	// Send SMS
 	if u.smsService != nil {
-		err = u.smsService.SendOTP(*user.Phone, otp)
+		_, err = u.smsService.SendOTP(userID, *user.Phone)
 		if err != nil {
 			fmt.Printf("Failed to send SMS: %v\n", err)
 			// Don't fail the entire process if SMS fails
@@ -387,14 +388,14 @@ func (u *UserService) VerifyOTP(userID int64, otpCode string) error {
 	if verification.OTPCode != otpCode {
 		// Increment attempts
 		verification.Attempts++
-		u.db.UpdatePhoneVerificationAttempts(verification.ID, verification.Attempts)
+		u.db.UpdatePhoneVerificationAttempts(userID, verification.Attempts)
 		return ErrInvalidOTP
 	}
 
 	// Mark as verified
 	now := time.Now()
 	verification.VerifiedAt = &now
-	err = u.db.UpdatePhoneVerification(verification)
+	err = u.db.UpdatePhoneVerification(verification.ID.String(), now)
 	if err != nil {
 		return err
 	}
@@ -464,7 +465,7 @@ func (u *UserService) ResetPassword(token, newPassword string) error {
 	// Mark token as used
 	now := time.Now()
 	passwordReset.UsedAt = &now
-	err = u.db.UpdatePasswordReset(passwordReset)
+	err = u.db.UpdatePasswordReset(passwordReset.ID.String(), now)
 	if err != nil {
 		return err
 	}
@@ -523,8 +524,20 @@ func (u *UserService) UpdateProfile(userID int64, req *models.UpdateProfileReque
 	}
 
 	if len(updateData) > 0 {
-		updateData["updated_at"] = time.Now()
-		err = u.db.UpdateUser(userID, updateData)
+		// Update the user object with the new data
+		if name, ok := updateData["name"]; ok {
+			user.Name = name.(string)
+		}
+		if phone, ok := updateData["phone"]; ok {
+			phoneStr := phone.(string)
+			user.Phone = &phoneStr
+		}
+		if phoneVerified, ok := updateData["phone_verified"]; ok {
+			user.PhoneVerified = phoneVerified.(bool)
+		}
+		user.UpdatedAt = time.Now()
+		
+		err = u.db.UpdateUser(user)
 		if err != nil {
 			return nil, err
 		}
@@ -576,10 +589,3 @@ func (u *UserService) generateOTP() string {
 	return fmt.Sprintf("%06d", otp%1000000)
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
-
-func timePtr(t time.Time) *time.Time {
-	return &t
-}

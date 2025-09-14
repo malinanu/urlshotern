@@ -163,10 +163,19 @@ export default function BulkURLShortener() {
       }
 
       const result = await response.json();
-      setResults(result);
+      
+      // Ensure result has expected properties
+      const validatedResult: BulkResult = {
+        successful: result.successful || 0,
+        failed: result.failed || 0,
+        results: Array.isArray(result.results) ? result.results : [],
+        errors: Array.isArray(result.errors) ? result.errors : []
+      };
+      
+      setResults(validatedResult);
       
       // Clear the form if all URLs were successful
-      if (result.failed === 0) {
+      if (validatedResult.failed === 0) {
         setUrls([{ id: '1', url: '', customCode: '' }]);
       }
       
@@ -182,7 +191,7 @@ export default function BulkURLShortener() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Bulk URL Shortener</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Bulk Trunc</h2>
             <p className="text-gray-600 mt-1">Create multiple short URLs at once</p>
           </div>
           
@@ -349,7 +358,7 @@ export default function BulkURLShortener() {
             </div>
 
             {/* Successful Results */}
-            {results.results.length > 0 && (
+            {results.results && results.results.length > 0 && (
               <div className="mb-6">
                 <h4 className="font-medium text-gray-900 mb-3">Successfully Created URLs</h4>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -377,7 +386,7 @@ export default function BulkURLShortener() {
             )}
 
             {/* Errors */}
-            {results.errors.length > 0 && (
+            {results?.errors && results.errors.length > 0 && (
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">Errors</h4>
                 <div className="space-y-2 max-h-32 overflow-y-auto">

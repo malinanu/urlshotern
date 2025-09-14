@@ -196,10 +196,6 @@ func (a *AuthMiddleware) RequirePremium() gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
 				Error:   "premium_required",
 				Message: "Premium subscription required",
-				Details: map[string]interface{}{
-					"current_plan": u.AccountType,
-					"required_plan": "premium",
-				},
 			})
 			c.Abort()
 			return
@@ -373,22 +369,6 @@ func IsAdmin(c *gin.Context) bool {
 	return false
 }
 
-// CORS middleware for authentication endpoints
-func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
-}
 
 // SecurityHeaders adds security headers to all responses
 func SecurityHeaders() gin.HandlerFunc {
@@ -458,9 +438,6 @@ func (a *AuthMiddleware) RequirePermission(permission string) gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
 				Error:   "permission_denied",
 				Message: fmt.Sprintf("Required permission: %s", permission),
-				Details: map[string]interface{}{
-					"required_permission": permission,
-				},
 			})
 			c.Abort()
 			return
@@ -497,9 +474,6 @@ func (a *AuthMiddleware) RequireAnyPermission(permissions ...string) gin.Handler
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
 				Error:   "permission_denied",
 				Message: "You don't have any of the required permissions",
-				Details: map[string]interface{}{
-					"required_permissions": permissions,
-				},
 			})
 			c.Abort()
 			return
@@ -536,9 +510,6 @@ func (a *AuthMiddleware) RequireRole(roleName string) gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
 				Error:   "role_required",
 				Message: fmt.Sprintf("Required role: %s", roleName),
-				Details: map[string]interface{}{
-					"required_role": roleName,
-				},
 			})
 			c.Abort()
 			return
@@ -575,9 +546,6 @@ func (a *AuthMiddleware) RequireAnyRole(roles ...string) gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
 				Error:   "role_required",
 				Message: "You don't have any of the required roles",
-				Details: map[string]interface{}{
-					"required_roles": roles,
-				},
 			})
 			c.Abort()
 			return

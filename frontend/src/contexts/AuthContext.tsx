@@ -49,6 +49,29 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+// Helper function to check if error is a network error
+const isNetworkError = (error: any): boolean => {
+  return (
+    error instanceof TypeError && 
+    (error.message === 'Failed to fetch' || 
+     error.message === 'Network request failed' ||
+     error.message.includes('fetch'))
+  );
+};
+
+// Helper function to check backend availability
+const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,30 +90,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const parsedUser = JSON.parse(userData);
           setUser(parsedUser);
           
+          // Check backend availability first in development
+          const isDevelopment = process.env.NODE_ENV === 'development';
+          if (isDevelopment) {
+            const backendAvailable = await checkBackendHealth();
+            if (!backendAvailable) {
+              console.warn('Backend server not available. Continuing with cached auth state.');
+              setIsLoading(false);
+              return;
+            }
+          }
+          
           // If token is expired, try to refresh it
           if (isTokenExpired(token)) {
             try {
               await refreshToken();
             } catch (error) {
               console.error('Failed to refresh expired token on init:', error);
-              logout();
+              // Don't logout on network errors during init
+              if (!isNetworkError(error)) {
+                logout();
+              }
             }
           } else {
             // Verify token is still valid by calling profile endpoint
-            const response = await fetch(`${API_BASE_URL}/api/v1/auth/profile`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            if (!response.ok) {
-              // Token is invalid, clear auth state
-              logout();
+            try {
+              const response = await fetch(`${API_BASE_URL}/api/v1/auth/profile`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                signal: AbortSignal.timeout(5000), // 5 second timeout
+              });
+              
+              if (!response.ok) {
+                // Token is invalid, clear auth state
+                logout();
+              }
+            } catch (error) {
+              console.error('Error verifying auth state:', error);
+              // Don't logout on network errors during profile verification
+              if (!isNetworkError(error)) {
+                logout();
+              }
             }
           }
         } catch (error) {
-          console.error('Error verifying auth state:', error);
+          console.error('Error parsing auth state:', error);
+          // Clear invalid stored data
           logout();
         }
       }
@@ -133,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
           remember_me: rememberMe,
         }),
+        signal: AbortSignal.timeout(15000), // 15 second timeout for login
       });
 
       const data = await response.json();
@@ -151,6 +199,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return data;
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Provide better error messages for network issues
+      if (isNetworkError(error)) {
+        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+      }
+      
       throw error;
     }
   };
@@ -163,9 +217,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(15000), // 15 second timeout for register
       });
 
-      const result = await response.json();
+      // Check if response has content before parsing JSON
+      let result;
+      const text = await response.text();
+      try {
+        result = text ? JSON.parse(text) : {};
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', text);
+        throw new Error('Invalid server response');
+      }
 
       if (!response.ok) {
         throw new Error(result.error || 'Registration failed');
@@ -183,6 +246,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return result;
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Provide better error messages for network issues
+      if (isNetworkError(error)) {
+        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+      }
+      
       throw error;
     }
   };
@@ -208,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshToken = async () => {
+  const refreshToken = async (retryCount = 0) => {
     // Prevent multiple simultaneous refresh attempts
     if (isRefreshing) {
       // Wait for ongoing refresh to complete
@@ -238,6 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           refresh_token: refreshTokenValue,
         }),
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
       const data = await response.json();
@@ -254,6 +324,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
     } catch (error) {
       console.error('Token refresh error:', error);
+      
+      // Handle network errors with retry logic
+      if (isNetworkError(error) && retryCount < 3) {
+        console.log(`Network error detected, retrying in ${Math.pow(2, retryCount)} seconds... (attempt ${retryCount + 1}/3)`);
+        
+        // Exponential backoff: 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        
+        setIsRefreshing(false);
+        return refreshToken(retryCount + 1);
+      }
+      
+      // For network errors that exceed retry limit, don't logout
+      // This allows the app to continue working offline
+      if (isNetworkError(error)) {
+        console.warn('Backend unavailable, continuing without token refresh');
+        // Don't logout, just log the issue
+        return;
+      }
+      
+      // For auth errors (invalid token, etc.), logout as usual
       logout();
       throw error;
     } finally {

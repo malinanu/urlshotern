@@ -1,6 +1,6 @@
 {
-  "name": "URL Shortener Pro",
-  "short_name": "URLShort",
+  "name": "Trunc",
+  "short_name": "Trunc",
   "description": "Professional URL shortener with analytics and custom domains",
   "start_url": "/",
   "display": "standalone",

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -10,12 +9,12 @@ import (
 )
 
 type RBACService struct {
-	db    storage.PostgresStorageInterface
-	redis storage.RedisStorageInterface
+	db    *storage.PostgresStorage
+	redis *storage.RedisStorage
 }
 
 // NewRBACService creates a new RBAC service
-func NewRBACService(db storage.PostgresStorageInterface, redis storage.RedisStorageInterface) *RBACService {
+func NewRBACService(db *storage.PostgresStorage, redis *storage.RedisStorage) *RBACService {
 	return &RBACService{
 		db:    db,
 		redis: redis,

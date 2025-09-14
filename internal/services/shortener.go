@@ -186,8 +186,8 @@ func (s *ShortenerService) GetURLByShortCode(shortCode string) (*models.URL, err
 		ID:          1,
 		ShortCode:   shortCode,
 		OriginalURL: "https://example.com/original-url",
-		Title:       stringPtr("Example Website"),
-		Description: stringPtr("An example website for demonstration"),
+		Title:       utils.StringPtr("Example Website"),
+		Description: utils.StringPtr("An example website for demonstration"),
 		CreatedBy:   &userID,
 		ClickCount:  25,
 		IsActive:    true,
@@ -233,10 +233,6 @@ func (s *ShortenerService) DeleteURL(shortCode string) error {
 	return nil
 }
 
-// Helper function to create string pointers
-func stringPtr(s string) *string {
-	return &s
-}
 
 // RecordClick records a click event for analytics
 func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string) error {

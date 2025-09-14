@@ -7,9 +7,9 @@ export default function PricingPage() {
       name: 'Free',
       price: '$0',
       period: '/month',
-      description: 'Perfect for personal use and testing',
+      description: 'Perfect for getting started',
       features: [
-        { name: '1,000 links per month', included: true },
+        { name: '10 short links', included: true },
         { name: 'Basic analytics', included: true },
         { name: 'Standard support', included: true },
         { name: 'Link expiration', included: true },
@@ -26,45 +26,45 @@ export default function PricingPage() {
     },
     {
       name: 'Pro',
-      price: '$9.99',
+      price: '$5',
       period: '/month',
-      description: 'Ideal for professionals and small teams',
+      description: 'For growing businesses',
       features: [
-        { name: '50,000 links per month', included: true },
+        { name: '1,000 short links', included: true },
         { name: 'Advanced analytics', included: true },
         { name: 'Priority support', included: true },
         { name: 'Link expiration', included: true },
         { name: 'QR codes', included: true },
         { name: 'Custom short codes', included: true },
+        { name: 'Custom domains', included: true },
         { name: 'Team collaboration (5 users)', included: true },
-        { name: 'API access (10k requests/month)', included: true },
-        { name: 'Password protection', included: true },
-        { name: 'White-label solution', included: false }
+        { name: 'API access', included: true },
+        { name: 'Password protection', included: true }
       ],
-      cta: 'Start Pro Trial',
+      cta: 'Start Pro Plan',
       popular: true,
       ctaLink: '/register'
     },
     {
-      name: 'Enterprise',
-      price: '$49.99',
+      name: 'Ultra',
+      price: '$29.99',
       period: '/month',
-      description: 'For large teams and organizations',
+      description: 'For enterprises & power users',
       features: [
-        { name: 'Unlimited links', included: true },
-        { name: 'Advanced analytics & reporting', included: true },
+        { name: 'Unlimited short links', included: true },
+        { name: 'Advanced analytics', included: true },
         { name: '24/7 premium support', included: true },
         { name: 'Link expiration', included: true },
         { name: 'QR codes', included: true },
         { name: 'Custom short codes', included: true },
+        { name: 'Custom domains', included: true },
         { name: 'Unlimited team members', included: true },
         { name: 'Unlimited API access', included: true },
-        { name: 'Password protection', included: true },
-        { name: 'White-label solution', included: true }
+        { name: 'Password protection', included: true }
       ],
-      cta: 'Contact Sales',
+      cta: 'Choose Ultra',
       popular: false,
-      ctaLink: '/contact'
+      ctaLink: '/register'
     }
   ];
 
@@ -199,14 +199,14 @@ export default function PricingPage() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-black">Feature</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-black">Free</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-black">Pro</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-black">Enterprise</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-black">Ultra</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   <tr>
-                    <td className="px-6 py-4 text-sm text-black">Monthly Links</td>
+                    <td className="px-6 py-4 text-sm text-black">Short Links</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">10</td>
                     <td className="px-6 py-4 text-center text-sm text-gray-600">1,000</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">50,000</td>
                     <td className="px-6 py-4 text-center text-sm text-gray-600">Unlimited</td>
                   </tr>
                   <tr className="bg-gray-50">
@@ -216,16 +216,16 @@ export default function PricingPage() {
                     <td className="px-6 py-4 text-center text-sm text-gray-600">Unlimited</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-sm text-black">API Requests/Month</td>
+                    <td className="px-6 py-4 text-sm text-black">API Access</td>
                     <td className="px-6 py-4 text-center text-sm text-gray-600">-</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">10,000</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">✓</td>
                     <td className="px-6 py-4 text-center text-sm text-gray-600">Unlimited</td>
                   </tr>
                   <tr className="bg-gray-50">
                     <td className="px-6 py-4 text-sm text-black">Support</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Community</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Priority Email</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">24/7 Phone + Email</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">Standard</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">Priority</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600">24/7 Premium</td>
                   </tr>
                 </tbody>
               </table>
@@ -268,7 +268,7 @@ export default function PricingPage() {
             Ready to Get Started?
           </h2>
           <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of users who trust URLShorter for their link management needs.
+            Join thousands of users who trust Trunc for their link management needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a

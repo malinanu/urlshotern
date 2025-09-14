@@ -6,11 +6,12 @@ import (
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 )
 
 type TeamService struct {
-	db           storage.PostgresStorageInterface
-	redis        storage.RedisStorageInterface
+	db           *storage.PostgresStorage
+	redis        *storage.RedisStorage
 	rbacService  *RBACService
 	userService  *UserService
 	emailService *EmailService
@@ -18,8 +19,8 @@ type TeamService struct {
 
 // NewTeamService creates a new team service
 func NewTeamService(
-	db storage.PostgresStorageInterface,
-	redis storage.RedisStorageInterface,
+	db *storage.PostgresStorage,
+	redis *storage.RedisStorage,
 	rbacService *RBACService,
 	userService *UserService,
 	emailService *EmailService,
@@ -85,7 +86,7 @@ func (t *TeamService) GetTeamByID(teamID int64) (*models.Team, error) {
 		ID:          teamID,
 		Name:        "sample-team",
 		DisplayName: "Sample Team",
-		Description: strPtr("A sample team for demonstration"),
+		Description: utils.StringPtr("A sample team for demonstration"),
 		OwnerID:     1,
 		IsActive:    true,
 		CreatedAt:   time.Now().Add(-7 * 24 * time.Hour),
@@ -137,7 +138,7 @@ func (t *TeamService) GetUserTeams(userID int64) ([]*models.TeamInfo, error) {
 				ID:          1,
 				Name:        "my-team",
 				DisplayName: "My Team",
-				Description: strPtr("My personal team"),
+				Description: utils.StringPtr("My personal team"),
 				OwnerID:     userID,
 				IsActive:    true,
 				CreatedAt:   time.Now().Add(-30 * 24 * time.Hour),
@@ -284,7 +285,7 @@ func (t *TeamService) AcceptTeamInvitation(token string, userID int64) (*models.
 		RoleID:    invitation.RoleID,
 		InvitedBy: &invitation.InvitedBy,
 		Status:    models.StatusActive,
-		JoinedAt:  timePtr(time.Now()),
+		JoinedAt:  utils.TimePtr(time.Now()),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -565,7 +566,7 @@ func (t *TeamService) getTeamMember(teamID, userID int64) (*models.TeamMember, e
 		UserID:    userID,
 		RoleID:    3, // Team member role
 		Status:    models.StatusActive,
-		JoinedAt:  timePtr(time.Now().Add(-30 * 24 * time.Hour)),
+		JoinedAt:  utils.TimePtr(time.Now().Add(-30 * 24 * time.Hour)),
 		CreatedAt: time.Now().Add(-30 * 24 * time.Hour),
 		UpdatedAt: time.Now().Add(-1 * 24 * time.Hour),
 	}, nil
@@ -587,10 +588,3 @@ func (t *TeamService) generateInvitationToken() string {
 }
 
 // Helper functions for pointers
-func strPtr(s string) *string {
-	return &s
-}
-
-func timePtr(t time.Time) *time.Time {
-	return &t
-}

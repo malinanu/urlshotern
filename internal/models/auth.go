@@ -115,18 +115,6 @@ type UserPreferences struct {
 	Theme              string `json:"theme" db:"theme"`
 }
 
-// APIKey represents API keys for programmatic access
-type APIKey struct {
-	ID           uuid.UUID  `json:"id" db:"id"`
-	UserID       int64      `json:"user_id" db:"user_id"`
-	Name         string     `json:"name" db:"name"`
-	KeyHash      string     `json:"-" db:"key_hash"` // Hidden from JSON
-	LastUsedAt   *time.Time `json:"last_used_at" db:"last_used_at"`
-	ExpiresAt    *time.Time `json:"expires_at" db:"expires_at"`
-	IsActive     bool       `json:"is_active" db:"is_active"`
-	Permissions  string     `json:"permissions" db:"permissions"` // JSON string
-	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
-}
 
 // AuditLog represents audit log entries
 type AuditLog struct {

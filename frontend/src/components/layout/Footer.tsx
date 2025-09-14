@@ -18,10 +18,8 @@ export default function Footer() {
       { name: 'Terms of Service', href: '/terms' },
     ],
     resources: [
-      { name: 'Help Center', href: '/help' },
-      { name: 'Status', href: '/status' },
-      { name: 'Blog', href: '/blog' },
-      { name: 'Community', href: '/community' },
+      { name: 'API Documentation', href: '/api-docs' },
+      { name: 'Conversions', href: '/conversions' },
     ],
   };
 
@@ -33,7 +31,7 @@ export default function Footer() {
           <div className="xl:col-span-1">
             <Link href="/" className="flex items-center space-x-2">
               <LinkIcon className="h-8 w-8 text-primary-400" />
-              <span className="text-xl font-bold text-white">URLShorter</span>
+              <span className="text-xl font-bold text-white">Trunc</span>
             </Link>
             <p className="mt-4 text-gray-400 text-sm max-w-md">
               The most reliable URL shortener with advanced analytics, custom
@@ -109,7 +107,7 @@ export default function Footer() {
               {/* Social links would go here */}
             </div>
             <p className="mt-8 text-base text-gray-400 md:mt-0 md:order-1">
-              &copy; {currentYear} URLShorter. All rights reserved.
+              &copy; {currentYear} Trunc. All rights reserved.
             </p>
           </div>
         </div>

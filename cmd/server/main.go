@@ -11,6 +11,7 @@ import (
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
+	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
@@ -41,20 +42,31 @@ func main() {
 	shortenerService := services.NewShortenerService(db, redis, config)
 	analyticsService := services.NewAnalyticsService(db)
 	advancedAnalyticsService := services.NewAdvancedAnalyticsService(db)
-	userAnalyticsService := services.NewUserAnalyticsService(db.DB)
-	authService := services.NewAuthService(db, config)
+	// userAnalyticsService := services.NewUserAnalyticsService(db)  // Temporarily disabled
+	var userAnalyticsService *services.UserAnalyticsService // Placeholder
+
+	// Initialize auth-related services
 	smsService := services.NewSMSService(db, config)
 	emailService := services.NewEmailService(db, config)
+	jwtService := services.NewJWTService(config.JWTSecret, config.JWTIssuer, time.Hour*24, time.Hour*24*7)
+	userService := services.NewUserService(db, redis, jwtService, smsService, emailService, nil)
+	authService := services.NewAuthService(userService, jwtService, smsService, emailService, db, redis, config)
+	rbacService := services.NewRBACService(db, redis)
 	conversionTrackingService := services.NewConversionTrackingService(db)
 	abTestingService := services.NewABTestingService(db, redis)
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
+	// cmsService := services.NewCMSService(db)  // Temporarily disabled
+	// apiKeyService := services.NewAPIKeyService(db)  // Temporarily disabled
 	
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
 	
 	// Set attribution service on shortener for attribution tracking
 	shortenerService.SetAttributionService(attributionService)
+
+	// Initialize auth middleware
+	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService)
 
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
@@ -69,7 +81,7 @@ func main() {
 	router := gin.Default()
 
 	// Setup all routes
-	routes.SetupRoutes(router, handler, authService)
+	routes.SetupRoutes(router, handler, authMiddleware)
 
 	// Setup server
 	srv := &http.Server{

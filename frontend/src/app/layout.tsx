@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -16,18 +16,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "URL Shortener Pro - Professional URL Shortening Service",
+  title: "Trunc - Professional URL Shortening Service",
   description: "Professional URL shortener with analytics, custom domains, and comprehensive dashboard. Track clicks, manage links, and get detailed insights.",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
-  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "URL Shortener Pro"
+    title: "Trunc"
   },
   icons: {
     icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "16x16" },
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" }
     ],
@@ -38,6 +37,13 @@ export const metadata: Metadata = {
   }
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#2563eb"
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,13 +52,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#2563eb" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="URL Shortener Pro" />
-        <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <script dangerouslySetInnerHTML={{
           __html: `
             if ('serviceWorker' in navigator) {

@@ -62,7 +62,7 @@ export default function LoginPage() {
           <div className="flex justify-center">
             <div className="flex items-center space-x-2">
               <LinkIcon className="h-10 w-10 text-primary-600" />
-              <span className="text-2xl font-bold text-black">URLShorter</span>
+              <span className="text-2xl font-bold text-black">Trunc</span>
             </div>
           </div>
           <h2 className="mt-6 text-center text-3xl font-bold text-black">

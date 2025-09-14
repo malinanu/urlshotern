@@ -34,6 +34,15 @@ type Config struct {
 	// Logging
 	LogLevel  string
 	LogFormat string
+
+	// Google OAuth Configuration
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
+
+	// JWT Configuration
+	JWTSecret string
+	JWTIssuer string
 }
 
 func LoadConfig() (*Config, error) {
@@ -62,6 +71,13 @@ func LoadConfig() (*Config, error) {
 
 		LogLevel:  getEnv("LOG_LEVEL", "info"),
 		LogFormat: getEnv("LOG_FORMAT", "json"),
+
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", ""),
+
+		JWTSecret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
+		JWTIssuer: getEnv("JWT_ISSUER", "urlshortener"),
 	}
 
 	return config, nil

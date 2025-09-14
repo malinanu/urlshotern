@@ -50,7 +50,7 @@ export default function Header() {
             <Link href="/" className="flex items-center space-x-2">
               <LinkIcon className="h-8 w-8 text-primary-600" />
               <span className="text-xl font-bold text-gray-900">
-                URLShorter
+                Trunc
               </span>
             </Link>
           </div>

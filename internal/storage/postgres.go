@@ -498,6 +498,324 @@ func (p *PostgresStorage) ShortCodeExists(shortCode string) (bool, error) {
 	return exists, nil
 }
 
+// User management methods
+
+// CreateUser creates a new user in the database
+func (p *PostgresStorage) CreateUser(user *models.User) error {
+	query := `
+		INSERT INTO users (id, name, email, phone, password_hash, email_verified, phone_verified, 
+			              provider, provider_id, avatar_url, account_type, is_active, is_admin, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`
+	_, err := p.Exec(query, user.ID, user.Name, user.Email, user.Phone, user.PasswordHash,
+		user.EmailVerified, user.PhoneVerified, user.Provider, user.ProviderID, user.AvatarURL,
+		user.AccountType, user.IsActive, user.IsAdmin, user.CreatedAt, user.UpdatedAt)
+	return err
+}
+
+// GetUserByID retrieves a user by ID
+func (p *PostgresStorage) GetUserByID(id int64) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT id, name, email, phone, password_hash, email_verified, phone_verified,
+		       provider, provider_id, avatar_url, account_type, is_active, is_admin,
+		       created_at, updated_at, last_login_at
+		FROM users WHERE id = $1
+	`
+	err := p.QueryRow(query, id).Scan(
+		&user.ID, &user.Name, &user.Email, &user.Phone, &user.PasswordHash,
+		&user.EmailVerified, &user.PhoneVerified, &user.Provider, &user.ProviderID,
+		&user.AvatarURL, &user.AccountType, &user.IsActive, &user.IsAdmin,
+		&user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetUserByEmail retrieves a user by email
+func (p *PostgresStorage) GetUserByEmail(email string) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT id, name, email, phone, password_hash, email_verified, phone_verified,
+		       provider, provider_id, avatar_url, account_type, is_active, is_admin,
+		       created_at, updated_at, last_login_at
+		FROM users WHERE email = $1
+	`
+	err := p.QueryRow(query, email).Scan(
+		&user.ID, &user.Name, &user.Email, &user.Phone, &user.PasswordHash,
+		&user.EmailVerified, &user.PhoneVerified, &user.Provider, &user.ProviderID,
+		&user.AvatarURL, &user.AccountType, &user.IsActive, &user.IsAdmin,
+		&user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetUserByPhone retrieves a user by phone
+func (p *PostgresStorage) GetUserByPhone(phone string) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT id, name, email, phone, password_hash, email_verified, phone_verified,
+		       provider, provider_id, avatar_url, account_type, is_active, is_admin,
+		       created_at, updated_at, last_login_at
+		FROM users WHERE phone = $1
+	`
+	err := p.QueryRow(query, phone).Scan(
+		&user.ID, &user.Name, &user.Email, &user.Phone, &user.PasswordHash,
+		&user.EmailVerified, &user.PhoneVerified, &user.Provider, &user.ProviderID,
+		&user.AvatarURL, &user.AccountType, &user.IsActive, &user.IsAdmin,
+		&user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// UpdateUserLastLogin updates user's last login time
+func (p *PostgresStorage) UpdateUserLastLogin(userID int64, loginTime time.Time) error {
+	query := `UPDATE users SET last_login_at = $1, updated_at = $2 WHERE id = $3`
+	_, err := p.Exec(query, loginTime, time.Now(), userID)
+	return err
+}
+
+// CreateUserPreferences creates user preferences
+func (p *PostgresStorage) CreateUserPreferences(prefs *models.UserPreferences) error {
+	query := `
+		INSERT INTO user_preferences (user_id, default_expiration, analytics_public, 
+		                            email_notifications, marketing_emails, timezone, theme)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err := p.Exec(query, prefs.UserID, prefs.DefaultExpiration, prefs.AnalyticsPublic,
+		prefs.EmailNotifications, prefs.MarketingEmails, prefs.Timezone, prefs.Theme)
+	return err
+}
+
+// CreateSession creates a new user session
+func (p *PostgresStorage) CreateSession(session *models.UserSession) error {
+	query := `
+		INSERT INTO user_sessions (id, user_id, device_info, ip_address, user_agent,
+		                         refresh_token_hash, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+	_, err := p.Exec(query, session.ID, session.UserID, session.DeviceInfo, session.IPAddress, 
+		session.UserAgent, session.RefreshTokenHash, session.ExpiresAt, session.CreatedAt)
+	return err
+}
+
+// GetSessionByID retrieves a session by ID
+func (p *PostgresStorage) GetSessionByID(id string) (*models.UserSession, error) {
+	session := &models.UserSession{}
+	query := `
+		SELECT id, user_id, device_info, ip_address, user_agent, 
+		       refresh_token_hash, expires_at, created_at
+		FROM user_sessions WHERE id = $1
+	`
+	err := p.QueryRow(query, id).Scan(
+		&session.ID, &session.UserID, &session.DeviceInfo, &session.IPAddress, 
+		&session.UserAgent, &session.RefreshTokenHash, &session.ExpiresAt, &session.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+// Email verification methods
+
+// CreateEmailVerification creates an email verification record
+func (p *PostgresStorage) CreateEmailVerification(verification *models.EmailVerification) error {
+	query := `
+		INSERT INTO email_verifications (id, user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	_, err := p.Exec(query, verification.ID, verification.UserID, verification.Token,
+		verification.ExpiresAt, verification.CreatedAt)
+	return err
+}
+
+// GetEmailVerificationByToken retrieves email verification by token
+func (p *PostgresStorage) GetEmailVerificationByToken(token string) (*models.EmailVerification, error) {
+	verification := &models.EmailVerification{}
+	query := `
+		SELECT id, user_id, token, expires_at, verified_at, created_at
+		FROM email_verifications WHERE token = $1
+	`
+	err := p.QueryRow(query, token).Scan(
+		&verification.ID, &verification.UserID, &verification.Token,
+		&verification.ExpiresAt, &verification.VerifiedAt, &verification.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return verification, nil
+}
+
+// UpdateEmailVerification updates email verification record
+func (p *PostgresStorage) UpdateEmailVerification(id string, verifiedAt time.Time) error {
+	query := `UPDATE email_verifications SET verified_at = $1 WHERE id = $2`
+	_, err := p.Exec(query, verifiedAt, id)
+	return err
+}
+
+// UpdateUserEmailVerified updates user email verification status
+func (p *PostgresStorage) UpdateUserEmailVerified(userID int64, verified bool) error {
+	query := `UPDATE users SET email_verified = $1, updated_at = $2 WHERE id = $3`
+	_, err := p.Exec(query, verified, time.Now(), userID)
+	return err
+}
+
+// Phone verification methods
+
+// CreatePhoneVerification creates a phone verification record
+func (p *PostgresStorage) CreatePhoneVerification(verification *models.PhoneVerification) error {
+	query := `
+		INSERT INTO phone_verifications (id, user_id, phone, otp_code, attempts, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err := p.Exec(query, verification.ID, verification.UserID, verification.Phone,
+		verification.OTPCode, verification.Attempts, verification.ExpiresAt, verification.CreatedAt)
+	return err
+}
+
+// DeletePhoneVerificationByUserID deletes phone verification by user ID
+func (p *PostgresStorage) DeletePhoneVerificationByUserID(userID int64) error {
+	query := `DELETE FROM phone_verifications WHERE user_id = $1`
+	_, err := p.Exec(query, userID)
+	return err
+}
+
+// GetPhoneVerificationByUserID retrieves phone verification by user ID
+func (p *PostgresStorage) GetPhoneVerificationByUserID(userID int64) (*models.PhoneVerification, error) {
+	verification := &models.PhoneVerification{}
+	query := `
+		SELECT id, user_id, phone, otp_code, attempts, expires_at, verified_at, created_at
+		FROM phone_verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1
+	`
+	err := p.QueryRow(query, userID).Scan(
+		&verification.ID, &verification.UserID, &verification.Phone,
+		&verification.OTPCode, &verification.Attempts, &verification.ExpiresAt, &verification.VerifiedAt, &verification.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return verification, nil
+}
+
+// UpdatePhoneVerificationAttempts updates phone verification attempts
+func (p *PostgresStorage) UpdatePhoneVerificationAttempts(userID int64, attempts int) error {
+	query := `UPDATE phone_verifications SET attempts = $1 WHERE user_id = $2`
+	_, err := p.Exec(query, attempts, userID)
+	return err
+}
+
+// UpdatePhoneVerification updates phone verification record
+func (p *PostgresStorage) UpdatePhoneVerification(id string, verifiedAt time.Time) error {
+	query := `UPDATE phone_verifications SET verified_at = $1 WHERE id = $2`
+	_, err := p.Exec(query, verifiedAt, id)
+	return err
+}
+
+// UpdateUserPhoneVerified updates user phone verification status
+func (p *PostgresStorage) UpdateUserPhoneVerified(userID int64, verified bool) error {
+	query := `UPDATE users SET phone_verified = $1, updated_at = $2 WHERE id = $3`
+	_, err := p.Exec(query, verified, time.Now(), userID)
+	return err
+}
+
+// Password reset methods
+
+// CreatePasswordReset creates a password reset record
+func (p *PostgresStorage) CreatePasswordReset(reset *models.PasswordReset) error {
+	query := `
+		INSERT INTO password_resets (id, user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	_, err := p.Exec(query, reset.ID, reset.UserID, reset.Token,
+		reset.ExpiresAt, reset.CreatedAt)
+	return err
+}
+
+// GetPasswordResetByToken retrieves password reset by token
+func (p *PostgresStorage) GetPasswordResetByToken(token string) (*models.PasswordReset, error) {
+	reset := &models.PasswordReset{}
+	query := `
+		SELECT id, user_id, token, expires_at, used_at, created_at
+		FROM password_resets WHERE token = $1
+	`
+	err := p.QueryRow(query, token).Scan(
+		&reset.ID, &reset.UserID, &reset.Token,
+		&reset.ExpiresAt, &reset.UsedAt, &reset.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return reset, nil
+}
+
+// UpdatePasswordReset updates password reset record
+func (p *PostgresStorage) UpdatePasswordReset(id string, usedAt time.Time) error {
+	query := `UPDATE password_resets SET used_at = $1 WHERE id = $2`
+	_, err := p.Exec(query, usedAt, id)
+	return err
+}
+
+// UpdateUserPassword updates user password
+func (p *PostgresStorage) UpdateUserPassword(userID int64, passwordHash string) error {
+	query := `UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3`
+	_, err := p.Exec(query, passwordHash, time.Now(), userID)
+	return err
+}
+
+// User management methods
+
+// UpdateUser updates user information
+func (p *PostgresStorage) UpdateUser(user *models.User) error {
+	query := `
+		UPDATE users SET name = $1, email = $2, phone = $3, provider = $4, 
+		                provider_id = $5, avatar_url = $6, account_type = $7, 
+		                updated_at = $8 
+		WHERE id = $9
+	`
+	_, err := p.Exec(query, user.Name, user.Email, user.Phone, user.Provider,
+		user.ProviderID, user.AvatarURL, user.AccountType, time.Now(), user.ID)
+	return err
+}
+
+// UpdateUserStatus updates user status (active/inactive)
+func (p *PostgresStorage) UpdateUserStatus(userID int64, isActive bool) error {
+	query := `UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3`
+	_, err := p.Exec(query, isActive, time.Now(), userID)
+	return err
+}
+
+// GetUserPreferences retrieves user preferences
+func (p *PostgresStorage) GetUserPreferences(userID int64) (*models.UserPreferences, error) {
+	prefs := &models.UserPreferences{}
+	query := `
+		SELECT user_id, default_expiration, analytics_public, email_notifications,
+		       marketing_emails, timezone, theme
+		FROM user_preferences WHERE user_id = $1
+	`
+	err := p.QueryRow(query, userID).Scan(
+		&prefs.UserID, &prefs.DefaultExpiration, &prefs.AnalyticsPublic,
+		&prefs.EmailNotifications, &prefs.MarketingEmails, &prefs.Timezone, &prefs.Theme)
+	if err != nil {
+		return nil, err
+	}
+	return prefs, nil
+}
+
+// UpdateUserPreferences updates user preferences
+func (p *PostgresStorage) UpdateUserPreferences(prefs *models.UserPreferences) error {
+	query := `
+		UPDATE user_preferences 
+		SET default_expiration = $1, analytics_public = $2, email_notifications = $3,
+		    marketing_emails = $4, timezone = $5, theme = $6
+		WHERE user_id = $7
+	`
+	_, err := p.Exec(query, prefs.DefaultExpiration, prefs.AnalyticsPublic,
+		prefs.EmailNotifications, prefs.MarketingEmails, prefs.Timezone, prefs.Theme, prefs.UserID)
+	return err
+}
+
 // Custom errors
 var (
 	ErrURLNotFound   = &StorageError{Message: "URL not found"}

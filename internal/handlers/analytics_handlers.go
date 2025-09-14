@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
-	"urlshortener/internal/models"
-	"urlshortener/internal/services"
+	"github.com/URLshorter/url-shortener/internal/models"
+	"github.com/URLshorter/url-shortener/internal/services"
 )
 
 type AnalyticsHandlers struct {
@@ -203,9 +204,8 @@ func (h *AnalyticsHandlers) LogUserActivity(c *gin.Context) {
 	var req struct {
 		ActivityType string                 `json:"activity_type" binding:"required"`
 		Description  string                 `json:"description"`
-		URLId        *int64                 `json:"url_id,omitempty"`
+		URLId        *string                `json:"url_id,omitempty"`  // Changed to string to match ResourceID
 		Metadata     map[string]interface{} `json:"metadata,omitempty"`
-		DurationMs   *int64                 `json:"duration_ms,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -223,21 +223,25 @@ func (h *AnalyticsHandlers) LogUserActivity(c *gin.Context) {
 		sessionIDStr = "web-session-" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
 
+	clientIP := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
 	activity := &models.UserActivityLog{
 		UserID:       userID.(int64),
 		SessionID:    sessionIDStr,
 		ActivityType: req.ActivityType,
+		ResourceType: "url", // Default resource type
+		Action:       "manual_log", // Default action
 		Description:  req.Description,
-		URLId:        req.URLId,
+		ResourceID:   req.URLId,
 		Metadata:     req.Metadata,
-		IPAddress:    &c.ClientIP(),
-		UserAgent:    &c.Request.UserAgent(),
-		DurationMs:   req.DurationMs,
+		IPAddress:    &clientIP,
+		UserAgent:    &userAgent,
 		CreatedAt:    time.Now(),
 	}
 
-	// Parse user agent for additional info
-	h.parseUserAgent(activity, c.Request.UserAgent())
+	// Parse user agent for additional info - simplified
+	h.parseUserAgentSimple(activity, c.Request.UserAgent())
 
 	err := h.analyticsService.LogUserActivity(activity)
 	if err != nil {
@@ -265,30 +269,41 @@ func (h *AnalyticsHandlers) StartSession(c *gin.Context) {
 	}
 
 	var req struct {
-		ScreenResolution *string `json:"screen_resolution,omitempty"`
-		Timezone         *string `json:"timezone,omitempty"`
+		DeviceInfo *string `json:"device_info,omitempty"`  // Changed to match UserSession model
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// Ignore bind errors for optional data
 	}
 
-	sessionID := "web-session-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	sessionUUID := uuid.New()
+	clientIP := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+	userIDInt := userID.(int64)
 
-	session := &models.UserSession{
-		ID:               sessionID,
-		UserID:           userID.(int64),
-		IPAddress:        c.ClientIP(),
-		UserAgent:        c.Request.UserAgent(),
-		ScreenResolution: req.ScreenResolution,
-		Timezone:         req.Timezone,
-		StartedAt:        time.Now(),
+	// session := &models.UserSession{
+	// 	ID:         sessionUUID,
+	// 	UserID:     userIDInt,
+	// 	DeviceInfo: req.DeviceInfo,
+	// 	IPAddress:  &clientIP,
+	// 	UserAgent:  &userAgent,
+	// 	ExpiresAt:  time.Now().Add(24 * time.Hour), // Session expires in 24 hours
+	// 	CreatedAt:  time.Now(),
+	// }
+
+	// Convert UserSession to AnalyticsSession for analytics service
+	analyticsSession := &models.AnalyticsSession{
+		ID:            sessionUUID.String(),
+		UserID:        &userIDInt,
+		StartTime:     time.Now(),
+		IPAddress:     &clientIP,
+		UserAgent:     &userAgent,
+		IsActive:      true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
-	// Parse user agent for additional info
-	h.parseUserAgentForSession(session, c.Request.UserAgent())
-
-	err := h.analyticsService.StartUserSession(session)
+	err := h.analyticsService.StartUserSession(analyticsSession)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "session_error",
@@ -298,14 +313,14 @@ func (h *AnalyticsHandlers) StartSession(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"session_id": sessionID,
+		"session_id": sessionUUID.String(),
 		"message":    "Session started successfully",
 	})
 }
 
 // EndSession manually ends a user session
 func (h *AnalyticsHandlers) EndSession(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	_, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Error:   "unauthorized",
@@ -348,7 +363,7 @@ func (h *AnalyticsHandlers) parseDateRange(c *gin.Context) models.DateRange {
 	// Parse start_date
 	if startDateStr := c.Query("start_date"); startDateStr != "" {
 		if startDate, err := time.Parse("2006-01-02", startDateStr); err == nil {
-			dateRange.StartDate = startDate
+			dateRange.Start = startDate
 		}
 	}
 
@@ -356,119 +371,63 @@ func (h *AnalyticsHandlers) parseDateRange(c *gin.Context) models.DateRange {
 	if endDateStr := c.Query("end_date"); endDateStr != "" {
 		if endDate, err := time.Parse("2006-01-02", endDateStr); err == nil {
 			// Set end of day
-			dateRange.EndDate = endDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+			dateRange.End = endDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 		}
 	}
 
 	// If no dates provided, default to last 30 days
-	if dateRange.StartDate.IsZero() && dateRange.EndDate.IsZero() {
-		dateRange.EndDate = time.Now()
-		dateRange.StartDate = time.Now().AddDate(0, 0, -30)
+	if dateRange.Start.IsZero() && dateRange.End.IsZero() {
+		dateRange.End = time.Now()
+		dateRange.Start = time.Now().AddDate(0, 0, -30)
 	}
 
 	return dateRange
 }
 
-func (h *AnalyticsHandlers) parseUserAgent(activity *models.UserActivityLog, userAgent string) {
-	// Simple user agent parsing - in production you might want to use a library
+func (h *AnalyticsHandlers) parseUserAgentSimple(activity *models.UserActivityLog, userAgent string) {
+	// Simple user agent parsing - only set fields that exist in the model
 	if userAgent == "" {
 		return
 	}
 
 	// Device type detection
+	deviceType := "desktop"
 	if contains(userAgent, "Mobile") || contains(userAgent, "Android") || contains(userAgent, "iPhone") {
-		activity.DeviceType = "mobile"
-		activity.IsMobile = true
+		deviceType = "mobile"
 	} else if contains(userAgent, "Tablet") || contains(userAgent, "iPad") {
-		activity.DeviceType = "tablet"
-		activity.IsMobile = true
-	} else {
-		activity.DeviceType = "desktop"
-		activity.IsMobile = false
+		deviceType = "tablet"
 	}
+	activity.DeviceType = &deviceType
 
 	// Browser detection
+	browser := "Unknown"
 	if contains(userAgent, "Chrome") {
-		activity.Browser = "Chrome"
+		browser = "Chrome"
 	} else if contains(userAgent, "Firefox") {
-		activity.Browser = "Firefox"
+		browser = "Firefox"
 	} else if contains(userAgent, "Safari") && !contains(userAgent, "Chrome") {
-		activity.Browser = "Safari"
+		browser = "Safari"
 	} else if contains(userAgent, "Edge") {
-		activity.Browser = "Edge"
-	} else {
-		activity.Browser = "Unknown"
+		browser = "Edge"
 	}
+	activity.Browser = &browser
 
-	// Platform detection
+	// OS detection
+	os := "Unknown"
 	if contains(userAgent, "Windows") {
-		activity.Platform = "Windows"
+		os = "Windows"
 	} else if contains(userAgent, "Macintosh") || contains(userAgent, "Mac OS") {
-		activity.Platform = "macOS"
+		os = "macOS"
 	} else if contains(userAgent, "Linux") {
-		activity.Platform = "Linux"
+		os = "Linux"
 	} else if contains(userAgent, "Android") {
-		activity.Platform = "Android"
+		os = "Android"
 	} else if contains(userAgent, "iOS") || contains(userAgent, "iPhone") || contains(userAgent, "iPad") {
-		activity.Platform = "iOS"
-	} else {
-		activity.Platform = "Unknown"
+		os = "iOS"
 	}
-
-	// Bot detection
-	if contains(userAgent, "bot") || contains(userAgent, "crawler") || contains(userAgent, "spider") {
-		activity.IsBot = true
-	} else {
-		activity.IsBot = false
-	}
+	activity.OS = &os
 }
 
-func (h *AnalyticsHandlers) parseUserAgentForSession(session *models.UserSession, userAgent string) {
-	// Similar parsing for session
-	if userAgent == "" {
-		return
-	}
-
-	// Device type detection
-	if contains(userAgent, "Mobile") || contains(userAgent, "Android") || contains(userAgent, "iPhone") {
-		session.DeviceType = "mobile"
-		session.IsMobile = true
-	} else if contains(userAgent, "Tablet") || contains(userAgent, "iPad") {
-		session.DeviceType = "tablet"
-		session.IsMobile = true
-	} else {
-		session.DeviceType = "desktop"
-		session.IsMobile = false
-	}
-
-	// Browser detection
-	if contains(userAgent, "Chrome") {
-		session.Browser = "Chrome"
-	} else if contains(userAgent, "Firefox") {
-		session.Browser = "Firefox"
-	} else if contains(userAgent, "Safari") && !contains(userAgent, "Chrome") {
-		session.Browser = "Safari"
-	} else if contains(userAgent, "Edge") {
-		session.Browser = "Edge"
-	} else {
-		session.Browser = "Unknown"
-	}
-
-	// Platform detection
-	if contains(userAgent, "Windows") {
-		session.Platform = "Windows"
-	} else if contains(userAgent, "Macintosh") || contains(userAgent, "Mac OS") {
-		session.Platform = "macOS"
-	} else if contains(userAgent, "Linux") {
-		session.Platform = "Linux"
-	} else if contains(userAgent, "Android") {
-		session.Platform = "Android"
-	} else if contains(userAgent, "iOS") || contains(userAgent, "iPhone") || contains(userAgent, "iPad") {
-		session.Platform = "iOS"
-	} else {
-		session.Platform = "Unknown"
-	}
-}
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || 

@@ -304,7 +304,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* URL Shortener */}
+          {/* Trunc */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-black mb-4">Create New Short URL</h2>
             <URLShortener onUrlCreated={handleUrlCreated} />

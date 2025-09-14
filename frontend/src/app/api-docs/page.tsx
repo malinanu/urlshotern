@@ -328,7 +328,7 @@ export default function APIDocsPage() {
               <h1 className="text-3xl font-bold text-gray-900">API Documentation</h1>
             </div>
             <p className="text-gray-600">
-              Complete reference for the URL Shortener API endpoints and usage.
+              Complete reference for the Trunc API endpoints and usage.
             </p>
           </div>
 

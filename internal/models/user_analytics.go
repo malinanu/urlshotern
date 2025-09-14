@@ -32,8 +32,8 @@ type UserActivityInfo struct {
 	ResourceName *string     `json:"resource_name,omitempty"`
 }
 
-// UserSession represents a user session for analytics
-type UserSession struct {
+// AnalyticsSession represents a user session for analytics
+type AnalyticsSession struct {
 	ID              string                 `json:"id" db:"id"`
 	UserID          *int64                 `json:"user_id,omitempty" db:"user_id"`
 	StartTime       time.Time              `json:"start_time" db:"start_time"`
@@ -299,11 +299,7 @@ const (
 	ResourceTypeGoal       = "goal"
 	ResourceTypeSession    = "session"
 
-	// Actions
-	ActionCreate   = "create"
-	ActionRead     = "read"
-	ActionUpdate   = "update"
-	ActionDelete   = "delete"
+	// Actions (others defined in rbac.go)
 	ActionShare    = "share"
 	ActionClick    = "click"
 	ActionView     = "view"
@@ -406,4 +402,102 @@ func GetEngagementLevel(score float64) string {
 	default:
 		return "Very Low"
 	}
+}
+
+// DateRange represents a date range for analytics queries
+type DateRange struct {
+	Start time.Time `json:"start" form:"start"`
+	End   time.Time `json:"end" form:"end"`
+}
+
+// UserActivityLogRequest represents a request to log user activity
+type UserActivityLogRequest struct {
+	ActivityType  string                 `json:"activity_type" validate:"required"`
+	ResourceType  string                 `json:"resource_type" validate:"required"`
+	ResourceID    *string                `json:"resource_id,omitempty"`
+	Action        string                 `json:"action" validate:"required"`
+	Description   string                 `json:"description" validate:"required"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+	IPAddress     *string                `json:"ip_address,omitempty"`
+	UserAgent     *string                `json:"user_agent,omitempty"`
+	Referrer      *string                `json:"referrer,omitempty"`
+	Location      *string                `json:"location,omitempty"`
+	DeviceType    *string                `json:"device_type,omitempty"`
+	Browser       *string                `json:"browser,omitempty"`
+	OS            *string                `json:"os,omitempty"`
+	// Query parameters for filtering and pagination
+	URLId         *int64     `json:"url_id,omitempty"`
+	StartDate     time.Time  `json:"start_date,omitempty"`
+	EndDate       time.Time  `json:"end_date,omitempty"`
+	Limit         int        `json:"limit,omitempty"`
+	Offset        int64      `json:"offset,omitempty"`
+	SortBy        string     `json:"sort_by,omitempty"`
+	SortOrder     string     `json:"sort_order,omitempty"`
+}
+
+// UserActivityLogResponse represents a response for activity log operations
+type UserActivityLogResponse struct {
+	Activity *UserActivityLog `json:"activity"`
+	Message  string           `json:"message"`
+}
+
+// UserDashboardAnalytics represents dashboard analytics data for a user
+type UserDashboardAnalytics struct {
+	TotalURLs        int64             `json:"total_urls"`
+	TotalClicks      int64             `json:"total_clicks"`
+	TotalSessions    int64             `json:"total_sessions"`
+	AvgSessionLength float64           `json:"avg_session_length_minutes"`
+	TopURLs          []*URLAnalytics   `json:"top_urls"`
+	RecentActivity   []*UserActivityInfo `json:"recent_activity"`
+	ClicksOverTime   []*ClickTimeData  `json:"clicks_over_time"`
+	DeviceStats      []*DeviceStats    `json:"device_stats"`
+	LocationStats    []*LocationStats  `json:"location_stats"`
+}
+
+// ClickTimeData represents click data over time
+type ClickTimeData struct {
+	Date   time.Time `json:"date"`
+	Clicks int64     `json:"clicks"`
+}
+
+// DeviceStats represents device statistics
+type DeviceStats struct {
+	DeviceType string `json:"device_type"`
+	Count      int64  `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
+// LocationStats represents location statistics
+type LocationStats struct {
+	Location   string `json:"location"`
+	Count      int64  `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
+// DeviceBreakdown represents device breakdown analytics
+type DeviceBreakdown struct {
+	DeviceType string  `json:"device_type"`
+	Count      int64   `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
+// BrowserBreakdown represents browser breakdown analytics
+type BrowserBreakdown struct {
+	Browser    string  `json:"browser"`
+	Count      int64   `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
+// LocationBreakdown represents location breakdown analytics
+type LocationBreakdown struct {
+	Country    string  `json:"country"`
+	Count      int64   `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
+// ChartDataPoint represents a data point for charts
+type ChartDataPoint struct {
+	Label string      `json:"label"`
+	Value interface{} `json:"value"`
+	Date  *time.Time  `json:"date,omitempty"`
 }

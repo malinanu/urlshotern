@@ -12,11 +12,12 @@ import (
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 )
 
 type DomainService struct {
-	db              storage.PostgresStorageInterface
-	redis           storage.RedisStorageInterface
+	db              *storage.PostgresStorage
+	redis           *storage.RedisStorage
 	config          *configs.Config
 	analyticsService *AnalyticsService
 	userService     *UserService
@@ -24,8 +25,8 @@ type DomainService struct {
 
 // NewDomainService creates a new domain service
 func NewDomainService(
-	db storage.PostgresStorageInterface,
-	redis storage.RedisStorageInterface,
+	db *storage.PostgresStorage,
+	redis *storage.RedisStorage,
 	config *configs.Config,
 	analyticsService *AnalyticsService,
 	userService *UserService,
@@ -567,8 +568,8 @@ func (d *DomainService) getSSLCertificate(domainID int64) (*models.SSLCertificat
 		DomainID:  domainID,
 		Provider:  models.SSLProviderLetsEncrypt,
 		Status:    models.SSLStatusActive,
-		IssuedAt:  timePtr(time.Now().Add(-30 * 24 * time.Hour)),
-		ExpiresAt: timePtr(time.Now().Add(60 * 24 * time.Hour)),
+		IssuedAt:  utils.TimePtr(time.Now().Add(-30 * 24 * time.Hour)),
+		ExpiresAt: utils.TimePtr(time.Now().Add(60 * 24 * time.Hour)),
 		AutoRenew: true,
 		CreatedAt: time.Now().Add(-30 * 24 * time.Hour),
 		UpdatedAt: time.Now().Add(-1 * time.Hour),
@@ -680,7 +681,3 @@ func (d *DomainService) getDomainURLCount(domainID int64) (int, error) {
 	return 0, nil
 }
 
-// Helper function for time pointers
-func timePtr(t time.Time) *time.Time {
-	return &t
-}

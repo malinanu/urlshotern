@@ -30,8 +30,6 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  // Optimize for mobile
-  swcMinify: true,
   // Enable static export optimization
   output: 'standalone',
 };

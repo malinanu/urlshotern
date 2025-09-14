@@ -21,11 +21,11 @@ metadata:
 spec:
   tls:
   - hosts:
-    - short.ly
-    - www.short.ly
+    - trunc.site
+    - www.trunc.site
     secretName: urlshortener-tls
   rules:
-  - host: short.ly
+  - host: trunc.site
     http:
       paths:
       - path: /
@@ -35,7 +35,7 @@ spec:
             name: urlshortener-service
             port:
               number: 80
-  - host: www.short.ly
+  - host: www.trunc.site
     http:
       paths:
       - path: /

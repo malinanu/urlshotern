@@ -19,9 +19,13 @@ import {
   ClockIcon,
   DocumentTextIcon,
   KeyIcon,
+  MagnifyingGlassIcon,
+  CubeIcon,
 } from '@heroicons/react/24/outline';
 import CMSManager from '@/components/cms/CMSManager';
 import APIKeyManager from '@/components/api-keys/APIKeyManager';
+import { SEOToolsManager } from '@/components/seo/SEOToolsManager';
+import { VisualPageBuilder } from '@/components/builder/VisualPageBuilder';
 
 interface SystemStats {
   total_users: number;
@@ -227,6 +231,8 @@ export default function AdminPage() {
     { id: 'overview', name: 'Overview', icon: ChartBarIcon },
     { id: 'users', name: 'Users', icon: UserGroupIcon },
     { id: 'cms', name: 'Content', icon: DocumentTextIcon },
+    { id: 'builder', name: 'Page Builder', icon: CubeIcon },
+    { id: 'seo', name: 'SEO Tools', icon: MagnifyingGlassIcon },
     { id: 'api-keys', name: 'API Keys', icon: KeyIcon },
     { id: 'activity', name: 'Activity', icon: ClockIcon },
     { id: 'system', name: 'System', icon: ServerIcon },
@@ -511,6 +517,14 @@ export default function AdminPage() {
 
           {activeTab === 'cms' && (
             <CMSManager />
+          )}
+
+          {activeTab === 'builder' && (
+            <VisualPageBuilder />
+          )}
+
+          {activeTab === 'seo' && (
+            <SEOToolsManager />
           )}
 
           {activeTab === 'api-keys' && (

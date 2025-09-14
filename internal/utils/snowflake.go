@@ -44,6 +44,11 @@ func GenerateID() (int64, error) {
 	return int64(id), nil
 }
 
+// GenerateSnowflakeID is an alias for GenerateID for compatibility
+func GenerateSnowflakeID() (int64, error) {
+	return GenerateID()
+}
+
 // Custom errors
 var (
 	ErrSnowflakeInitFailed      = &SnowflakeError{Message: "failed to initialize Snowflake"}

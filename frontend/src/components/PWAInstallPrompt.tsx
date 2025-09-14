@@ -101,7 +101,7 @@ export function PWAInstallPrompt() {
               <Smartphone className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-semibold text-sm">Install URL Shortener</p>
+              <p className="font-semibold text-sm">Install Trunc</p>
               <p className="text-xs text-blue-100">Add to home screen for quick access</p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export function PWAInstallPrompt() {
           </div>
           
           <p className="text-gray-600 text-sm mb-4">
-            Install URL Shortener as an app for quick access to your dashboard and better performance.
+            Install Trunc as an app for quick access to your dashboard and better performance.
           </p>
           
           <div className="flex space-x-2">
@@ -183,7 +183,7 @@ export function PWAInstallPrompt() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-4 md:items-center">
           <div className="bg-white rounded-t-2xl md:rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Install URL Shortener</h3>
+              <h3 className="text-lg font-semibold">Install Trunc</h3>
               <button
                 onClick={handleDismiss}
                 className="text-gray-400 hover:text-gray-600 transition-colors"

@@ -7,11 +7,12 @@ import (
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 )
 
 type CollaborationService struct {
-	db           storage.PostgresStorageInterface
-	redis        storage.RedisStorageInterface
+	db           *storage.PostgresStorage
+	redis        *storage.RedisStorage
 	userService  *UserService
 	teamService  *TeamService
 	emailService *EmailService
@@ -19,8 +20,8 @@ type CollaborationService struct {
 
 // NewCollaborationService creates a new collaboration service
 func NewCollaborationService(
-	db storage.PostgresStorageInterface,
-	redis storage.RedisStorageInterface,
+	db *storage.PostgresStorage,
+	redis *storage.RedisStorage,
 	userService *UserService,
 	teamService *TeamService,
 	emailService *EmailService,
@@ -104,7 +105,7 @@ func (c *CollaborationService) GetURLShares(urlID int64, userID int64) ([]*model
 				URLID:          urlID,
 				SharerID:       userID,
 				SharedWithType: models.SharedWithUser,
-				SharedWithID:   int64Ptr(2),
+				SharedWithID:   utils.Int64Ptr(2),
 				ShareType:      models.ShareTypeEdit,
 				IsActive:       true,
 				CreatedAt:      time.Now().Add(-2 * time.Hour),
@@ -127,7 +128,7 @@ func (c *CollaborationService) GetShareInfo(shareID int64) (*models.URLShareInfo
 			URLID:          1,
 			SharerID:       1,
 			SharedWithType: models.SharedWithUser,
-			SharedWithID:   int64Ptr(2),
+			SharedWithID:   utils.Int64Ptr(2),
 			ShareType:      models.ShareTypeEdit,
 			IsActive:       true,
 			CreatedAt:      time.Now().Add(-2 * time.Hour),
@@ -532,7 +533,7 @@ func (c *CollaborationService) GetUserCollections(userID int64) ([]*models.URLCo
 				ID:          1,
 				UserID:      userID,
 				Name:        "Work Links",
-				Description: stringPtr("Important work-related URLs"),
+				Description: utils.StringPtr("Important work-related URLs"),
 				Color:       models.ColorBlue,
 				Icon:        models.IconFolder,
 				IsPublic:    false,
@@ -560,7 +561,7 @@ func (c *CollaborationService) GetCollectionInfo(collectionID int64, requestorID
 			ID:          collectionID,
 			UserID:      requestorID,
 			Name:        "My Collection",
-			Description: stringPtr("A sample collection"),
+			Description: utils.StringPtr("A sample collection"),
 			Color:       models.ColorBlue,
 			Icon:        models.IconFolder,
 			IsPublic:    false,
@@ -804,10 +805,4 @@ func (c *CollaborationService) sendShareNotification(share *models.URLShare, mes
 }
 
 // Helper functions
-func int64Ptr(i int64) *int64 {
-	return &i
-}
 
-func stringPtr(s string) *string {
-	return &s
-}
