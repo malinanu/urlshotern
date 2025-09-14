@@ -42,7 +42,9 @@
       "Bash(DB_HOST=localhost DB_PORT=5432 DB_USER=urlshortener DB_PASSWORD=password DB_NAME=urlshortener_db go run cmd/server/main.go)",
       "Bash(cmd /c:*)",
       "Bash(DB_HOST=localhost DB_PORT=5432 DB_USER=urlshortener DB_PASSWORD=password DB_NAME=urlshortener_db SERVER_PORT=8081 go run cmd/server/main.go)",
-      "Bash(DB_HOST=localhost DB_PORT=5432 DB_USER=urlshortener DB_PASSWORD=password DB_NAME=urlshortener_db REDIS_HOST=localhost REDIS_PORT=6379 SERVER_PORT=8081 go run cmd/server/main.go)"
+      "Bash(DB_HOST=localhost DB_PORT=5432 DB_USER=urlshortener DB_PASSWORD=password DB_NAME=urlshortener_db REDIS_HOST=localhost REDIS_PORT=6379 SERVER_PORT=8081 go run cmd/server/main.go)",
+      "Bash(chmod:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
