@@ -13,6 +13,8 @@ import {
   CheckIcon,
 } from '@heroicons/react/24/outline';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface APIKey {
   id: number;
   key_prefix: string;
@@ -85,7 +87,7 @@ export default function APIKeyManager() {
 
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/v1/api-keys', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/api-keys`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -109,7 +111,7 @@ export default function APIKeyManager() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/api-keys', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/api-keys`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -150,7 +152,7 @@ export default function APIKeyManager() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/api-keys/${keyId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/${keyId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -174,7 +176,7 @@ export default function APIKeyManager() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/api-keys/${keyId}/revoke`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/${keyId}/revoke`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -196,7 +198,7 @@ export default function APIKeyManager() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/api-keys/${keyId}/stats`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/api-keys/${keyId}/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

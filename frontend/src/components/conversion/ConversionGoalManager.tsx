@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  PlusIcon, 
-  PencilIcon, 
+import {
+  PlusIcon,
+  PencilIcon,
   TrashIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -12,6 +12,8 @@ import {
   LinkIcon,
   BeakerIcon
 } from '@heroicons/react/24/outline';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface ConversionGoal {
   id: number;
@@ -57,7 +59,7 @@ const ConversionGoalManager: React.FC = () => {
   const fetchGoals = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8080/api/v1/conversions/goals', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/conversions/goals`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -79,7 +81,7 @@ const ConversionGoalManager: React.FC = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8080/api/v1/conversions/goals', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/conversions/goals`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -104,7 +106,7 @@ const ConversionGoalManager: React.FC = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8080/api/v1/conversions/goals/${editingGoal.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/conversions/goals/${editingGoal.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -130,7 +132,7 @@ const ConversionGoalManager: React.FC = () => {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://localhost:8080/api/v1/conversions/goals/${goalId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/conversions/goals/${goalId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

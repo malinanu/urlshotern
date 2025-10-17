@@ -20,44 +20,48 @@ func SetupRoutes(
 	router.Use(middleware.CORSMiddleware())
 	router.Use(middleware.RequestIDMiddleware())
 	router.Use(middleware.LoggingMiddleware())
-	
+
 	// Health check
 	router.GET("/health", handler.HealthCheck)
-	
+
 	// Public routes (no authentication required)
 	setupPublicRoutes(router, handler, authMiddleware)
 
 	// Authentication routes
 	setupAuthRoutes(router, handler.AuthHandlers, authMiddleware)
 
-	// Protected routes (authentication required)
+	// Protected routes (authentication required - supports both JWT and API keys)
 	setupProtectedRoutes(router, handler, authMiddleware)
-	
+
 	// Admin routes (admin access required) - temporarily disabled
 	// setupAdminRoutes(router, handler, authService)
-	
+
 	// Static file serving for frontend (must be last to not interfere with API routes)
 	setupStaticRoutes(router)
 }
 
 // setupPublicRoutes configures public routes
 func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddleware *middleware.AuthMiddleware) {
-	// URL shortening (with optional auth) - temporarily disabled auth middleware
+	// Get API key service from handler
+	apiKeyService := handler.APIKeyHandlers.GetAPIKeyService()
+
+	// URL shortening (supports both JWT and API key authentication)
 	router.POST("/api/v1/shorten",
-		// middleware.OptionalAuthMiddleware(authService),
+		middleware.FlexibleAuthMiddleware(authMiddleware, apiKeyService),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
 		handler.ShortenURL,
 	)
-	
+
 	// URL redirection (no auth required)
 	router.GET("/:shortCode", handler.RedirectURL)
-	
-	// Public analytics (if URL is public)
-	router.GET("/api/v1/analytics/:shortCode", 
+
+	// Public analytics (supports both JWT and API key authentication for enhanced features)
+	router.GET("/api/v1/analytics/:shortCode",
+		middleware.FlexibleAuthMiddleware(authMiddleware, apiKeyService),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
 		handler.GetAnalytics,
 	)
-	
+
 	// Public CMS pages - temporarily disabled
 	// router.GET("/api/v1/pages/:slug", handler.CMSHandlers.PublicPageHandler)
 }
@@ -101,10 +105,14 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 
 // setupProtectedRoutes configures routes that require authentication
 func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMiddleware *middleware.AuthMiddleware) {
+	// Get API key service from handler
+	apiKeyService := handler.APIKeyHandlers.GetAPIKeyService()
+
 	api := router.Group("/api/v1")
-	// api.Use(authMiddleware.RequireAuth())  // Temporarily disabled due to auth setup issues
+	// Use FlexibleAuthMiddleware to accept both JWT tokens and API keys
+	api.Use(middleware.FlexibleAuthMiddleware(authMiddleware, apiKeyService))
 	api.Use(middleware.RateLimitMiddleware(middleware.DefaultRateLimit))
-	
+
 	// Protected URL operations
 	api.POST("/batch-shorten", handler.BatchShortenURLs)
 	api.GET("/my-urls", handler.GetUserURLs)
@@ -270,19 +278,14 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 		})
 	}
 	
-	// API access protected routes - temporarily disabled
-	/*
-	apiAccess := api.Group("/api-keys")
-	apiAccess.Use(handler.BillingHandlers.CheckFeatureAccess("api_access"))
-	{
-		apiAccess.POST("/", handler.CMSHandlers.CreateAPIKey)
-		apiAccess.GET("/", handler.CMSHandlers.ListAPIKeys)
-		apiAccess.GET("/:id", handler.CMSHandlers.GetAPIKey)
-		apiAccess.PUT("/:id/revoke", handler.CMSHandlers.RevokeAPIKey)
-		apiAccess.DELETE("/:id", handler.CMSHandlers.DeleteAPIKey)
-		apiAccess.GET("/:id/stats", handler.CMSHandlers.GetAPIKeyStats)
-	}
-	*/
+	// API key management routes - ENABLED for professional API integration
+	// Removed billing feature gate - API keys available to all authenticated users
+	api.POST("/api-keys", handler.APIKeyHandlers.CreateAPIKey)
+	api.GET("/api-keys", handler.APIKeyHandlers.ListAPIKeys)
+	api.GET("/api-keys/:id", handler.APIKeyHandlers.GetAPIKey)
+	api.PUT("/api-keys/:id/revoke", handler.APIKeyHandlers.RevokeAPIKey)
+	api.DELETE("/api-keys/:id", handler.APIKeyHandlers.DeleteAPIKey)
+	api.GET("/api-keys/:id/stats", handler.APIKeyHandlers.GetAPIKeyStats)
 }
 
 // setupStaticRoutes configures static file serving for the frontend

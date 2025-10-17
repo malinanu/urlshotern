@@ -73,24 +73,16 @@ func (h *AuthHandlers) Login(c *gin.Context) {
 	}
 
 	middleware.LogInfo(c, "Login attempt")
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  "dummy-access-token",
-		"refresh_token": "dummy-refresh-token",
-		"expires_in":    3600,
-		"user": gin.H{
-			"id":             1,
-			"name":          "Test User",
-			"email":         req.Email,
-			"phone":         "",
-			"phone_verified": false,
-			"email_verified": true,
-			"provider":      "local",
-			"avatar_url":    "",
-			"account_type":  "user",
-			"is_active":     true,
-			"created_at":    "2025-01-01T00:00:00Z",
-		},
-	})
+
+	// Authenticate user
+	response, err := h.authService.Login(&req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "Login failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // RefreshToken handles token refresh
@@ -108,10 +100,17 @@ func (h *AuthHandlers) RefreshToken(c *gin.Context) {
 	}
 
 	middleware.LogInfo(c, "Token refresh attempt")
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Token refresh successful",
-		"token":   "new-dummy-token", // Temporary placeholder
-	})
+
+	// Refresh tokens using auth service
+	response, err := h.authService.RefreshTokens(&req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "Token refresh failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.LogInfo(c, "Token refresh successful")
+	c.JSON(http.StatusOK, response)
 }
 
 // SendOTP handles OTP sending
@@ -167,18 +166,28 @@ func (h *AuthHandlers) VerifyOTP(c *gin.Context) {
 
 // GetProfile returns user profile
 func (h *AuthHandlers) GetProfile(c *gin.Context) {
-	userID, exists := middleware.GetUserID(c)
+	_, exists := middleware.GetUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
+	// Get user from context (already fetched by auth middleware)
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user, ok := userInterface.(*models.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user data"})
+		return
+	}
+
+	// Return user profile
 	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{
-			"id":    userID,
-			"name":  "Test User",
-			"email": "test@example.com",
-		},
+		"user": user.ToPublic(),
 	})
 }
 

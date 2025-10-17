@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import {
   UserCircleIcon,
   KeyIcon,
   BellIcon,
@@ -20,6 +20,8 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be less than 100 characters'),
@@ -126,7 +128,7 @@ export default function SettingsPage() {
     setIsUpdating(true);
     try {
       const token = getAccessToken();
-      const response = await fetch('http://localhost:8080/api/v1/auth/profile', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -159,7 +161,7 @@ export default function SettingsPage() {
     setIsUpdating(true);
     try {
       const token = getAccessToken();
-      const response = await fetch('http://localhost:8080/api/v1/auth/change-password', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -189,7 +191,7 @@ export default function SettingsPage() {
     setIsUpdating(true);
     try {
       const token = getAccessToken();
-      const response = await fetch('http://localhost:8080/api/v1/auth/preferences', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/preferences`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -230,7 +232,7 @@ export default function SettingsPage() {
     setIsUpdating(true);
     try {
       const token = getAccessToken();
-      const response = await fetch('http://localhost:8080/api/v1/auth/delete-account', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/delete-account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

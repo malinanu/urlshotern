@@ -6,12 +6,14 @@ import Layout from '@/components/layout/Layout';
 import RealTimeAnalytics from '@/components/analytics/RealTimeAnalytics';
 import AdvancedAnalytics from '@/components/analytics/AdvancedAnalytics';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  ChartBarIcon, 
+import {
+  ChartBarIcon,
   PresentationChartLineIcon,
   ChartPieIcon,
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 function AnalyticsContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,7 +45,7 @@ function AnalyticsContent() {
 
       try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch('http://localhost:8080/api/v1/my-urls', {
+        const response = await fetch(`${API_BASE_URL}/api/v1/my-urls`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

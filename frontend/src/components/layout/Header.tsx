@@ -111,6 +111,13 @@ export default function Header() {
                       Bulk Operations
                     </Link>
                     <Link
+                      href="/api-keys"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      API Keys
+                    </Link>
+                    <Link
                       href="/settings"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setIsProfileMenuOpen(false)}
@@ -203,6 +210,13 @@ export default function Header() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Bulk Operations
+                    </Link>
+                    <Link
+                      href="/api-keys"
+                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      API Keys
                     </Link>
                     <Link
                       href="/settings"

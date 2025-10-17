@@ -126,28 +126,39 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 
 // RefreshTokens generates new tokens using refresh token
 func (a *AuthService) RefreshTokens(req *models.RefreshTokenRequest, ipAddress, userAgent string) (*models.AuthResponse, error) {
-	// Get user ID from refresh token
-	userID, err := a.jwtService.ExtractUserIDFromToken(req.RefreshToken)
+	// Validate and extract claims from refresh token
+	claims, err := a.jwtService.ValidateToken(req.RefreshToken)
 	if err != nil {
-		return nil, fmt.Errorf("invalid refresh token")
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	// Verify this is a refresh token
+	if claims.TokenType != "refresh" {
+		return nil, fmt.Errorf("invalid token type for refresh")
 	}
 
 	// Get user
-	user, err := a.userService.GetUserByID(userID)
+	user, err := a.userService.GetUserByID(claims.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found")
 	}
 
-	// Use JWT service to refresh tokens
-	tokenPair, err := a.jwtService.RefreshToken(req.RefreshToken, user, "")
+	// Check if user is still active
+	if !user.IsActive {
+		return nil, fmt.Errorf("account is not active")
+	}
+
+	// Use JWT service to refresh tokens with existing session ID
+	tokenPair, err := a.jwtService.RefreshToken(req.RefreshToken, user, claims.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
 	// Log token refresh
-	a.logAuditEvent(&user.ID, "token_refreshed", "authentication", fmt.Sprintf("%d", user.ID), 
+	a.logAuditEvent(&user.ID, "token_refreshed", "authentication", fmt.Sprintf("%d", user.ID),
 		map[string]interface{}{
 			"email": user.Email,
+			"session_id": claims.SessionID,
 		}, ipAddress, userAgent)
 
 	return &models.AuthResponse{

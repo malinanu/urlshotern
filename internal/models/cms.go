@@ -1,9 +1,9 @@
 package models
 
 import (
-	"database/sql/driver"
-	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // StaticPage represents a CMS page
@@ -116,72 +116,10 @@ type PageVisit struct {
 	VisitedAt   time.Time `json:"visited_at" db:"visited_at"`
 }
 
-// APIKey represents an API key for programmatic access
-type APIKey struct {
-	ID          int64         `json:"id" db:"id"`
-	UserID      int64         `json:"user_id" db:"user_id"`
-	KeyHash     string        `json:"-" db:"key_hash"` // Never expose in JSON
-	KeyPrefix   string        `json:"key_prefix" db:"key_prefix"`
-	Name        string        `json:"name" db:"name"`
-	Description *string       `json:"description,omitempty" db:"description"`
-	Permissions APIKeyPermissions `json:"permissions" db:"permissions"`
-	RateLimit   int           `json:"rate_limit" db:"rate_limit"`
-	LastUsedAt  *time.Time    `json:"last_used_at,omitempty" db:"last_used_at"`
-	LastUsedIP  *string       `json:"last_used_ip,omitempty" db:"last_used_ip"`
-	ExpiresAt   *time.Time    `json:"expires_at,omitempty" db:"expires_at"`
-	IsActive    bool          `json:"is_active" db:"is_active"`
-	CreatedAt   time.Time     `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at" db:"updated_at"`
-}
-
-// APIKeyPermissions represents the permissions for an API key
-type APIKeyPermissions []string
-
-// Value implements the driver.Valuer interface
-func (p APIKeyPermissions) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return json.Marshal(p)
-}
-
-// Scan implements the sql.Scanner interface
-func (p *APIKeyPermissions) Scan(value interface{}) error {
-	if value == nil {
-		*p = nil
-		return nil
-	}
-
-	switch v := value.(type) {
-	case []byte:
-		return json.Unmarshal(v, p)
-	case string:
-		return json.Unmarshal([]byte(v), p)
-	default:
-		return nil
-	}
-}
-
-// CreateAPIKeyRequest represents the request to create an API key
-type CreateAPIKeyRequest struct {
-	Name        string            `json:"name" validate:"required,min=1,max=100"`
-	Description *string           `json:"description,omitempty"`
-	Permissions APIKeyPermissions `json:"permissions"`
-	RateLimit   int               `json:"rate_limit"`
-	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
-}
-
-// CreateAPIKeyResponse represents the response when creating an API key
-type CreateAPIKeyResponse struct {
-	APIKey    *APIKey `json:"api_key"`
-	PlainKey  string  `json:"plain_key"` // Only returned once
-	KeyPrefix string  `json:"key_prefix"`
-}
-
 // APIKeyUsage represents API key usage statistics
 type APIKeyUsage struct {
 	ID             int64     `json:"id" db:"id"`
-	APIKeyID       int64     `json:"api_key_id" db:"api_key_id"`
+	APIKeyID       uuid.UUID `json:"api_key_id" db:"api_key_id"`
 	Endpoint       string    `json:"endpoint" db:"endpoint"`
 	Method         string    `json:"method" db:"method"`
 	StatusCode     *int      `json:"status_code,omitempty" db:"status_code"`
@@ -191,17 +129,6 @@ type APIKeyUsage struct {
 	RequestSize    *int      `json:"request_size,omitempty" db:"request_size"`
 	ResponseSize   *int      `json:"response_size,omitempty" db:"response_size"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-}
-
-// APIKeyStats represents API key usage statistics
-type APIKeyStats struct {
-	APIKeyID       int64 `json:"api_key_id"`
-	TotalRequests  int64 `json:"total_requests"`
-	TodayRequests  int64 `json:"today_requests"`
-	WeekRequests   int64 `json:"week_requests"`
-	MonthRequests  int64 `json:"month_requests"`
-	SuccessRate    float64 `json:"success_rate"`
-	AvgResponseTime float64 `json:"avg_response_time"`
 }
 
 // PageAnalytics represents analytics for a static page
@@ -227,25 +154,6 @@ type ListPagesQuery struct {
 	Offset      int     `json:"offset"`
 }
 
-// ListAPIKeysQuery represents query parameters for listing API keys
-type ListAPIKeysQuery struct {
-	Active    *bool   `json:"active,omitempty"`
-	Expired   *bool   `json:"expired,omitempty"`
-	Search    *string `json:"search,omitempty"`
-	SortBy    string  `json:"sort_by"`
-	SortOrder string  `json:"sort_order"`
-	Limit     int     `json:"limit"`
-	Offset    int     `json:"offset"`
-}
-
-// PaginatedResponse represents a paginated response
-type PaginatedResponse struct {
-	Data       interface{} `json:"data"`
-	Total      int64       `json:"total"`
-	Limit      int         `json:"limit"`
-	Offset     int         `json:"offset"`
-	HasMore    bool        `json:"has_more"`
-}
 
 // MediaFile represents an uploaded media file
 type MediaFile struct {
@@ -353,15 +261,7 @@ type ContentBlockRequest struct {
 
 // Default permissions for API keys
 var (
-	DefaultAPIKeyPermissions = APIKeyPermissions{
-		"url.create",
-		"url.read",
-		"url.update", 
-		"url.delete",
-		"analytics.read",
-	}
-
-	PremiumAPIKeyPermissions = APIKeyPermissions{
+	PremiumAPIKeyPermissions = StringArray{
 		"url.create",
 		"url.read", 
 		"url.update",
@@ -373,7 +273,7 @@ var (
 		"domain.delete",
 	}
 
-	AdminAPIKeyPermissions = APIKeyPermissions{
+	AdminAPIKeyPermissions = StringArray{
 		"*", // All permissions
 	}
 )

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  ChartBarIcon, 
-  GlobeAltIcon, 
+import {
+  ChartBarIcon,
+  GlobeAltIcon,
   DevicePhoneMobileIcon,
   ComputerDesktopIcon,
   EyeIcon,
@@ -12,6 +12,8 @@ import {
   CalendarDaysIcon,
   ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface AnalyticsData {
   total_clicks: number;
@@ -72,7 +74,7 @@ export default function RealTimeAnalytics({
 
     try {
       const token = getAccessToken();
-      const response = await fetch(`http://localhost:8080/api/v1/analytics/${shortCode}?days=30`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/analytics/${shortCode}?days=30`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

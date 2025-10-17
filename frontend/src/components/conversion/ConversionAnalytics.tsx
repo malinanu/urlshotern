@@ -11,6 +11,8 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface ConversionStats {
   goal_id: number;
   goal_name: string;
@@ -69,7 +71,7 @@ const ConversionAnalytics: React.FC<ConversionAnalyticsProps> = ({ goalId }) => 
   const fetchGoals = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8080/api/v1/conversions/goals', {
+      const response = await fetch('${API_BASE_URL}/api/v1/conversions/goals', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -97,7 +99,7 @@ const ConversionAnalytics: React.FC<ConversionAnalyticsProps> = ({ goalId }) => 
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        `http://localhost:8080/api/v1/conversions/goals/${selectedGoalId}/stats?days=${days}`,
+        `${API_BASE_URL}/api/v1/conversions/goals/${selectedGoalId}/stats?days=${days}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

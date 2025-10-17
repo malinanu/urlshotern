@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  LinkIcon, 
-  TrendingUpIcon, 
-  GlobeIcon, 
+import {
+  LinkIcon,
+  TrendingUpIcon,
+  GlobeIcon,
   TagIcon,
   ChartBarIcon,
   EyeIcon,
   ArrowTrendingUpIcon,
   ExternalLinkIcon
 } from '@heroicons/react/24/outline';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface UTMParameters {
   utm_source: string;
@@ -131,7 +133,7 @@ export default function ReferrerAnalytics({
       
       // Fetch enhanced referrer analytics
       const analyticsResponse = await fetch(
-        `http://localhost:8080/api/v1/analytics/${shortCode}/referrers/enhanced?days=${days}`, 
+        `${API_BASE_URL}/api/v1/analytics/${shortCode}/referrers/enhanced?days=${days}`, 
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -142,7 +144,7 @@ export default function ReferrerAnalytics({
       
       // Fetch insights
       const insightsResponse = await fetch(
-        `http://localhost:8080/api/v1/analytics/${shortCode}/referrers/insights?days=${days}`, 
+        `${API_BASE_URL}/api/v1/analytics/${shortCode}/referrers/insights?days=${days}`, 
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -153,7 +155,7 @@ export default function ReferrerAnalytics({
       
       // Fetch UTM campaigns
       const campaignsResponse = await fetch(
-        `http://localhost:8080/api/v1/analytics/${shortCode}/utm-campaigns?days=${days}`, 
+        `${API_BASE_URL}/api/v1/analytics/${shortCode}/utm-campaigns?days=${days}`, 
         {
           headers: {
             'Authorization': `Bearer ${token}`,

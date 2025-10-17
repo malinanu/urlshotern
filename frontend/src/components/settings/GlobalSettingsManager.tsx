@@ -18,6 +18,8 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface GlobalSetting {
   id: number;
   key: string;
@@ -96,7 +98,7 @@ export default function GlobalSettingsManager() {
 
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/v1/admin/settings', {
+      const response = await fetch('${API_BASE_URL}/api/v1/admin/settings', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -132,7 +134,7 @@ export default function GlobalSettingsManager() {
 
     try {
       setSaving(true);
-      const response = await fetch(`http://localhost:8080/api/v1/admin/settings/${key}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/settings/${key}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -175,7 +177,7 @@ export default function GlobalSettingsManager() {
 
     try {
       setSaving(true);
-      const response = await fetch('http://localhost:8080/api/v1/admin/settings/bulk', {
+      const response = await fetch('${API_BASE_URL}/api/v1/admin/settings/bulk', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -215,7 +217,7 @@ export default function GlobalSettingsManager() {
 
     try {
       setSaving(true);
-      const response = await fetch('http://localhost:8080/api/v1/admin/settings', {
+      const response = await fetch('${API_BASE_URL}/api/v1/admin/settings', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -255,7 +257,7 @@ export default function GlobalSettingsManager() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/admin/settings/${key}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/settings/${key}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -18,6 +18,8 @@ import {
   DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface StaticPage {
   id: number;
   slug: string;
@@ -83,7 +85,7 @@ export default function CMSManager() {
       }
       params.append('limit', '50');
 
-      const response = await fetch(`http://localhost:8080/api/v1/admin/cms/pages?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/cms/pages?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -108,8 +110,8 @@ export default function CMSManager() {
 
     try {
       const url = editingPage
-        ? `http://localhost:8080/api/v1/admin/cms/pages/${editingPage.id}`
-        : 'http://localhost:8080/api/v1/admin/cms/pages';
+        ? `${API_BASE_URL}/api/v1/admin/cms/pages/${editingPage.id}`
+        : '${API_BASE_URL}/api/v1/admin/cms/pages';
       
       const method = editingPage ? 'PUT' : 'POST';
 
@@ -167,7 +169,7 @@ export default function CMSManager() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/admin/cms/pages/${pageId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/cms/pages/${pageId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -189,7 +191,7 @@ export default function CMSManager() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/admin/cms/pages/${page.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/cms/pages/${page.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

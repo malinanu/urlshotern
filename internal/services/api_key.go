@@ -12,6 +12,7 @@ import (
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/google/uuid"
 )
 
 type APIKeyService struct {
@@ -44,15 +45,16 @@ func (s *APIKeyService) CreateAPIKey(userID int64, req *models.CreateAPIKeyReque
 	}
 
 	now := time.Now()
+	newID := uuid.New()
 	query := `
-		INSERT INTO api_keys (user_id, key_hash, key_prefix, name, description, permissions, 
+		INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name, description, permissions,
 			rate_limit, expires_at, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at, updated_at`
 
 	var apiKey models.APIKey
 	err = s.db.QueryRow(query,
-		userID, keyHash, keyPrefix, req.Name, req.Description, req.Permissions,
+		newID, userID, keyHash, keyPrefix, req.Name, req.Description, req.Permissions,
 		req.RateLimit, req.ExpiresAt, true, now, now,
 	).Scan(&apiKey.ID, &apiKey.CreatedAt, &apiKey.UpdatedAt)
 
@@ -79,7 +81,7 @@ func (s *APIKeyService) CreateAPIKey(userID int64, req *models.CreateAPIKeyReque
 }
 
 // GetAPIKey retrieves an API key by ID
-func (s *APIKeyService) GetAPIKey(id int64, userID int64) (*models.APIKey, error) {
+func (s *APIKeyService) GetAPIKey(id uuid.UUID, userID int64) (*models.APIKey, error) {
 	query := `
 		SELECT id, user_id, key_hash, key_prefix, name, description, permissions,
 			rate_limit, last_used_at, last_used_ip, expires_at, is_active,
@@ -147,7 +149,7 @@ func (s *APIKeyService) ValidateAPIKey(key string) (*models.APIKey, error) {
 }
 
 // UpdateAPIKeyUsage updates the last used timestamp and IP for an API key
-func (s *APIKeyService) UpdateAPIKeyUsage(keyID int64, ipAddress string) error {
+func (s *APIKeyService) UpdateAPIKeyUsage(keyID uuid.UUID, ipAddress string) error {
 	query := `
 		UPDATE api_keys 
 		SET last_used_at = $1, last_used_ip = $2, updated_at = $3
@@ -163,7 +165,7 @@ func (s *APIKeyService) UpdateAPIKeyUsage(keyID int64, ipAddress string) error {
 }
 
 // RecordAPIKeyUsage records API key usage for analytics
-func (s *APIKeyService) RecordAPIKeyUsage(keyID int64, endpoint, method string, statusCode, responseTimeMs, requestSize, responseSize int, ipAddress, userAgent string) error {
+func (s *APIKeyService) RecordAPIKeyUsage(keyID uuid.UUID, endpoint, method string, statusCode, responseTimeMs, requestSize, responseSize int, ipAddress, userAgent string) error {
 	query := `
 		INSERT INTO api_key_usage (api_key_id, endpoint, method, status_code, response_time_ms,
 			ip_address, user_agent, request_size, response_size, created_at)
@@ -277,7 +279,7 @@ func (s *APIKeyService) ListAPIKeys(userID int64, query *models.ListAPIKeysQuery
 }
 
 // RevokeAPIKey deactivates an API key
-func (s *APIKeyService) RevokeAPIKey(id int64, userID int64) error {
+func (s *APIKeyService) RevokeAPIKey(id uuid.UUID, userID int64) error {
 	query := `UPDATE api_keys SET is_active = false, updated_at = $1 WHERE id = $2 AND user_id = $3`
 	result, err := s.db.Exec(query, time.Now(), id, userID)
 	if err != nil {
@@ -297,7 +299,7 @@ func (s *APIKeyService) RevokeAPIKey(id int64, userID int64) error {
 }
 
 // DeleteAPIKey permanently deletes an API key
-func (s *APIKeyService) DeleteAPIKey(id int64, userID int64) error {
+func (s *APIKeyService) DeleteAPIKey(id uuid.UUID, userID int64) error {
 	query := `DELETE FROM api_keys WHERE id = $1 AND user_id = $2`
 	result, err := s.db.Exec(query, id, userID)
 	if err != nil {
@@ -317,7 +319,7 @@ func (s *APIKeyService) DeleteAPIKey(id int64, userID int64) error {
 }
 
 // GetAPIKeyStats gets usage statistics for an API key
-func (s *APIKeyService) GetAPIKeyStats(keyID int64, userID int64) (*models.APIKeyStats, error) {
+func (s *APIKeyService) GetAPIKeyStats(keyID uuid.UUID, userID int64) (*models.APIKeyStats, error) {
 	// First verify the key belongs to the user
 	_, err := s.GetAPIKey(keyID, userID)
 	if err != nil {

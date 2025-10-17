@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
 )
@@ -358,7 +359,7 @@ func (h *CMSHandlers) GetAPIKey(c *gin.Context) {
 	}
 
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
 		return
@@ -382,7 +383,7 @@ func (h *CMSHandlers) RevokeAPIKey(c *gin.Context) {
 	}
 
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
 		return
@@ -406,7 +407,7 @@ func (h *CMSHandlers) DeleteAPIKey(c *gin.Context) {
 	}
 
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
 		return
@@ -430,7 +431,7 @@ func (h *CMSHandlers) GetAPIKeyStats(c *gin.Context) {
 	}
 
 	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid API key ID"})
 		return

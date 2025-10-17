@@ -96,7 +96,7 @@ func APIKeyPermissionMiddleware(apiKeyService *services.APIKeyService, permissio
 			return
 		}
 
-		apiKeyPerms, ok := permissions.(models.APIKeyPermissions)
+		apiKeyPerms, ok := permissions.(models.StringArray)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid permissions format"})
 			c.Abort()

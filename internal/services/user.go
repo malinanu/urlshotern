@@ -218,9 +218,14 @@ func (u *UserService) GetUserByPhone(phone string) (*models.User, error) {
 func (u *UserService) CreateSession(user *models.User, rememberMe bool, ipAddress, userAgent string) (string, error) {
 	sessionID := uuid.New()
 	expiresAt := time.Now().Add(24 * time.Hour) // Default 24 hours
-	
+
 	if rememberMe {
 		expiresAt = time.Now().Add(7 * 24 * time.Hour) // 7 days for remember me
+	}
+
+	// Use a default IP if empty (happens when behind proxies or in dev)
+	if ipAddress == "" {
+		ipAddress = "0.0.0.0"
 	}
 
 	session := &models.UserSession{

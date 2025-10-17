@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 interface User {
   id: number;
@@ -52,23 +52,23 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 // Helper function to check if error is a network error
 const isNetworkError = (error: any): boolean => {
   return (
-    error instanceof TypeError && 
-    (error.message === 'Failed to fetch' || 
+    error instanceof TypeError &&
+    (error.message === 'Failed to fetch' ||
      error.message === 'Network request failed' ||
      error.message.includes('fetch'))
   );
 };
 
-// Helper function to check backend availability
-const checkBackendHealth = async (): Promise<boolean> => {
+// Helper function to decode JWT and check expiration (moved outside component)
+const checkTokenExpiry = (token: string): boolean => {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000), // 5 second timeout
-    });
-    return response.ok;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Math.floor(Date.now() / 1000);
+    // Check if token is actually expired (no buffer)
+    return payload.exp < currentTime;
   } catch (error) {
-    return false;
+    console.error('Error decoding token:', error);
+    return true; // Treat invalid tokens as expired
   }
 };
 
@@ -79,191 +79,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!user;
 
-  // Initialize auth state from localStorage
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      const userData = localStorage.getItem('user_data');
-      
-      if (token && userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
-          
-          // Check backend availability first in development
-          const isDevelopment = process.env.NODE_ENV === 'development';
-          if (isDevelopment) {
-            const backendAvailable = await checkBackendHealth();
-            if (!backendAvailable) {
-              console.warn('Backend server not available. Continuing with cached auth state.');
-              setIsLoading(false);
-              return;
-            }
-          }
-          
-          // If token is expired, try to refresh it
-          if (isTokenExpired(token)) {
-            try {
-              await refreshToken();
-            } catch (error) {
-              console.error('Failed to refresh expired token on init:', error);
-              // Don't logout on network errors during init
-              if (!isNetworkError(error)) {
-                logout();
-              }
-            }
-          } else {
-            // Verify token is still valid by calling profile endpoint
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/v1/auth/profile`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-                signal: AbortSignal.timeout(5000), // 5 second timeout
-              });
-              
-              if (!response.ok) {
-                // Token is invalid, clear auth state
-                logout();
-              }
-            } catch (error) {
-              console.error('Error verifying auth state:', error);
-              // Don't logout on network errors during profile verification
-              if (!isNetworkError(error)) {
-                logout();
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing auth state:', error);
-          // Clear invalid stored data
-          logout();
-        }
-      }
-      
-      setIsLoading(false);
-    };
-    
-    initAuth();
+  // Helper function to check expiration with optional buffer
+  const isTokenExpired = useCallback((token?: string, bufferSeconds: number = 0): boolean => {
+    const tokenToCheck = token || localStorage.getItem('access_token');
+    if (!tokenToCheck) return true;
+
+    try {
+      const payload = JSON.parse(atob(tokenToCheck.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      // Check if token expires within the buffer time
+      return payload.exp < (currentTime + bufferSeconds);
+    } catch (error) {
+      console.error('Error checking token expiry:', error);
+      return true;
+    }
   }, []);
 
-  // Set up periodic token refresh check
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  const getAccessToken = useCallback((): string | null => {
+    return localStorage.getItem('access_token');
+  }, []);
 
-    const tokenRefreshInterval = setInterval(async () => {
-      const token = getAccessToken();
-      if (token && isTokenExpired(token)) {
-        try {
-          console.log('Token expired, refreshing automatically...');
-          await refreshToken();
-        } catch (error) {
-          console.error('Automatic token refresh failed:', error);
-          logout();
-        }
-      }
-    }, 60000); // Check every minute
+  const logout = useCallback(() => {
+    console.log('[Auth] Logging out user');
 
-    return () => clearInterval(tokenRefreshInterval);
-  }, [isAuthenticated]);
+    // Save token before removing for logout endpoint call
+    const token = localStorage.getItem('access_token');
 
-  const login = async (email: string, password: string, rememberMe = false): Promise<AuthResponse> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          remember_me: rememberMe,
-        }),
-        signal: AbortSignal.timeout(15000), // 15 second timeout for login
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Store auth data
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-      
-      setUser(data.user);
-      
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      
-      // Provide better error messages for network issues
-      if (isNetworkError(error)) {
-        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
-      }
-      
-      throw error;
-    }
-  };
-
-  const register = async (data: RegisterData): Promise<AuthResponse> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        signal: AbortSignal.timeout(15000), // 15 second timeout for register
-      });
-
-      // Check if response has content before parsing JSON
-      let result;
-      const text = await response.text();
-      try {
-        result = text ? JSON.parse(text) : {};
-      } catch (jsonError) {
-        console.error('Failed to parse JSON response:', text);
-        throw new Error('Invalid server response');
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Registration failed');
-      }
-
-      // For registration, we might not get tokens immediately if verification is required
-      // Check if we got an auth response or just a registration confirmation
-      if (result.access_token) {
-        localStorage.setItem('access_token', result.access_token);
-        localStorage.setItem('refresh_token', result.refresh_token);
-        localStorage.setItem('user_data', JSON.stringify(result.user));
-        setUser(result.user);
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Registration error:', error);
-      
-      // Provide better error messages for network issues
-      if (isNetworkError(error)) {
-        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
-      }
-      
-      throw error;
-    }
-  };
-
-  const logout = () => {
+    // Remove auth data
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_data');
     setUser(null);
-    
-    // Call logout endpoint if we have a token
-    const token = localStorage.getItem('access_token');
+
+    // Call logout endpoint if we had a token
     if (token) {
       fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
         method: 'POST',
@@ -271,18 +119,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-      }).catch(() => {
-        // Ignore errors on logout
+      }).catch((error) => {
+        console.error('[Auth] Logout endpoint error:', error);
       });
     }
-  };
+  }, []);
 
-  const refreshToken = async (retryCount = 0) => {
+  const refreshToken = useCallback(async (retryCount = 0) => {
+    console.log('[Auth] Refreshing token, attempt:', retryCount + 1);
+
     // Prevent multiple simultaneous refresh attempts
     if (isRefreshing) {
-      // Wait for ongoing refresh to complete
+      console.log('[Auth] Refresh already in progress, waiting...');
       let attempts = 0;
-      while (isRefreshing && attempts < 50) { // Max 5 seconds wait
+      while (isRefreshing && attempts < 50) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
       }
@@ -290,8 +140,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const refreshTokenValue = localStorage.getItem('refresh_token');
-    
+
     if (!refreshTokenValue) {
+      console.error('[Auth] No refresh token found');
       logout();
       return;
     }
@@ -307,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           refresh_token: refreshTokenValue,
         }),
-        signal: AbortSignal.timeout(10000), // 10 second timeout
+        signal: AbortSignal.timeout(10000),
       });
 
       const data = await response.json();
@@ -316,59 +167,202 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Token refresh failed');
       }
 
+      console.log('[Auth] Token refresh successful');
+
       // Update stored tokens
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
-      
+
       setUser(data.user);
     } catch (error) {
-      console.error('Token refresh error:', error);
-      
+      console.error('[Auth] Token refresh error:', error);
+
       // Handle network errors with retry logic
       if (isNetworkError(error) && retryCount < 3) {
-        console.log(`Network error detected, retrying in ${Math.pow(2, retryCount)} seconds... (attempt ${retryCount + 1}/3)`);
-        
-        // Exponential backoff: 1s, 2s, 4s
+        console.log(`[Auth] Network error, retrying in ${Math.pow(2, retryCount)} seconds...`);
+
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-        
+
         setIsRefreshing(false);
         return refreshToken(retryCount + 1);
       }
-      
+
       // For network errors that exceed retry limit, don't logout
-      // This allows the app to continue working offline
       if (isNetworkError(error)) {
-        console.warn('Backend unavailable, continuing without token refresh');
-        // Don't logout, just log the issue
+        console.warn('[Auth] Backend unavailable, continuing without token refresh');
         return;
       }
-      
-      // For auth errors (invalid token, etc.), logout as usual
+
+      // For auth errors, logout
+      console.error('[Auth] Authentication error, logging out');
       logout();
       throw error;
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [isRefreshing, logout]);
 
-  // Helper function to decode JWT and check expiration
-  const isTokenExpired = (token?: string): boolean => {
-    const tokenToCheck = token || localStorage.getItem('access_token');
-    if (!tokenToCheck) return true;
-    
+  // Initialize auth state from localStorage
+  useEffect(() => {
+    const initAuth = async () => {
+      console.log('[Auth] Initializing auth state');
+
+      const token = localStorage.getItem('access_token');
+      const userData = localStorage.getItem('user_data');
+
+      if (token && userData && userData !== 'undefined') {
+        try {
+          const parsedUser = JSON.parse(userData);
+
+          // Always load user from cache first (for instant UI update)
+          console.log('[Auth] Loading user from cache');
+          setUser(parsedUser);
+
+          // Then check if token is expired and refresh if needed
+          if (checkTokenExpiry(token)) {
+            console.log('[Auth] Token expired, refreshing in background...');
+            try {
+              await refreshToken();
+            } catch (error) {
+              console.error('[Auth] Failed to refresh expired token:', error);
+              // Only logout if refresh fails due to auth error (not network)
+              if (!isNetworkError(error)) {
+                logout();
+              }
+            }
+          } else {
+            console.log('[Auth] Token valid');
+          }
+        } catch (error) {
+          console.error('[Auth] Error parsing stored user data:', error);
+          logout();
+        }
+      } else {
+        console.log('[Auth] No stored credentials found');
+      }
+
+      setIsLoading(false);
+    };
+
+    initAuth();
+  }, [logout, refreshToken]);
+
+  // Set up periodic token refresh check
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    console.log('[Auth] Setting up token refresh interval');
+
+    const tokenRefreshInterval = setInterval(() => {
+      const token = getAccessToken();
+
+      if (token) {
+        // Check if token will expire in the next 5 minutes
+        if (isTokenExpired(token, 300)) {
+          console.log('[Auth] Token expiring soon, refreshing...');
+          refreshToken().catch((error) => {
+            console.error('[Auth] Auto-refresh failed:', error);
+          });
+        }
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      console.log('[Auth] Clearing token refresh interval');
+      clearInterval(tokenRefreshInterval);
+    };
+  }, [isAuthenticated, isTokenExpired, getAccessToken, refreshToken]);
+
+  const login = async (email: string, password: string, rememberMe = false): Promise<AuthResponse> => {
+    console.log('[Auth] Logging in user:', email);
+
     try {
-      const payload = JSON.parse(atob(tokenToCheck.split('.')[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-      // Check if token expires within the next 5 minutes
-      return payload.exp < (currentTime + 300);
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          remember_me: rememberMe,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      console.log('[Auth] Login successful');
+
+      // Store auth data
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+
+      setUser(data.user);
+
+      return data;
     } catch (error) {
-      return true; // Treat invalid tokens as expired
+      console.error('[Auth] Login error:', error);
+
+      if (isNetworkError(error)) {
+        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+      }
+
+      throw error;
     }
   };
 
-  const getAccessToken = (): string | null => {
-    return localStorage.getItem('access_token');
+  const register = async (data: RegisterData): Promise<AuthResponse> => {
+    console.log('[Auth] Registering user:', data.email);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      let result;
+      const text = await response.text();
+      try {
+        result = text ? JSON.parse(text) : {};
+      } catch (jsonError) {
+        console.error('[Auth] Failed to parse registration response:', text);
+        throw new Error('Invalid server response');
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Registration failed');
+      }
+
+      console.log('[Auth] Registration successful');
+
+      if (result.access_token) {
+        localStorage.setItem('access_token', result.access_token);
+        localStorage.setItem('refresh_token', result.refresh_token);
+        localStorage.setItem('user_data', JSON.stringify(result.user));
+        setUser(result.user);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[Auth] Registration error:', error);
+
+      if (isNetworkError(error)) {
+        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+      }
+
+      throw error;
+    }
   };
 
   const value = {

@@ -9,6 +9,8 @@ import clsx from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { QRCodeModal } from '@/components/QRCode';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 const urlSchema = z.object({
   url: z
     .string()
@@ -62,7 +64,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:8080/api/v1/shorten', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/shorten`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
@@ -80,7 +82,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
             'Content-Type': 'application/json',
           };
           
-          const retryResponse = await fetch('http://localhost:8080/api/v1/shorten', {
+          const retryResponse = await fetch(`${API_BASE_URL}/api/v1/shorten`, {
             method: 'POST',
             headers: headersWithoutAuth,
             body: JSON.stringify(data),

@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  PlusIcon, 
-  TrashIcon, 
+import {
+  PlusIcon,
+  TrashIcon,
   ArrowUpTrayIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -12,6 +12,8 @@ import {
   ClipboardDocumentIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface URLInput {
   id: string;
@@ -151,7 +153,7 @@ export default function BulkURLShortener() {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:8080/api/v1/batch-shorten', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/batch-shorten`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),

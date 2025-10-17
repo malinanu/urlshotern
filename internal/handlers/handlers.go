@@ -26,12 +26,16 @@ type Handler struct {
 	ABTestHandlers         *ABTestingHandler
 	RealtimeHandlers       *RealtimeAnalyticsHandler
 	BillingHandlers        *BillingHandler
+	APIKeyHandlers         *APIKeyHandler
 	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
 	AttributionHandlers    *AttributionHandler
 }
 
 // NewHandler creates a new handler instance
 func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage) *Handler {
+	// Create API key service and handler
+	apiKeyService := services.NewAPIKeyService(db)
+
 	return &Handler{
 		shortenerService:       shortenerService,
 		analyticsService:       analyticsService,
@@ -46,6 +50,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		ABTestHandlers:         NewABTestingHandler(abTestService),
 		RealtimeHandlers:       NewRealtimeAnalyticsHandler(realtimeService),
 		BillingHandlers:        NewBillingHandler(nil), // Will need to fix this properly
+		APIKeyHandlers:         NewAPIKeyHandler(apiKeyService),
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 	}

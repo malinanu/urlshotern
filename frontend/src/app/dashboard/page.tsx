@@ -6,9 +6,9 @@ import Layout from '@/components/layout/Layout';
 import URLShortener from '@/components/URLShortener';
 import { useAuth } from '@/contexts/AuthContext';
 import { QRCodeModal } from '@/components/QRCode';
-import { 
-  ChartBarIcon, 
-  LinkIcon, 
+import {
+  ChartBarIcon,
+  LinkIcon,
   ClipboardDocumentIcon,
   CheckIcon,
   CalendarIcon,
@@ -18,6 +18,8 @@ import {
   PencilIcon,
   QrCodeIcon,
 } from '@heroicons/react/24/outline';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface URLData {
   id: number;
@@ -92,7 +94,7 @@ export default function DashboardPage() {
       setLoadingStats(true);
 
       // Fetch user's URLs from backend
-      const urlsResponse = await makeAuthenticatedRequest('http://localhost:8080/api/v1/my-urls');
+      const urlsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/my-urls`);
       
       if (urlsResponse && urlsResponse.ok) {
         const urlsData = await urlsResponse.json();
@@ -102,7 +104,7 @@ export default function DashboardPage() {
       }
 
       // Fetch dashboard stats from backend
-      const statsResponse = await makeAuthenticatedRequest('http://localhost:8080/api/v1/dashboard/stats');
+      const statsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/dashboard/stats`);
       
       if (statsResponse && statsResponse.ok) {
         const statsData = await statsResponse.json();
@@ -174,7 +176,7 @@ export default function DashboardPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/my-urls/${shortCode}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/my-urls/${shortCode}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -208,7 +210,7 @@ export default function DashboardPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/my-urls/${shortCode}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/my-urls/${shortCode}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
