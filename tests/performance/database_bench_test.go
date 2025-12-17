@@ -34,9 +34,10 @@ func setupDB() error {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		// Default connection for local testing (SSL disabled)
+		// SECURITY: This default is for local development only
 		// For production/CI testing with SSL, set DATABASE_URL environment variable:
 		// export DATABASE_URL="postgres://user:pass@host:5432/dbname?sslmode=require"
-		dbURL = "postgres://postgres:password@localhost:5432/urlshortener?sslmode=disable"
+		dbURL = "postgres://urlshortener:devpassword@localhost:5432/urlshortener_db?sslmode=disable"
 	}
 
 	db, err = sql.Open("postgres", dbURL)
