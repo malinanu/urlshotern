@@ -61,6 +61,9 @@ spec:
           subPath: postgresql.conf
         - name: postgres-init
           mountPath: /docker-entrypoint-initdb.d
+        - name: postgres-ssl
+          mountPath: /etc/postgresql/ssl
+          readOnly: true
         resources:
           requests:
             memory: "512Mi"
@@ -98,6 +101,10 @@ spec:
       - name: postgres-init
         configMap:
           name: postgres-init-scripts
+      - name: postgres-ssl
+        secret:
+          secretName: postgres-ssl-certs
+          defaultMode: 0600
 ---
 apiVersion: v1
 kind: Service
@@ -145,8 +152,14 @@ data:
     log_min_duration_statement = 1000
     log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
     
-    # Security
-    ssl = off
+    # Security - SSL/TLS Configuration
+    ssl = on
+    ssl_cert_file = '/etc/postgresql/ssl/server.crt'
+    ssl_key_file = '/etc/postgresql/ssl/server.key'
+    ssl_ca_file = '/etc/postgresql/ssl/root.crt'
+    ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'
+    ssl_prefer_server_ciphers = on
+    ssl_min_protocol_version = 'TLSv1.2'
     
     # Performance monitoring
     shared_preload_libraries = 'pg_stat_statements'
