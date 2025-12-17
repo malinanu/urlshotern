@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
@@ -27,14 +28,18 @@ type Handler struct {
 	RealtimeHandlers       *RealtimeAnalyticsHandler
 	BillingHandlers        *BillingHandler
 	APIKeyHandlers         *APIKeyHandler
+	PolarWebhookHandler    *PolarWebhookHandler
 	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
 	AttributionHandlers    *AttributionHandler
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, config *configs.Config) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
+
+	// Create billing service and handlers
+	billingHandler := NewBillingHandler(db.GetDB(), config)
 
 	return &Handler{
 		shortenerService:       shortenerService,
@@ -49,8 +54,9 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		ConversionHandlers:     NewConversionTrackingHandler(conversionService),
 		ABTestHandlers:         NewABTestingHandler(abTestService),
 		RealtimeHandlers:       NewRealtimeAnalyticsHandler(realtimeService),
-		BillingHandlers:        NewBillingHandler(nil), // Will need to fix this properly
+		BillingHandlers:        billingHandler,
 		APIKeyHandlers:         NewAPIKeyHandler(apiKeyService),
+		PolarWebhookHandler:    NewPolarWebhookHandler(db.GetDB(), billingHandler.billingService),
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 	}
@@ -349,8 +355,12 @@ func (h *Handler) BatchShortenURLs(c *gin.Context) {
 func (h *Handler) GetUserURLs(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)
 	if !exists {
-		// Temporary: Use default user ID 1 for development
-		userID = 1
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "authentication_required",
+			Message: "Authentication required to access this resource",
+		})
+		c.Abort()
+		return
 	}
 
 	// Parse query parameters
@@ -387,8 +397,12 @@ func (h *Handler) GetUserURLs(c *gin.Context) {
 func (h *Handler) DeleteURL(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)
 	if !exists {
-		// Temporary: Use default user ID 1 for development
-		userID = 1
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "authentication_required",
+			Message: "Authentication required to access this resource",
+		})
+		c.Abort()
+		return
 	}
 
 	shortCode := c.Param("shortCode")
@@ -425,8 +439,12 @@ func (h *Handler) DeleteURL(c *gin.Context) {
 func (h *Handler) UpdateURL(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)
 	if !exists {
-		// Temporary: Use default user ID 1 for development
-		userID = 1
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "authentication_required",
+			Message: "Authentication required to access this resource",
+		})
+		c.Abort()
+		return
 	}
 
 	shortCode := c.Param("shortCode")
@@ -470,8 +488,12 @@ func (h *Handler) UpdateURL(c *gin.Context) {
 func (h *Handler) GetUserDashboardStats(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)
 	if !exists {
-		// Temporary: Use default user ID 1 for development
-		userID = 1
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "authentication_required",
+			Message: "Authentication required to access this resource",
+		})
+		c.Abort()
+		return
 	}
 
 	stats, err := h.analyticsService.GetUserDashboardStats(userID)
