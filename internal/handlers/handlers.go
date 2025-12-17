@@ -21,6 +21,7 @@ type Handler struct {
 	abTestingService       *services.ABTestingService
 	realtimeService        *services.RealtimeAnalyticsService
 	attributionService     *services.AttributionService
+	billingService         *services.BillingService  // Added for usage limit enforcement
 	AuthHandlers           *AuthHandlers
 	AnalyticsHandlers      *AnalyticsHandlers
 	ConversionHandlers     *ConversionTrackingHandler
@@ -49,6 +50,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		abTestingService:       abTestService,
 		realtimeService:        realtimeService,
 		attributionService:     attributionService,
+		billingService:         billingHandler.billingService,  // Store billing service for usage limit checks
 		AuthHandlers:           authHandlers,
 		AnalyticsHandlers:      analyticsHandlers,
 		ConversionHandlers:     NewConversionTrackingHandler(conversionService),
@@ -91,6 +93,23 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 	var userIDPtr *int64
 	if userID > 0 {
 		userIDPtr = &userID
+
+		// Check usage limits for authenticated users
+		canCreate, message, err := h.billingService.CanCreateURL(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error:   "usage_check_failed",
+				Message: "Failed to verify usage limits",
+			})
+			return
+		}
+		if !canCreate {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "usage_limit_exceeded",
+				Message: message,
+			})
+			return
+		}
 	}
 
 	// Shorten the URL
