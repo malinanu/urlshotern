@@ -1,6 +1,15 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import {
+  validateToken,
+  storeAuthTokens,
+  shouldRefreshToken,
+  getTokenRemainingTime,
+  clearAuthTokens,
+  getAccessToken as getStoredAccessToken,
+  getRefreshToken as getStoredRefreshToken,
+} from '@/utils/tokenValidation';
 
 interface User {
   id: number;
@@ -59,56 +68,43 @@ const isNetworkError = (error: any): boolean => {
   );
 };
 
-// Helper function to decode JWT and check expiration (moved outside component)
-const checkTokenExpiry = (token: string): boolean => {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const currentTime = Math.floor(Date.now() / 1000);
-    // Check if token is actually expired (no buffer)
-    return payload.exp < currentTime;
-  } catch (error) {
-    console.error('Error decoding token:', error);
-    return true; // Treat invalid tokens as expired
-  }
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Promise reference to prevent concurrent refresh attempts (Issue #36)
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
+
   const isAuthenticated = !!user;
 
-  // Helper function to check expiration with optional buffer
-  const isTokenExpired = useCallback((token?: string, bufferSeconds: number = 0): boolean => {
-    const tokenToCheck = token || localStorage.getItem('access_token');
-    if (!tokenToCheck) return true;
-
-    try {
-      const payload = JSON.parse(atob(tokenToCheck.split('.')[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-      // Check if token expires within the buffer time
-      return payload.exp < (currentTime + bufferSeconds);
-    } catch (error) {
-      console.error('Error checking token expiry:', error);
-      return true;
-    }
+  // Wrapper for getAccessToken to maintain backward compatibility
+  const getAccessToken = useCallback((): string | null => {
+    return getStoredAccessToken();
   }, []);
 
-  const getAccessToken = useCallback((): string | null => {
-    return localStorage.getItem('access_token');
+  // Wrapper for isTokenExpired to maintain backward compatibility (uses utility internally)
+  const isTokenExpired = useCallback((token?: string, bufferSeconds: number = 0): boolean => {
+    const tokenToCheck = token || getStoredAccessToken();
+    if (!tokenToCheck) return true;
+
+    // Use utility function with proper validation (Issue #35)
+    const validation = validateToken(tokenToCheck);
+    if (!validation.isValid) return true;
+
+    // Check if token expires within the buffer time
+    const currentTime = Math.floor(Date.now() / 1000);
+    return validation.payload!.exp < (currentTime + bufferSeconds);
   }, []);
 
   const logout = useCallback(() => {
     console.log('[Auth] Logging out user');
 
     // Save token before removing for logout endpoint call
-    const token = localStorage.getItem('access_token');
+    const token = getStoredAccessToken();
 
-    // Remove auth data
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
+    // Remove auth data using utility (Issue #35)
+    clearAuthTokens();
     setUser(null);
 
     // Call logout endpoint if we had a token
@@ -125,114 +121,148 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refreshToken = useCallback(async (retryCount = 0) => {
+  const refreshToken = useCallback(async (retryCount = 0): Promise<void> => {
+    // Check if refresh is already in progress (Issue #36 - Race condition fix)
+    if (refreshPromiseRef.current) {
+      console.log('[Auth] Refresh already in progress, waiting for existing promise...');
+      return refreshPromiseRef.current;
+    }
+
     console.log('[Auth] Refreshing token, attempt:', retryCount + 1);
 
-    // Prevent multiple simultaneous refresh attempts
-    if (isRefreshing) {
-      console.log('[Auth] Refresh already in progress, waiting...');
-      let attempts = 0;
-      while (isRefreshing && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      return;
-    }
+    // Create refresh promise and store reference
+    const refreshPromise = (async () => {
+      const refreshTokenValue = getStoredRefreshToken();
 
-    const refreshTokenValue = localStorage.getItem('refresh_token');
-
-    if (!refreshTokenValue) {
-      console.error('[Auth] No refresh token found');
-      logout();
-      return;
-    }
-
-    setIsRefreshing(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          refresh_token: refreshTokenValue,
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Token refresh failed');
-      }
-
-      console.log('[Auth] Token refresh successful');
-
-      // Update stored tokens
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-
-      setUser(data.user);
-    } catch (error) {
-      console.error('[Auth] Token refresh error:', error);
-
-      // Handle network errors with retry logic
-      if (isNetworkError(error) && retryCount < 3) {
-        console.log(`[Auth] Network error, retrying in ${Math.pow(2, retryCount)} seconds...`);
-
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-
-        setIsRefreshing(false);
-        return refreshToken(retryCount + 1);
-      }
-
-      // For network errors that exceed retry limit, don't logout
-      if (isNetworkError(error)) {
-        console.warn('[Auth] Backend unavailable, continuing without token refresh');
+      if (!refreshTokenValue) {
+        console.error('[Auth] No refresh token found');
+        refreshPromiseRef.current = null;
+        logout();
         return;
       }
 
-      // For auth errors, logout
-      console.error('[Auth] Authentication error, logging out');
-      logout();
-      throw error;
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [isRefreshing, logout]);
+      // Validate refresh token structure before attempting refresh (Issue #35)
+      const refreshValidation = validateToken(refreshTokenValue);
+      if (!refreshValidation.isValid && !refreshValidation.error?.includes('expired')) {
+        console.error('[Auth] Invalid refresh token structure:', refreshValidation.error);
+        refreshPromiseRef.current = null;
+        logout();
+        return;
+      }
+
+      setIsRefreshing(true);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            refresh_token: refreshTokenValue,
+          }),
+          signal: AbortSignal.timeout(10000),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Token refresh failed');
+        }
+
+        console.log('[Auth] Token refresh successful');
+
+        // Validate and store tokens using utility (Issues #35, #37)
+        try {
+          storeAuthTokens(data.access_token, data.refresh_token, data.expires_in);
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          setUser(data.user);
+        } catch (validationError) {
+          console.error('[Auth] Token validation failed:', validationError);
+          refreshPromiseRef.current = null;
+          logout();
+          return;
+        }
+      } catch (error) {
+        console.error('[Auth] Token refresh error:', error);
+
+        // Handle network errors with exponential backoff (Issue #36)
+        if (isNetworkError(error) && retryCount < 3) {
+          const delaySeconds = Math.pow(2, retryCount);
+          console.log(`[Auth] Network error, retrying in ${delaySeconds} seconds...`);
+
+          await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+
+          setIsRefreshing(false);
+          refreshPromiseRef.current = null;
+          return refreshToken(retryCount + 1);
+        }
+
+        // For network errors that exceed retry limit, don't logout (Issue #36)
+        if (isNetworkError(error)) {
+          console.warn('[Auth] Backend unavailable after retries, continuing without token refresh');
+          refreshPromiseRef.current = null;
+          return;
+        }
+
+        // For auth errors, logout
+        console.error('[Auth] Authentication error, logging out');
+        refreshPromiseRef.current = null;
+        logout();
+        throw error;
+      } finally {
+        setIsRefreshing(false);
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    refreshPromiseRef.current = refreshPromise;
+    return refreshPromise;
+  }, [logout]);
 
   // Initialize auth state from localStorage
   useEffect(() => {
     const initAuth = async () => {
       console.log('[Auth] Initializing auth state');
 
-      const token = localStorage.getItem('access_token');
+      const token = getStoredAccessToken();
       const userData = localStorage.getItem('user_data');
 
       if (token && userData && userData !== 'undefined') {
         try {
+          // Validate token structure first (Issue #35)
+          const tokenValidation = validateToken(token);
+
+          if (!tokenValidation.isValid && !tokenValidation.error?.includes('expired')) {
+            // Token has invalid structure (malformed)
+            console.error('[Auth] Invalid token structure, logging out:', tokenValidation.error);
+            logout();
+            setIsLoading(false);
+            return;
+          }
+
           const parsedUser = JSON.parse(userData);
 
           // Always load user from cache first (for instant UI update)
           console.log('[Auth] Loading user from cache');
           setUser(parsedUser);
 
-          // Then check if token is expired and refresh if needed
-          if (checkTokenExpiry(token)) {
-            console.log('[Auth] Token expired, refreshing in background...');
+          // Check if token should be refreshed using stored expiry (Issue #37)
+          if (shouldRefreshToken()) {
+            const remaining = getTokenRemainingTime();
+            console.log(`[Auth] Token refresh needed (remaining: ${remaining}s), refreshing...`);
             try {
               await refreshToken();
             } catch (error) {
-              console.error('[Auth] Failed to refresh expired token:', error);
+              console.error('[Auth] Failed to refresh token:', error);
               // Only logout if refresh fails due to auth error (not network)
               if (!isNetworkError(error)) {
                 logout();
               }
             }
           } else {
-            console.log('[Auth] Token valid');
+            const remaining = getTokenRemainingTime();
+            console.log(`[Auth] Token valid (remaining: ${remaining}s)`);
           }
         } catch (error) {
           console.error('[Auth] Error parsing stored user data:', error);
@@ -255,16 +285,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[Auth] Setting up token refresh interval');
 
     const tokenRefreshInterval = setInterval(() => {
-      const token = getAccessToken();
-
-      if (token) {
-        // Check if token will expire in the next 5 minutes
-        if (isTokenExpired(token, 300)) {
-          console.log('[Auth] Token expiring soon, refreshing...');
-          refreshToken().catch((error) => {
-            console.error('[Auth] Auto-refresh failed:', error);
-          });
-        }
+      // Use stored timestamp for efficient expiry check (Issue #37)
+      if (shouldRefreshToken()) {
+        const remaining = getTokenRemainingTime();
+        console.log(`[Auth] Token expiring soon (remaining: ${remaining}s), refreshing...`);
+        refreshToken().catch((error) => {
+          console.error('[Auth] Auto-refresh failed:', error);
+        });
       }
     }, 60000); // Check every minute
 
@@ -272,7 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[Auth] Clearing token refresh interval');
       clearInterval(tokenRefreshInterval);
     };
-  }, [isAuthenticated, isTokenExpired, getAccessToken, refreshToken]);
+  }, [isAuthenticated, refreshToken]);
 
   const login = async (email: string, password: string, rememberMe = false): Promise<AuthResponse> => {
     console.log('[Auth] Logging in user:', email);
@@ -299,12 +326,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('[Auth] Login successful');
 
-      // Store auth data
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-
-      setUser(data.user);
+      // Validate and store auth data using utility (Issues #35, #37)
+      try {
+        storeAuthTokens(data.access_token, data.refresh_token, data.expires_in);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+        setUser(data.user);
+      } catch (validationError) {
+        console.error('[Auth] Token validation failed after login:', validationError);
+        throw new Error('Received invalid tokens from server');
+      }
 
       return data;
     } catch (error) {
@@ -347,10 +377,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[Auth] Registration successful');
 
       if (result.access_token) {
-        localStorage.setItem('access_token', result.access_token);
-        localStorage.setItem('refresh_token', result.refresh_token);
-        localStorage.setItem('user_data', JSON.stringify(result.user));
-        setUser(result.user);
+        // Validate and store auth data using utility (Issues #35, #37)
+        try {
+          storeAuthTokens(result.access_token, result.refresh_token, result.expires_in);
+          localStorage.setItem('user_data', JSON.stringify(result.user));
+          setUser(result.user);
+        } catch (validationError) {
+          console.error('[Auth] Token validation failed after registration:', validationError);
+          throw new Error('Received invalid tokens from server');
+        }
       }
 
       return result;
