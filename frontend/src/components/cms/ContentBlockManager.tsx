@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import RichTextEditor from '../editor/RichTextEditor';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { Textarea } from '../ui/Textarea';
-import { Badge } from '../ui/Badge';
-import { Card } from '../ui/Card';
+import { Modal } from '../ui/modal';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select } from '../ui/select';
+import { Textarea } from '../ui/textarea';
+import { Badge } from '../ui/badge';
+import { Card } from '../ui/card';
 import { toast } from 'react-toastify';
 import {
   PlusIcon,
@@ -71,7 +71,7 @@ const categories = [
 ];
 
 export function ContentBlockManager() {
-  const { user, token } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [filteredBlocks, setFilteredBlocks] = useState<ContentBlock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +104,7 @@ export function ContentBlockManager() {
     try {
       const response = await fetch('/api/v1/admin/content-blocks', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -160,7 +160,7 @@ export function ContentBlockManager() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
         body: JSON.stringify(formData),
       });
@@ -203,7 +203,7 @@ export function ContentBlockManager() {
       const response = await fetch(`/api/v1/admin/content-blocks/${block.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -235,7 +235,7 @@ export function ContentBlockManager() {
     try {
       const response = await fetch(`/api/v1/admin/content-blocks/${block.id}/render`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 

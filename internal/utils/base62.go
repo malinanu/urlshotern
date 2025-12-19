@@ -2,32 +2,55 @@ package utils
 
 import (
 	"math"
-	"strings"
 )
 
 const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
-// Encode encodes an integer to a base62 string
+// Pre-allocated buffer pool to reduce allocations
+var bufferPool = make(chan []byte, 100)
+
+func getBuffer() []byte {
+	select {
+	case buf := <-bufferPool:
+		return buf[:0] // Reset length but keep capacity
+	default:
+		return make([]byte, 0, 12) // Snowflake IDs typically need ~11 chars in base62
+	}
+}
+
+func putBuffer(buf []byte) {
+	if cap(buf) == 12 {
+		select {
+		case bufferPool <- buf:
+		default:
+			// Pool is full, let it be garbage collected
+		}
+	}
+}
+
+// EncodeBase62 encodes an integer to a base62 string (optimized version)
 func EncodeBase62(num int64) string {
 	if num == 0 {
 		return "0"
 	}
 
-	var result strings.Builder
+	// Get buffer from pool
+	buf := getBuffer()
+	defer putBuffer(buf)
+
+	// Build string in reverse order (avoid reversing later)
 	for num > 0 {
-		remainder := num % 62
-		result.WriteByte(base62Chars[remainder])
-		num = num / 62
+		buf = append(buf, base62Chars[num%62])
+		num /= 62
 	}
 
-	// Reverse the string
-	encoded := result.String()
-	runes := []rune(encoded)
-	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
+	// Reverse in-place
+	length := len(buf)
+	for i := 0; i < length/2; i++ {
+		buf[i], buf[length-1-i] = buf[length-1-i], buf[i]
 	}
 
-	return string(runes)
+	return string(buf)
 }
 
 // Decode decodes a base62 string to an integer

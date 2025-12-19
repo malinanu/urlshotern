@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import URLShortener from '@/components/URLShortener';
@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [editingUrl, setEditingUrl] = useState<URLData | null>(null);
   const [qrModalUrl, setQrModalUrl] = useState<URLData | null>(null);
   const router = useRouter();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -64,6 +65,12 @@ export default function DashboardPage() {
   const fetchData = async (retryOnTokenRefresh = true) => {
     if (!isAuthenticated || !user) return;
 
+    // Cancel previous request if still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
     const token = getAccessToken();
     if (!token) return;
 
@@ -73,6 +80,7 @@ export default function DashboardPage() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: abortControllerRef.current?.signal,
       });
 
       // Handle token expiration
@@ -112,8 +120,10 @@ export default function DashboardPage() {
       } else if (statsResponse) {
         console.error('Failed to fetch stats:', statsResponse.status);
       }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Error fetching dashboard data:', error);
+      }
     } finally {
       setLoadingUrls(false);
       setLoadingStats(false);
@@ -123,6 +133,13 @@ export default function DashboardPage() {
   // Fetch user's URLs and stats
   useEffect(() => {
     fetchData();
+
+    return () => {
+      // Cancel pending requests on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [isAuthenticated, user, getAccessToken]);
 
   // Callback for when a new URL is created
@@ -144,8 +161,10 @@ export default function DashboardPage() {
     setTimeout(async () => {
       try {
         await fetchData();
-      } catch (error) {
-        console.error('Failed to refresh dashboard after URL creation:', error);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to refresh dashboard after URL creation:', error);
+        }
       }
     }, 1000); // Small delay to allow optimistic update to be visible
   };
@@ -381,6 +400,7 @@ export default function DashboardPage() {
                             </span>
                             <button
                               onClick={() => copyToClipboard(url.short_url, url.id)}
+                              aria-label={copiedId === url.id ? "Copied" : "Copy short URL"}
                               className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                             >
                               {copiedId === url.id ? (
@@ -411,26 +431,29 @@ export default function DashboardPage() {
                             >
                               Analytics
                             </button>
-                            <button 
+                            <button
                               onClick={() => setQrModalUrl(url)}
+                              aria-label="Show QR code"
                               className="p-1 text-purple-600 hover:text-purple-800 transition-colors"
                               title="Show QR Code"
                             >
                               <QrCodeIcon className="h-4 w-4" />
                             </button>
-                            <button 
+                            <button
                               onClick={() => setEditingUrl(url)}
+                              aria-label="Edit URL"
                               className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
                               title="Edit URL"
                             >
                               <PencilIcon className="h-4 w-4" />
                             </button>
-                            <button 
+                            <button
                               onClick={() => {
                                 if (confirm('Are you sure you want to delete this URL? This action cannot be undone.')) {
                                   deleteURL(url.short_code);
                                 }
                               }}
+                              aria-label="Delete URL"
                               className="p-1 text-red-600 hover:text-red-800 transition-colors"
                               title="Delete URL"
                             >

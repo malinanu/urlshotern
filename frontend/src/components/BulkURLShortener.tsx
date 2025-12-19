@@ -12,8 +12,7 @@ import {
   ClipboardDocumentIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 interface URLInput {
   id: string;
@@ -153,7 +152,7 @@ export default function BulkURLShortener() {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/batch-shorten`, {
+      const response = await fetch(API_ENDPOINTS.urls.batchShorten, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
@@ -254,6 +253,7 @@ export default function BulkURLShortener() {
                   type="button"
                   onClick={() => removeUrlInput(urlInput.id)}
                   disabled={urls.length === 1}
+                  aria-label="Remove URL input"
                   className="p-2 text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                   title="Remove URL"
                 >

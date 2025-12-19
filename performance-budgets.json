@@ -1,0 +1,223 @@
+{
+  "budgets": {
+    "frontend": {
+      "lighthouse": {
+        "performance": {
+          "min_score": 85,
+          "description": "Lighthouse performance score must be >= 85"
+        },
+        "accessibility": {
+          "min_score": 90,
+          "description": "Lighthouse accessibility score must be >= 90"
+        },
+        "best_practices": {
+          "min_score": 90,
+          "description": "Lighthouse best practices score must be >= 90"
+        },
+        "seo": {
+          "min_score": 85,
+          "description": "Lighthouse SEO score must be >= 85"
+        }
+      },
+      "core_web_vitals": {
+        "lcp": {
+          "max_value": 2500,
+          "unit": "ms",
+          "description": "Largest Contentful Paint must be < 2.5s"
+        },
+        "fid": {
+          "max_value": 100,
+          "unit": "ms",
+          "description": "First Input Delay must be < 100ms"
+        },
+        "cls": {
+          "max_value": 0.1,
+          "unit": "score",
+          "description": "Cumulative Layout Shift must be < 0.1"
+        },
+        "fcp": {
+          "max_value": 1800,
+          "unit": "ms",
+          "description": "First Contentful Paint must be < 1.8s"
+        },
+        "tti": {
+          "max_value": 3800,
+          "unit": "ms",
+          "description": "Time to Interactive must be < 3.8s"
+        },
+        "tbt": {
+          "max_value": 300,
+          "unit": "ms",
+          "description": "Total Blocking Time must be < 300ms"
+        },
+        "si": {
+          "max_value": 3400,
+          "unit": "ms",
+          "description": "Speed Index must be < 3.4s"
+        }
+      },
+      "resource_budgets": {
+        "javascript": {
+          "max_size": 716800,
+          "unit": "bytes",
+          "description": "Total JavaScript bundle size must be < 700 KB"
+        },
+        "css": {
+          "max_size": 102400,
+          "unit": "bytes",
+          "description": "Total CSS bundle size must be < 100 KB"
+        },
+        "images": {
+          "max_size": 512000,
+          "unit": "bytes",
+          "description": "Total image size must be < 500 KB"
+        },
+        "total": {
+          "max_size": 2097152,
+          "unit": "bytes",
+          "description": "Total page weight must be < 2 MB"
+        }
+      }
+    },
+    "api": {
+      "response_times": {
+        "p95": {
+          "max_value": 1000,
+          "unit": "ms",
+          "description": "95th percentile response time must be < 1s"
+        },
+        "p99": {
+          "max_value": 2000,
+          "unit": "ms",
+          "description": "99th percentile response time must be < 2s"
+        },
+        "avg": {
+          "max_value": 500,
+          "unit": "ms",
+          "description": "Average response time must be < 500ms"
+        }
+      },
+      "endpoints": {
+        "shorten_url": {
+          "p95": 800,
+          "p99": 1500,
+          "unit": "ms",
+          "description": "URL shortening endpoint performance"
+        },
+        "redirect": {
+          "p95": 200,
+          "p99": 400,
+          "unit": "ms",
+          "description": "Redirect endpoint performance"
+        },
+        "analytics": {
+          "p95": 500,
+          "p99": 1000,
+          "unit": "ms",
+          "description": "Analytics endpoint performance"
+        },
+        "health_check": {
+          "p95": 100,
+          "p99": 200,
+          "unit": "ms",
+          "description": "Health check endpoint performance"
+        }
+      },
+      "error_rates": {
+        "http_errors": {
+          "max_rate": 0.01,
+          "unit": "percentage",
+          "description": "HTTP error rate must be < 1%"
+        },
+        "timeout_errors": {
+          "max_rate": 0.005,
+          "unit": "percentage",
+          "description": "Timeout error rate must be < 0.5%"
+        }
+      },
+      "throughput": {
+        "min_rps": 100,
+        "unit": "requests/second",
+        "description": "Minimum requests per second under load"
+      }
+    },
+    "database": {
+      "query_latency": {
+        "url_lookup": {
+          "max_value": 100,
+          "unit": "ms",
+          "description": "URL lookup query must complete in < 100ms (P95)"
+        },
+        "url_insert": {
+          "max_value": 50,
+          "unit": "ms",
+          "description": "URL insert query must complete in < 50ms (P95)"
+        },
+        "analytics_query": {
+          "max_value": 100,
+          "unit": "ms",
+          "description": "Analytics aggregation query must complete in < 100ms (P95)"
+        },
+        "click_insert": {
+          "max_value": 50,
+          "unit": "ms",
+          "description": "Click tracking insert must complete in < 50ms (P95)"
+        }
+      },
+      "cache": {
+        "hit_rate": {
+          "min_rate": 0.9,
+          "unit": "percentage",
+          "description": "Cache hit rate must be > 90%"
+        },
+        "lookup_latency": {
+          "max_value": 10,
+          "unit": "ms",
+          "description": "Cache lookup must complete in < 10ms"
+        }
+      },
+      "connections": {
+        "pool_utilization": {
+          "max_percentage": 80,
+          "unit": "percentage",
+          "description": "Database connection pool utilization should stay below 80%"
+        }
+      }
+    },
+    "infrastructure": {
+      "cpu": {
+        "max_utilization": 70,
+        "unit": "percentage",
+        "description": "CPU utilization should stay below 70% under normal load"
+      },
+      "memory": {
+        "max_utilization": 80,
+        "unit": "percentage",
+        "description": "Memory utilization should stay below 80%"
+      },
+      "disk_io": {
+        "max_wait": 10,
+        "unit": "ms",
+        "description": "Disk I/O wait time should be < 10ms"
+      }
+    }
+  },
+  "thresholds": {
+    "regression_threshold": 0.10,
+    "critical_regression_threshold": 0.25,
+    "improvement_threshold": 0.05,
+    "description": "Performance change thresholds for trend analysis"
+  },
+  "monitoring": {
+    "alert_on_regression": true,
+    "alert_on_critical_regression": true,
+    "alert_channels": ["slack", "email"],
+    "trend_window_days": 30
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2025-01-07",
+    "owner": "platform-team",
+    "review_frequency": "quarterly"
+  }
+}

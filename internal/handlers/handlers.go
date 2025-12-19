@@ -11,6 +11,7 @@ import (
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -35,12 +36,12 @@ type Handler struct {
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, config *configs.Config) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
 
 	// Create billing service and handlers
-	billingHandler := NewBillingHandler(db.GetDB(), config)
+	billingHandler := NewBillingHandler(gormDB, config)
 
 	return &Handler{
 		shortenerService:       shortenerService,
@@ -58,7 +59,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		RealtimeHandlers:       NewRealtimeAnalyticsHandler(realtimeService),
 		BillingHandlers:        billingHandler,
 		APIKeyHandlers:         NewAPIKeyHandler(apiKeyService),
-		PolarWebhookHandler:    NewPolarWebhookHandler(db.GetDB(), billingHandler.billingService),
+		PolarWebhookHandler:    NewPolarWebhookHandler(gormDB, billingHandler.billingService),
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 	}

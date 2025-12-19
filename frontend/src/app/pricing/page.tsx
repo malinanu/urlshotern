@@ -1,7 +1,86 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { CheckIcon, XMarkIcon, StarIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/contexts/AuthContext';
+import { redirectToCheckout, getProducts, type PolarProduct } from '@/lib/polar';
 
 export default function PricingPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+
+  // Fetch Polar products on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setProductsLoading(true);
+        const products = await getProducts();
+        setPolarProducts(products);
+        console.log('[Pricing] Loaded Polar products:', products);
+      } catch (error) {
+        console.error('[Pricing] Failed to load products:', error);
+        // Continue with static plans if products fail to load
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchProducts();
+    } else {
+      setProductsLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  // Handler for plan selection
+  const handlePlanClick = async (planName: string, productId: string | null, planType: string) => {
+    // Free plan - redirect to home
+    if (planType === 'free') {
+      router.push('/');
+      return;
+    }
+
+    // Paid plans - check authentication
+    if (!isAuthenticated) {
+      // Redirect to login with return URL
+      const returnUrl = encodeURIComponent(`/pricing?plan=${planName.toLowerCase()}`);
+      router.push(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+
+    // Check if we have a product ID
+    if (!productId) {
+      console.error('[Pricing] No product ID available for plan:', planName);
+      alert('This plan is currently unavailable. Please contact support or check back later.');
+      return;
+    }
+
+    // User is authenticated - redirect to Polar checkout
+    try {
+      setIsLoading(true);
+      setLoadingPlan(planName);
+      console.log(`[Pricing] Creating checkout for product: ${productId}`);
+      await redirectToCheckout(productId);
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      alert('Failed to start checkout. Please try again or contact support.');
+      setIsLoading(false);
+      setLoadingPlan(null);
+    }
+  };
+
+  // Helper to find Polar product by plan type
+  const getPolarProductId = (planType: string): string | null => {
+    const product = polarProducts.find(p => p.plan_type === planType);
+    return product?.id || null;
+  };
+
   const plans = [
     {
       name: 'Free',
@@ -22,7 +101,8 @@ export default function PricingPage() {
       ],
       cta: 'Get Started Free',
       popular: false,
-      ctaLink: '/'
+      productId: null, // Free plan - no product ID
+      planType: 'free'
     },
     {
       name: 'Pro',
@@ -43,7 +123,8 @@ export default function PricingPage() {
       ],
       cta: 'Start Pro Plan',
       popular: true,
-      ctaLink: '/register'
+      productId: getPolarProductId('premium'), // Get from Polar products
+      planType: 'premium'
     },
     {
       name: 'Ultra',
@@ -64,7 +145,8 @@ export default function PricingPage() {
       ],
       cta: 'Choose Ultra',
       popular: false,
-      ctaLink: '/register'
+      productId: getPolarProductId('enterprise'), // Get from Polar products
+      planType: 'enterprise'
     }
   ];
 
@@ -144,16 +226,17 @@ export default function PricingPage() {
                     <span className="text-xl text-gray-600">{plan.period}</span>
                   </div>
 
-                  <a
-                    href={plan.ctaLink}
-                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors block ${
+                  <button
+                    onClick={() => handlePlanClick(plan.name, plan.productId, plan.planType)}
+                    disabled={isLoading || (plan.planType !== 'free' && productsLoading)}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
                       plan.popular
-                        ? 'bg-primary-600 text-white hover:bg-primary-700'
-                        : 'bg-gray-100 text-black hover:bg-gray-200'
-                    }`}
+                        ? 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-primary-400'
+                        : 'bg-gray-100 text-black hover:bg-gray-200 disabled:bg-gray-300'
+                    } disabled:cursor-not-allowed`}
                   >
-                    {plan.cta}
-                  </a>
+                    {loadingPlan === plan.name ? 'Loading...' : productsLoading && plan.planType !== 'free' ? 'Loading products...' : plan.cta}
+                  </button>
                 </div>
 
                 <div className="mt-8">

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_ENDPOINTS, buildApiUrl } from '@/lib/api-config';
+import { StatsSkeleton, UserTableSkeleton, ActivitySkeleton } from '@/components/skeletons/AdminSkeletons';
 import { 
   UserGroupIcon,
   LinkIcon,
@@ -73,7 +75,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   // Check if user is admin
-  const isAdmin = user?.account_type === 'admin' || user?.email === 'admin@urlshorter.com';
+  const isAdmin = user?.account_type === 'admin';
 
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -98,7 +100,7 @@ export default function AdminPage() {
       try {
         // Fetch system stats
         setLoadingStats(true);
-        const statsResponse = await fetch('http://localhost:8080/api/v1/admin/stats', { headers });
+        const statsResponse = await fetch(API_ENDPOINTS.admin.stats, { headers });
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
           setStats(statsData);
@@ -107,7 +109,7 @@ export default function AdminPage() {
 
         // Fetch users
         setLoadingUsers(true);
-        const usersResponse = await fetch('http://localhost:8080/api/v1/admin/users?limit=100', { headers });
+        const usersResponse = await fetch(buildApiUrl(API_ENDPOINTS.admin.users, { limit: 100 }), { headers });
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           setUsers(usersData.users || []);
@@ -116,7 +118,7 @@ export default function AdminPage() {
 
         // Fetch recent activity
         setLoadingActivity(true);
-        const activityResponse = await fetch('http://localhost:8080/api/v1/admin/activity?limit=50', { headers });
+        const activityResponse = await fetch(buildApiUrl(API_ENDPOINTS.admin.activity, { limit: 50 }), { headers });
         if (activityResponse.ok) {
           const activityData = await activityResponse.json();
           setRecentActivity(activityData.activities || []);
@@ -139,7 +141,7 @@ export default function AdminPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/admin/users/${userId}/status`, {
+      const response = await fetch(API_ENDPOINTS.admin.userStatus(userId.toString()), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -168,7 +170,7 @@ export default function AdminPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/admin/users/${userId}`, {
+      const response = await fetch(API_ENDPOINTS.admin.deleteUser(userId.toString()), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -283,14 +285,7 @@ export default function AdminPage() {
             <div className="space-y-6">
               {/* System Stats Cards */}
               {loadingStats ? (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-white p-6 rounded-lg shadow-sm border animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                      <div className="h-8 bg-gray-200 rounded w-16"></div>
-                    </div>
-                  ))}
-                </div>
+                <StatsSkeleton />
               ) : stats && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -368,14 +363,7 @@ export default function AdminPage() {
               
               {loadingUsers ? (
                 <div className="p-6">
-                  <div className="space-y-4">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      </div>
-                    ))}
-                  </div>
+                  <UserTableSkeleton />
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -435,9 +423,10 @@ export default function AdminPage() {
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => toggleUserStatus(user.id, user.is_active)}
+                                aria-label={user.is_active ? 'Deactivate user' : 'Activate user'}
                                 className={`p-1 rounded transition-colors ${
-                                  user.is_active 
-                                    ? 'text-red-600 hover:text-red-800' 
+                                  user.is_active
+                                    ? 'text-red-600 hover:text-red-800'
                                     : 'text-green-600 hover:text-green-800'
                                 }`}
                                 title={user.is_active ? 'Deactivate user' : 'Activate user'}
@@ -450,6 +439,7 @@ export default function AdminPage() {
                               </button>
                               <button
                                 onClick={() => deleteUser(user.id)}
+                                aria-label="Delete user"
                                 className="p-1 text-red-600 hover:text-red-800 transition-colors"
                                 title="Delete user"
                               >
@@ -474,14 +464,7 @@ export default function AdminPage() {
               
               {loadingActivity ? (
                 <div className="p-6">
-                  <div className="space-y-4">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      </div>
-                    ))}
-                  </div>
+                  <ActivitySkeleton />
                 </div>
               ) : (
                 <div className="p-6">

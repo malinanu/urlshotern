@@ -10,6 +10,8 @@ import {
   getAccessToken as getStoredAccessToken,
   getRefreshToken as getStoredRefreshToken,
 } from '@/utils/tokenValidation';
+import { API_ENDPOINTS } from '@/lib/api-config';
+import { createLogger } from '@/utils/logger';
 
 interface User {
   id: number;
@@ -56,7 +58,8 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// Create logger for auth operations
+const logger = createLogger('Auth');
 
 // Helper function to check if error is a network error
 const isNetworkError = (error: any): boolean => {
@@ -98,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    console.log('[Auth] Logging out user');
+    logger.info('Logging out user');
 
     // Save token before removing for logout endpoint call
     const token = getStoredAccessToken();
@@ -109,14 +112,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Call logout endpoint if we had a token
     if (token) {
-      fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      fetch(API_ENDPOINTS.auth.logout, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       }).catch((error) => {
-        console.error('[Auth] Logout endpoint error:', error);
+        logger.error('Logout endpoint error:', error);
       });
     }
   }, []);
@@ -124,18 +127,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshToken = useCallback(async (retryCount = 0): Promise<void> => {
     // Check if refresh is already in progress (Issue #36 - Race condition fix)
     if (refreshPromiseRef.current) {
-      console.log('[Auth] Refresh already in progress, waiting for existing promise...');
+      logger.debug('Refresh already in progress, waiting for existing promise...');
       return refreshPromiseRef.current;
     }
 
-    console.log('[Auth] Refreshing token, attempt:', retryCount + 1);
+    logger.info('Refreshing token, attempt:', retryCount + 1);
 
     // Create refresh promise and store reference
     const refreshPromise = (async () => {
       const refreshTokenValue = getStoredRefreshToken();
 
       if (!refreshTokenValue) {
-        console.error('[Auth] No refresh token found');
+        logger.error('No refresh token found');
         refreshPromiseRef.current = null;
         logout();
         return;
@@ -144,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Validate refresh token structure before attempting refresh (Issue #35)
       const refreshValidation = validateToken(refreshTokenValue);
       if (!refreshValidation.isValid && !refreshValidation.error?.includes('expired')) {
-        console.error('[Auth] Invalid refresh token structure:', refreshValidation.error);
+        logger.error('Invalid refresh token structure:', refreshValidation.error);
         refreshPromiseRef.current = null;
         logout();
         return;
@@ -153,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsRefreshing(true);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+        const response = await fetch(API_ENDPOINTS.auth.refresh, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -170,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error(data.error || 'Token refresh failed');
         }
 
-        console.log('[Auth] Token refresh successful');
+        logger.info('Token refresh successful');
 
         // Validate and store tokens using utility (Issues #35, #37)
         try {
@@ -178,18 +181,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('user_data', JSON.stringify(data.user));
           setUser(data.user);
         } catch (validationError) {
-          console.error('[Auth] Token validation failed:', validationError);
+          logger.error('Token validation failed:', validationError);
           refreshPromiseRef.current = null;
           logout();
           return;
         }
       } catch (error) {
-        console.error('[Auth] Token refresh error:', error);
+        logger.error('Token refresh error:', error);
 
         // Handle network errors with exponential backoff (Issue #36)
         if (isNetworkError(error) && retryCount < 3) {
           const delaySeconds = Math.pow(2, retryCount);
-          console.log(`[Auth] Network error, retrying in ${delaySeconds} seconds...`);
+          logger.warn(`Network error, retrying in ${delaySeconds} seconds...`);
 
           await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
 
@@ -200,13 +203,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // For network errors that exceed retry limit, don't logout (Issue #36)
         if (isNetworkError(error)) {
-          console.warn('[Auth] Backend unavailable after retries, continuing without token refresh');
+          logger.warn('Backend unavailable after retries, continuing without token refresh');
           refreshPromiseRef.current = null;
           return;
         }
 
         // For auth errors, logout
-        console.error('[Auth] Authentication error, logging out');
+        logger.error('Authentication error, logging out');
         refreshPromiseRef.current = null;
         logout();
         throw error;
@@ -223,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize auth state from localStorage
   useEffect(() => {
     const initAuth = async () => {
-      console.log('[Auth] Initializing auth state');
+      logger.debug('Initializing auth state');
 
       const token = getStoredAccessToken();
       const userData = localStorage.getItem('user_data');
@@ -235,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!tokenValidation.isValid && !tokenValidation.error?.includes('expired')) {
             // Token has invalid structure (malformed)
-            console.error('[Auth] Invalid token structure, logging out:', tokenValidation.error);
+            logger.error('Invalid token structure, logging out:', tokenValidation.error);
             logout();
             setIsLoading(false);
             return;
@@ -244,17 +247,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const parsedUser = JSON.parse(userData);
 
           // Always load user from cache first (for instant UI update)
-          console.log('[Auth] Loading user from cache');
+          logger.debug('Loading user from cache');
           setUser(parsedUser);
 
           // Check if token should be refreshed using stored expiry (Issue #37)
           if (shouldRefreshToken()) {
             const remaining = getTokenRemainingTime();
-            console.log(`[Auth] Token refresh needed (remaining: ${remaining}s), refreshing...`);
+            logger.info(`Token refresh needed (remaining: ${remaining}s), refreshing...`);
             try {
               await refreshToken();
             } catch (error) {
-              console.error('[Auth] Failed to refresh token:', error);
+              logger.error('Failed to refresh token:', error);
               // Only logout if refresh fails due to auth error (not network)
               if (!isNetworkError(error)) {
                 logout();
@@ -262,14 +265,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } else {
             const remaining = getTokenRemainingTime();
-            console.log(`[Auth] Token valid (remaining: ${remaining}s)`);
+            logger.debug(`Token valid (remaining: ${remaining}s)`);
           }
         } catch (error) {
-          console.error('[Auth] Error parsing stored user data:', error);
+          logger.error('Error parsing stored user data:', error);
           logout();
         }
       } else {
-        console.log('[Auth] No stored credentials found');
+        logger.debug('No stored credentials found');
       }
 
       setIsLoading(false);
@@ -278,34 +281,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, [logout, refreshToken]);
 
-  // Set up periodic token refresh check
+  // Set up periodic token refresh check with adaptive polling
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    console.log('[Auth] Setting up token refresh interval');
+    logger.debug('Setting up token refresh interval');
 
-    const tokenRefreshInterval = setInterval(() => {
-      // Use stored timestamp for efficient expiry check (Issue #37)
+    // Calculate optimal check interval based on token lifetime
+    const calculateCheckInterval = () => {
+      const remaining = getTokenRemainingTime();
+      if (remaining < 300) return 30000;  // 30s if < 5min left
+      if (remaining < 1800) return 60000; // 1min if < 30min left
+      return 300000; // 5min otherwise
+    };
+
+    const checkAndRefresh = () => {
       if (shouldRefreshToken()) {
         const remaining = getTokenRemainingTime();
-        console.log(`[Auth] Token expiring soon (remaining: ${remaining}s), refreshing...`);
+        logger.info(`Token expiring soon (remaining: ${remaining}s), refreshing...`);
         refreshToken().catch((error) => {
-          console.error('[Auth] Auto-refresh failed:', error);
+          logger.error('Auto-refresh failed:', error);
         });
       }
-    }, 60000); // Check every minute
+    };
+
+    // Initial check
+    checkAndRefresh();
+
+    // Set up interval with adaptive timing
+    const tokenRefreshInterval = setInterval(checkAndRefresh, calculateCheckInterval());
 
     return () => {
-      console.log('[Auth] Clearing token refresh interval');
+      logger.debug('Clearing token refresh interval');
       clearInterval(tokenRefreshInterval);
     };
   }, [isAuthenticated, refreshToken]);
 
+  // Sync token refresh across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'access_token' && e.newValue) {
+        logger.debug('Token updated in another tab');
+        // Update local state without triggering another refresh
+        setIsAuthenticated(true);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const login = async (email: string, password: string, rememberMe = false): Promise<AuthResponse> => {
-    console.log('[Auth] Logging in user:', email);
+    logger.info('Logging in user:', email);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      const response = await fetch(API_ENDPOINTS.auth.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -324,7 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Login failed');
       }
 
-      console.log('[Auth] Login successful');
+      logger.info('Login successful');
 
       // Validate and store auth data using utility (Issues #35, #37)
       try {
@@ -332,13 +362,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
         setUser(data.user);
       } catch (validationError) {
-        console.error('[Auth] Token validation failed after login:', validationError);
+        logger.error('Token validation failed after login:', validationError);
         throw new Error('Received invalid tokens from server');
       }
 
       return data;
     } catch (error) {
-      console.error('[Auth] Login error:', error);
+      logger.error('Login error:', error);
 
       if (isNetworkError(error)) {
         throw new Error('Unable to connect to server. Please check your internet connection and try again.');
@@ -349,10 +379,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (data: RegisterData): Promise<AuthResponse> => {
-    console.log('[Auth] Registering user:', data.email);
+    logger.info('Registering user:', data.email);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+      const response = await fetch(API_ENDPOINTS.auth.register, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -366,7 +396,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         result = text ? JSON.parse(text) : {};
       } catch (jsonError) {
-        console.error('[Auth] Failed to parse registration response:', text);
+        logger.error('Failed to parse registration response:', text);
         throw new Error('Invalid server response');
       }
 
@@ -374,7 +404,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error || 'Registration failed');
       }
 
-      console.log('[Auth] Registration successful');
+      logger.info('Registration successful');
 
       if (result.access_token) {
         // Validate and store auth data using utility (Issues #35, #37)
@@ -383,14 +413,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('user_data', JSON.stringify(result.user));
           setUser(result.user);
         } catch (validationError) {
-          console.error('[Auth] Token validation failed after registration:', validationError);
+          logger.error('Token validation failed after registration:', validationError);
           throw new Error('Received invalid tokens from server');
         }
       }
 
       return result;
     } catch (error) {
-      console.error('[Auth] Registration error:', error);
+      logger.error('Registration error:', error);
 
       if (isNetworkError(error)) {
         throw new Error('Unable to connect to server. Please check your internet connection and try again.');

@@ -268,6 +268,21 @@ func (u *UserService) IsSessionValid(userID int64, sessionID string) (bool, erro
 	return true, nil
 }
 
+// InvalidateUserSessions invalidates all sessions for a user
+func (u *UserService) InvalidateUserSessions(userID int64) error {
+	// Delete all sessions for this user from database
+	err := u.db.DeleteUserSessions(userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user sessions: %w", err)
+	}
+
+	// Also clear any cached session data from Redis
+	// This would require scanning for keys like "session:{userID}:*"
+	// For now, we rely on the database deletion and token blacklisting
+
+	return nil
+}
+
 // CreateEmailVerificationToken creates an email verification token
 func (u *UserService) CreateEmailVerificationToken(userID int64) (string, error) {
 	token := u.generateSecureToken()
@@ -493,6 +508,16 @@ func (u *UserService) ChangePassword(userID int64, currentPassword, newPassword 
 	err = bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(currentPassword))
 	if err != nil {
 		return ErrInvalidCredentials
+	}
+
+	// Validate new password strength
+	if err := utils.ValidatePasswordStrength(newPassword); err != nil {
+		return err
+	}
+
+	// Check that new password is different from current password
+	if currentPassword == newPassword {
+		return errors.New("new password must be different from current password")
 	}
 
 	// Hash new password

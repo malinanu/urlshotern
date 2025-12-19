@@ -103,6 +103,7 @@ export function QRCode({
       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
         <button
           onClick={downloadQR}
+          aria-label="Download QR code"
           className="bg-white text-gray-700 px-3 py-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium"
         >
           <ArrowDownTrayIcon className="h-4 w-4" />
@@ -172,6 +173,7 @@ export function QRCodeModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close QR code modal"
             className="text-gray-400 hover:text-gray-500 transition-colors"
           >
             <XMarkIcon className="h-6 w-6" />

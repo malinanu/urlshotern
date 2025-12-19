@@ -1,21 +1,27 @@
 package handlers
 
 import (
+	"bytes"
+	"io"
+	"log"
 	"net/http"
 
+	"github.com/URLshorter/url-shortener/configs"
+	"github.com/URLshorter/url-shortener/internal/models"
+	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-
-	"github.com/URLshorter/url-shortener/internal/services"
 )
 
 type BillingHandler struct {
 	billingService *services.BillingService
+	config         *configs.Config
 }
 
-func NewBillingHandler(db *gorm.DB) *BillingHandler {
+func NewBillingHandler(db *gorm.DB, config *configs.Config) *BillingHandler {
 	return &BillingHandler{
-		billingService: services.NewBillingService(db),
+		billingService: services.NewBillingService(db, config),
+		config:         config,
 	}
 }
 
@@ -121,7 +127,7 @@ func (bh *BillingHandler) GetUsage(c *gin.Context) {
 	})
 }
 
-// CreateCheckoutSession creates a new Stripe checkout session for upgrading
+// CreateCheckoutSession creates a new Polar checkout session for upgrading
 func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 	if userID == 0 {
@@ -129,50 +135,78 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		return
 	}
 
+	// Get user from context (set by auth middleware)
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user, ok := userInterface.(*models.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+		return
+	}
+
+	// DEBUG: Read and log the request body
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed to read request body: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+	log.Printf("[DEBUG] Checkout request body: %s", string(bodyBytes))
+
+	// Restore the request body for binding
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	var req struct {
-		PlanID     string `json:"plan_id" binding:"required"`
-		SuccessURL string `json:"success_url"`
-		CancelURL  string `json:"cancel_url"`
+		ProductID  string  `json:"product_id" binding:"required"`
+		PriceID    *string `json:"price_id,omitempty"`
+		SuccessURL string  `json:"success_url"`
+		CancelURL  string  `json:"cancel_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[ERROR] JSON binding error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error":   "Invalid request body",
 			"details": err.Error(),
 		})
 		return
 	}
 
-	// Validate plan exists
-	_, err := bh.billingService.GetPlan(req.PlanID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid plan ID",
-			"details": err.Error(),
-		})
-		return
-	}
+	log.Printf("[DEBUG] Parsed checkout request - ProductID: %s, SuccessURL: %s, CancelURL: %s", req.ProductID, req.SuccessURL, req.CancelURL)
 
 	// Set default URLs if not provided
 	if req.SuccessURL == "" {
-		req.SuccessURL = "https://yourdomain.com/billing/success"
+		req.SuccessURL = bh.config.BaseURL + "/billing/success"
 	}
 	if req.CancelURL == "" {
-		req.CancelURL = "https://yourdomain.com/billing/cancel"
+		req.CancelURL = bh.config.BaseURL + "/billing/cancelled"
 	}
 
-	checkoutURL, err := bh.billingService.CreateCheckoutSession(userID, req.PlanID, req.SuccessURL, req.CancelURL)
+	checkout, err := bh.billingService.CreateCheckoutSession(
+		userID,
+		user.Email,
+		req.ProductID,
+		req.PriceID,
+		req.SuccessURL,
+		req.CancelURL,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to create checkout session",
+			"error":   "Failed to create checkout session",
 			"details": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"checkout_url": checkoutURL,
-		"expires_at": "2024-01-01T00:00:00Z", // Mock expiration
+		"checkout_url":    checkout.URL,
+		"checkout_id":     checkout.ID,
+		"client_secret":   checkout.ClientSecret,
+		"expires_at":      checkout.ExpiresAt,
 	})
 }
 
@@ -244,7 +278,7 @@ func (bh *BillingHandler) ReactivateSubscription(c *gin.Context) {
 		return
 	}
 
-	if !subscription.CancelAtEnd {
+	if !subscription.CancelAtPeriodEnd {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Subscription is not set to cancel",
 		})
@@ -252,7 +286,7 @@ func (bh *BillingHandler) ReactivateSubscription(c *gin.Context) {
 	}
 
 	err = bh.billingService.UpdateSubscription(userID, map[string]interface{}{
-		"cancel_at_end": false,
+		"cancel_at_period_end": false,
 		"status": "active",
 	})
 
@@ -335,9 +369,72 @@ func (bh *BillingHandler) UpdatePaymentMethod(c *gin.Context) {
 	})
 }
 
-// StripeWebhook handles Stripe webhook events
-func (bh *BillingHandler) StripeWebhook(c *gin.Context) {
-	bh.billingService.WebhookHandler(c)
+// GetCustomerPortalURL returns the Polar customer portal URL
+func (bh *BillingHandler) GetCustomerPortalURL(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	subscription, err := bh.billingService.GetUserSubscription(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to get subscription",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Polar customer portal URL
+	portalURL := "https://polar.sh/customer-portal"
+	if subscription.PolarCustomerID != "" {
+		portalURL = "https://polar.sh/customer-portal?customer_id=" + subscription.PolarCustomerID
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"portal_url": portalURL,
+	})
+}
+
+// GetProducts returns all available Polar products/plans
+func (bh *BillingHandler) GetProducts(c *gin.Context) {
+	polarService := bh.billingService.GetPolarService()
+
+	// Try to sync products from Polar
+	err := polarService.SyncProductsFromPolar()
+	if err != nil {
+		// Log error but continue - we can still return cached products
+		c.Error(err)
+	}
+
+	// Get products from database
+	var products []struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		PlanType    string `json:"plan_type"`
+		IsRecurring bool   `json:"is_recurring"`
+		Prices      interface{} `json:"prices"`
+		Benefits    interface{} `json:"benefits"`
+	}
+
+	err = bh.billingService.GetDB().
+		Table("polar_products").
+		Where("is_archived = ?", false).
+		Scan(&products).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to get products",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"products": products,
+	})
 }
 
 // CheckFeatureAccess middleware to check if user has access to a feature

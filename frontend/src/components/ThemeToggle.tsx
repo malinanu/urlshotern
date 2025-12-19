@@ -38,6 +38,7 @@ export default function ThemeToggle() {
           const nextIndex = (currentIndex + 1) % themes.length;
           setTheme(themes[nextIndex].id as any);
         }}
+        aria-label={`Toggle theme. Current: ${theme}`}
         className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         title={`Current: ${theme}, Click to cycle`}
       >

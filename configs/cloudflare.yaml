@@ -1,0 +1,329 @@
+# CloudFlare CDN Configuration
+# This file defines caching rules, page rules, and optimization settings
+
+version: "1.0"
+
+# Zone Configuration
+zone:
+  name: trunc.site
+  zone_id: "${CLOUDFLARE_ZONE_ID}"
+  account_id: "${CLOUDFLARE_ACCOUNT_ID}"
+
+# DNS Records
+dns:
+  - type: A
+    name: trunc.site
+    content: "${ORIGIN_IP}"
+    proxied: true
+    ttl: 1  # Auto (CloudFlare managed)
+
+  - type: A
+    name: www
+    content: "${ORIGIN_IP}"
+    proxied: true
+    ttl: 1
+
+  - type: CNAME
+    name: api
+    content: trunc.site
+    proxied: true
+    ttl: 1
+
+# Page Rules (evaluated in order)
+page_rules:
+  # Static assets - aggressive caching
+  - url: "trunc.site/_next/static/*"
+    actions:
+      cache_level: cache_everything
+      edge_cache_ttl: 31536000  # 1 year
+      browser_cache_ttl: 31536000
+      cache_on_cookie: "bypass"
+
+  # API endpoints - no caching by default
+  - url: "trunc.site/api/v1/shorten"
+    actions:
+      cache_level: bypass
+      disable_performance: false
+
+  # Analytics endpoints - short cache
+  - url: "trunc.site/api/v1/analytics/*"
+    actions:
+      cache_level: cache_everything
+      edge_cache_ttl: 300  # 5 minutes
+      browser_cache_ttl: 300
+
+  # Short URL redirects - moderate caching
+  - url: "trunc.site/*"
+    actions:
+      cache_level: cache_everything
+      edge_cache_ttl: 3600  # 1 hour
+      browser_cache_ttl: 3600
+      respect_strong_etags: true
+
+# Caching Configuration
+cache:
+  # Default cache TTL
+  default_ttl: 3600  # 1 hour
+
+  # Always cache these file extensions
+  cache_by_extension:
+    - js
+    - css
+    - jpg
+    - jpeg
+    - png
+    - gif
+    - webp
+    - avif
+    - svg
+    - ico
+    - woff
+    - woff2
+    - ttf
+    - eot
+
+  # Cache by status code
+  cache_by_status:
+    "200": 3600
+    "301": 7200  # Permanent redirects cached longer
+    "302": 1800
+    "404": 300
+
+  # Ignore query strings for these paths
+  ignore_query_string:
+    - "/_next/static/*"
+    - "/static/*"
+
+  # Cache key configuration
+  cache_key:
+    custom_key:
+      query_string:
+        include: ["*"]  # Include all query params in cache key
+      header:
+        include:
+          - "Accept-Encoding"
+          - "Accept-Language"
+        check_presence:
+          - "Accept"
+
+# Performance Optimizations
+performance:
+  # Minification
+  minify:
+    html: true
+    css: true
+    js: true
+
+  # Auto Minify
+  auto_minify:
+    html: true
+    css: true
+    js: true
+
+  # Brotli compression
+  brotli: true
+
+  # Image optimizations
+  polish: lossless  # Options: lossless, lossy, off
+  webp: true
+  avif: true
+  mirage: true  # Auto-resize images
+
+  # HTTP/2 Server Push
+  http2_server_push: true
+
+  # HTTP/3 (QUIC)
+  http3: true
+
+  # Early Hints
+  early_hints: true
+
+  # Rocket Loader (defer JavaScript)
+  rocket_loader: false  # Disabled for SPA compatibility
+
+  # Mobile Redirect
+  mobile_redirect: false
+
+  # Prefetch URLs
+  prefetch_preload: true
+
+# Security Settings
+security:
+  # SSL/TLS
+  ssl:
+    mode: full_strict  # Options: off, flexible, full, full_strict
+    min_tls_version: "1.2"
+    tls_1_3: true
+    automatic_https_rewrites: true
+    always_use_https: true
+    opportunistic_encryption: true
+
+  # HSTS
+  hsts:
+    enabled: true
+    max_age: 63072000  # 2 years
+    include_subdomains: true
+    preload: true
+
+  # Security headers
+  security_headers:
+    x_content_type_options: nosniff
+    x_frame_options: DENY
+    x_xss_protection: "1; mode=block"
+    referrer_policy: strict-origin-when-cross-origin
+    strict_transport_security: "max-age=63072000; includeSubDomains; preload"
+
+  # WAF (Web Application Firewall)
+  waf:
+    mode: on  # Options: on, off
+    sensitivity: medium  # Options: low, medium, high
+
+  # DDoS Protection
+  ddos:
+    mode: automatic  # Options: off, automatic, always_on
+
+  # Rate Limiting
+  rate_limiting:
+    - name: api-rate-limit
+      path: "/api/*"
+      threshold: 100
+      period: 600  # 10 minutes
+      action: challenge
+
+    - name: redirect-rate-limit
+      path: "/*"
+      threshold: 1000
+      period: 60
+      action: simulate  # simulate, challenge, block
+
+  # Bot Management
+  bot_management:
+    fight_mode: false  # Challenge all visitors
+    challenge_passage: 30  # minutes
+    verified_bots:
+      - google
+      - bing
+      - facebook
+      - twitter
+
+# Load Balancing
+load_balancing:
+  enabled: false
+  # Uncomment for multi-region setup
+  # pools:
+  #   - name: us-east
+  #     origins:
+  #       - address: us-east.origin.trunc.site
+  #         weight: 1
+  #   - name: eu-west
+  #     origins:
+  #       - address: eu-west.origin.trunc.site
+  #         weight: 1
+
+# Workers Configuration
+workers:
+  - name: redirect-analytics
+    route: "trunc.site/*"
+    script: redirect-analytics.js
+
+  - name: ab-testing
+    route: "trunc.site/"
+    script: ab-testing.js
+
+# Analytics and Logs
+analytics:
+  web_analytics: true
+
+  # Log retention
+  logs:
+    enabled: true
+    retention_days: 30
+
+  # Logpush (Enterprise feature)
+  # logpush:
+  #   enabled: true
+  #   destination: "s3://your-bucket/cloudflare-logs"
+  #   fields:
+  #     - ClientIP
+  #     - ClientRequestHost
+  #     - ClientRequestURI
+  #     - EdgeResponseStatus
+  #     - CacheCacheStatus
+
+# Custom Error Pages
+error_pages:
+  - error: 500
+    url: https://trunc.site/errors/500.html
+
+  - error: 503
+    url: https://trunc.site/errors/503.html
+
+# Firewall Rules
+firewall_rules:
+  - description: "Block known malicious IPs"
+    expression: '(ip.src in $malicious_ips)'
+    action: block
+
+  - description: "Challenge suspicious user agents"
+    expression: '(http.user_agent contains "curl") or (http.user_agent contains "wget")'
+    action: managed_challenge
+
+  - description: "Allow legitimate bots"
+    expression: '(cf.client.bot) and not (cf.verified_bot_category in {"Search Engine" "Aggregator"})'
+    action: block
+
+# Transform Rules
+transform_rules:
+  # Add security headers
+  - name: security-headers
+    expression: 'true'
+    headers:
+      - name: X-Content-Type-Options
+        value: nosniff
+        operation: set
+
+      - name: X-Frame-Options
+        value: DENY
+        operation: set
+
+      - name: Permissions-Policy
+        value: "geolocation=(), microphone=(), camera=()"
+        operation: set
+
+# Spectrum (for non-HTTP protocols)
+spectrum:
+  enabled: false
+
+# Argo Smart Routing (Enterprise feature)
+argo:
+  enabled: false
+  smart_routing: false
+  tiered_caching: false
+
+# Custom Certificates
+custom_certificates:
+  enabled: false
+  # Upload custom SSL certificates if needed
+
+# Network Settings
+network:
+  ipv6: true
+  websockets: true
+  pseudo_ipv4: add_header
+  ip_geolocation: true
+  maximum_upload_size: 100  # MB
+
+# Scrape Shield
+scrape_shield:
+  email_obfuscation: true
+  server_side_excludes: true
+  hotlink_protection: false
+
+# Browser Integrity Check
+browser_check: true
+
+# Development Mode (bypass cache temporarily)
+development_mode: false
+
+# Always Online (serve stale content when origin is down)
+always_online: true

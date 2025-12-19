@@ -1,0 +1,223 @@
+# Database Alert Rules for URL Shortener
+
+groups:
+  - name: postgresql_alerts
+    interval: 30s
+    rules:
+      # Database Availability
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL instance {{ $labels.instance }} is down"
+          runbook_url: "https://wiki.example.com/runbooks/database-down"
+
+      # Connection Pool Alerts
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          db_connections_active / (db_connections_active + db_connections_idle) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool utilization is {{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/connection-pool-exhausted"
+
+      - alert: HighDatabaseConnections
+        expr: db_connections_active > 20
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High number of active database connections"
+          description: "Active connections: {{ $value }}"
+          runbook_url: "https://wiki.example.com/runbooks/high-db-connections"
+
+      # Query Performance
+      - alert: SlowQueryDetected
+        expr: |
+          rate(db_slow_queries_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow queries detected on {{ $labels.table }}"
+          description: "{{ $value }} slow queries/sec on table {{ $labels.table }}"
+          runbook_url: "https://wiki.example.com/runbooks/slow-queries"
+
+      - alert: HighQueryLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation, table)
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High query latency for {{ $labels.operation }} on {{ $labels.table }}"
+          description: "P95 query latency is {{ $value }}s"
+          runbook_url: "https://wiki.example.com/runbooks/high-query-latency"
+
+      # Database Size Alerts
+      - alert: DatabaseGrowthRate
+        expr: |
+          predict_linear(pg_database_size_bytes[1h], 24 * 3600) > pg_database_size_bytes * 1.5
+        for: 1h
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Rapid database growth detected"
+          description: "Database {{ $labels.datname }} is growing rapidly"
+          runbook_url: "https://wiki.example.com/runbooks/database-growth"
+
+      # Replication Lag (if using replication)
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag > 30
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL replication lag detected"
+          description: "Replication lag is {{ $value }}s on {{ $labels.instance }}"
+          runbook_url: "https://wiki.example.com/runbooks/replication-lag"
+
+      # Deadlock Alerts
+      - alert: DatabaseDeadlocksDetected
+        expr: |
+          rate(pg_stat_database_deadlocks[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database deadlocks detected"
+          description: "{{ $value }} deadlocks/sec in database {{ $labels.datname }}"
+          runbook_url: "https://wiki.example.com/runbooks/deadlocks"
+
+      # Transaction Alerts
+      - alert: LongRunningTransactions
+        expr: pg_stat_activity_max_tx_duration > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Long-running transactions detected"
+          description: "Transaction running for {{ $value }}s"
+          runbook_url: "https://wiki.example.com/runbooks/long-transactions"
+
+      # Cache Hit Ratio
+      - alert: LowDatabaseCacheHitRatio
+        expr: |
+          rate(pg_stat_database_blks_hit[5m]) /
+          (rate(pg_stat_database_blks_hit[5m]) + rate(pg_stat_database_blks_read[5m])) < 0.90
+        for: 15m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Low database cache hit ratio"
+          description: "Cache hit ratio is {{ $value | humanizePercentage }} for database {{ $labels.datname }}"
+          runbook_url: "https://wiki.example.com/runbooks/low-cache-hit-ratio"
+
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      # Redis Availability
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis instance {{ $labels.instance }} is down"
+          runbook_url: "https://wiki.example.com/runbooks/redis-down"
+
+      # Memory Alerts
+      - alert: RedisMemoryHigh
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/redis-memory-high"
+
+      - alert: RedisMemoryCritical
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis memory usage critical"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/redis-memory-high"
+
+      # Eviction Alerts
+      - alert: RedisHighEvictionRate
+        expr: |
+          rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High Redis key eviction rate"
+          description: "Evicting {{ $value }} keys/sec"
+          runbook_url: "https://wiki.example.com/runbooks/redis-evictions"
+
+      # Cache Hit Rate
+      - alert: RedisCacheHitRateLow
+        expr: |
+          rate(cache_hits_total[5m]) /
+          (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) < 0.85
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low Redis cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/low-cache-hit-rate"
+
+      # Connection Alerts
+      - alert: RedisHighConnectionCount
+        expr: redis_connected_clients > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High number of Redis connections"
+          description: "{{ $value }} active connections"
+          runbook_url: "https://wiki.example.com/runbooks/redis-connections"
+
+      # Persistence Alerts
+      - alert: RedisRDBLastSaveFailed
+        expr: redis_rdb_last_save_status == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis RDB save failed"
+          description: "Last RDB save failed on {{ $labels.instance }}"
+          runbook_url: "https://wiki.example.com/runbooks/redis-persistence"

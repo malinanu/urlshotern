@@ -15,13 +15,20 @@ type AuthMiddleware struct {
 	jwtService  *services.JWTService
 	userService *services.UserService
 	rbacService *services.RBACService
+	redis       RedisStorage
 }
 
-func NewAuthMiddleware(jwtService *services.JWTService, userService *services.UserService, rbacService *services.RBACService) *AuthMiddleware {
+// RedisStorage interface for token blacklisting
+type RedisStorage interface {
+	IsTokenBlacklisted(token string) (bool, error)
+}
+
+func NewAuthMiddleware(jwtService *services.JWTService, userService *services.UserService, rbacService *services.RBACService, redis RedisStorage) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtService:  jwtService,
 		userService: userService,
 		rbacService: rbacService,
+		redis:       redis,
 	}
 }
 
@@ -33,6 +40,28 @@ func (a *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 				Error:   "unauthorized",
 				Message: "Authentication required",
+			})
+			c.Abort()
+			return
+		}
+
+		// Check if token is blacklisted
+		isBlacklisted, err := a.redis.IsTokenBlacklisted(token)
+		if err != nil {
+			// Log error but don't expose details
+			LogError(c, err, "Failed to check token blacklist")
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error:   "authentication_error",
+				Message: "Authentication service unavailable",
+			})
+			c.Abort()
+			return
+		}
+
+		if isBlacklisted {
+			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+				Error:   "token_revoked",
+				Message: "Token has been revoked",
 			})
 			c.Abort()
 			return
@@ -210,6 +239,14 @@ func (a *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := a.extractTokenFromHeader(c)
 		if token == "" {
+			c.Next()
+			return
+		}
+
+		// Check if token is blacklisted
+		isBlacklisted, err := a.redis.IsTokenBlacklisted(token)
+		if err != nil || isBlacklisted {
+			// Don't abort, just continue without user context
 			c.Next()
 			return
 		}

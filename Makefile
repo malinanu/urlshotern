@@ -14,19 +14,35 @@ all: build
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  build        - Build the binary"
-	@echo "  test         - Run all tests"
-	@echo "  test-unit    - Run unit tests only"
-	@echo "  test-integration - Run integration tests only"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  install      - Install dependencies"
-	@echo "  dev          - Start development environment"
-	@echo "  run          - Run the application locally"
-	@echo "  docker-build - Build Docker image"
-	@echo "  docker-run   - Run with Docker Compose"
-	@echo "  docker-stop  - Stop Docker services"
-	@echo "  lint         - Run linters"
-	@echo "  format       - Format code"
+	@echo "  build               - Build the binary"
+	@echo "  test                - Run all tests"
+	@echo "  test-unit           - Run unit tests only"
+	@echo "  test-integration    - Run integration tests only"
+	@echo "  clean               - Clean build artifacts"
+	@echo "  install             - Install dependencies"
+	@echo "  dev                 - Start development environment"
+	@echo "  run                 - Run the application locally"
+	@echo "  docker-build        - Build Docker image"
+	@echo "  docker-run          - Run with Docker Compose"
+	@echo "  docker-stop         - Stop Docker services"
+	@echo "  lint                - Run linters"
+	@echo "  format              - Format code"
+	@echo ""
+	@echo "Performance Optimization Framework:"
+	@echo "  collect-baseline         - Collect performance baseline from Prometheus"
+	@echo "  capacity-plan            - Generate capacity planning forecast"
+	@echo "  weekly-report            - Generate weekly performance report"
+	@echo "  performance-budget-check - Validate against performance budgets"
+	@echo "  benchmark-compare        - Compare benchmark results with baseline"
+	@echo ""
+	@echo "Performance Testing:"
+	@echo "  perf-test           - Run all performance tests"
+	@echo "  perf-test-frontend  - Run Lighthouse CI tests"
+	@echo "  perf-test-api       - Run K6 API load tests"
+	@echo "  perf-test-db        - Run database benchmarks"
+	@echo "  perf-test-quick     - Quick performance check"
+	@echo "  perf-dashboard      - Generate performance dashboard"
+	@echo "  perf-clean          - Clean performance artifacts"
 
 # Build the binary
 build:
@@ -144,3 +160,75 @@ docs:
 bench:
 	@echo "Running benchmarks..."
 	go test -bench=. -benchmem ./...
+
+# Continuous Performance Optimization targets
+collect-baseline:
+	@echo "Collecting performance baseline..."
+	@mkdir -p baselines
+	@cd tools/performance && go run baseline_collector.go \
+		--prometheus-url=$${PROMETHEUS_URL:-http://localhost:9090} \
+		--lookback=168 \
+		--output=../../baselines/baseline_$$(date +%Y%m%d).json
+
+capacity-plan:
+	@echo "Generating capacity plan..."
+	@mkdir -p reports
+	@cd tools/performance && go run capacity_planner.go \
+		--input=../../baselines/baseline_latest.json \
+		--forecast=90 \
+		--scenario=$${SCENARIO:-expected} \
+		--output=../../reports/capacity_plan_$$(date +%Y%m%d).json
+
+weekly-report:
+	@echo "Generating weekly performance report..."
+	@chmod +x scripts/performance/weekly_report.sh
+	@./scripts/performance/weekly_report.sh
+
+performance-budget-check:
+	@echo "Checking performance budgets..."
+	@echo "Not yet implemented - TODO: Add budget validation script"
+
+benchmark-compare:
+	@echo "Comparing benchmark results..."
+	@echo "Not yet implemented - TODO: Add benchmark comparison"
+
+# Performance testing targets
+perf-test: perf-test-frontend perf-test-api perf-test-db
+	@echo "All performance tests completed"
+
+perf-test-frontend:
+	@echo "Running frontend performance tests with Lighthouse CI..."
+	@if command -v lhci > /dev/null; then \
+		cd frontend && npm run build && lhci autorun; \
+	else \
+		echo "Lighthouse CI not installed. Installing..."; \
+		npm install -g @lhci/cli && cd frontend && npm run build && lhci autorun; \
+	fi
+
+perf-test-api:
+	@echo "Running API performance tests with K6..."
+	@if command -v k6 > /dev/null; then \
+		k6 run tests/performance/api-performance.js; \
+	else \
+		echo "K6 not installed. Please install from https://k6.io/docs/getting-started/installation/"; \
+		exit 1; \
+	fi
+
+perf-test-db:
+	@echo "Running database performance benchmarks..."
+	@cd tests/performance && chmod +x run-benchmarks.sh && ./run-benchmarks.sh
+
+perf-test-quick:
+	@echo "Running quick performance check..."
+	@k6 run --vus 5 --duration 30s tests/performance/api-performance.js
+
+perf-dashboard:
+	@echo "Generating performance dashboard..."
+	@python3 tests/performance/performance-dashboard.py
+
+perf-clean:
+	@echo "Cleaning performance test artifacts..."
+	@rm -rf .lighthouseci
+	@rm -rf tests/performance/benchmark-results
+	@rm -f performance-results.json
+	@rm -f performance-report.html

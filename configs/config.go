@@ -43,6 +43,21 @@ type Config struct {
 	// JWT Configuration
 	JWTSecret string
 	JWTIssuer string
+
+	// Polar Configuration
+	PolarAccessToken    string
+	PolarWebhookSecret  string
+	PolarOrganizationID string
+	PolarAPIURL         string
+
+	// Email Configuration
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	FromEmail    string
+	FromName     string
+	FrontendURL  string
 }
 
 func LoadConfig() (*Config, error) {
@@ -78,6 +93,20 @@ func LoadConfig() (*Config, error) {
 
 		JWTSecret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
 		JWTIssuer: getEnv("JWT_ISSUER", "urlshortener"),
+
+		PolarAccessToken:    getEnv("POLAR_ACCESS_TOKEN", ""),
+		PolarWebhookSecret:  getEnv("POLAR_WEBHOOK_SECRET", ""),
+		PolarOrganizationID: getEnv("POLAR_ORGANIZATION_ID", ""),
+		PolarAPIURL:         getEnv("POLAR_API_URL", "https://api.polar.sh/v1"),
+
+		// Email Configuration
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
+		SMTPUsername: getEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		FromEmail:    getEnv("FROM_EMAIL", "noreply@urlshortener.com"),
+		FromName:     getEnv("FROM_NAME", "URL Shortener"),
+		FrontendURL:  getEnv("FRONTEND_URL", "http://localhost:3000"),
 	}
 
 	return config, nil

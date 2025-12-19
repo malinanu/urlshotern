@@ -6,6 +6,7 @@ import (
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/URLshorter/url-shortener/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -94,8 +95,23 @@ func (h *APIKeyHandler) ListAPIKeys(c *gin.Context) {
 		query.Search = &search
 	}
 
-	query.SortBy = c.DefaultQuery("sort_by", "created_at")
-	query.SortOrder = c.DefaultQuery("sort_order", "desc")
+	// Validate and set sort parameters (Issue #13 - Query Parameter Validation)
+	allowedSortFields := []string{"created_at", "name", "last_used_at", "expires_at"}
+	sortBy := c.DefaultQuery("sort_by", "created_at")
+	if validatedSortBy, err := utils.ValidateSortBy(sortBy, allowedSortFields); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	} else {
+		query.SortBy = validatedSortBy
+	}
+
+	sortOrder := c.DefaultQuery("sort_order", "desc")
+	if validatedSortOrder, err := utils.ValidateSortOrder(sortOrder); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	} else {
+		query.SortOrder = validatedSortOrder
+	}
 
 	result, err := h.apiKeyService.ListAPIKeys(userID.(int64), query)
 	if err != nil {

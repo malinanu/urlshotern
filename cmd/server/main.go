@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -31,6 +34,18 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// Initialize GORM database for billing and Polar integration
+	sslMode := "disable"
+	if config.Environment == "production" {
+		sslMode = "require"
+	}
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, sslMode)
+	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to GORM database: %v", err)
+	}
 
 	redis, err := storage.NewRedisStorage(config)
 	if err != nil {
@@ -66,12 +81,12 @@ func main() {
 	shortenerService.SetAttributionService(attributionService)
 
 	// Initialize auth middleware
-	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService)
+	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
 
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
 
 	// Setup Gin router
 	if config.Environment == "production" {

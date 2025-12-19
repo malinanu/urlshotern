@@ -1,6 +1,6 @@
 // Service Worker for URL Shortener PWA
-const CACHE_NAME = 'urlshortener-v1.0.0';
-const API_CACHE_NAME = 'urlshortener-api-v1.0.0';
+const CACHE_NAME = 'urlshortener-v1.0.1';
+const API_CACHE_NAME = 'urlshortener-api-v1.0.1';
 
 // Static assets to cache
 const STATIC_ASSETS = [
@@ -62,13 +62,23 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Only handle http and https requests (skip chrome-extension, data, blob, etc.)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Only handle same-origin or API requests
+  if (url.origin !== location.origin && !url.pathname.startsWith('/api/')) {
+    return;
+  }
+
   // Handle different types of requests
   if (request.method === 'GET') {
     if (url.pathname.startsWith('/api/')) {
       // API requests - Network First with API cache
       event.respondWith(networkFirstAPI(request));
-    } else if (url.pathname.startsWith('/_next/static/') || 
-               url.pathname.endsWith('.js') || 
+    } else if (url.pathname.startsWith('/_next/static/') ||
+               url.pathname.endsWith('.js') ||
                url.pathname.endsWith('.css')) {
       // Static assets - Cache First
       event.respondWith(cacheFirstStatic(request));
