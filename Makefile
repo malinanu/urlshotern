@@ -142,14 +142,38 @@ install-tools:
 	@echo "Installing development tools..."
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-# Database migrations (placeholder)
+# Database Migration Management
+migrate-status:
+	@echo "Checking migration status..."
+	@./scripts/migrate.sh status
+
 migrate-up:
-	@echo "Running database migrations..."
-	# Add migration command here
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Usage: make migrate-up VERSION=001"; \
+		exit 1; \
+	fi
+	@./scripts/migrate.sh up $(VERSION)
 
 migrate-down:
-	@echo "Rolling back database migrations..."
-	# Add rollback command here
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Usage: make migrate-down VERSION=005"; \
+		exit 1; \
+	fi
+	@./scripts/migrate.sh down $(VERSION)
+
+migrate-rollback-to:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Usage: make migrate-rollback-to VERSION=003"; \
+		exit 1; \
+	fi
+	@./scripts/migrate.sh rollback-to $(VERSION)
+
+migrate-dry-run:
+	@if [ -z "$(VERSION)" ] || [ -z "$(DIRECTION)" ]; then \
+		echo "Usage: make migrate-dry-run DIRECTION=down VERSION=005"; \
+		exit 1; \
+	fi
+	@./scripts/migrate.sh dry-run $(DIRECTION) $(VERSION)
 
 # Generate API documentation (placeholder)
 docs:

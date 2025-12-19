@@ -37,6 +37,17 @@ make docker-stop        # Stop all services
 # Code quality
 make lint               # Run linters
 make format             # Format code
+
+# Database migrations
+make migrate-status                    # Check migration status
+make migrate-up VERSION=001            # Apply migration
+make migrate-down VERSION=005          # Rollback migration
+make migrate-rollback-to VERSION=003   # Rollback to version
+make migrate-dry-run DIRECTION=down VERSION=005  # Preview rollback
+
+# Or use scripts directly (cross-platform)
+./scripts/migrate.sh status            # Linux/macOS
+.\scripts\migrate.ps1 status           # Windows PowerShell
 ```
 
 ## Architecture Overview
