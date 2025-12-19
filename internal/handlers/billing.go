@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/models"
@@ -303,7 +305,7 @@ func (bh *BillingHandler) ReactivateSubscription(c *gin.Context) {
 	})
 }
 
-// GetBillingHistory returns the user's billing history
+// GetBillingHistory returns the user's billing history from Polar
 func (bh *BillingHandler) GetBillingHistory(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 	if userID == 0 {
@@ -311,29 +313,76 @@ func (bh *BillingHandler) GetBillingHistory(c *gin.Context) {
 		return
 	}
 
-	// Mock billing history - in real implementation, fetch from Stripe
-	history := []gin.H{
-		{
-			"id": "inv_001",
-			"amount": 999,
-			"currency": "usd",
-			"status": "paid",
-			"created": "2024-01-01T00:00:00Z",
-			"period_start": "2024-01-01T00:00:00Z",
-			"period_end": "2024-02-01T00:00:00Z",
-			"description": "Premium Plan - Monthly",
-			"hosted_invoice_url": "https://invoice.stripe.com/mock",
-			"invoice_pdf": "https://invoice.stripe.com/mock.pdf",
-		},
+	// Get user's subscription to find customer ID
+	subscription, err := bh.billingService.GetUserSubscription(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get subscription",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// If user doesn't have a Polar customer ID, return empty history
+	if subscription.PolarCustomerID == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"invoices": []gin.H{},
+			"has_more": false,
+		})
+		return
+	}
+
+	// Fetch orders from Polar API
+	polarService := bh.billingService.GetPolarService()
+	orders, err := polarService.ListOrders(subscription.PolarCustomerID, 20)
+	if err != nil {
+		log.Printf("Failed to fetch orders from Polar: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch billing history",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Transform Polar orders into invoice format
+	history := make([]gin.H, 0, len(orders))
+	for _, order := range orders {
+		// Get product details for description
+		product, err := polarService.GetProduct(order.ProductID)
+		description := "Subscription"
+		if err == nil {
+			description = product.Name
+		}
+
+		// Build invoice URL (Polar may provide this in the future)
+		invoiceURL := fmt.Sprintf("https://polar.sh/orders/%s", order.ID)
+
+		invoice := gin.H{
+			"id":          order.ID,
+			"amount":      order.Amount,
+			"currency":    order.Currency,
+			"status":      "paid",
+			"created":     order.CreatedAt.Format(time.RFC3339),
+			"description": description,
+			"product_id":  order.ProductID,
+			"hosted_invoice_url": invoiceURL,
+		}
+
+		if order.SubscriptionID != nil {
+			invoice["subscription_id"] = *order.SubscriptionID
+		}
+
+		history = append(history, invoice)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"invoices": history,
-		"has_more": false,
+		"has_more": len(orders) >= 20,
 	})
 }
 
-// UpdatePaymentMethod updates the user's payment method
+// UpdatePaymentMethod redirects user to Polar customer portal for payment method management
+// Polar manages payment methods through their customer portal rather than direct API
 func (bh *BillingHandler) UpdatePaymentMethod(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 	if userID == 0 {
@@ -341,31 +390,26 @@ func (bh *BillingHandler) UpdatePaymentMethod(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		PaymentMethodID string `json:"payment_method_id" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+	// Get user's subscription to find customer ID
+	subscription, err := bh.billingService.GetUserSubscription(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get subscription",
 			"details": err.Error(),
 		})
 		return
 	}
 
-	// Mock update - in real implementation, update via Stripe
+	// Payment methods are managed through Polar customer portal
+	portalURL := "https://polar.sh/customer-portal"
+	if subscription.PolarCustomerID != "" {
+		portalURL = fmt.Sprintf("https://polar.sh/customer-portal?customer_id=%s", subscription.PolarCustomerID)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Payment method updated successfully",
-		"payment_method": gin.H{
-			"id": req.PaymentMethodID,
-			"type": "card",
-			"card": gin.H{
-				"brand": "visa",
-				"last4": "4242",
-				"exp_month": 12,
-				"exp_year": 2025,
-			},
-		},
+		"message": "Payment methods are managed through Polar customer portal",
+		"portal_url": portalURL,
+		"redirect_required": true,
 	})
 }
 

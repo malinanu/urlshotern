@@ -227,6 +227,48 @@ func (ps *PolarService) GetProduct(productID string) (*PolarProduct, error) {
 	return &product, nil
 }
 
+// PolarOrder represents an order/invoice from Polar
+type PolarOrder struct {
+	ID             string    `json:"id"`
+	Amount         int       `json:"amount"`
+	Currency       string    `json:"currency"`
+	CustomerID     string    `json:"customer_id"`
+	ProductID      string    `json:"product_id"`
+	ProductPriceID string    `json:"product_price_id"`
+	SubscriptionID *string   `json:"subscription_id,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// ListOrders retrieves all orders for a customer
+func (ps *PolarService) ListOrders(customerID string, limit int) ([]PolarOrder, error) {
+	type OrdersResponse struct {
+		Items []PolarOrder `json:"items"`
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+
+	var response OrdersResponse
+	endpoint := fmt.Sprintf("/orders?customer_id=%s&limit=%d", customerID, limit)
+	err := ps.makeRequest("GET", endpoint, nil, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list orders: %w", err)
+	}
+
+	return response.Items, nil
+}
+
+// GetOrder retrieves a specific order by ID
+func (ps *PolarService) GetOrder(orderID string) (*PolarOrder, error) {
+	var order PolarOrder
+	err := ps.makeRequest("GET", fmt.Sprintf("/orders/%s", orderID), nil, &order)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+	return &order, nil
+}
+
 // Database Operations
 
 // GetOrCreatePolarCustomer gets or creates a Polar customer for a user
