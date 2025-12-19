@@ -157,21 +157,22 @@ func (pwh *PolarWebhookHandler) HandleWebhook(c *gin.Context) {
 		errorMsg := processingErr.Error()
 		webhookEvent.ProcessingStatus = "failed"
 		webhookEvent.ErrorMessage = &errorMsg
-		webhookEvent.ProcessedAt = &now
-		log.Printf("Error processing webhook %s: %v", payload.Type, processingErr)
+		webhookEvent.LastRetryAt = &now // Initialize for retry worker
+		log.Printf("⚠️  Error processing webhook %s: %v (queued for retry)", payload.Type, processingErr)
 	} else {
 		webhookEvent.ProcessingStatus = "processed"
 		webhookEvent.ProcessedAt = &now
+		log.Printf("✅ Successfully processed webhook %s", payload.Type)
 	}
 
 	pwh.db.Save(&webhookEvent)
 
-	if processingErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process event"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"received": true})
+	// IMPORTANT: Always return 200 to Polar to prevent their retry system
+	// Our internal retry worker will handle retries with exponential backoff
+	c.JSON(http.StatusOK, gin.H{
+		"received": true,
+		"status":   webhookEvent.ProcessingStatus,
+	})
 }
 
 // Event Handlers

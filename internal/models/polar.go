@@ -52,16 +52,18 @@ type PolarProduct struct {
 
 // PolarWebhookEvent stores webhook events for debugging and idempotency
 type PolarWebhookEvent struct {
-	ID               int64     `json:"id" gorm:"primaryKey;autoIncrement"`
-	PolarEventID     string    `json:"polar_event_id" gorm:"uniqueIndex;not null"`
-	EventType        string    `json:"event_type" gorm:"not null;index"`
-	Payload          JSONB     `json:"payload" gorm:"type:jsonb;not null"`
+	ID               int64      `json:"id" gorm:"primaryKey;autoIncrement"`
+	PolarEventID     string     `json:"polar_event_id" gorm:"uniqueIndex;not null"`
+	EventType        string     `json:"event_type" gorm:"not null;index"`
+	Payload          JSONB      `json:"payload" gorm:"type:jsonb;not null"`
 	ProcessedAt      *time.Time `json:"processed_at,omitempty" gorm:"index"`
-	ProcessingStatus string    `json:"processing_status" gorm:"default:'pending'"` // pending, processed, failed
-	ErrorMessage     *string   `json:"error_message,omitempty"`
-	RetryCount       int       `json:"retry_count" gorm:"default:0"`
-	CreatedAt        time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt        time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	ProcessingStatus string     `json:"processing_status" gorm:"default:'pending';index"` // pending, processed, failed, dead_letter
+	ErrorMessage     *string    `json:"error_message,omitempty"`
+	RetryCount       int        `json:"retry_count" gorm:"default:0;index"`
+	LastRetryAt      *time.Time `json:"last_retry_at,omitempty" gorm:"index"`
+	DeadLetterReason *string    `json:"dead_letter_reason,omitempty"`
+	CreatedAt        time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt        time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // PolarPrice represents a price point for a product

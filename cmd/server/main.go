@@ -16,6 +16,7 @@ import (
 	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/workers"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -88,6 +89,17 @@ func main() {
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
 
+	// Initialize webhook retry worker
+	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
+	webhookRetryWorker := workers.NewWebhookRetryWorker(gormDB, webhookProcessor)
+	webhookAdminHandler := handlers.NewWebhookAdminHandler(webhookRetryWorker)
+
+	// Start webhook retry worker in background
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+	go webhookRetryWorker.Start(workerCtx)
+	log.Println("✅ Webhook retry worker started")
+
 	// Setup Gin router
 	if config.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -97,6 +109,9 @@ func main() {
 
 	// Setup all routes
 	routes.SetupRoutes(router, handler, authMiddleware)
+
+	// Setup webhook admin routes
+	routes.SetupWebhookAdminRoutes(router, webhookAdminHandler, authMiddleware)
 
 	// Setup server
 	srv := &http.Server{
@@ -121,6 +136,10 @@ func main() {
 	// Shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	// Shutdown webhook retry worker
+	workerCancel()
+	log.Println("✅ Webhook retry worker stopped")
 
 	// Shutdown real-time analytics service
 	realtimeAnalyticsService.Shutdown()
