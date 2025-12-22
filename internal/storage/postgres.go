@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
@@ -16,18 +17,25 @@ type PostgresStorage struct {
 
 // NewPostgresStorage creates a new PostgreSQL storage instance
 func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName)
+	// Use SSL in production, disable in development
+	sslMode := "require"
+	if config.Environment == "development" {
+		sslMode = "disable"
+	}
+
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, sslMode)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool
+	// Configure connection pool with granular settings
 	db.SetMaxOpenConns(config.DBMaxConns)
-	db.SetMaxIdleConns(config.DBMaxConns / 2)
-	db.SetConnMaxLifetime(time.Hour)
+	db.SetMaxIdleConns(config.DBMaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(config.DBConnMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(config.DBConnMaxIdleTime) * time.Second)
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
@@ -47,6 +55,22 @@ func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
 // Close closes the database connection
 func (p *PostgresStorage) Close() error {
 	return p.db.Close()
+}
+
+// GetPoolStats returns database connection pool statistics
+func (p *PostgresStorage) GetPoolStats() map[string]interface{} {
+	stats := p.db.Stats()
+	return map[string]interface{}{
+		"max_open_connections":   stats.MaxOpenConnections,
+		"open_connections":       stats.OpenConnections,
+		"in_use":                 stats.InUse,
+		"idle":                   stats.Idle,
+		"wait_count":             stats.WaitCount,
+		"wait_duration":          stats.WaitDuration.String(),
+		"max_idle_closed":        stats.MaxIdleClosed,
+		"max_idle_time_closed":   stats.MaxIdleTimeClosed,
+		"max_lifetime_closed":    stats.MaxLifetimeClosed,
+	}
 }
 
 // Database access methods for authentication services
@@ -613,12 +637,19 @@ func (p *PostgresStorage) GetSessionByID(id string) (*models.UserSession, error)
 		FROM user_sessions WHERE id = $1
 	`
 	err := p.QueryRow(query, id).Scan(
-		&session.ID, &session.UserID, &session.DeviceInfo, &session.IPAddress, 
+		&session.ID, &session.UserID, &session.DeviceInfo, &session.IPAddress,
 		&session.UserAgent, &session.RefreshTokenHash, &session.ExpiresAt, &session.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return session, nil
+}
+
+// DeleteUserSessions deletes all sessions for a user
+func (p *PostgresStorage) DeleteUserSessions(userID int64) error {
+	query := `DELETE FROM user_sessions WHERE user_id = $1`
+	_, err := p.Exec(query, userID)
+	return err
 }
 
 // Email verification methods
@@ -769,13 +800,51 @@ func (p *PostgresStorage) UpdateUserPassword(userID int64, passwordHash string) 
 // UpdateUser updates user information
 func (p *PostgresStorage) UpdateUser(user *models.User) error {
 	query := `
-		UPDATE users SET name = $1, email = $2, phone = $3, provider = $4, 
-		                provider_id = $5, avatar_url = $6, account_type = $7, 
-		                updated_at = $8 
+		UPDATE users SET name = $1, email = $2, phone = $3, provider = $4,
+		                provider_id = $5, avatar_url = $6, account_type = $7,
+		                updated_at = $8
 		WHERE id = $9
 	`
 	_, err := p.Exec(query, user.Name, user.Email, user.Phone, user.Provider,
 		user.ProviderID, user.AvatarURL, user.AccountType, time.Now(), user.ID)
+	return err
+}
+
+// UpdateUserProfile updates specific user profile fields
+func (p *PostgresStorage) UpdateUserProfile(userID int64, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	// Build dynamic query
+	var setClauses []string
+	var args []interface{}
+	argIndex := 1
+
+	for field, value := range updates {
+		// Validate field names to prevent SQL injection
+		switch field {
+		case "name", "phone", "avatar_url":
+			setClauses = append(setClauses, fmt.Sprintf("%s = $%d", field, argIndex))
+			args = append(args, value)
+			argIndex++
+		default:
+			return fmt.Errorf("invalid field name: %s", field)
+		}
+	}
+
+	// Always update updated_at
+	setClauses = append(setClauses, fmt.Sprintf("updated_at = $%d", argIndex))
+	args = append(args, time.Now())
+	argIndex++
+
+	// Add userID as final parameter
+	args = append(args, userID)
+
+	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d",
+		strings.Join(setClauses, ", "), argIndex)
+
+	_, err := p.Exec(query, args...)
 	return err
 }
 
@@ -814,19 +883,4 @@ func (p *PostgresStorage) UpdateUserPreferences(prefs *models.UserPreferences) e
 	_, err := p.Exec(query, prefs.DefaultExpiration, prefs.AnalyticsPublic,
 		prefs.EmailNotifications, prefs.MarketingEmails, prefs.Timezone, prefs.Theme, prefs.UserID)
 	return err
-}
-
-// Custom errors
-var (
-	ErrURLNotFound   = &StorageError{Message: "URL not found"}
-	ErrURLExpired    = &StorageError{Message: "URL has expired"}
-	ErrUnauthorized  = &StorageError{Message: "Unauthorized access"}
-)
-
-type StorageError struct {
-	Message string
-}
-
-func (e *StorageError) Error() string {
-	return e.Message
 }

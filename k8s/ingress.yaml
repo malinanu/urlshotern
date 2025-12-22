@@ -1,0 +1,135 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: urlshortener-ingress
+  namespace: urlshortener
+  annotations:
+    # Nginx ingress controller
+    kubernetes.io/ingress.class: "nginx"
+
+    # SSL/TLS configuration
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Rate limiting (1000 requests per second per IP)
+    nginx.ingress.kubernetes.io/limit-rps: "1000"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+
+    # Connection limits
+    nginx.ingress.kubernetes.io/limit-connections: "100"
+
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+
+    # Buffer size optimization
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+
+    # Compression
+    nginx.ingress.kubernetes.io/enable-compression: "true"
+    nginx.ingress.kubernetes.io/compression-level: "6"
+    nginx.ingress.kubernetes.io/compression-types: "text/html text/css text/plain text/javascript application/javascript application/json"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+
+    # Performance optimization
+    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "100"
+    nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "60"
+    nginx.ingress.kubernetes.io/use-http2: "true"
+
+    # Load balancing
+    nginx.ingress.kubernetes.io/load-balance: "ewma"  # Exponentially weighted moving average
+spec:
+  tls:
+  - hosts:
+    - trunc.site
+    - www.trunc.site
+    secretName: urlshortener-tls
+  rules:
+  - host: trunc.site
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: urlshortener-service
+            port:
+              number: 80
+  - host: www.trunc.site
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: urlshortener-service
+            port:
+              number: 80
+---
+# ConfigMap for nginx ingress controller optimization
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configuration
+  namespace: ingress-nginx
+data:
+  # Connection settings
+  keep-alive: "75"
+  keep-alive-requests: "1000"
+  upstream-keepalive-connections: "100"
+  upstream-keepalive-timeout: "60"
+
+  # Worker processes
+  worker-processes: "auto"
+  worker-connections: "16384"
+
+  # Buffer sizes
+  client-body-buffer-size: "16k"
+  client-header-buffer-size: "1k"
+  large-client-header-buffers: "4 16k"
+
+  # Timeouts
+  client-body-timeout: "30"
+  client-header-timeout: "30"
+  send-timeout: "30"
+
+  # Performance
+  use-gzip: "true"
+  gzip-level: "6"
+  gzip-types: "text/html text/css text/plain text/javascript application/javascript application/json"
+
+  # Security
+  ssl-protocols: "TLSv1.2 TLSv1.3"
+  ssl-ciphers: "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384"
+  ssl-prefer-server-ciphers: "on"
+  ssl-session-cache: "shared:SSL:10m"
+  ssl-session-timeout: "10m"
+
+  # Rate limiting
+  limit-req-status-code: "429"
+  limit-conn-status-code: "429"
+
+  # Proxy settings
+  proxy-connect-timeout: "30"
+  proxy-send-timeout: "30"
+  proxy-read-timeout: "30"
+  proxy-buffering: "on"
+  proxy-buffer-size: "16k"
+  proxy-buffers: "8 16k"
+
+  # HTTP/2
+  use-http2: "true"
+  http2-max-concurrent-streams: "128"
+
+  # Load balancing
+  load-balance: "ewma"

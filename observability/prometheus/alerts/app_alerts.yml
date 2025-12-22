@@ -1,0 +1,241 @@
+# Application Alert Rules for URL Shortener
+
+groups:
+  - name: url_shortener_application_alerts
+    interval: 30s
+    rules:
+      # High Latency Alerts
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="url-shortener"}[5m])) by (le, endpoint)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          slo: latency
+        annotations:
+          summary: "High P95 latency detected on {{ $labels.endpoint }}"
+          description: "P95 latency is {{ $value }}s (threshold: 1s) on endpoint {{ $labels.endpoint }}"
+          runbook_url: "https://wiki.example.com/runbooks/high-latency"
+          dashboard_url: "https://grafana.example.com/d/app-performance"
+
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{service="url-shortener"}[5m])) by (le, endpoint)
+          ) > 2
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+          slo: latency
+        annotations:
+          summary: "Critical P99 latency detected on {{ $labels.endpoint }}"
+          description: "P99 latency is {{ $value }}s (threshold: 2s) on endpoint {{ $labels.endpoint }}"
+          runbook_url: "https://wiki.example.com/runbooks/high-latency"
+
+      # High Error Rate Alerts
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{service="url-shortener",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="url-shortener"}[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+          slo: availability
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 1%)"
+          runbook_url: "https://wiki.example.com/runbooks/high-error-rate"
+
+      - alert: ElevatedErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{service="url-shortener",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="url-shortener"}[5m]))
+          ) > 0.005
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          slo: availability
+        annotations:
+          summary: "Elevated error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 0.5%)"
+
+      # Application Availability
+      - alert: ApplicationDown
+        expr: up{job="url-shortener-app"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "URL Shortener application is down"
+          description: "Application has been down for more than 2 minutes"
+          runbook_url: "https://wiki.example.com/runbooks/app-down"
+
+      # Error Budget Burn Rate Alerts (Multi-window, Multi-burn-rate)
+      - alert: ErrorBudgetBurnRateCritical
+        expr: |
+          (
+            (1 - (
+              sum(rate(sli_availability_requests_total{success="true"}[1h]))
+              /
+              sum(rate(sli_availability_requests_total[1h]))
+            )) / (1 - 0.9995)
+          ) > 14.4
+          and
+          (
+            (1 - (
+              sum(rate(sli_availability_requests_total{success="true"}[5m]))
+              /
+              sum(rate(sli_availability_requests_total[5m]))
+            )) / (1 - 0.9995)
+          ) > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          component: slo
+          slo: availability
+        annotations:
+          summary: "Critical error budget burn rate"
+          description: "Error budget is being consumed 14.4x faster than expected. At this rate, monthly budget will be exhausted in ~2 hours"
+          runbook_url: "https://wiki.example.com/runbooks/error-budget-burn"
+
+      - alert: ErrorBudgetBurnRateHigh
+        expr: |
+          (
+            (1 - (
+              sum(rate(sli_availability_requests_total{success="true"}[6h]))
+              /
+              sum(rate(sli_availability_requests_total[6h]))
+            )) / (1 - 0.9995)
+          ) > 6
+          and
+          (
+            (1 - (
+              sum(rate(sli_availability_requests_total{success="true"}[30m]))
+              /
+              sum(rate(sli_availability_requests_total[30m]))
+            )) / (1 - 0.9995)
+          ) > 6
+        for: 15m
+        labels:
+          severity: warning
+          component: slo
+          slo: availability
+        annotations:
+          summary: "High error budget burn rate"
+          description: "Error budget is being consumed 6x faster than expected. At this rate, monthly budget will be exhausted in ~5 days"
+          runbook_url: "https://wiki.example.com/runbooks/error-budget-burn"
+
+      # Business Metrics Alerts
+      - alert: LowURLCreationRate
+        expr: |
+          sum(rate(urls_created_total[10m])) < 0.1
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Unusually low URL creation rate"
+          description: "URL creation rate is {{ $value }} URLs/sec (expected: >0.1/sec)"
+          runbook_url: "https://wiki.example.com/runbooks/low-traffic"
+
+      - alert: NoURLCreations
+        expr: |
+          sum(rate(urls_created_total[5m])) == 0
+        for: 10m
+        labels:
+          severity: critical
+          component: business
+        annotations:
+          summary: "No URLs being created"
+          description: "No URLs have been created in the last 10 minutes"
+          runbook_url: "https://wiki.example.com/runbooks/zero-traffic"
+
+  - name: url_shortener_resource_alerts
+    interval: 30s
+    rules:
+      # CPU Alerts
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanize }}%"
+          runbook_url: "https://wiki.example.com/runbooks/high-cpu"
+
+      - alert: CriticalCPUUsage
+        expr: |
+          100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanize }}%"
+          runbook_url: "https://wiki.example.com/runbooks/high-cpu"
+
+      # Memory Alerts
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}%"
+          runbook_url: "https://wiki.example.com/runbooks/high-memory"
+
+      - alert: CriticalMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}%"
+          runbook_url: "https://wiki.example.com/runbooks/high-memory"
+
+      # Disk Alerts
+      - alert: LowDiskSpace
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}:{{ $labels.mountpoint }}"
+          description: "Disk usage is {{ $value | humanize }}%"
+          runbook_url: "https://wiki.example.com/runbooks/low-disk-space"
+
+      - alert: CriticalDiskSpace
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}:{{ $labels.mountpoint }}"
+          description: "Disk usage is {{ $value | humanize }}%"
+          runbook_url: "https://wiki.example.com/runbooks/low-disk-space"

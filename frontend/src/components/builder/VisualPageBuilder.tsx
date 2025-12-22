@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import RichTextEditor from '../editor/RichTextEditor';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
+import { Modal } from '../ui/modal';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select } from '../ui/select';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
 import { toast } from 'react-toastify';
 import {
   PlusIcon,
@@ -105,7 +105,7 @@ const blockTypes = [
 ];
 
 export function VisualPageBuilder() {
-  const { user, token } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const [blocks, setBlocks] = useState<BuilderBlock[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
@@ -133,7 +133,7 @@ export function VisualPageBuilder() {
     try {
       const response = await fetch('/api/v1/admin/content-blocks', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -286,7 +286,7 @@ export function VisualPageBuilder() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
         body: JSON.stringify(pageData),
       });

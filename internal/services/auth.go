@@ -263,6 +263,46 @@ func (a *AuthService) ResetPassword(req *models.ResetPasswordRequest, ipAddress,
 	return nil
 }
 
+// UpdateProfile updates user profile information
+func (a *AuthService) UpdateProfile(userID int64, req *models.UpdateProfileRequest, ipAddress, userAgent string) (*models.User, error) {
+	// Verify user exists
+	_, err := a.userService.GetUserByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// Build update fields
+	updates := make(map[string]interface{})
+
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+
+	if req.Phone != nil {
+		updates["phone"] = *req.Phone
+	}
+
+	// Update user in database
+	err = a.db.UpdateUserProfile(userID, updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update profile: %w", err)
+	}
+
+	// Fetch updated user
+	updatedUser, err := a.userService.GetUserByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated user: %w", err)
+	}
+
+	// Log profile update
+	a.logAuditEvent(&userID, "profile_updated", "user", fmt.Sprintf("%d", userID),
+		map[string]interface{}{
+			"fields_updated": updates,
+		}, ipAddress, userAgent)
+
+	return updatedUser, nil
+}
+
 // ChangePassword changes user password
 func (a *AuthService) ChangePassword(userID int64, req *models.ChangePasswordRequest, ipAddress, userAgent string) error {
 	err := a.userService.ChangePassword(userID, req.CurrentPassword, req.NewPassword)
@@ -270,8 +310,15 @@ func (a *AuthService) ChangePassword(userID int64, req *models.ChangePasswordReq
 		return err
 	}
 
+	// Invalidate all user sessions (force re-login for security)
+	err = a.userService.InvalidateUserSessions(userID)
+	if err != nil {
+		// Log error but don't fail the password change
+		fmt.Printf("Warning: failed to invalidate user sessions after password change: %v\n", err)
+	}
+
 	// Log password change
-	a.logAuditEvent(&userID, "password_changed", "user", fmt.Sprintf("%d", userID), 
+	a.logAuditEvent(&userID, "password_changed", "user", fmt.Sprintf("%d", userID),
 		map[string]interface{}{
 			"method": "self_service",
 		}, ipAddress, userAgent)
@@ -296,12 +343,35 @@ func (a *AuthService) GetGoogleAuthURL(state string) string {
 func (a *AuthService) Logout(userID int64, sessionID string, ipAddress, userAgent string) error {
 	// Invalidate session in database
 	// This would be implemented in the UserService or directly here
-	
+
 	// Log logout
-	a.logAuditEvent(&userID, "logout", "authentication", fmt.Sprintf("%d", userID), 
+	a.logAuditEvent(&userID, "logout", "authentication", fmt.Sprintf("%d", userID),
 		map[string]interface{}{
 			"session_id": sessionID,
 		}, ipAddress, userAgent)
+
+	return nil
+}
+
+// InvalidateToken blacklists a token by adding it to Redis with TTL matching token expiry
+func (a *AuthService) InvalidateToken(token string) error {
+	// Validate token to get expiry time
+	claims, err := a.jwtService.ValidateToken(token)
+	if err != nil {
+		// Token is already invalid or expired, no need to blacklist
+		if err == ErrExpiredToken {
+			return nil
+		}
+		return fmt.Errorf("failed to validate token: %w", err)
+	}
+
+	// Blacklist token in Redis until its natural expiry
+	if claims.ExpiresAt != nil {
+		err = a.redis.BlacklistToken(token, claims.ExpiresAt.Time)
+		if err != nil {
+			return fmt.Errorf("failed to blacklist token: %w", err)
+		}
+	}
 
 	return nil
 }

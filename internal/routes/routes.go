@@ -2,7 +2,9 @@ package routes
 
 import (
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -23,6 +25,12 @@ func SetupRoutes(
 
 	// Health check
 	router.GET("/health", handler.HealthCheck)
+
+	// Database connection pool statistics (for monitoring)
+	router.GET("/health/db-pool", handler.DBPoolStats)
+
+	// Goroutine error statistics (for monitoring)
+	router.GET("/health/goroutines", handler.GoroutineStats)
 
 	// Public routes (no authentication required)
 	setupPublicRoutes(router, handler, authMiddleware)
@@ -164,14 +172,12 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authService
 	// Admin user management
 	admin.GET("/users/:id", handler.AuthHandlers.GetUserByID)
 	admin.GET("/users", func(c *gin.Context) {
-		// TODO: Implement user list
-		c.JSON(200, gin.H{"message": "Admin user list - coming soon"})
+		c.JSON(501, gin.H{"error": "User list endpoint not implemented"})
 	})
-	
+
 	// Admin analytics
 	admin.GET("/stats", func(c *gin.Context) {
-		// TODO: Implement admin stats
-		c.JSON(200, gin.H{"message": "Admin stats - coming soon"})
+		c.JSON(501, gin.H{"error": "Admin stats endpoint not implemented"})
 	})
 	
 	// CMS management routes
@@ -258,13 +264,15 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	billing.POST("/checkout", handler.BillingHandlers.CreateCheckoutSession)
 	billing.POST("/cancel-subscription", handler.BillingHandlers.CancelSubscription)
 	billing.POST("/reactivate-subscription", handler.BillingHandlers.ReactivateSubscription)
-	
+	billing.GET("/portal", handler.BillingHandlers.GetCustomerPortalURL)
+	billing.GET("/products", handler.BillingHandlers.GetProducts)
+
 	// Payment methods
 	billing.POST("/payment-method", handler.BillingHandlers.UpdatePaymentMethod)
 	billing.GET("/history", handler.BillingHandlers.GetBillingHistory)
-	
-	// Webhooks (no auth required for Stripe webhooks)
-	api.POST("/webhooks/stripe", handler.BillingHandlers.StripeWebhook)
+
+	// Webhooks (no auth required for Polar webhooks)
+	api.POST("/webhooks/polar", handler.PolarWebhookHandler.HandleWebhook)
 	
 	// Feature-protected routes
 	customDomain := api.Group("/custom-domains")
@@ -292,29 +300,80 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 func setupStaticRoutes(router *gin.Engine) {
 	// Serve static files from the /static directory
 	router.Static("/static", "./static")
-	
+
 	// Serve frontend assets (_next directory for Next.js)
 	router.StaticFS("/_next", http.Dir("./static/_next"))
-	
+
 	// Serve index.html for root path
 	router.GET("/", func(c *gin.Context) {
 		indexPath := filepath.Join("./static", "index.html")
 		c.File(indexPath)
 	})
-	
-	// Serve index.html for common frontend routes
-	frontendRoutes := []string{"/dashboard", "/login", "/register", "/analytics", "/profile", "/settings"}
+
+	// All frontend routes that need static HTML
+	frontendRoutes := []string{
+		"/features", "/pricing", "/api-docs",
+		"/about", "/contact", "/terms", "/privacy",
+		"/dashboard", "/login", "/register",
+		"/analytics", "/profile", "/settings",
+		"/bulk", "/conversions", "/api-keys", "/admin",
+		"/billing",
+	}
+
 	for _, route := range frontendRoutes {
-		router.GET(route, func(c *gin.Context) {
+		routePath := route // Local copy to avoid closure issues
+
+		router.GET(routePath, func(c *gin.Context) {
+			// Try to serve the specific HTML file for this route (e.g., /features.html)
+			htmlPath := filepath.Join("./static", routePath+".html")
+			if _, err := os.Stat(htmlPath); err == nil {
+				c.File(htmlPath)
+				return
+			}
+			// Try nested index.html (e.g., /features/index.html)
+			nestedPath := filepath.Join("./static", routePath, "index.html")
+			if _, err := os.Stat(nestedPath); err == nil {
+				c.File(nestedPath)
+				return
+			}
+			// Fallback to root index.html for client-side routing
 			indexPath := filepath.Join("./static", "index.html")
 			c.File(indexPath)
 		})
-		// Also handle sub-routes with /*path
-		router.GET(route+"/*path", func(c *gin.Context) {
+
+		// Handle sub-routes with /*path
+		router.GET(routePath+"/*path", func(c *gin.Context) {
 			indexPath := filepath.Join("./static", "index.html")
 			c.File(indexPath)
 		})
 	}
+
+	// Catch-all route handler (MUST be registered LAST)
+	router.NoRoute(func(c *gin.Context) {
+		// Only handle non-API routes
+		if !strings.HasPrefix(c.Request.URL.Path, "/api/") &&
+		   !strings.HasPrefix(c.Request.URL.Path, "/health") {
+			// Check if it's a short code (single segment, no extension)
+			pathSegments := strings.Split(strings.Trim(c.Request.URL.Path, "/"), "/")
+			if len(pathSegments) == 1 && !strings.Contains(pathSegments[0], ".") {
+				// Let short code 404 naturally
+				c.JSON(404, gin.H{"error": "Short URL not found"})
+				return
+			}
+
+			// Serve index.html for frontend routes (SPA fallback)
+			indexPath := filepath.Join("./static", "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				c.File(indexPath)
+				return
+			}
+
+			c.JSON(404, gin.H{"error": "Page not found"})
+		} else {
+			// API routes get JSON 404
+			c.JSON(404, gin.H{"error": "API endpoint not found"})
+		}
+	})
 }
 
 // setupUserAnalyticsRoutes configures user analytics routes

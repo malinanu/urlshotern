@@ -241,7 +241,7 @@ ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS utm_term VARCHAR(100);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS utm_content VARCHAR(100);
 
 -- Create an alias for the url_mappings table as 'urls' for consistency
-CREATE VIEW IF NOT EXISTS urls AS SELECT * FROM url_mappings;
+CREATE OR REPLACE VIEW urls AS SELECT * FROM url_mappings;
 
 -- Custom Domains Tables
 

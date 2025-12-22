@@ -1,0 +1,565 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      performance_type:
+        description: 'Type of performance test'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - frontend
+          - api
+          - database
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+  K6_VERSION: 'v0.47.0'
+
+jobs:
+  # Frontend performance testing with Lighthouse CI
+  lighthouse-ci:
+    name: Lighthouse CI - Frontend Performance
+    runs-on: ubuntu-latest
+    if: github.event.inputs.performance_type == 'frontend' || github.event.inputs.performance_type == 'all' || github.event.inputs.performance_type == ''
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: urlshortener
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Start backend server
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/urlshortener?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+          PORT: 8080
+        run: |
+          go build -o ./bin/server ./cmd/server/main.go
+          ./bin/server &
+          sleep 5
+          curl -f http://localhost:8080/health || exit 1
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './lighthouserc.js'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 3
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lighthouse-results
+          path: .lighthouseci
+          retention-days: 30
+
+      - name: Check performance budgets
+        id: lighthouse-check
+        run: |
+          cd frontend
+          npx @lhci/cli@0.12.x assert --preset=lighthouse:recommended || echo "budgets_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Comment PR with Lighthouse results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reportPath = '.lighthouseci/manifest.json';
+
+            if (fs.existsSync(reportPath)) {
+              const manifest = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              const summary = manifest[0].summary;
+
+              const comment = `## 🔦 Lighthouse Performance Report
+
+              ### Core Web Vitals
+              - **Performance Score**: ${summary.performance || 'N/A'}
+              - **Accessibility Score**: ${summary.accessibility || 'N/A'}
+              - **Best Practices Score**: ${summary['best-practices'] || 'N/A'}
+              - **SEO Score**: ${summary.seo || 'N/A'}
+
+              [View full report](${manifest[0].url})
+              `;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+      - name: Fail on budget exceeded
+        if: steps.lighthouse-check.outputs.budgets_failed == 'true'
+        run: |
+          echo "::error::Performance budgets exceeded"
+          exit 1
+
+  # API performance testing with K6
+  k6-api-performance:
+    name: K6 - API Performance Testing
+    runs-on: ubuntu-latest
+    if: github.event.inputs.performance_type == 'api' || github.event.inputs.performance_type == 'all' || github.event.inputs.performance_type == ''
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: urlshortener
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup database
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/urlshortener?sslmode=disable
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -d urlshortener -f configs/database.sql || true
+
+      - name: Build and start server
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/urlshortener?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+          PORT: 8080
+        run: |
+          go build -o ./bin/server ./cmd/server/main.go
+          ./bin/server &
+          sleep 5
+          curl -f http://localhost:8080/health || exit 1
+
+      - name: Install K6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Run K6 performance tests
+        env:
+          BASE_URL: http://localhost:8080
+        run: |
+          k6 run --out json=performance-results.json tests/performance/api-performance.js
+
+      - name: Upload K6 results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: k6-results
+          path: performance-results.json
+          retention-days: 30
+
+      - name: Parse K6 results and check thresholds
+        id: k6-check
+        run: |
+          # Install jq for JSON parsing
+          sudo apt-get install -y jq
+
+          # Check if any thresholds failed
+          failed=$(jq -r '.metrics | to_entries[] | select(.value.thresholds // {} | to_entries[] | .value.ok == false) | .key' performance-results.json | wc -l)
+
+          if [ "$failed" -gt 0 ]; then
+            echo "threshold_failed=true" >> $GITHUB_OUTPUT
+            echo "::error::$failed K6 threshold(s) failed"
+          else
+            echo "threshold_failed=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract key metrics for summary
+          echo "### K6 Performance Results" > k6-summary.md
+          echo "" >> k6-summary.md
+          jq -r '.metrics | to_entries[] | "- \(.key): \(.value.values.avg // .value.values.rate // "N/A")"' performance-results.json >> k6-summary.md
+
+      - name: Comment PR with K6 results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+
+            if (fs.existsSync('k6-summary.md')) {
+              const summary = fs.readFileSync('k6-summary.md', 'utf8');
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🚀 K6 API Performance Report\n\n${summary}`
+              });
+            }
+
+      - name: Fail on threshold exceeded
+        if: steps.k6-check.outputs.threshold_failed == 'true'
+        run: |
+          echo "::error::K6 performance thresholds exceeded"
+          exit 1
+
+  # Database performance benchmarks
+  database-benchmarks:
+    name: Database Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event.inputs.performance_type == 'database' || github.event.inputs.performance_type == 'all' || github.event.inputs.performance_type == ''
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: urlshortener
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup database
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/urlshortener?sslmode=disable
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -d urlshortener -f configs/database.sql || true
+
+      - name: Run database benchmarks
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/urlshortener?sslmode=disable
+        run: |
+          cd tests/performance
+          chmod +x run-benchmarks.sh
+          ./run-benchmarks.sh
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: database-benchmark-results
+          path: tests/performance/benchmark-results/
+          retention-days: 30
+
+      - name: Comment PR with benchmark results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'tests/performance/benchmark-results/summary.md';
+
+            if (fs.existsSync(summaryPath)) {
+              const summary = fs.readFileSync(summaryPath, 'utf8');
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🗄️ Database Performance Benchmarks\n\n${summary}`
+              });
+            }
+
+  # Performance trend tracking and comparison
+  performance-trends:
+    name: Performance Trend Analysis
+    runs-on: ubuntu-latest
+    needs: [lighthouse-ci, k6-api-performance, database-benchmarks]
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Setup Python for analysis
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install analysis dependencies
+        run: |
+          pip install pandas matplotlib numpy
+
+      - name: Analyze performance trends
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+          from datetime import datetime
+
+          # Create trends directory
+          os.makedirs('performance-trends', exist_ok=True)
+
+          # Load current results
+          results = {
+              'timestamp': datetime.now().isoformat(),
+              'commit': os.getenv('GITHUB_SHA', 'unknown'),
+              'lighthouse': {},
+              'k6': {},
+              'database': {}
+          }
+
+          # Parse Lighthouse results
+          if os.path.exists('lighthouse-results'):
+              # Parse Lighthouse manifest
+              pass  # Implement parsing logic
+
+          # Parse K6 results
+          if os.path.exists('k6-results/performance-results.json'):
+              with open('k6-results/performance-results.json') as f:
+                  k6_data = json.load(f)
+                  results['k6'] = k6_data.get('metrics', {})
+
+          # Save trends data
+          with open('performance-trends/latest.json', 'w') as f:
+              json.dump(results, f, indent=2)
+
+          print("Performance trend analysis complete")
+          EOF
+
+      - name: Upload trend data
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-trends
+          path: performance-trends/
+          retention-days: 90
+
+      - name: Commit trends to repository
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add performance-trends/ || true
+          git commit -m "Update performance trends [skip ci]" || true
+          git push || true
+
+  # Performance regression detection
+  performance-regression-check:
+    name: Performance Regression Detection
+    runs-on: ubuntu-latest
+    needs: [lighthouse-ci, k6-api-performance, database-benchmarks]
+    if: always() && github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download current results
+        uses: actions/download-artifact@v3
+
+      - name: Get baseline performance data
+        run: |
+          # Fetch baseline from main branch
+          git checkout origin/main -- performance-trends/ || echo "No baseline found"
+
+      - name: Compare performance metrics
+        id: regression-check
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+
+          regression_detected = False
+          regression_threshold = 0.10  # 10% regression threshold
+
+          # Load baseline
+          baseline_file = 'performance-trends/latest.json'
+          if os.path.exists(baseline_file):
+              with open(baseline_file) as f:
+                  baseline = json.load(f)
+
+              # Compare K6 metrics
+              if os.path.exists('k6-results/performance-results.json'):
+                  with open('k6-results/performance-results.json') as f:
+                      current = json.load(f)
+
+                  # Check for regressions
+                  for metric, current_value in current.get('metrics', {}).items():
+                      baseline_value = baseline.get('k6', {}).get(metric, {})
+
+                      if 'avg' in current_value.get('values', {}):
+                          current_avg = current_value['values']['avg']
+                          baseline_avg = baseline_value.get('values', {}).get('avg', 0)
+
+                          if baseline_avg > 0:
+                              change = (current_avg - baseline_avg) / baseline_avg
+
+                              if change > regression_threshold:
+                                  print(f"::warning::Regression detected in {metric}: {change*100:.2f}% increase")
+                                  regression_detected = True
+
+              if regression_detected:
+                  print("regression_detected=true")
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write("regression_detected=true\n")
+              else:
+                  print("No significant regressions detected")
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write("regression_detected=false\n")
+          else:
+              print("No baseline data found, skipping regression check")
+          EOF
+
+      - name: Create regression report
+        if: steps.regression-check.outputs.regression_detected == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ Performance Regression Detected
+
+              Performance metrics have regressed beyond acceptable thresholds.
+
+              Please review the detailed performance reports above and optimize before merging.
+              `
+            });
+
+      - name: Fail on regression
+        if: steps.regression-check.outputs.regression_detected == 'true'
+        run: |
+          echo "::error::Performance regression detected"
+          exit 1
+
+  # Synthetic monitoring
+  synthetic-monitoring:
+    name: Synthetic Performance Monitoring
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event.schedule
+    needs: [lighthouse-ci, k6-api-performance]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run synthetic tests against production
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL || 'https://trunc.site' }}
+        run: |
+          npm install -g @lhci/cli k6
+
+          # Run Lighthouse against production
+          lhci autorun --collect.url="$PRODUCTION_URL"
+
+          # Run K6 smoke test
+          k6 run --vus 1 --duration 1m tests/performance/api-performance.js
+
+      - name: Alert on performance degradation
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'failure'
+          channel: '#alerts'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: '🚨 Production performance degradation detected!'

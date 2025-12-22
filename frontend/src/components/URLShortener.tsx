@@ -8,8 +8,7 @@ import { ClipboardDocumentIcon, CheckIcon, QrCodeIcon } from '@heroicons/react/2
 import clsx from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { QRCodeModal } from '@/components/QRCode';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+import { API_ENDPOINTS } from '@/lib/api-config';
 
 const urlSchema = z.object({
   url: z
@@ -64,7 +63,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/shorten`, {
+      const response = await fetch(API_ENDPOINTS.urls.shorten, {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
@@ -82,7 +81,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
             'Content-Type': 'application/json',
           };
           
-          const retryResponse = await fetch(`${API_BASE_URL}/api/v1/shorten`, {
+          const retryResponse = await fetch(API_ENDPOINTS.urls.shorten, {
             method: 'POST',
             headers: headersWithoutAuth,
             body: JSON.stringify(data),
@@ -200,6 +199,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                   />
                   <button
                     onClick={copyToClipboard}
+                    aria-label={copied ? "Copied to clipboard" : "Copy short URL to clipboard"}
                     className="flex items-center gap-1 px-3 py-2 text-sm text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
                   >
                     {copied ? (
@@ -216,6 +216,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                   </button>
                   <button
                     onClick={() => setShowQRModal(true)}
+                    aria-label="Show QR code for this short URL"
                     className="flex items-center gap-1 px-3 py-2 text-sm text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
                   >
                     <QrCodeIcon className="h-4 w-4" />

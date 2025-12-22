@@ -1,0 +1,129 @@
+# CloudFlare Workers Configuration for URL Shortener
+# Documentation: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "url-shortener-redirect"
+main = "redirect-analytics.js"
+compatibility_date = "2025-01-01"
+
+# Account and Zone Configuration
+# Replace with your CloudFlare account and zone IDs
+# account_id = "YOUR_ACCOUNT_ID"
+# zone_id = "YOUR_ZONE_ID"
+
+# Worker Settings
+workers_dev = true  # Enable workers.dev subdomain for testing
+keep_vars = true    # Preserve environment variables between deployments
+
+# KV Namespaces for URL Mapping Cache
+[[kv_namespaces]]
+binding = "URL_MAPPINGS"
+# id = "YOUR_PRODUCTION_KV_NAMESPACE_ID"
+# preview_id = "YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+# Analytics Engine (for high-volume analytics)
+# Note: Analytics Engine is available on Workers Paid plan
+[[analytics_engine_datasets]]
+binding = "ANALYTICS_ENGINE"
+# dataset = "url_shortener_analytics"
+
+# Queue for Batch Analytics Processing
+# Note: Queues are available on Workers Paid plan
+[[queues.producers]]
+binding = "ANALYTICS_QUEUE"
+queue = "redirect-analytics"
+# delivery_delay = 5  # Delay in seconds before delivery
+
+# Queue consumer configuration (separate worker to process analytics)
+[[queues.consumers]]
+queue = "redirect-analytics"
+max_batch_size = 100
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "analytics-dlq"
+
+# Environment Variables (Production)
+[env.production]
+name = "url-shortener-redirect-prod"
+vars = {
+  ENVIRONMENT = "production",
+  ORIGIN_URL = "https://trunc.site",
+  CACHE_TTL = "3600",
+  ANALYTICS_ENABLED = "true"
+}
+
+# Production KV Namespace
+[[env.production.kv_namespaces]]
+binding = "URL_MAPPINGS"
+# id = "YOUR_PRODUCTION_KV_NAMESPACE_ID"
+
+# Environment Variables (Staging)
+[env.staging]
+name = "url-shortener-redirect-staging"
+vars = {
+  ENVIRONMENT = "staging",
+  ORIGIN_URL = "https://staging.trunc.site",
+  CACHE_TTL = "1800",
+  ANALYTICS_ENABLED = "true"
+}
+
+[[env.staging.kv_namespaces]]
+binding = "URL_MAPPINGS"
+# id = "YOUR_STAGING_KV_NAMESPACE_ID"
+
+# Environment Variables (Development)
+[env.development]
+name = "url-shortener-redirect-dev"
+vars = {
+  ENVIRONMENT = "development",
+  ORIGIN_URL = "http://localhost:8080",
+  CACHE_TTL = "300",
+  ANALYTICS_ENABLED = "false"
+}
+
+[[env.development.kv_namespaces]]
+binding = "URL_MAPPINGS"
+# id = "YOUR_DEV_KV_NAMESPACE_ID"
+
+# Route Configuration
+# Map worker to your domain
+[[routes]]
+pattern = "trunc.site/*"
+zone_name = "trunc.site"
+
+[[routes]]
+pattern = "www.trunc.site/*"
+zone_name = "trunc.site"
+
+# Limits and Performance
+[limits]
+cpu_ms = 50  # Max CPU time per request (milliseconds)
+
+# Build Configuration
+[build]
+command = "npm install && npm run build"
+# cwd = "cloudflare/workers"
+# watch_dirs = ["src"]
+
+# Observability
+[observability]
+enabled = true
+head_sampling_rate = 1.0  # Sample 100% of requests (reduce in production)
+
+# Tail consumers (for real-time log streaming)
+[[tail_consumers]]
+service = "url-shortener-logs"
+# environment = "production"
+
+# Usage Model
+# "bundled" = 10M requests/month included, then $0.50/million
+# "unbound" = pay-as-you-go, better for variable workloads
+usage_model = "bundled"
+
+# Compatibility flags
+[compatibility_flags]
+nodejs_compat = true  # Enable Node.js compatibility
+
+# Triggers (Cron for maintenance tasks)
+[[triggers.crons]]
+cron = "0 2 * * *"  # Daily at 2 AM UTC
+script = "maintenance.js"  # Optional cleanup script

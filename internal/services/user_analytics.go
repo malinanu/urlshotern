@@ -89,30 +89,89 @@ func (s *UserAnalyticsService) EndUserSession(sessionID string, endedAt time.Tim
 	return nil
 }
 
-// GetUserAnalyticsSummary returns comprehensive analytics for a user - Stub implementation
+// GetUserAnalyticsSummary returns comprehensive analytics for a user
 func (s *UserAnalyticsService) GetUserAnalyticsSummary(userID int64, dateRange models.DateRange) (*models.UserAnalyticsSummary, error) {
-	// TODO: Implement proper analytics summary based on correct model structure
-	return &models.UserAnalyticsSummary{
-		UserID:              userID,
-		AccountCreatedAt:    time.Now().AddDate(0, -6, 0), // 6 months ago
-		LastActiveAt:        &time.Time{},
-		TotalSessions:       25,
-		TotalActiveDays:     45,
-		AvgSessionDuration:  8.5,
-		TotalURLsCreated:    100,
-		TotalClicks:         2500,
-		TotalShares:         150,
-		TotalComments:       25,
-		TotalBookmarks:      40,
-		TotalCollections:    5,
-		TopDevices:          []models.DeviceUsageStat{},
-		TopBrowsers:         []models.BrowserUsageStat{},
-		TopLocations:        []models.LocationUsageStat{},
-		ActivityTrends:      []models.ActivityTrend{},
-		RecentActivity:      []*models.UserActivityInfo{},
-		UsagePatterns:       models.UserUsagePatterns{},
-		EngagementMetrics:   models.UserEngagementMetrics{},
-	}, nil
+	summary := &models.UserAnalyticsSummary{
+		UserID: userID,
+	}
+
+	// Get user basic info
+	query := "SELECT created_at, last_login_at FROM users WHERE id = $1"
+	err := s.db.QueryRow(query, userID).Scan(&summary.AccountCreatedAt, &summary.LastActiveAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	// Build date range filter
+	dateFilter := ""
+	args := []interface{}{userID}
+	if !dateRange.Start.IsZero() && !dateRange.End.IsZero() {
+		dateFilter = " AND started_at BETWEEN $2 AND $3"
+		args = append(args, dateRange.Start, dateRange.End)
+	}
+
+	// Get session statistics
+	sessionQuery := fmt.Sprintf(`
+		SELECT
+			COALESCE(COUNT(*), 0) as total_sessions,
+			COALESCE(AVG(duration_minutes), 0) as avg_duration,
+			COALESCE(COUNT(DISTINCT DATE(started_at)), 0) as active_days
+		FROM user_sessions
+		WHERE user_id = $1 %s`, dateFilter)
+
+	var totalSessions, activeDays int64
+	var avgDuration float64
+	err = s.db.QueryRow(sessionQuery, args...).Scan(&totalSessions, &avgDuration, &activeDays)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session stats: %w", err)
+	}
+	summary.TotalSessions = totalSessions
+	summary.TotalActiveDays = activeDays
+	summary.AvgSessionDuration = avgDuration
+
+	// Get URL statistics from user_activity_logs
+	// Note: URL creation is tracked in user_activity_logs, not url_mappings
+	urlQuery := `
+		SELECT
+			COALESCE(COUNT(*), 0) as total_urls
+		FROM user_activity_logs
+		WHERE user_id = $1 AND activity_type IN ('url_create', 'url_shortened')`
+
+	var totalURLs int64
+	err = s.db.QueryRow(urlQuery, userID).Scan(&totalURLs)
+	if err != nil {
+		// If table doesn't exist yet, use default
+		totalURLs = 0
+	}
+	summary.TotalURLsCreated = totalURLs
+
+	// Get total clicks from activity logs
+	clickQuery := `
+		SELECT COALESCE(COUNT(*), 0)
+		FROM user_activity_logs
+		WHERE user_id = $1 AND activity_type = 'url_click'`
+
+	var totalClicks int64
+	err = s.db.QueryRow(clickQuery, userID).Scan(&totalClicks)
+	if err != nil {
+		totalClicks = 0
+	}
+	summary.TotalClicks = totalClicks
+
+	// Get top devices
+	summary.TopDevices = s.getTopDevices(userID, dateRange)
+
+	// Get top browsers
+	summary.TopBrowsers = s.getTopBrowsers(userID, dateRange)
+
+	// Get top locations
+	summary.TopLocations = s.getTopLocations(userID, dateRange)
+
+	// Calculate engagement metrics
+	engagementMetrics := s.calculateEngagementMetricsInternal(userID, totalSessions, activeDays, avgDuration)
+	summary.EngagementMetrics = *engagementMetrics
+
+	return summary, nil
 
 	// Original implementation (commented out due to complexity and model mismatches)
 	/*
@@ -185,17 +244,7 @@ func (s *UserAnalyticsService) GetUserAnalyticsSummary(userID int64, dateRange m
 	}
 
 	summary.TotalURLsCreated = urlStats.TotalURLs
-	// summary.URLsCreatedLast30Days = urlStats.URLsLast30Days  // Field not available in model
 	summary.TotalClicks = urlStats.TotalClicks
-	// summary.ClicksLast30Days = urlStats.ClicksLast30Days      // Field not available in model
-
-	// Calculate engagement score - TODO: add EngagementScore field to model
-	// summary.EngagementScore = s.calculateEngagementScore(summary)
-
-	// Get top devices and browsers - TODO: fix type mismatches
-	// summary.TopDevices = s.getTopDevices(userID, dateRange)
-	// summary.TopBrowsers = s.getTopBrowsers(userID, dateRange)
-	// summary.TopLocations = s.getTopLocations(userID, dateRange)
 
 	return summary, nil
 	*/
@@ -203,19 +252,73 @@ func (s *UserAnalyticsService) GetUserAnalyticsSummary(userID int64, dateRange m
 
 // GetUserEngagementMetrics returns detailed engagement metrics
 func (s *UserAnalyticsService) GetUserEngagementMetrics(userID int64, dateRange models.DateRange) (*models.UserEngagementMetrics, error) {
-	// Stub implementation for now - TODO: implement proper analytics
-	metrics := &models.UserEngagementMetrics{
-		RetentionRate:         85.5,
-		EngagementScore:       72.3,
-		DaysActive:            90,
-		DaysInactive:          10,
-		LongestStreak:         15,
-		CurrentStreak:         3,
-		AvgActionsPerSession:  4.2,
-		FeatureAdoptionRate:   68.9,
-		CollaborationRate:     23.4,
-		URLSuccessRate:        94.2,
+	// Get basic session statistics
+	sessionQuery := `
+		SELECT
+			COALESCE(COUNT(*), 0) as total_sessions,
+			COALESCE(AVG(duration_minutes), 0) as avg_duration
+		FROM user_sessions
+		WHERE user_id = $1`
+
+	var totalSessions int64
+	var avgDuration float64
+	err := s.db.QueryRow(sessionQuery, userID).Scan(&totalSessions, &avgDuration)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session metrics: %w", err)
 	}
+
+	// Get activity days (days with at least one session)
+	activeDaysQuery := `
+		SELECT COALESCE(COUNT(DISTINCT DATE(started_at)), 0)
+		FROM user_sessions
+		WHERE user_id = $1 AND started_at >= NOW() - INTERVAL '90 days'`
+
+	var daysActive int64
+	err = s.db.QueryRow(activeDaysQuery, userID).Scan(&daysActive)
+	if err != nil {
+		daysActive = 0
+	}
+
+	daysInactive := 90 - daysActive
+
+	// Calculate retention rate (simple calculation based on activity)
+	retentionRate := 0.0
+	if daysActive > 0 {
+		retentionRate = (float64(daysActive) / 90.0) * 100
+	}
+
+	// Calculate engagement score
+	engagementScore := s.calculateSimpleEngagementScore(totalSessions, daysActive, avgDuration)
+
+	// Calculate average actions per session from activity logs
+	avgActionsQuery := `
+		SELECT COALESCE(AVG(activity_count), 0)
+		FROM (
+			SELECT session_id, COUNT(*) as activity_count
+			FROM user_activity_logs
+			WHERE user_id = $1 AND session_id IS NOT NULL
+			GROUP BY session_id
+		) AS session_activities`
+
+	var avgActions float64
+	err = s.db.QueryRow(avgActionsQuery, userID).Scan(&avgActions)
+	if err != nil {
+		avgActions = 0
+	}
+
+	metrics := &models.UserEngagementMetrics{
+		RetentionRate:         retentionRate,
+		EngagementScore:       engagementScore,
+		DaysActive:            daysActive,
+		DaysInactive:          daysInactive,
+		LongestStreak:         0, // Would require complex streak calculation
+		CurrentStreak:         0, // Would require complex streak calculation
+		AvgActionsPerSession:  avgActions,
+		FeatureAdoptionRate:   0, // Would require feature usage tracking
+		CollaborationRate:     0, // Would require collaboration data
+		URLSuccessRate:        0, // Would require success criteria
+	}
+
 	return metrics, nil
 
 	// Original implementation (commented out due to model field mismatches)
@@ -278,16 +381,9 @@ func (s *UserAnalyticsService) GetUserEngagementMetrics(userID int64, dateRange 
 	*/
 }
 
-// GetUserActivityLog returns user activity log with pagination - Stub implementation
+// GetUserActivityLog returns user activity log with pagination
 func (s *UserAnalyticsService) GetUserActivityLog(userID int64, req *models.UserActivityLogRequest) (*models.UserActivityLogResponse, error) {
-	// TODO: Implement proper activity log querying based on correct model structure
-	return &models.UserActivityLogResponse{
-		Activity: nil,
-		Message:  "Activity log retrieved successfully",
-	}, nil
-
-	// Original implementation (commented out due to model field mismatches)
-	/*
+	// Build base query
 	baseQuery := "FROM user_activity_logs WHERE user_id = $1"
 	args := []interface{}{userID}
 	argIndex := 2
@@ -300,8 +396,8 @@ func (s *UserAnalyticsService) GetUserActivityLog(userID int64, req *models.User
 	}
 
 	if req.URLId != nil {
-		baseQuery += fmt.Sprintf(" AND url_id = $%d", argIndex)
-		args = append(args, *req.URLId)
+		baseQuery += fmt.Sprintf(" AND resource_id = $%d", argIndex)
+		args = append(args, fmt.Sprintf("%d", *req.URLId))
 		argIndex++
 	}
 
@@ -317,25 +413,7 @@ func (s *UserAnalyticsService) GetUserActivityLog(userID int64, req *models.User
 		argIndex++
 	}
 
-	// Get total count
-	var totalCount int64
-	countQuery := "SELECT COUNT(*) " + baseQuery
-	err := s.db.Get(&totalCount, countQuery, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get activity count: %w", err)
-	}
-
-	// Get activities with pagination
-	orderBy := "created_at DESC"
-	if req.SortBy != "" {
-		orderBy = req.SortBy
-		if req.SortOrder == "asc" {
-			orderBy += " ASC"
-		} else {
-			orderBy += " DESC"
-		}
-	}
-
+	// Set default pagination values
 	limit := req.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 50 // Default limit
@@ -346,47 +424,46 @@ func (s *UserAnalyticsService) GetUserActivityLog(userID int64, req *models.User
 		offset = 0
 	}
 
+	// Set default sorting
+	orderBy := "created_at DESC"
+	if req.SortBy != "" {
+		orderBy = req.SortBy
+		if req.SortOrder == "asc" {
+			orderBy += " ASC"
+		} else {
+			orderBy += " DESC"
+		}
+	}
+
+	// Get activities with pagination
 	dataQuery := fmt.Sprintf(`
-		SELECT * %s 
-		ORDER BY %s 
-		LIMIT $%d OFFSET $%d`, 
+		SELECT * %s
+		ORDER BY %s
+		LIMIT $%d OFFSET $%d`,
 		baseQuery, orderBy, argIndex, argIndex+1)
-	
+
 	args = append(args, limit, offset)
 
 	var activities []models.UserActivityLog
-	err = s.db.Select(&activities, dataQuery, args...)
+	err := s.db.Select(&activities, dataQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get activities: %w", err)
 	}
 
+	// For the current response model, just return the first activity (if any)
+	var activity *models.UserActivityLog
+	if len(activities) > 0 {
+		activity = &activities[0]
+	}
+
 	return &models.UserActivityLogResponse{
-		Activities:  activities,
-		TotalCount:  totalCount,
-		Limit:       limit,
-		Offset:      offset,
-		HasMore:     offset+int64(len(activities)) < totalCount,
+		Activity: activity,
+		Message:  "Activity log retrieved successfully",
 	}, nil
-	*/
 }
 
-// GetDashboardAnalytics returns analytics data for the dashboard - Stub implementation
+// GetDashboardAnalytics returns analytics data for the dashboard
 func (s *UserAnalyticsService) GetDashboardAnalytics(userID int64, period string) (*models.UserDashboardAnalytics, error) {
-	// TODO: Implement proper dashboard analytics based on correct model structure
-	return &models.UserDashboardAnalytics{
-		TotalURLs:        10,
-		TotalClicks:      250,
-		TotalSessions:    15,
-		AvgSessionLength: 5.5,
-		TopURLs:          []*models.URLAnalytics{},
-		RecentActivity:   []*models.UserActivityInfo{},
-		ClicksOverTime:   []*models.ClickTimeData{},
-		DeviceStats:      []*models.DeviceStats{},
-		LocationStats:    []*models.LocationStats{},
-	}, nil
-
-	// Original implementation (commented out due to model field mismatches)
-	/*
 	// Get date range for the period
 	var startDate time.Time
 	switch period {
@@ -407,7 +484,9 @@ func (s *UserAnalyticsService) GetDashboardAnalytics(userID int64, period string
 		End:   time.Now(),
 	}
 
-	// Get basic metrics
+	analytics := &models.UserDashboardAnalytics{}
+
+	// Get basic metrics from summary
 	summary, err := s.GetUserAnalyticsSummary(userID, dateRange)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get analytics summary: %w", err)
@@ -416,32 +495,129 @@ func (s *UserAnalyticsService) GetDashboardAnalytics(userID int64, period string
 	analytics.TotalURLs = summary.TotalURLsCreated
 	analytics.TotalClicks = summary.TotalClicks
 	analytics.TotalSessions = summary.TotalSessions
-	analytics.AvgSessionDuration = summary.AvgSessionDuration
+	analytics.AvgSessionLength = summary.AvgSessionDuration
 
-	// Get chart data
-	analytics.UrlCreationChart = s.getURLCreationChart(userID, dateRange, period)
-	analytics.ClicksChart = s.getClicksChart(userID, dateRange, period)
-	analytics.ActivityChart = s.getActivityChart(userID, dateRange, period)
-	analytics.DeviceBreakdown = summary.TopDevices
-	analytics.BrowserBreakdown = summary.TopBrowsers
+	// Get recent activities (last 10)
+	activityQuery := `
+		SELECT * FROM user_activity_logs
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT 10`
 
-	// Get top performing URLs
-	analytics.TopURLs = s.getTopURLs(userID, dateRange)
-
-	// Get recent activities
-	activityReq := &models.UserActivityLogRequest{
-		StartDate: startDate,
-		EndDate:   time.Now(),
-		Limit:     10,
-		SortBy:    "created_at",
-		SortOrder: "desc",
-	}
-	
-	activityLog, err := s.GetUserActivityLog(userID, activityReq)
+	var activities []models.UserActivityLog
+	err = s.db.Select(&activities, activityQuery, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get recent activities: %w", err)
+		// If error, return empty array
+		activities = []models.UserActivityLog{}
 	}
-	analytics.RecentActivities = activityLog.Activities
+
+	// Convert to UserActivityInfo
+	recentActivity := make([]*models.UserActivityInfo, 0, len(activities))
+	for i := range activities {
+		recentActivity = append(recentActivity, &models.UserActivityInfo{
+			UserActivityLog: &activities[i],
+		})
+	}
+	analytics.RecentActivity = recentActivity
+
+	// Get clicks over time (grouped by day for week/month, by hour for today)
+	var groupBy string
+	switch period {
+	case "today":
+		groupBy = "DATE_TRUNC('hour', created_at)"
+	default:
+		groupBy = "DATE_TRUNC('day', created_at)"
+	}
+
+	clicksQuery := fmt.Sprintf(`
+		SELECT %s as date, COUNT(*) as clicks
+		FROM user_activity_logs
+		WHERE user_id = $1 AND activity_type = 'url_click' AND created_at >= $2
+		GROUP BY %s
+		ORDER BY date`, groupBy, groupBy)
+
+	rows, err := s.db.Query(clicksQuery, userID, startDate)
+	if err != nil {
+		analytics.ClicksOverTime = []*models.ClickTimeData{}
+	} else {
+		defer rows.Close()
+		var clicksData []*models.ClickTimeData
+		for rows.Next() {
+			var data models.ClickTimeData
+			if err := rows.Scan(&data.Date, &data.Clicks); err == nil {
+				clicksData = append(clicksData, &data)
+			}
+		}
+		analytics.ClicksOverTime = clicksData
+	}
+
+	// Get device stats
+	deviceQuery := `
+		SELECT device_type, COUNT(*) as count
+		FROM user_sessions
+		WHERE user_id = $1 AND started_at >= $2 AND device_type IS NOT NULL
+		GROUP BY device_type
+		ORDER BY count DESC
+		LIMIT 5`
+
+	rows, err = s.db.Query(deviceQuery, userID, startDate)
+	if err != nil {
+		analytics.DeviceStats = []*models.DeviceStats{}
+	} else {
+		defer rows.Close()
+		var deviceStats []*models.DeviceStats
+		var total int64
+		for rows.Next() {
+			var stat models.DeviceStats
+			if err := rows.Scan(&stat.DeviceType, &stat.Count); err == nil {
+				deviceStats = append(deviceStats, &stat)
+				total += stat.Count
+			}
+		}
+		// Calculate percentages
+		for _, stat := range deviceStats {
+			if total > 0 {
+				stat.Percentage = float64(stat.Count) / float64(total) * 100
+			}
+		}
+		analytics.DeviceStats = deviceStats
+	}
+
+	// Get location stats
+	locationQuery := `
+		SELECT location, COUNT(*) as count
+		FROM user_sessions
+		WHERE user_id = $1 AND started_at >= $2 AND location IS NOT NULL
+		GROUP BY location
+		ORDER BY count DESC
+		LIMIT 10`
+
+	rows, err = s.db.Query(locationQuery, userID, startDate)
+	if err != nil {
+		analytics.LocationStats = []*models.LocationStats{}
+	} else {
+		defer rows.Close()
+		var locationStats []*models.LocationStats
+		var total int64
+		for rows.Next() {
+			var stat models.LocationStats
+			if err := rows.Scan(&stat.Location, &stat.Count); err == nil {
+				locationStats = append(locationStats, &stat)
+				total += stat.Count
+			}
+		}
+		// Calculate percentages
+		for _, stat := range locationStats {
+			if total > 0 {
+				stat.Percentage = float64(stat.Count) / float64(total) * 100
+			}
+		}
+		analytics.LocationStats = locationStats
+	}
+
+	// Top URLs - simplified version (would need url_mappings table with user_id)
+	// For now, returning empty array as url_mappings doesn't have user relationship
+	analytics.TopURLs = []*models.URLAnalytics{}
 
 	return analytics, nil
 }
@@ -542,12 +718,12 @@ func (s *UserAnalyticsService) calculateConsistencyScore(userID int64, dateRange
 	// Calculate how consistently the user is active
 	query := `
 		SELECT DATE(created_at) as date, COUNT(*) as activities
-		FROM user_activity_logs 
+		FROM user_activity_logs
 		WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
 		GROUP BY DATE(created_at)
 		ORDER BY date`
 
-	rows, err := s.db.Query(query, userID, dateRange.StartDate, dateRange.EndDate)
+	rows, err := s.db.Query(query, userID, dateRange.Start, dateRange.End)
 	if err != nil {
 		return 0
 	}
@@ -609,111 +785,120 @@ func (s *UserAnalyticsService) calculateDiversityScore(features []string) float6
 	return score
 }
 
-func (s *UserAnalyticsService) getTopDevices(userID int64, dateRange models.DateRange) []models.DeviceBreakdown {
+func (s *UserAnalyticsService) getTopDevices(userID int64, dateRange models.DateRange) []models.DeviceUsageStat {
 	whereClause, args := s.buildDateRangeClause(dateRange, userID)
 	query := fmt.Sprintf(`
-		SELECT device_type, COUNT(*) as count
-		FROM user_sessions 
+		SELECT
+			device_type,
+			COUNT(*) as sessions,
+			COALESCE(SUM(duration_minutes), 0) as duration
+		FROM user_sessions
 		WHERE user_id = $1 %s AND device_type IS NOT NULL
-		GROUP BY device_type 
-		ORDER BY count DESC 
+		GROUP BY device_type
+		ORDER BY sessions DESC
 		LIMIT 5`, whereClause)
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
-		return []models.DeviceBreakdown{}
+		return []models.DeviceUsageStat{}
 	}
 	defer rows.Close()
 
-	var devices []models.DeviceBreakdown
-	var total int64
+	var devices []models.DeviceUsageStat
+	var totalSessions int64
 	for rows.Next() {
-		var device models.DeviceBreakdown
-		if err := rows.Scan(&device.DeviceType, &device.Count); err != nil {
+		var device models.DeviceUsageStat
+		if err := rows.Scan(&device.DeviceType, &device.Sessions, &device.Duration); err != nil {
 			continue
 		}
 		devices = append(devices, device)
-		total += device.Count
+		totalSessions += device.Sessions
 	}
 
 	// Calculate percentages
 	for i := range devices {
-		if total > 0 {
-			devices[i].Percentage = float64(devices[i].Count) / float64(total) * 100
+		if totalSessions > 0 {
+			devices[i].Percentage = float64(devices[i].Sessions) / float64(totalSessions) * 100
 		}
 	}
 
 	return devices
 }
 
-func (s *UserAnalyticsService) getTopBrowsers(userID int64, dateRange models.DateRange) []models.BrowserBreakdown {
+func (s *UserAnalyticsService) getTopBrowsers(userID int64, dateRange models.DateRange) []models.BrowserUsageStat {
 	whereClause, args := s.buildDateRangeClause(dateRange, userID)
 	query := fmt.Sprintf(`
-		SELECT browser, COUNT(*) as count
-		FROM user_sessions 
+		SELECT
+			browser,
+			COUNT(*) as sessions,
+			COALESCE(SUM(duration_minutes), 0) as duration
+		FROM user_sessions
 		WHERE user_id = $1 %s AND browser IS NOT NULL
-		GROUP BY browser 
-		ORDER BY count DESC 
+		GROUP BY browser
+		ORDER BY sessions DESC
 		LIMIT 5`, whereClause)
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
-		return []models.BrowserBreakdown{}
+		return []models.BrowserUsageStat{}
 	}
 	defer rows.Close()
 
-	var browsers []models.BrowserBreakdown
-	var total int64
+	var browsers []models.BrowserUsageStat
+	var totalSessions int64
 	for rows.Next() {
-		var browser models.BrowserBreakdown
-		if err := rows.Scan(&browser.Browser, &browser.Count); err != nil {
+		var browser models.BrowserUsageStat
+		if err := rows.Scan(&browser.Browser, &browser.Sessions, &browser.Duration); err != nil {
 			continue
 		}
 		browsers = append(browsers, browser)
-		total += browser.Count
+		totalSessions += browser.Sessions
 	}
 
 	// Calculate percentages
 	for i := range browsers {
-		if total > 0 {
-			browsers[i].Percentage = float64(browsers[i].Count) / float64(total) * 100
+		if totalSessions > 0 {
+			browsers[i].Percentage = float64(browsers[i].Sessions) / float64(totalSessions) * 100
 		}
 	}
 
 	return browsers
 }
 
-func (s *UserAnalyticsService) getTopLocations(userID int64, dateRange models.DateRange) []models.LocationBreakdown {
+func (s *UserAnalyticsService) getTopLocations(userID int64, dateRange models.DateRange) []models.LocationUsageStat {
 	whereClause, args := s.buildDateRangeClause(dateRange, userID)
 	query := fmt.Sprintf(`
-		SELECT location, COUNT(*) as count
-		FROM user_sessions 
+		SELECT
+			location,
+			COUNT(*) as sessions,
+			COALESCE(SUM(duration_minutes), 0) as duration
+		FROM user_sessions
 		WHERE user_id = $1 %s AND location IS NOT NULL
-		GROUP BY location 
-		ORDER BY count DESC 
+		GROUP BY location
+		ORDER BY sessions DESC
 		LIMIT 10`, whereClause)
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
-		return []models.LocationBreakdown{}
+		return []models.LocationUsageStat{}
 	}
 	defer rows.Close()
 
-	var locations []models.LocationBreakdown
-	var total int64
+	var locations []models.LocationUsageStat
+	var totalSessions int64
 	for rows.Next() {
-		var location models.LocationBreakdown
-		if err := rows.Scan(&location.Location, &location.Count); err != nil {
+		var location models.LocationUsageStat
+		if err := rows.Scan(&location.Location, &location.Sessions, &location.Duration); err != nil {
 			continue
 		}
 		locations = append(locations, location)
-		total += location.Count
+		totalSessions += location.Sessions
 	}
 
 	// Calculate percentages
 	for i := range locations {
-		if total > 0 {
-			locations[i].Percentage = float64(locations[i].Count) / float64(total) * 100
+		if totalSessions > 0 {
+			locations[i].Percentage = float64(locations[i].Sessions) / float64(totalSessions) * 100
 		}
 	}
 
@@ -735,12 +920,12 @@ func (s *UserAnalyticsService) getURLCreationChart(userID int64, dateRange model
 
 	query := fmt.Sprintf(`
 		SELECT %s as period, COUNT(*) as value
-		FROM urls 
+		FROM urls
 		WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
 		GROUP BY %s
 		ORDER BY period`, groupBy, groupBy)
 
-	rows, err := s.db.Query(query, userID, dateRange.StartDate, dateRange.EndDate)
+	rows, err := s.db.Query(query, userID, dateRange.Start, dateRange.End)
 	if err != nil {
 		return []models.ChartDataPoint{}
 	}
@@ -749,11 +934,11 @@ func (s *UserAnalyticsService) getURLCreationChart(userID int64, dateRange model
 	var data []models.ChartDataPoint
 	for rows.Next() {
 		var point models.ChartDataPoint
-		var period time.Time
-		if err := rows.Scan(&period, &point.Value); err != nil {
+		var timestamp time.Time
+		if err := rows.Scan(&timestamp, &point.Value); err != nil {
 			continue
 		}
-		point.Label = s.formatChartLabel(period, period)
+		point.Label = s.formatChartLabel(timestamp, period)
 		data = append(data, point)
 	}
 
@@ -775,12 +960,12 @@ func (s *UserAnalyticsService) getClicksChart(userID int64, dateRange models.Dat
 
 	query := fmt.Sprintf(`
 		SELECT %s as period, COALESCE(SUM(click_count), 0) as value
-		FROM urls 
+		FROM urls
 		WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
 		GROUP BY %s
 		ORDER BY period`, groupBy, groupBy)
 
-	rows, err := s.db.Query(query, userID, dateRange.StartDate, dateRange.EndDate)
+	rows, err := s.db.Query(query, userID, dateRange.Start, dateRange.End)
 	if err != nil {
 		return []models.ChartDataPoint{}
 	}
@@ -789,11 +974,11 @@ func (s *UserAnalyticsService) getClicksChart(userID int64, dateRange models.Dat
 	var data []models.ChartDataPoint
 	for rows.Next() {
 		var point models.ChartDataPoint
-		var period time.Time
-		if err := rows.Scan(&period, &point.Value); err != nil {
+		var timestamp time.Time
+		if err := rows.Scan(&timestamp, &point.Value); err != nil {
 			continue
 		}
-		point.Label = s.formatChartLabel(period, period)
+		point.Label = s.formatChartLabel(timestamp, period)
 		data = append(data, point)
 	}
 
@@ -815,12 +1000,12 @@ func (s *UserAnalyticsService) getActivityChart(userID int64, dateRange models.D
 
 	query := fmt.Sprintf(`
 		SELECT %s as period, COUNT(*) as value
-		FROM user_activity_logs 
+		FROM user_activity_logs
 		WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
 		GROUP BY %s
 		ORDER BY period`, groupBy, groupBy)
 
-	rows, err := s.db.Query(query, userID, dateRange.StartDate, dateRange.EndDate)
+	rows, err := s.db.Query(query, userID, dateRange.Start, dateRange.End)
 	if err != nil {
 		return []models.ChartDataPoint{}
 	}
@@ -829,11 +1014,11 @@ func (s *UserAnalyticsService) getActivityChart(userID int64, dateRange models.D
 	var data []models.ChartDataPoint
 	for rows.Next() {
 		var point models.ChartDataPoint
-		var period time.Time
-		if err := rows.Scan(&period, &point.Value); err != nil {
+		var timestamp time.Time
+		if err := rows.Scan(&timestamp, &point.Value); err != nil {
 			continue
 		}
-		point.Label = s.formatChartLabel(period, period)
+		point.Label = s.formatChartLabel(timestamp, period)
 		data = append(data, point)
 	}
 
@@ -842,13 +1027,13 @@ func (s *UserAnalyticsService) getActivityChart(userID int64, dateRange models.D
 
 func (s *UserAnalyticsService) getTopURLs(userID int64, dateRange models.DateRange) []models.TopURL {
 	query := `
-		SELECT id, short_code, original_url, title, click_count, created_at
-		FROM urls 
+		SELECT short_code, original_url, COALESCE(click_count, 0) as clicks
+		FROM urls
 		WHERE user_id = $1 AND created_at BETWEEN $2 AND $3
 		ORDER BY click_count DESC, created_at DESC
 		LIMIT 10`
 
-	rows, err := s.db.Query(query, userID, dateRange.StartDate, dateRange.EndDate)
+	rows, err := s.db.Query(query, userID, dateRange.Start, dateRange.End)
 	if err != nil {
 		return []models.TopURL{}
 	}
@@ -857,7 +1042,7 @@ func (s *UserAnalyticsService) getTopURLs(userID int64, dateRange models.DateRan
 	var urls []models.TopURL
 	for rows.Next() {
 		var url models.TopURL
-		if err := rows.Scan(&url.ID, &url.ShortCode, &url.OriginalURL, &url.Title, &url.ClickCount, &url.CreatedAt); err != nil {
+		if err := rows.Scan(&url.ShortCode, &url.OriginalURL, &url.Clicks); err != nil {
 			continue
 		}
 		urls = append(urls, url)
@@ -877,5 +1062,81 @@ func (s *UserAnalyticsService) formatChartLabel(period time.Time, periodType str
 	default:
 		return period.Format("Jan 2")
 	}
-	*/
+}
+
+// calculateSimpleEngagementScore calculates a simple engagement score (0-100)
+func (s *UserAnalyticsService) calculateSimpleEngagementScore(totalSessions int64, daysActive int64, avgDuration float64) float64 {
+	score := 0.0
+
+	// Sessions factor (0-40 points) - rewards frequent logins
+	sessionScore := float64(totalSessions) * 2.0
+	if sessionScore > 40 {
+		sessionScore = 40
+	}
+	score += sessionScore
+
+	// Active days factor (0-40 points) - rewards consistency
+	activeDaysScore := float64(daysActive) * 0.44 // 0.44 * 90 = ~40
+	if activeDaysScore > 40 {
+		activeDaysScore = 40
+	}
+	score += activeDaysScore
+
+	// Session duration factor (0-20 points) - rewards engagement
+	durationScore := avgDuration * 2.0
+	if durationScore > 20 {
+		durationScore = 20
+	}
+	score += durationScore
+
+	// Normalize to 0-100 scale
+	if score > 100 {
+		score = 100
+	}
+
+	return score
+}
+
+// calculateEngagementMetricsInternal calculates engagement metrics for a user
+func (s *UserAnalyticsService) calculateEngagementMetricsInternal(userID int64, totalSessions int64, activeDays int64, avgDuration float64) *models.UserEngagementMetrics {
+	// Calculate retention rate (percentage of days active in last 90 days)
+	retentionRate := 0.0
+	if activeDays > 0 {
+		retentionRate = (float64(activeDays) / 90.0) * 100
+	}
+
+	// Calculate days inactive
+	daysInactive := int64(90) - activeDays
+
+	// Calculate engagement score
+	engagementScore := s.calculateSimpleEngagementScore(totalSessions, activeDays, avgDuration)
+
+	// Get average actions per session
+	avgActionsQuery := `
+		SELECT COALESCE(AVG(activity_count), 0)
+		FROM (
+			SELECT session_id, COUNT(*) as activity_count
+			FROM user_activity_logs
+			WHERE user_id = $1 AND session_id IS NOT NULL
+			GROUP BY session_id
+		) AS session_activities`
+
+	var avgActions float64
+	err := s.db.QueryRow(avgActionsQuery, userID).Scan(&avgActions)
+	if err != nil {
+		avgActions = 0
+	}
+
+	return &models.UserEngagementMetrics{
+		RetentionRate:        retentionRate,
+		EngagementScore:      engagementScore,
+		DaysActive:           activeDays,
+		DaysInactive:         daysInactive,
+		LongestStreak:        0, // Complex calculation not implemented
+		CurrentStreak:        0, // Complex calculation not implemented
+		AvgActionsPerSession: avgActions,
+		FeatureAdoptionRate:  0, // Requires feature tracking
+		CollaborationRate:    0, // Requires collaboration data
+		URLSuccessRate:       0, // Requires success criteria
+	}
 }

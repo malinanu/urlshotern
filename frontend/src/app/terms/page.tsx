@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
+import { API_ENDPOINTS } from '@/lib/api-config';
+import { toast } from 'react-toastify';
 
 interface PageData {
   title: string;
@@ -15,6 +17,7 @@ export default function TermsPage() {
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [useFallback, setUseFallback] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPageData();
@@ -23,17 +26,29 @@ export default function TermsPage() {
   const fetchPageData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/v1/pages/terms');
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPageData(data.page);
-      } else {
+      setError(null); // Clear previous errors
+
+      const response = await fetch(API_ENDPOINTS.cms.terms);
+
+      if (!response.ok) {
+        const errorMsg = `Failed to load page (${response.status})`;
+        setError(errorMsg);
         setUseFallback(true);
+        toast.error(errorMsg); // Show user-facing error
+        return;
       }
+
+      const data = await response.json();
+      setPageData(data.page);
     } catch (error) {
+      const errorMsg = error instanceof Error
+        ? `Network error: ${error.message}`
+        : 'Failed to load page content';
+
       console.error('Error fetching page:', error);
+      setError(errorMsg);
       setUseFallback(true);
+      toast.error(errorMsg); // Show user-facing error
     } finally {
       setLoading(false);
     }
@@ -311,7 +326,18 @@ export default function TermsPage() {
     <Layout>
       <div className="min-h-screen bg-white py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800 mb-2">{error}</p>
+              <button
+                onClick={fetchPageData}
+                className="text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          <div
             className="prose prose-lg max-w-none"
             dangerouslySetInnerHTML={{ __html: displayContent?.content || '' }}
           />

@@ -7,17 +7,24 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=urlshortener
-      - DB_PASSWORD=password
+      # SECURITY: For local development only. Use strong password in production.
+      - DB_PASSWORD=${DB_PASSWORD:-devpassword}
       - DB_NAME=urlshortener_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SERVER_PORT=8080
+      # SECURITY: For local development only. Use actual credentials in production.
+      - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-polar_oat_bmzD64gals01kuZuN6dCdEloAIlj43F00klYr1x7Pdr}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-whsec_test_mock_secret_for_development}
+      - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID:-65dca2de-3a3e-4a9a-9464-ee6053485626}
+      - POLAR_API_URL=${POLAR_API_URL:-https://sandbox-api.polar.sh/v1}
     ports:
       - "8080:8080"
     volumes:
       - ..:/app
       - /app/tmp
       - /app/frontend/node_modules
+      - /app/static
     depends_on:
       - postgres
       - redis
@@ -29,7 +36,8 @@ services:
     environment:
       POSTGRES_DB: urlshortener_db
       POSTGRES_USER: urlshortener
-      POSTGRES_PASSWORD: password
+      # SECURITY: For local development only. Use strong password in production.
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"

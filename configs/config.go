@@ -15,12 +15,15 @@ type Config struct {
 	Environment string
 
 	// Database Configuration
-	DBHost        string
-	DBPort        string
-	DBUser        string
-	DBPassword    string
-	DBName        string
-	DBMaxConns    int
+	DBHost              string
+	DBPort              string
+	DBUser              string
+	DBPassword          string
+	DBName              string
+	DBMaxConns          int
+	DBMaxIdleConns      int
+	DBConnMaxLifetime   int // in seconds
+	DBConnMaxIdleTime   int // in seconds
 
 	// Redis Configuration
 	RedisHost     string
@@ -43,6 +46,21 @@ type Config struct {
 	// JWT Configuration
 	JWTSecret string
 	JWTIssuer string
+
+	// Polar Configuration
+	PolarAccessToken    string
+	PolarWebhookSecret  string
+	PolarOrganizationID string
+	PolarAPIURL         string
+
+	// Email Configuration
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	FromEmail    string
+	FromName     string
+	FrontendURL  string
 }
 
 func LoadConfig() (*Config, error) {
@@ -55,12 +73,15 @@ func LoadConfig() (*Config, error) {
 		BaseURL:     getEnv("BASE_URL", "http://localhost:8080"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "urlshortener"),
-		DBPassword: getEnv("DB_PASSWORD", "password"),
-		DBName:     getEnv("DB_NAME", "urlshortener_db"),
-		DBMaxConns: getEnvAsInt("DB_MAX_CONNECTIONS", 25),
+		DBHost:            getEnv("DB_HOST", "localhost"),
+		DBPort:            getEnv("DB_PORT", "5432"),
+		DBUser:            getEnv("DB_USER", "urlshortener"),
+		DBPassword:        getEnv("DB_PASSWORD", "password"),
+		DBName:            getEnv("DB_NAME", "urlshortener_db"),
+		DBMaxConns:        getEnvAsInt("DB_MAX_CONNECTIONS", 25),
+		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 10),
+		DBConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),
+		DBConnMaxIdleTime: getEnvAsInt("DB_CONN_MAX_IDLE_TIME", 600),
 
 		RedisHost:     getEnv("REDIS_HOST", "localhost"),
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
@@ -78,6 +99,20 @@ func LoadConfig() (*Config, error) {
 
 		JWTSecret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
 		JWTIssuer: getEnv("JWT_ISSUER", "urlshortener"),
+
+		PolarAccessToken:    getEnv("POLAR_ACCESS_TOKEN", ""),
+		PolarWebhookSecret:  getEnv("POLAR_WEBHOOK_SECRET", ""),
+		PolarOrganizationID: getEnv("POLAR_ORGANIZATION_ID", ""),
+		PolarAPIURL:         getEnv("POLAR_API_URL", "https://api.polar.sh/v1"),
+
+		// Email Configuration
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
+		SMTPUsername: getEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		FromEmail:    getEnv("FROM_EMAIL", "noreply@urlshortener.com"),
+		FromName:     getEnv("FROM_NAME", "URL Shortener"),
+		FrontendURL:  getEnv("FRONTEND_URL", "http://localhost:3000"),
 	}
 
 	return config, nil

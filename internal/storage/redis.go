@@ -222,13 +222,29 @@ func (r *RedisStorage) Set(key string, value interface{}, ttl time.Duration) err
 	return nil
 }
 
-// Custom error for cache key not found
-var ErrCacheKeyNotFound = &CacheError{Message: "cache key not found"}
+// BlacklistToken adds a token to the blacklist with TTL matching token expiry
+func (r *RedisStorage) BlacklistToken(token string, expiresAt time.Time) error {
+	key := fmt.Sprintf("blacklist:%s", token)
+	ttl := time.Until(expiresAt)
 
-type CacheError struct {
-	Message string
+	// Don't blacklist if already expired
+	if ttl <= 0 {
+		return nil
+	}
+
+	err := r.client.Set(r.ctx, key, "blacklisted", ttl).Err()
+	if err != nil {
+		return fmt.Errorf("failed to blacklist token: %w", err)
+	}
+	return nil
 }
 
-func (e *CacheError) Error() string {
-	return e.Message
+// IsTokenBlacklisted checks if a token is blacklisted
+func (r *RedisStorage) IsTokenBlacklisted(token string) (bool, error) {
+	key := fmt.Sprintf("blacklist:%s", token)
+	exists, err := r.client.Exists(r.ctx, key).Result()
+	if err != nil {
+		return false, fmt.Errorf("failed to check token blacklist: %w", err)
+	}
+	return exists > 0, nil
 }

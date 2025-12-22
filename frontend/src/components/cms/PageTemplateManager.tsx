@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import RichTextEditor from '../editor/RichTextEditor';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { Textarea } from '../ui/Textarea';
-import { Badge } from '../ui/Badge';
-import { Card } from '../ui/Card';
+import { Modal } from '../ui/modal';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select } from '../ui/select';
+import { Textarea } from '../ui/textarea';
+import { Badge } from '../ui/badge';
+import { Card } from '../ui/card';
 import { toast } from 'react-toastify';
 import {
   PlusIcon,
@@ -63,7 +63,7 @@ const templateCategories = [
 ];
 
 export function PageTemplateManager() {
-  const { user, token } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<PageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +96,7 @@ export function PageTemplateManager() {
     try {
       const response = await fetch('/api/v1/admin/page-templates', {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -163,7 +163,7 @@ export function PageTemplateManager() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
         body: JSON.stringify(formData),
       });
@@ -207,7 +207,7 @@ export function PageTemplateManager() {
       const response = await fetch(`/api/v1/admin/page-templates/${template.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -240,7 +240,7 @@ export function PageTemplateManager() {
     try {
       const response = await fetch(`/api/v1/admin/page-templates/${template.id}/render`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 
@@ -261,7 +261,7 @@ export function PageTemplateManager() {
       const response = await fetch(`/api/v1/admin/page-templates/${template.id}/set-default`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       });
 

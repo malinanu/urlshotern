@@ -262,6 +262,7 @@ export default function ContactPage() {
                         value={formData.name}
                         onChange={handleInputChange}
                         placeholder="Your full name"
+                        disabled={formStatus === 'sending'}
                         className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.name ? 'border-red-500' : ''}`}
                       />
                       {formErrors.name && (
@@ -280,6 +281,7 @@ export default function ContactPage() {
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="your@email.com"
+                        disabled={formStatus === 'sending'}
                         className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.email ? 'border-red-500' : ''}`}
                       />
                       {formErrors.email && (
@@ -298,6 +300,7 @@ export default function ContactPage() {
                       value={formData.company}
                       onChange={handleInputChange}
                       placeholder="Your company name (optional)"
+                      disabled={formStatus === 'sending'}
                       className="border-gray-200 focus:border-primary-600 focus:ring-primary-600"
                     />
                   </div>
@@ -312,6 +315,7 @@ export default function ContactPage() {
                         name="inquiryType"
                         value={formData.inquiryType}
                         onChange={handleInputChange}
+                        disabled={formStatus === 'sending'}
                         className="w-full px-3 py-2 border border-gray-200 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
                       >
                         {inquiryTypes.map(type => (
@@ -331,6 +335,7 @@ export default function ContactPage() {
                         name="priority"
                         value={formData.priority}
                         onChange={handleInputChange}
+                        disabled={formStatus === 'sending'}
                         className="w-full px-3 py-2 border border-gray-200 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
                       >
                         {priorityLevels.map(level => (
@@ -352,6 +357,7 @@ export default function ContactPage() {
                       value={formData.subject}
                       onChange={handleInputChange}
                       placeholder="Brief description of your inquiry"
+                      disabled={formStatus === 'sending'}
                       className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.subject ? 'border-red-500' : ''}`}
                     />
                     {formErrors.subject && (
@@ -370,6 +376,7 @@ export default function ContactPage() {
                       value={formData.message}
                       onChange={handleInputChange}
                       placeholder="Please provide details about your inquiry..."
+                      disabled={formStatus === 'sending'}
                       className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.message ? 'border-red-500' : ''}`}
                     />
                     {formErrors.message && (

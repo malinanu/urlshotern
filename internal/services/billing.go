@@ -6,12 +6,16 @@ import (
 	"net/http"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/URLshorter/url-shortener/configs"
+	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type BillingService struct {
-	db *gorm.DB
+	db           *gorm.DB
+	polarService *PolarService
+	config       *configs.Config
 }
 
 type Subscription struct {
@@ -136,40 +140,51 @@ var PredefinedPlans = map[string]Plan{
 	},
 }
 
-func NewBillingService(db *gorm.DB) *BillingService {
-	return &BillingService{db: db}
+func NewBillingService(db *gorm.DB, config *configs.Config) *BillingService {
+	polarService := NewPolarService(db, config)
+	return &BillingService{
+		db:           db,
+		polarService: polarService,
+		config:       config,
+	}
 }
 
-// GetUserSubscription retrieves the current subscription for a user
-func (bs *BillingService) GetUserSubscription(userID int64) (*Subscription, error) {
-	var subscription Subscription
-	err := bs.db.Where("user_id = ?", userID).Order("created_at DESC").First(&subscription).Error
+// GetUserSubscription retrieves the current subscription for a user (Polar-based)
+func (bs *BillingService) GetUserSubscription(userID int64) (*models.PolarSubscription, error) {
+	var subscription models.PolarSubscription
+	err := bs.db.Where("user_id = ? AND (status = ? OR status = ?)", userID, "active", "trialing").
+		Order("created_at DESC").
+		First(&subscription).Error
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Create default free subscription
-			return bs.CreateFreeSubscription(userID)
+			// Return free plan subscription
+			return bs.CreateFreePolarSubscription(userID)
 		}
 		return nil, err
 	}
 	return &subscription, nil
 }
 
-// CreateFreeSubscription creates a free subscription for new users
-func (bs *BillingService) CreateFreeSubscription(userID int64) (*Subscription, error) {
-	subscription := &Subscription{
-		UserID:       userID,
-		PlanType:     "free",
-		Status:       "active",
-		BillingCycle: "monthly",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+// CreateFreePolarSubscription creates a free subscription for new users
+func (bs *BillingService) CreateFreePolarSubscription(userID int64) (*models.PolarSubscription, error) {
+	subscription := &models.PolarSubscription{
+		UserID:           userID,
+		PolarCustomerID:  fmt.Sprintf("free_user_%d", userID), // Placeholder for free users
+		PolarProductID:   "free_plan",
+		Status:           "active",
+		PlanType:         "free",
+		Benefits:         []models.PolarBenefit{},
+		Metadata:         models.JSONB{"plan": "free"},
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
-	
+
 	err := bs.db.Create(subscription).Error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return subscription, nil
 }
 
@@ -285,74 +300,50 @@ func (bs *BillingService) UpdateSubscription(userID int64, updates map[string]in
 	return bs.db.Model(&Subscription{}).Where("user_id = ?", userID).Updates(updates).Error
 }
 
-// CreateCheckoutSession creates a Stripe checkout session (mock implementation)
-func (bs *BillingService) CreateCheckoutSession(userID int64, planID string, successURL, cancelURL string) (string, error) {
-	_, err := bs.GetPlan(planID)
+// CreateCheckoutSession creates a Polar checkout session
+func (bs *BillingService) CreateCheckoutSession(userID int64, email string, productID string, priceID *string, successURL, cancelURL string) (*PolarCheckoutSession, error) {
+	// Get or create Polar customer
+	customerID, err := bs.polarService.GetOrCreatePolarCustomer(userID, email, nil)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to get/create customer: %w", err)
 	}
-	
-	// In a real implementation, this would integrate with Stripe
-	// For now, return a mock checkout URL
-	checkoutURL := fmt.Sprintf("https://checkout.stripe.com/mock/%s/%d", planID, userID)
-	
-	log.Printf("Mock checkout session created for user %d, plan %s: %s", userID, planID, checkoutURL)
-	
-	return checkoutURL, nil
-}
 
-// WebhookHandler handles Stripe webhooks (mock implementation)
-func (bs *BillingService) WebhookHandler(c *gin.Context) {
-	// In a real implementation, this would verify the webhook signature
-	// and process Stripe events
-	
-	var payload map[string]interface{}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
-		return
+	// Create metadata
+	metadata := map[string]interface{}{
+		"user_id":    userID,
+		"product_id": productID,
 	}
-	
-	eventType, ok := payload["type"].(string)
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing event type"})
-		return
+
+	// Create checkout session via Polar
+	checkout, err := bs.polarService.CreateCheckoutSession(productID, priceID, email, successURL, metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create checkout: %w", err)
 	}
-	
-	log.Printf("Received webhook event: %s", eventType)
-	
-	switch eventType {
-	case "checkout.session.completed":
-		// Handle successful subscription creation
-		bs.handleCheckoutCompleted(payload)
-	case "invoice.payment_succeeded":
-		// Handle successful payment
-		bs.handlePaymentSucceeded(payload)
-	case "customer.subscription.updated":
-		// Handle subscription updates
-		bs.handleSubscriptionUpdated(payload)
-	case "customer.subscription.deleted":
-		// Handle subscription cancellation
-		bs.handleSubscriptionDeleted(payload)
+
+	// Save checkout ID to database for tracking
+	var subscription models.PolarSubscription
+	checkoutID := checkout.ID
+	err = bs.db.Model(&subscription).
+		Where("user_id = ? AND polar_customer_id = ?", userID, customerID).
+		Update("polar_checkout_id", checkoutID).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		log.Printf("Warning: failed to save checkout ID: %v", err)
 	}
-	
-	c.JSON(http.StatusOK, gin.H{"received": true})
+
+	log.Printf("Polar checkout session created for user %d, product %s: %s", userID, productID, checkout.URL)
+
+	return checkout, nil
 }
 
-func (bs *BillingService) handleCheckoutCompleted(payload map[string]interface{}) {
-	// Mock implementation - in real app, extract customer and subscription info from Stripe
-	log.Println("Processing checkout completion...")
+// GetPolarService returns the underlying Polar service
+func (bs *BillingService) GetPolarService() *PolarService {
+	return bs.polarService
 }
 
-func (bs *BillingService) handlePaymentSucceeded(payload map[string]interface{}) {
-	log.Println("Processing successful payment...")
-}
-
-func (bs *BillingService) handleSubscriptionUpdated(payload map[string]interface{}) {
-	log.Println("Processing subscription update...")
-}
-
-func (bs *BillingService) handleSubscriptionDeleted(payload map[string]interface{}) {
-	log.Println("Processing subscription cancellation...")
+// GetDB returns the database connection
+func (bs *BillingService) GetDB() *gorm.DB {
+	return bs.db
 }
 
 // API Handlers
@@ -427,8 +418,15 @@ func (bs *BillingService) CreateCheckoutHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
-	checkoutURL, err := bs.CreateCheckoutSession(userID, req.PlanID, req.SuccessURL, req.CancelURL)
+
+	// Get user email from database
+	var user models.User
+	if err := bs.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user information"})
+		return
+	}
+
+	checkoutURL, err := bs.CreateCheckoutSession(userID, user.Email, req.PlanID, nil, req.SuccessURL, req.CancelURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
 		return

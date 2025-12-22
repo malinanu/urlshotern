@@ -594,15 +594,15 @@ func (a *AttributionService) GetChannelAttribution(shortCode string, days int, m
 			COALESCE(SUM(ta.attribution_value), 0) as attribution_value
 		FROM attribution_touchpoints at
 		LEFT JOIN conversions c ON at.session_id = c.session_id
-		LEFT JOIN touchpoint_attributions ta ON at.id = ta.touchpoint_id 
+		LEFT JOIN touchpoint_attributions ta ON at.id = ta.touchpoint_id
 			AND ta.attribution_model = $1
 		WHERE at.short_code = $2
-		  AND at.created_at >= NOW() - INTERVAL '%d days'
+		  AND at.created_at >= NOW() - INTERVAL '$3 days'
 		GROUP BY at.campaign_source, at.campaign_medium
 		ORDER BY attribution_value DESC
 	`
 
-	rows, err := a.storage.Query(fmt.Sprintf(query, days), string(model), shortCode)
+	rows, err := a.storage.Query(query, string(model), shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query channel attribution: %w", err)
 	}

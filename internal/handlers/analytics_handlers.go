@@ -10,6 +10,7 @@ import (
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/URLshorter/url-shortener/internal/utils"
 )
 
 type AnalyticsHandlers struct {
@@ -129,13 +130,30 @@ func (h *AnalyticsHandlers) GetUserActivityLog(c *gin.Context) {
 		}
 	}
 
-	// Sorting parameters
+	// Sorting parameters with validation (Issue #13 - Query Parameter Validation)
+	allowedSortFields := []string{"created_at", "activity_type", "ip_address"}
 	if sortBy := c.Query("sort_by"); sortBy != "" {
-		req.SortBy = sortBy
+		if validatedSortBy, err := utils.ValidateSortBy(sortBy, allowedSortFields); err != nil {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "invalid_parameter",
+				Message: err.Error(),
+			})
+			return
+		} else {
+			req.SortBy = validatedSortBy
+		}
 	}
 
 	if sortOrder := c.Query("sort_order"); sortOrder != "" {
-		req.SortOrder = sortOrder
+		if validatedSortOrder, err := utils.ValidateSortOrder(sortOrder); err != nil {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "invalid_parameter",
+				Message: err.Error(),
+			})
+			return
+		} else {
+			req.SortOrder = validatedSortOrder
+		}
 	}
 
 	response, err := h.analyticsService.GetUserActivityLog(userID.(int64), req)

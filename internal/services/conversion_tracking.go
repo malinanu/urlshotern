@@ -276,15 +276,15 @@ func (c *ConversionTrackingService) GetConversionStats(userID int64, shortCode s
 			COALESCE(AVG(c.conversion_value), 0) as avg_value,
 			COALESCE(AVG(c.time_to_conversion), 0) as avg_time_to_convert
 		FROM conversion_goals cg
-		LEFT JOIN conversions c ON cg.id = c.goal_id 
-			AND c.short_code = $2 
-			AND c.conversion_time >= NOW() - INTERVAL '%d days'
+		LEFT JOIN conversions c ON cg.id = c.goal_id
+			AND c.short_code = $2
+			AND c.conversion_time >= NOW() - INTERVAL '$3 days'
 		WHERE cg.user_id = $1 AND cg.is_active = true
 		GROUP BY cg.id, cg.goal_name
 		ORDER BY total_conversions DESC
 	`
-	
-	rows, err := c.storage.Query(fmt.Sprintf(query, days), userID, shortCode)
+
+	rows, err := c.storage.Query(query, userID, shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conversion stats: %w", err)
 	}
@@ -457,11 +457,11 @@ func (c *ConversionTrackingService) getTotalClicksForURL(shortCode string, days 
 	query := `
 		SELECT COALESCE(SUM(clicks), 0)
 		FROM click_events
-		WHERE short_code = $1 AND clicked_at >= NOW() - INTERVAL '%d days'
+		WHERE short_code = $1 AND clicked_at >= NOW() - INTERVAL '$2 days'
 	`
-	
+
 	var totalClicks int64
-	err := c.storage.QueryRow(fmt.Sprintf(query, days), shortCode).Scan(&totalClicks)
+	err := c.storage.QueryRow(query, shortCode, days).Scan(&totalClicks)
 	if err != nil {
 		return 0
 	}
@@ -502,12 +502,12 @@ func (c *ConversionTrackingService) CalculateAttributedConversions(shortCode str
 		SELECT referrer_domain, COUNT(*) as conversion_count
 		FROM conversions c
 		JOIN referrer_analytics ra ON c.short_code = ra.short_code
-		WHERE c.short_code = $1 
-		AND c.conversion_time >= NOW() - INTERVAL '%d days'
+		WHERE c.short_code = $1
+		AND c.conversion_time >= NOW() - INTERVAL '$2 days'
 		GROUP BY referrer_domain
 	`
-	
-	rows, err := c.storage.Query(fmt.Sprintf(query, days), shortCode)
+
+	rows, err := c.storage.Query(query, shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate attributed conversions: %w", err)
 	}

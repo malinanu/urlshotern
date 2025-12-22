@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/URLshorter/url-shortener/internal/utils"
 )
 
 type CMSHandlers struct {
@@ -76,10 +77,10 @@ func (h *CMSHandlers) GetStaticPage(c *gin.Context) {
 	userAgent := c.GetHeader("User-Agent")
 	referrer := c.GetHeader("Referer")
 	ipAddress := c.ClientIP()
-	
-	go func() {
-		_ = h.cmsService.RecordPageVisit(page.ID, ipAddress, userAgent, referrer)
-	}()
+
+	utils.Go("record_page_visit", func() error {
+		return h.cmsService.RecordPageVisit(page.ID, ipAddress, userAgent, referrer)
+	})
 
 	c.JSON(http.StatusOK, gin.H{"page": page})
 }
@@ -470,10 +471,10 @@ func (h *CMSHandlers) PublicPageHandler(c *gin.Context) {
 	userAgent := c.GetHeader("User-Agent")
 	referrer := c.GetHeader("Referer")
 	ipAddress := c.ClientIP()
-	
-	go func() {
-		_ = h.cmsService.RecordPageVisit(page.ID, ipAddress, userAgent, referrer)
-	}()
+
+	utils.Go("record_page_visit", func() error {
+		return h.cmsService.RecordPageVisit(page.ID, ipAddress, userAgent, referrer)
+	})
 
 	// Return page data for frontend to render
 	c.JSON(http.StatusOK, gin.H{

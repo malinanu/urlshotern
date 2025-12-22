@@ -10,20 +10,51 @@ import (
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/models"
+	"github.com/URLshorter/url-shortener/internal/services/email"
 	"github.com/URLshorter/url-shortener/internal/storage"
 )
 
 type EmailService struct {
-	db     *storage.PostgresStorage
-	config *configs.Config
+	db       *storage.PostgresStorage
+	config   *configs.Config
+	provider email.Provider
 }
 
 // NewEmailService creates a new email service
 func NewEmailService(db *storage.PostgresStorage, config *configs.Config) *EmailService {
-	return &EmailService{
-		db:     db,
-		config: config,
+	// Create email provider based on environment
+	emailConfig := email.EmailConfig{
+		Provider:     getEmailProvider(config),
+		SMTPHost:     config.SMTPHost,
+		SMTPPort:     config.SMTPPort,
+		SMTPUsername: config.SMTPUsername,
+		SMTPPassword: config.SMTPPassword,
+		FromEmail:    config.FromEmail,
+		FromName:     config.FromName,
 	}
+
+	provider, err := email.NewProvider(emailConfig)
+	if err != nil {
+		fmt.Printf("Warning: failed to create email provider: %v, using console provider\n", err)
+		provider = email.NewConsoleProvider(emailConfig)
+	}
+
+	return &EmailService{
+		db:       db,
+		config:   config,
+		provider: provider,
+	}
+}
+
+// getEmailProvider determines which email provider to use based on environment
+func getEmailProvider(config *configs.Config) string {
+	if config.Environment == "development" {
+		return "console"
+	}
+	if config.SMTPHost != "" {
+		return "smtp"
+	}
+	return "console"
 }
 
 // SendVerificationEmail creates and sends email verification
@@ -116,60 +147,45 @@ func (e *EmailService) ResendVerificationEmail(userID int64) (*models.EmailVerif
 }
 
 // SendEmailVerification sends email verification with token (updated interface)
-func (e *EmailService) SendEmailVerification(email, token string) error {
-	// For development, just log the email instead of actually sending
-	if e.config.Environment == "development" {
-		verificationURL := fmt.Sprintf("http://localhost:3000/verify-email?token=%s", token)
-		fmt.Printf("Email verification to %s: Click here to verify your email: %s\n", email, verificationURL)
-		return nil
-	}
+func (e *EmailService) SendEmailVerification(emailAddr, token string) error {
+	// Build verification URL
+	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", e.config.FrontendURL, token)
 
-	// TODO: Implement actual email sending (SMTP, SendGrid, etc.)
-	fmt.Printf("Email sending not configured for production environment\n")
-	return nil
+	// Generate email template
+	template := email.VerificationEmailTemplate(verificationURL, emailAddr)
+
+	// Send email using provider
+	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
 }
 
 // SendPasswordReset sends password reset email
-func (e *EmailService) SendPasswordReset(email, token string) error {
-	// For development, just log the email instead of actually sending
-	if e.config.Environment == "development" {
-		resetURL := fmt.Sprintf("http://localhost:3000/reset-password?token=%s", token)
-		fmt.Printf("Password reset for %s: Click here to reset your password: %s\n", email, resetURL)
-		return nil
-	}
+func (e *EmailService) SendPasswordReset(emailAddr, token string) error {
+	// Build reset URL
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", e.config.FrontendURL, token)
 
-	// TODO: Implement actual email sending (SMTP, SendGrid, etc.)
-	fmt.Printf("Email sending not configured for production environment\n")
-	return nil
+	// Generate email template
+	template := email.PasswordResetEmailTemplate(resetURL, emailAddr)
+
+	// Send email using provider
+	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
 }
 
 // SendTeamInvitation sends team invitation email
-func (e *EmailService) SendTeamInvitation(email, teamName, inviterName, token string) error {
-	// For development, just log the email instead of actually sending
-	if e.config.Environment == "development" {
-		inviteURL := fmt.Sprintf("http://localhost:3000/team-invite?token=%s", token)
-		fmt.Printf("Team invitation to %s: %s invited you to join team '%s'. Click here to accept: %s\n", 
-			email, inviterName, teamName, inviteURL)
-		return nil
-	}
+func (e *EmailService) SendTeamInvitation(emailAddr, teamName, inviterName, token string) error {
+	// Build invitation URL
+	inviteURL := fmt.Sprintf("%s/team-invite?token=%s", e.config.FrontendURL, token)
 
-	// TODO: Implement actual email sending (SMTP, SendGrid, etc.)
-	fmt.Printf("Team invitation email sending not configured for production environment\n")
-	return nil
+	// Generate email template
+	template := email.TeamInvitationEmailTemplate(inviteURL, teamName, inviterName, emailAddr)
+
+	// Send email using provider
+	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
 }
 
-// sendEmail sends verification email (mock implementation for development)
-func (e *EmailService) sendEmail(email, token string) error {
-	// For development, just log the email instead of actually sending
-	if e.config.Environment == "development" {
-		verificationURL := fmt.Sprintf("http://localhost:3000/verify-email?token=%s", token)
-		fmt.Printf("Email verification to %s: Click here to verify your email: %s\n", email, verificationURL)
-		return nil
-	}
-
-	// TODO: Implement actual email sending (SMTP, SendGrid, etc.)
-	fmt.Printf("Email sending not configured for production environment\n")
-	return nil
+// sendEmail sends verification email using the provider
+func (e *EmailService) sendEmail(emailAddr, token string) error {
+	// This is the same as SendEmailVerification - redirect to it
+	return e.SendEmailVerification(emailAddr, token)
 }
 
 // generateVerificationToken generates a random verification token

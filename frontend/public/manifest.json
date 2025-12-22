@@ -1,15 +1,19 @@
 {
-  "name": "Trunc",
+  "name": "Trunc - URL Shortener",
   "short_name": "Trunc",
-  "description": "Professional URL shortener with analytics and custom domains",
-  "start_url": "/",
+  "description": "Professional URL shortener with advanced analytics, custom domains, and offline support. Optimized for mobile performance.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "orientation": "portrait-primary",
-  "categories": ["productivity", "utilities"],
+  "orientation": "any",
+  "categories": ["productivity", "utilities", "business"],
   "lang": "en",
   "dir": "ltr",
+  "prefer_related_applications": false,
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -105,8 +109,35 @@
   "share_target": {
     "action": "/dashboard",
     "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
     "params": {
+      "title": "title",
+      "text": "text",
       "url": "share_url"
     }
-  }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+trunc",
+      "url": "/shorten?url=%s"
+    }
+  ],
+  "related_applications": [],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "file_handlers": [
+    {
+      "action": "/bulk",
+      "accept": {
+        "text/csv": [".csv"],
+        "text/plain": [".txt"]
+      }
+    }
+  ],
+  "handle_links": "preferred",
+  "display_override_description": "Optimized for mobile with adaptive UI and offline support"
 }

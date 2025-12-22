@@ -1,0 +1,260 @@
+# Alertmanager Configuration for URL Shortener
+
+global:
+  resolve_timeout: 5m
+  # Slack webhook URL (set via environment or secret)
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  # PagerDuty integration key
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# Templates for notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Routing tree for alerts
+route:
+  # Default receiver for all alerts
+  receiver: 'default'
+
+  # Group alerts together if they share these labels
+  group_by: ['alertname', 'cluster', 'service']
+
+  # Wait time before sending initial notification
+  group_wait: 30s
+
+  # Wait time before sending notifications about new alerts in the same group
+  group_interval: 5m
+
+  # Wait time before sending a notification about an alert that has already been sent
+  repeat_interval: 4h
+
+  # Child routes with specific receivers
+  routes:
+    # Critical alerts go to PagerDuty and Slack
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      continue: true
+      group_wait: 10s
+      repeat_interval: 1h
+
+    - match:
+        severity: critical
+      receiver: 'slack-critical'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts go only to Slack
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      repeat_interval: 12h
+
+    # SLO-related alerts
+    - match:
+        component: slo
+      receiver: 'slack-slo'
+      group_by: ['alertname', 'slo_type']
+      repeat_interval: 2h
+
+    # Business metrics alerts
+    - match:
+        component: business
+      receiver: 'slack-business'
+      repeat_interval: 4h
+
+    # Database alerts
+    - match:
+        component: database
+      receiver: 'slack-database'
+      repeat_interval: 2h
+
+    # Infrastructure alerts
+    - match:
+        component: infrastructure
+      receiver: 'slack-infrastructure'
+      repeat_interval: 6h
+
+# Inhibition rules - prevent notification for certain alerts if others are already firing
+inhibit_rules:
+  # Inhibit any alerts if application is down
+  - source_match:
+      alertname: 'ApplicationDown'
+    target_match_re:
+      alertname: '(HighLatency|HighErrorRate|.*)'
+    equal: ['service']
+
+  # Inhibit database connection alerts if database is down
+  - source_match:
+      alertname: 'PostgreSQLDown'
+    target_match_re:
+      alertname: '(DatabaseConnectionPoolExhausted|SlowQueryDetected|.*)'
+    equal: ['service']
+
+  # Inhibit cache-related alerts if Redis is down
+  - source_match:
+      alertname: 'RedisDown'
+    target_match_re:
+      alertname: '(RedisCacheHitRateLow|RedisMemoryHigh|.*)'
+    equal: ['service']
+
+  # Inhibit warning-level alerts if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+# Receivers - where to send alerts
+receivers:
+  # Default receiver (fallback)
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts-url-shortener'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # PagerDuty for critical alerts (pages on-call)
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        severity: '{{ .GroupLabels.severity }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          summary: '{{ .CommonAnnotations.summary }}'
+          description: '{{ .CommonAnnotations.description }}'
+          runbook: '{{ .CommonAnnotations.runbook_url }}'
+          dashboard: '{{ .CommonAnnotations.dashboard_url }}'
+        url: '{{ .CommonAnnotations.runbook_url }}'
+        client: 'Prometheus'
+        client_url: 'http://prometheus:9090'
+
+  # Slack for critical alerts
+  - name: 'slack-critical'
+    slack_configs:
+      - channel: '#incidents-url-shortener'
+        username: 'Alertmanager'
+        icon_emoji: ':fire:'
+        color: 'danger'
+        title: ':fire: CRITICAL: {{ .GroupLabels.alertname }}'
+        title_link: '{{ .CommonAnnotations.dashboard_url }}'
+        text: |
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Severity:* {{ .GroupLabels.severity }}
+          *Service:* {{ .GroupLabels.service }}
+          *Runbook:* {{ .CommonAnnotations.runbook_url }}
+          *Dashboard:* {{ .CommonAnnotations.dashboard_url }}
+        send_resolved: true
+        actions:
+          - type: button
+            text: 'View Dashboard :chart_with_upwards_trend:'
+            url: '{{ .CommonAnnotations.dashboard_url }}'
+          - type: button
+            text: 'View Runbook :notebook:'
+            url: '{{ .CommonAnnotations.runbook_url }}'
+          - type: button
+            text: 'Prometheus :mag:'
+            url: 'http://prometheus:9090'
+
+  # Slack for warning alerts
+  - name: 'slack-warnings'
+    slack_configs:
+      - channel: '#alerts-url-shortener'
+        username: 'Alertmanager'
+        icon_emoji: ':warning:'
+        color: 'warning'
+        title: ':warning: WARNING: {{ .GroupLabels.alertname }}'
+        title_link: '{{ .CommonAnnotations.dashboard_url }}'
+        text: |
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Service:* {{ .GroupLabels.service }}
+        send_resolved: true
+
+  # Slack for SLO alerts
+  - name: 'slack-slo'
+    slack_configs:
+      - channel: '#slo-alerts-url-shortener'
+        username: 'SLO Monitor'
+        icon_emoji: ':chart_with_downwards_trend:'
+        color: 'danger'
+        title: ':chart_with_downwards_trend: SLO Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *SLO Type:* {{ .GroupLabels.slo }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Runbook:* {{ .CommonAnnotations.runbook_url }}
+        send_resolved: true
+
+  # Slack for business metrics
+  - name: 'slack-business'
+    slack_configs:
+      - channel: '#business-metrics-alerts'
+        username: 'Business Metrics'
+        icon_emoji: ':moneybag:'
+        color: 'warning'
+        title: ':moneybag: Business Metric Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+        send_resolved: true
+
+  # Slack for database alerts
+  - name: 'slack-database'
+    slack_configs:
+      - channel: '#database-alerts'
+        username: 'Database Monitor'
+        icon_emoji: ':floppy_disk:'
+        color: 'danger'
+        title: ':floppy_disk: Database Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Runbook:* {{ .CommonAnnotations.runbook_url }}
+        send_resolved: true
+
+  # Slack for infrastructure alerts
+  - name: 'slack-infrastructure'
+    slack_configs:
+      - channel: '#infrastructure-alerts'
+        username: 'Infrastructure Monitor'
+        icon_emoji: ':computer:'
+        color: 'warning'
+        title: ':computer: Infrastructure Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+        send_resolved: true
+
+# Time intervals for muting alerts (e.g., during maintenance windows)
+time_intervals:
+  - name: business-hours
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '17:00'
+        weekdays: ['monday:friday']
+        location: 'America/New_York'
+
+  - name: off-hours
+    time_intervals:
+      - times:
+          - start_time: '17:00'
+            end_time: '09:00'
+        weekdays: ['monday:friday']
+        location: 'America/New_York'
+      - weekdays: ['saturday', 'sunday']
+        location: 'America/New_York'
+
+  - name: maintenance-window
+    time_intervals:
+      - times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        weekdays: ['sunday']
+        location: 'America/New_York'

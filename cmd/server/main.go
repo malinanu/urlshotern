@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -15,7 +16,10 @@ import (
 	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/workers"
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -31,6 +35,18 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// Initialize GORM database for billing and Polar integration
+	sslMode := "disable"
+	if config.Environment == "production" {
+		sslMode = "require"
+	}
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, sslMode)
+	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to GORM database: %v", err)
+	}
 
 	redis, err := storage.NewRedisStorage(config)
 	if err != nil {
@@ -66,12 +82,23 @@ func main() {
 	shortenerService.SetAttributionService(attributionService)
 
 	// Initialize auth middleware
-	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService)
+	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
 
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
+
+	// Initialize webhook retry worker
+	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
+	webhookRetryWorker := workers.NewWebhookRetryWorker(gormDB, webhookProcessor)
+	webhookAdminHandler := handlers.NewWebhookAdminHandler(webhookRetryWorker)
+
+	// Start webhook retry worker in background
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+	go webhookRetryWorker.Start(workerCtx)
+	log.Println("✅ Webhook retry worker started")
 
 	// Setup Gin router
 	if config.Environment == "production" {
@@ -82,6 +109,9 @@ func main() {
 
 	// Setup all routes
 	routes.SetupRoutes(router, handler, authMiddleware)
+
+	// Setup webhook admin routes
+	routes.SetupWebhookAdminRoutes(router, webhookAdminHandler, authMiddleware)
 
 	// Setup server
 	srv := &http.Server{
@@ -106,6 +136,10 @@ func main() {
 	// Shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	// Shutdown webhook retry worker
+	workerCancel()
+	log.Println("✅ Webhook retry worker stopped")
 
 	// Shutdown real-time analytics service
 	realtimeAnalyticsService.Shutdown()

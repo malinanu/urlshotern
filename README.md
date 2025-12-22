@@ -145,6 +145,33 @@ make test-integration
 make test-coverage
 ```
 
+## Database Migrations
+
+The project uses a custom migration system to manage database schema changes safely.
+
+```bash
+# Check migration status
+make migrate-status
+
+# Apply a migration
+make migrate-up VERSION=001
+
+# Rollback a migration
+make migrate-down VERSION=005
+
+# Rollback to a specific version
+make migrate-rollback-to VERSION=003
+
+# Preview rollback without executing
+make migrate-dry-run DIRECTION=down VERSION=005
+
+# Or use scripts directly
+./scripts/migrate.sh status        # Linux/macOS
+.\scripts\migrate.ps1 status       # Windows PowerShell
+```
+
+See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for the complete migration guide and [docs/ROLLBACK_PROCEDURES.md](docs/ROLLBACK_PROCEDURES.md) for rollback procedures.
+
 ## Deployment
 
 ### Docker Compose (Recommended)

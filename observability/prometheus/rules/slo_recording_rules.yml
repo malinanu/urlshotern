@@ -1,0 +1,242 @@
+# SLO Recording Rules for Efficient Query Performance
+
+groups:
+  - name: slo_recording_rules
+    interval: 30s
+    rules:
+      # Availability SLI - Multiple time windows
+      - record: sli:availability:ratio_rate5m
+        expr: |
+          sum(rate(sli_availability_requests_total{success="true"}[5m]))
+          /
+          sum(rate(sli_availability_requests_total[5m]))
+
+      - record: sli:availability:ratio_rate30m
+        expr: |
+          sum(rate(sli_availability_requests_total{success="true"}[30m]))
+          /
+          sum(rate(sli_availability_requests_total[30m]))
+
+      - record: sli:availability:ratio_rate1h
+        expr: |
+          sum(rate(sli_availability_requests_total{success="true"}[1h]))
+          /
+          sum(rate(sli_availability_requests_total[1h]))
+
+      - record: sli:availability:ratio_rate6h
+        expr: |
+          sum(rate(sli_availability_requests_total{success="true"}[6h]))
+          /
+          sum(rate(sli_availability_requests_total[6h]))
+
+      - record: sli:availability:ratio_rate24h
+        expr: |
+          sum(rate(sli_availability_requests_total{success="true"}[24h]))
+          /
+          sum(rate(sli_availability_requests_total[24h]))
+
+      - record: sli:availability:ratio_rate30d
+        expr: |
+          sum(rate(sli_availability_requests_total{success="true"}[30d]))
+          /
+          sum(rate(sli_availability_requests_total[30d]))
+
+      # Latency SLI - Multiple time windows
+      - record: sli:latency:ratio_rate5m
+        expr: |
+          sum(rate(sli_latency_requests_total{within_target="true"}[5m]))
+          /
+          sum(rate(sli_latency_requests_total[5m]))
+
+      - record: sli:latency:ratio_rate30m
+        expr: |
+          sum(rate(sli_latency_requests_total{within_target="true"}[30m]))
+          /
+          sum(rate(sli_latency_requests_total[30m]))
+
+      - record: sli:latency:ratio_rate1h
+        expr: |
+          sum(rate(sli_latency_requests_total{within_target="true"}[1h]))
+          /
+          sum(rate(sli_latency_requests_total[1h]))
+
+      - record: sli:latency:ratio_rate6h
+        expr: |
+          sum(rate(sli_latency_requests_total{within_target="true"}[6h]))
+          /
+          sum(rate(sli_latency_requests_total[6h]))
+
+      - record: sli:latency:ratio_rate24h
+        expr: |
+          sum(rate(sli_latency_requests_total{within_target="true"}[24h]))
+          /
+          sum(rate(sli_latency_requests_total[24h]))
+
+      - record: sli:latency:ratio_rate30d
+        expr: |
+          sum(rate(sli_latency_requests_total{within_target="true"}[30d]))
+          /
+          sum(rate(sli_latency_requests_total[30d]))
+
+      # Error Rate SLI - Multiple time windows
+      - record: sli:error_rate:ratio_rate5m
+        expr: |
+          sum(rate(sli_error_rate_requests_total{error="false"}[5m]))
+          /
+          sum(rate(sli_error_rate_requests_total[5m]))
+
+      - record: sli:error_rate:ratio_rate30m
+        expr: |
+          sum(rate(sli_error_rate_requests_total{error="false"}[30m]))
+          /
+          sum(rate(sli_error_rate_requests_total[30m]))
+
+      - record: sli:error_rate:ratio_rate1h
+        expr: |
+          sum(rate(sli_error_rate_requests_total{error="false"}[1h]))
+          /
+          sum(rate(sli_error_rate_requests_total[1h]))
+
+      - record: sli:error_rate:ratio_rate6h
+        expr: |
+          sum(rate(sli_error_rate_requests_total{error="false"}[6h]))
+          /
+          sum(rate(sli_error_rate_requests_total[6h]))
+
+      # Error Budget Burn Rate Calculations
+      # Target: 99.95% availability (error budget: 0.05%)
+      - record: slo:error_budget:burn_rate_1h
+        expr: |
+          (1 - sli:availability:ratio_rate1h) / (1 - 0.9995)
+
+      - record: slo:error_budget:burn_rate_6h
+        expr: |
+          (1 - sli:availability:ratio_rate6h) / (1 - 0.9995)
+
+      - record: slo:error_budget:burn_rate_24h
+        expr: |
+          (1 - sli:availability:ratio_rate24h) / (1 - 0.9995)
+
+      - record: slo:error_budget:burn_rate_30d
+        expr: |
+          (1 - sli:availability:ratio_rate30d) / (1 - 0.9995)
+
+      # Error Budget Remaining
+      - record: slo:error_budget:remaining
+        expr: |
+          1 - (slo:error_budget:burn_rate_30d * 30)
+
+  - name: performance_recording_rules
+    interval: 30s
+    rules:
+      # HTTP Request Rate
+      - record: http:request_rate:5m
+        expr: |
+          sum(rate(http_requests_total{service="url-shortener"}[5m])) by (method, endpoint)
+
+      - record: http:request_rate:1h
+        expr: |
+          sum(rate(http_requests_total{service="url-shortener"}[1h])) by (method, endpoint)
+
+      # HTTP Error Rates
+      - record: http:error_rate:5m
+        expr: |
+          sum(rate(http_requests_total{service="url-shortener",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{service="url-shortener"}[5m]))
+
+      - record: http:error_rate:1h
+        expr: |
+          sum(rate(http_requests_total{service="url-shortener",status=~"5.."}[1h]))
+          /
+          sum(rate(http_requests_total{service="url-shortener"}[1h]))
+
+      # HTTP Latency Percentiles
+      - record: http:request_duration:p50_5m
+        expr: |
+          histogram_quantile(0.50,
+            sum(rate(http_request_duration_seconds_bucket{service="url-shortener"}[5m])) by (le, endpoint)
+          )
+
+      - record: http:request_duration:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="url-shortener"}[5m])) by (le, endpoint)
+          )
+
+      - record: http:request_duration:p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{service="url-shortener"}[5m])) by (le, endpoint)
+          )
+
+  - name: business_metrics_recording_rules
+    interval: 1m
+    rules:
+      # URL Creation Rate
+      - record: business:url_creation_rate:5m
+        expr: |
+          sum(rate(urls_created_total[5m]))
+
+      - record: business:url_creation_rate:1h
+        expr: |
+          sum(rate(urls_created_total[1h]))
+
+      - record: business:url_creation_rate:24h
+        expr: |
+          sum(rate(urls_created_total[24h]))
+
+      # URL Click Rate
+      - record: business:url_click_rate:5m
+        expr: |
+          sum(rate(http_requests_total{endpoint="/redirect"}[5m]))
+
+      - record: business:url_click_rate:1h
+        expr: |
+          sum(rate(http_requests_total{endpoint="/redirect"}[1h]))
+
+      # Cache Performance
+      - record: cache:hit_ratio:5m
+        expr: |
+          sum(rate(cache_hits_total[5m]))
+          /
+          (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m])))
+
+      - record: cache:hit_ratio:1h
+        expr: |
+          sum(rate(cache_hits_total[1h]))
+          /
+          (sum(rate(cache_hits_total[1h])) + sum(rate(cache_misses_total[1h])))
+
+  - name: database_performance_recording_rules
+    interval: 30s
+    rules:
+      # Database Query Rate
+      - record: db:query_rate:5m
+        expr: |
+          sum(rate(db_queries_total[5m])) by (operation, table)
+
+      # Database Query Latency
+      - record: db:query_duration:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation, table)
+          )
+
+      - record: db:query_duration:p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation, table)
+          )
+
+      # Database Connection Pool Utilization
+      - record: db:connection_pool_utilization
+        expr: |
+          db_connections_active / (db_connections_active + db_connections_idle)
+
+      # Database Error Rate
+      - record: db:error_rate:5m
+        expr: |
+          sum(rate(db_queries_total{status="error"}[5m]))
+          /
+          sum(rate(db_queries_total[5m]))

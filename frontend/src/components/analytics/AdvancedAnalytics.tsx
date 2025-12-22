@@ -1,7 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatNumber, formatPercentage } from '@/utils/formatters';
+import {
+  GlobeAltIcon,
+  DevicePhoneMobileIcon,
+  ClockIcon,
+  ArrowTrendingUpIcon,
+  ChartBarIcon,
+  MapIcon,
+  CalendarIcon,
+} from '@heroicons/react/24/outline';
+
+// Import Recharts components (already optimized in next.config.ts)
 import {
   BarChart,
   Bar,
@@ -13,20 +25,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   AreaChart,
   Area,
 } from 'recharts';
-import { 
-  GlobeAltIcon, 
-  DevicePhoneMobileIcon,
-  ClockIcon,
-  ArrowTrendingUpIcon,
-  ChartBarIcon,
-  MapIcon,
-  CalendarIcon,
-} from '@heroicons/react/24/outline';
 
 // Color palette for charts
 const COLORS = {
@@ -152,11 +153,7 @@ export default function AdvancedAnalytics({
   const [activeTab, setActiveTab] = useState<'geographic' | 'time' | 'device'>('geographic');
   const { getAccessToken, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    fetchAdvancedAnalytics();
-  }, [shortCode, days]);
-
-  const fetchAdvancedAnalytics = async () => {
+  const fetchAdvancedAnalytics = useCallback(async () => {
     if (!isAuthenticated || !shortCode) return;
 
     setIsLoading(true);
@@ -182,21 +179,11 @@ export default function AdvancedAnalytics({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [shortCode, days, isAuthenticated, getAccessToken]);
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
-    }
-    return num.toString();
-  };
-
-  const formatPercentage = (percentage: number): string => {
-    return `${percentage.toFixed(1)}%`;
-  };
+  useEffect(() => {
+    fetchAdvancedAnalytics();
+  }, [fetchAdvancedAnalytics]);
 
   if (isLoading) {
     return (
@@ -241,6 +228,22 @@ export default function AdvancedAnalytics({
       </div>
     );
   }
+
+  // Memoize expensive computations to avoid re-calculation on every render
+  const topCountriesForChart = useMemo(
+    () => analytics.geographic?.countries.slice(0, 10) || [],
+    [analytics.geographic?.countries]
+  );
+
+  const topCountriesForPie = useMemo(
+    () => analytics.geographic?.countries.slice(0, 8) || [],
+    [analytics.geographic?.countries]
+  );
+
+  const chartColors = useMemo(
+    () => topCountriesForPie.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+    [topCountriesForPie]
+  );
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
@@ -314,6 +317,16 @@ export default function AdvancedAnalytics({
   );
 }
 
+// Chart Loading Skeleton
+const ChartSkeleton = () => (
+  <div className="h-80 flex items-center justify-center">
+    <div className="animate-pulse space-y-4 w-full">
+      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div className="h-64 bg-gray-200 rounded"></div>
+    </div>
+  </div>
+);
+
 // Geographic Analytics Component
 function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic'] }) {
   return (
@@ -327,11 +340,11 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.countries.slice(0, 10)}>
+              <BarChart data={topCountriesForChart}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="country_code" />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number, name: string) => [formatNumber(value), 'Clicks']}
                   labelFormatter={(label: string) => {
                     const country = data.countries.find(c => c.country_code === label);
@@ -350,7 +363,7 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.countries.slice(0, 8)}
+                  data={topCountriesForPie}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -358,11 +371,11 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
                   paddingAngle={2}
                   dataKey="clicks"
                 >
-                  {data.countries.slice(0, 8).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  {topCountriesForPie.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={chartColors[index]} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number) => [formatNumber(value), 'Clicks']}
                   labelFormatter={(label: string, payload: any) => {
                     if (payload && payload.length > 0) {
@@ -477,17 +490,17 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hourlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="hour" 
+                <XAxis
+                  dataKey="hour"
                   tick={{ fontSize: 12 }}
                   interval={3}
                 />
                 <YAxis />
                 <Tooltip formatter={(value: number) => [formatNumber(value), 'Clicks']} />
-                <Area 
-                  type="monotone" 
-                  dataKey="clicks" 
-                  stroke={COLORS.primary} 
+                <Area
+                  type="monotone"
+                  dataKey="clicks"
+                  stroke={COLORS.primary}
                   fill={COLORS.primary}
                   fillOpacity={0.3}
                 />

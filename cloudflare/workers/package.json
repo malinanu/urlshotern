@@ -1,0 +1,43 @@
+{
+  "name": "url-shortener-workers",
+  "version": "1.0.0",
+  "description": "CloudFlare Workers for URL Shortener edge computing",
+  "main": "redirect-analytics.js",
+  "scripts": {
+    "deploy": "wrangler publish redirect-analytics.js --env production",
+    "deploy:staging": "wrangler publish redirect-analytics.js --env staging",
+    "deploy:dev": "wrangler publish redirect-analytics.js --env development",
+    "deploy:all": "npm run deploy && wrangler publish ab-testing.js --env production",
+    "dev": "wrangler dev redirect-analytics.js",
+    "test": "wrangler dev redirect-analytics.js --local",
+    "tail": "wrangler tail redirect-analytics --env production",
+    "logs": "wrangler tail redirect-analytics --env production --format pretty",
+    "kv:create": "wrangler kv:namespace create URL_MAPPINGS",
+    "kv:list": "wrangler kv:key list --binding=URL_MAPPINGS",
+    "kv:get": "wrangler kv:key get --binding=URL_MAPPINGS",
+    "kv:put": "wrangler kv:key put --binding=URL_MAPPINGS",
+    "kv:delete": "wrangler kv:key delete --binding=URL_MAPPINGS",
+    "metrics": "wrangler metrics redirect-analytics --env production",
+    "clean": "rm -rf dist .wrangler"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "edge-computing",
+    "cdn",
+    "url-shortener",
+    "analytics"
+  ],
+  "author": "URL Shortener Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/node": "^20.10.0",
+    "miniflare": "^3.20241106.2",
+    "wrangler": "^3.94.0"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

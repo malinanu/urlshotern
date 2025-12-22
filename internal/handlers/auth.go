@@ -211,10 +211,31 @@ func (h *AuthHandlers) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement profile update in auth service
-	middleware.LogInfo(c, "Profile update requested")
+	// Additional phone validation if phone is provided
+	if req.Phone != nil && *req.Phone != "" {
+		// Phone validation is already handled by validator tag, but we can add extra checks here if needed
+		middleware.LogInfo(c, "Profile update requested with phone number")
+	}
+
+	// Get user ID from context
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Update profile using auth service
+	updatedUser, err := h.authService.UpdateProfile(userID, &req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "Failed to update profile")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	middleware.LogInfo(c, "Profile updated successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Profile update functionality coming soon",
+		"message": "Profile updated successfully",
+		"user":    updatedUser.ToPublic(),
 	})
 }
 
@@ -238,10 +259,24 @@ func (h *AuthHandlers) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement password change in auth service
-	middleware.LogInfo(c, "Password change requested")
+	// Get user ID from context
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Change password using auth service
+	err := h.authService.ChangePassword(userID, &req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "Failed to change password")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.LogInfo(c, "Password changed successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Password change functionality coming soon",
+		"message": "Password changed successfully. Please log in again with your new password.",
 	})
 }
 
@@ -253,8 +288,28 @@ func (h *AuthHandlers) Logout(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement session invalidation
-	middleware.LogInfo(c, "User logged out")
+	// Extract token from Authorization header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No token provided"})
+		return
+	}
+
+	// Remove "Bearer " prefix
+	token := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	}
+
+	// Invalidate the token (blacklist it until expiry)
+	err := h.authService.InvalidateToken(token)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to invalidate token")
+		// Log the error but still return success to user for security
+		// (don't expose internal errors during logout)
+	}
+
+	middleware.LogInfo(c, "User logged out successfully, token invalidated")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
 	})

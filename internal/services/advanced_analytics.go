@@ -312,7 +312,7 @@ func (a *AdvancedAnalyticsService) GetAdvancedAnalytics(shortCode string, days i
 // GetEnhancedReferrerAnalytics retrieves detailed referrer analytics with UTM parameters
 func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string, days int) (*ReferrerAnalytics, error) {
 	query := `
-		SELECT 
+		SELECT
 			referrer_domain,
 			referrer_url,
 			referrer_type,
@@ -324,14 +324,14 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 			clicks,
 			unique_clicks,
 			last_click
-		FROM referrer_analytics 
-		WHERE short_code = $1 
-		  AND created_at >= NOW() - INTERVAL '%d days'
+		FROM referrer_analytics
+		WHERE short_code = $1
+		  AND created_at >= NOW() - INTERVAL '$2 days'
 		ORDER BY clicks DESC
 		LIMIT 100
 	`
-	
-	rows, err := a.storage.Query(fmt.Sprintf(query, days), shortCode)
+
+	rows, err := a.storage.Query(query, shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query referrer analytics: %w", err)
 	}
@@ -486,22 +486,22 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 // GetUTMCampaignAnalytics retrieves UTM campaign performance analytics
 func (a *AdvancedAnalyticsService) GetUTMCampaignAnalytics(shortCode string, days int) ([]CampaignStat, error) {
 	query := `
-		SELECT 
+		SELECT
 			campaign_name,
 			campaign_source,
 			campaign_medium,
 			SUM(clicks) as total_clicks
-		FROM referrer_analytics 
-		WHERE short_code = $1 
-		  AND created_at >= NOW() - INTERVAL '%d days'
-		  AND campaign_source IS NOT NULL 
+		FROM referrer_analytics
+		WHERE short_code = $1
+		  AND created_at >= NOW() - INTERVAL '$2 days'
+		  AND campaign_source IS NOT NULL
 		  AND campaign_source != ''
 		GROUP BY campaign_name, campaign_source, campaign_medium
 		ORDER BY total_clicks DESC
 		LIMIT 50
 	`
-	
-	rows, err := a.storage.Query(fmt.Sprintf(query, days), shortCode)
+
+	rows, err := a.storage.Query(query, shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query UTM campaigns: %w", err)
 	}
@@ -542,16 +542,16 @@ func (a *AdvancedAnalyticsService) GetReferrerInsights(shortCode string, days in
 	// Get basic referrer stats first
 	query := `
 		SELECT referrer, COUNT(*) as count
-		FROM clicks 
-		WHERE short_code = $1 
-		AND clicked_at > NOW() - INTERVAL '%d days'
+		FROM clicks
+		WHERE short_code = $1
+		AND clicked_at > NOW() - INTERVAL '$2 days'
 		AND referrer IS NOT NULL AND referrer != ''
 		GROUP BY referrer
 		ORDER BY count DESC
 		LIMIT 50
 	`
-	
-	rows, err := a.storage.Query(fmt.Sprintf(query, days), shortCode)
+
+	rows, err := a.storage.Query(query, shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get referrer stats: %w", err)
 	}
@@ -875,15 +875,15 @@ func (a *AdvancedAnalyticsService) GetReferrerAnalytics(shortCode string, days i
 	
 	query := `
 		SELECT referrer_domain, SUM(clicks) as clicks
-		FROM referrer_analytics 
-		WHERE short_code = $1 AND last_click >= NOW() - INTERVAL '%d days'
+		FROM referrer_analytics
+		WHERE short_code = $1 AND last_click >= NOW() - INTERVAL '$2 days'
 		AND referrer_domain IS NOT NULL AND referrer_domain != ''
 		GROUP BY referrer_domain
 		ORDER BY clicks DESC
 		LIMIT 20
 	`
-	
-	rows, err := a.storage.Query(fmt.Sprintf(query, days), shortCode)
+
+	rows, err := a.storage.Query(query, shortCode, days)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get referrer analytics: %w", err)
 	}

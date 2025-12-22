@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import { API_ENDPOINTS, buildApiUrl } from '@/lib/api-config';
+import {
   CreditCardIcon,
   CheckCircleIcon,
   XCircleIcon,
@@ -94,13 +95,13 @@ export default function BillingPage() {
 
       // Fetch subscription and usage data
       const [usageResponse, plansResponse] = await Promise.all([
-        fetch('http://localhost:8080/api/v1/billing/usage', {
+        fetch(API_ENDPOINTS.billing.usage, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }),
-        fetch('http://localhost:8080/api/v1/billing/plans', {
+        fetch(API_ENDPOINTS.billing.plans, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -135,7 +136,7 @@ export default function BillingPage() {
     setUpgrading(planId);
     
     try {
-      const response = await fetch('http://localhost:8080/api/v1/billing/checkout', {
+      const response = await fetch(API_ENDPOINTS.billing.checkout, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,7 +172,7 @@ export default function BillingPage() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/billing/cancel-subscription', {
+      const response = await fetch(API_ENDPOINTS.billing.cancel, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -28,8 +28,27 @@ RUN cd frontend && npm run build
 
 # Create static directory and copy built frontend
 RUN mkdir -p /app/static
-RUN if [ -d "/app/frontend/out" ]; then cp -r /app/frontend/out/* /app/static/; fi
-RUN if [ -d "/app/frontend/.next" ] && [ ! -d "/app/frontend/out" ]; then cp -r /app/frontend/.next/static /app/static/_next && cp /app/frontend/.next/server/app/index.html /app/static/ 2>/dev/null || true; fi
+
+# Copy static export from Next.js build
+# With output: 'export', Next.js generates static files in frontend/out/
+RUN if [ -d "/app/frontend/out" ]; then \
+    echo "Copying Next.js static export from /app/frontend/out/"; \
+    cp -rv /app/frontend/out/* /app/static/; \
+    ls -la /app/static/; \
+else \
+    echo "ERROR: /app/frontend/out directory not found!"; \
+    echo "Next.js build may have failed or output mode is not set to 'export'"; \
+    exit 1; \
+fi
+
+# Verify critical files exist
+RUN if [ ! -f "/app/static/index.html" ]; then \
+    echo "ERROR: index.html not found in /app/static/"; \
+    ls -la /app/static/; \
+    exit 1; \
+fi
+
+RUN echo "Frontend build copied successfully."
 
 # Expose port
 EXPOSE 8080

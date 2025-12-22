@@ -59,6 +59,7 @@ redis_data/
 *.pem
 *.crt
 *.key
+certs/
 
 # Backup files
 *.bak
