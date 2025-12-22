@@ -44,7 +44,6 @@ interface AuthContextType {
   logout: () => void;
   refreshToken: () => Promise<void>;
   getAccessToken: () => string | null;
-  isTokenExpired: (token?: string) => boolean;
 }
 
 interface RegisterData {
@@ -84,20 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Wrapper for getAccessToken to maintain backward compatibility
   const getAccessToken = useCallback((): string | null => {
     return getStoredAccessToken();
-  }, []);
-
-  // Wrapper for isTokenExpired to maintain backward compatibility (uses utility internally)
-  const isTokenExpired = useCallback((token?: string, bufferSeconds: number = 0): boolean => {
-    const tokenToCheck = token || getStoredAccessToken();
-    if (!tokenToCheck) return true;
-
-    // Use utility function with proper validation (Issue #35)
-    const validation = validateToken(tokenToCheck);
-    if (!validation.isValid) return true;
-
-    // Check if token expires within the buffer time
-    const currentTime = Math.floor(Date.now() / 1000);
-    return validation.payload!.exp < (currentTime + bufferSeconds);
   }, []);
 
   const logout = useCallback(() => {
@@ -439,7 +424,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     refreshToken,
     getAccessToken,
-    isTokenExpired,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

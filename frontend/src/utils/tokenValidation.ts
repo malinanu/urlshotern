@@ -3,6 +3,20 @@
  *
  * Centralized token validation with proper error handling for JWT tokens.
  * Addresses issues #35, #36, #37 related to authentication token handling.
+ *
+ * ## Key Functions:
+ *
+ * **Token Expiry Checking (Issue #37 - Performance Optimization):**
+ * - `shouldRefreshToken()` - **PREFERRED**: Uses stored timestamp from backend's `expires_in`
+ * - `getTokenRemainingTime()` - Get remaining seconds using stored timestamp
+ *
+ * **Token Validation (Issue #35 - Structure & Error Handling):**
+ * - `validateToken()` - Comprehensive validation including structure, expiry, and payload
+ * - `storeAuthTokens()` - Validates and stores tokens with calculated expiry timestamp
+ *
+ * **Low-Level Utilities:**
+ * - `isValidJWTStructure()` - Checks JWT format (3 dot-separated base64url parts)
+ * - `decodeJWTPayload()` - Safely decodes JWT payload with error handling
  */
 
 // Constants
@@ -87,28 +101,6 @@ export function decodeJWTPayload(token: string): JWTPayload | null {
 }
 
 /**
- * Checks if token is expired with configurable buffer
- * @param token - JWT token string
- * @param bufferSeconds - Buffer time in seconds (default: 5 minutes)
- * @returns true if token is expired or expiring within buffer time
- */
-export function isTokenExpired(
-  token: string,
-  bufferSeconds: number = TOKEN_EXPIRY_BUFFER_SECONDS
-): boolean {
-  const payload = decodeJWTPayload(token);
-  if (!payload) {
-    // Invalid token structure should be treated as expired
-    return true;
-  }
-
-  const currentTime = Math.floor(Date.now() / 1000);
-  const expiresAt = payload.exp;
-
-  return expiresAt < (currentTime + bufferSeconds);
-}
-
-/**
  * Comprehensive token validation
  * @param token - JWT token string
  * @returns Validation result with details
@@ -189,9 +181,17 @@ export function storeAuthTokens(
 }
 
 /**
- * Checks if token should be refreshed based on stored expiry timestamp
- * Uses stored timestamp instead of decoding JWT for better performance (issue #37)
- * @returns true if token should be refreshed
+ * Checks if token should be refreshed based on stored expiry timestamp.
+ *
+ * **PREFERRED METHOD** for checking token expiry. Uses the backend's `expires_in` field
+ * stored in localStorage, avoiding JWT decoding and providing better performance and accuracy.
+ *
+ * Benefits:
+ * - No JWT decoding overhead
+ * - More accurate (uses server time, avoids clock skew)
+ * - 5-minute buffer prevents edge-case expiry issues
+ *
+ * @returns true if token should be refreshed (expires within buffer time)
  */
 export function shouldRefreshToken(): boolean {
   try {

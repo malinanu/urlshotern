@@ -91,8 +91,8 @@ const nextConfig: NextConfig = {
     ]
   },
 
-  // Disable static export for development (can be enabled for production build)
-  // output: 'export',
+  // Enable static export for production build
+  output: 'export',
 
   // Production source maps for error tracking (smaller than dev maps)
   productionBrowserSourceMaps: false,
