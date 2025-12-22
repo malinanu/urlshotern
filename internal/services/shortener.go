@@ -254,25 +254,19 @@ func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer 
 	}
 
 	// Save to database (async operation for better performance)
-	go func() {
-		if err := s.db.SaveClickEvent(event); err != nil {
-			fmt.Printf("Failed to save click event: %v\n", err)
-		}
-	}()
+	utils.Go("save_click_event", func() error {
+		return s.db.SaveClickEvent(event)
+	})
 
 	// Process enhanced analytics (async operation)
-	go func() {
-		if err := s.analytics.ProcessEnhancedClickEvent(event); err != nil {
-			fmt.Printf("Failed to process enhanced click analytics: %v\n", err)
-		}
-	}()
+	utils.Go("process_enhanced_click_analytics", func() error {
+		return s.analytics.ProcessEnhancedClickEvent(event)
+	})
 
 	// Increment click count in database
-	go func() {
-		if err := s.db.IncrementClickCount(shortCode); err != nil {
-			fmt.Printf("Failed to increment click count in DB: %v\n", err)
-		}
-	}()
+	utils.Go("increment_click_count", func() error {
+		return s.db.IncrementClickCount(shortCode)
+	})
 
 	// Increment cached click count for faster analytics
 	s.redis.IncrementClickCount(shortCode)

@@ -15,12 +15,15 @@ type Config struct {
 	Environment string
 
 	// Database Configuration
-	DBHost        string
-	DBPort        string
-	DBUser        string
-	DBPassword    string
-	DBName        string
-	DBMaxConns    int
+	DBHost              string
+	DBPort              string
+	DBUser              string
+	DBPassword          string
+	DBName              string
+	DBMaxConns          int
+	DBMaxIdleConns      int
+	DBConnMaxLifetime   int // in seconds
+	DBConnMaxIdleTime   int // in seconds
 
 	// Redis Configuration
 	RedisHost     string
@@ -70,12 +73,15 @@ func LoadConfig() (*Config, error) {
 		BaseURL:     getEnv("BASE_URL", "http://localhost:8080"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "urlshortener"),
-		DBPassword: getEnv("DB_PASSWORD", "password"),
-		DBName:     getEnv("DB_NAME", "urlshortener_db"),
-		DBMaxConns: getEnvAsInt("DB_MAX_CONNECTIONS", 25),
+		DBHost:            getEnv("DB_HOST", "localhost"),
+		DBPort:            getEnv("DB_PORT", "5432"),
+		DBUser:            getEnv("DB_USER", "urlshortener"),
+		DBPassword:        getEnv("DB_PASSWORD", "password"),
+		DBName:            getEnv("DB_NAME", "urlshortener_db"),
+		DBMaxConns:        getEnvAsInt("DB_MAX_CONNECTIONS", 25),
+		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 10),
+		DBConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),
+		DBConnMaxIdleTime: getEnvAsInt("DB_CONN_MAX_IDLE_TIME", 600),
 
 		RedisHost:     getEnv("REDIS_HOST", "localhost"),
 		RedisPort:     getEnv("REDIS_PORT", "6379"),

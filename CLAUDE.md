@@ -77,23 +77,29 @@ configs/
 - **Encoding**: Base62 encoding for short, URL-safe codes
 - **Caching**: Redis for fast lookups with TTL-based expiration
 - **Database**: PostgreSQL with proper indexing for performance
+- **Connection Pooling**: PgBouncer for efficient database connection management
 - **HTTP Framework**: Gin for high-performance HTTP routing
 - **Testing**: Unit tests with testify, integration tests with httptest
 
 ## API Endpoints
 
 - `POST /api/v1/shorten` - Create short URL
-- `GET /{shortCode}` - Redirect to original URL  
+- `GET /{shortCode}` - Redirect to original URL
 - `GET /api/v1/analytics/{shortCode}` - Get analytics data
 - `GET /health` - Health check
+- `GET /health/db-pool` - Database connection pool statistics
+- `GET /health/goroutines` - Goroutine error statistics and monitoring
 
 ## Environment Configuration
 
 Copy `.env.example` to `.env` and configure:
 - Database connection (PostgreSQL)
+- Database connection pool settings (max connections, idle connections, timeouts)
 - Redis connection
 - Server settings (port, base URL)
 - Snowflake node ID for distributed deployment
+
+See `docker/README_PGBOUNCER.md` for detailed connection pooling configuration and monitoring.
 
 ## Testing Strategy
 

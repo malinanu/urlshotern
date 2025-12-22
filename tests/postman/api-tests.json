@@ -1,0 +1,506 @@
+{
+	"info": {
+		"_postman_id": "urlshortener-api-tests",
+		"name": "URL Shortener API Contract Tests",
+		"description": "Comprehensive API contract tests for the URL Shortener service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set base URL if not already set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8080');",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Health Checks",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has correct structure', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData.status).to.equal('healthy');",
+									"    pm.expect(jsonData).to.have.property('service');",
+									"    pm.expect(jsonData.service).to.equal('url-shortener');",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(500);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						}
+					}
+				},
+				{
+					"name": "Database Pool Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has pool statistics', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('max_open_connections');",
+									"    pm.expect(jsonData.data).to.have.property('open_connections');",
+									"    pm.expect(jsonData.data).to.have.property('in_use');",
+									"    pm.expect(jsonData.data).to.have.property('idle');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/db-pool",
+							"host": ["{{base_url}}"],
+							"path": ["health", "db-pool"]
+						}
+					}
+				},
+				{
+					"name": "Goroutine Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has goroutine statistics', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('stats');",
+									"    pm.expect(jsonData.data).to.have.property('recent_errors');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/goroutines?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["health", "goroutines"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "URL Shortening",
+			"item": [
+				{
+					"name": "Shorten URL - Success",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has correct structure', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('short_code');",
+									"    pm.expect(jsonData).to.have.property('short_url');",
+									"    pm.expect(jsonData).to.have.property('original_url');",
+									"    pm.expect(jsonData.original_url).to.equal('https://www.example.com');",
+									"    ",
+									"    // Store short code for later tests",
+									"    pm.environment.set('test_short_code', jsonData.short_code);",
+									"});",
+									"",
+									"pm.test('Short code has valid format', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.short_code).to.match(/^[a-zA-Z0-9]+$/);",
+									"    pm.expect(jsonData.short_code.length).to.be.greaterThan(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\": \"https://www.example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/shorten",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "shorten"]
+						}
+					}
+				},
+				{
+					"name": "Shorten URL - Invalid URL",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Response has error message', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\": \"not-a-valid-url\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/shorten",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "shorten"]
+						}
+					}
+				},
+				{
+					"name": "Shorten URL - Missing URL",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Response has error message', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/shorten",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "shorten"]
+						}
+					}
+				},
+				{
+					"name": "Shorten URL - With Custom Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Custom code is used', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.short_code).to.equal('custom123');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\": \"https://www.example.com/custom\",\n    \"custom_code\": \"custom123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/shorten",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "shorten"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "URL Redirection",
+			"item": [
+				{
+					"name": "Redirect - Valid Short Code",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have a test short code",
+									"if (!pm.environment.get('test_short_code')) {",
+									"    pm.environment.set('test_short_code', 'test123');",
+									"}"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test expects redirect (301 or 302) or not found (404)",
+									"pm.test('Status code is redirect or not found', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([301, 302, 404]);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{test_short_code}}",
+							"host": ["{{base_url}}"],
+							"path": ["{{test_short_code}}"]
+						}
+					}
+				},
+				{
+					"name": "Redirect - Invalid Short Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Response has error message', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData.error).to.equal('not_found');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/nonexistent123",
+							"host": ["{{base_url}}"],
+							"path": ["nonexistent123"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Get Analytics - Valid Short Code",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Ensure we have a test short code",
+									"if (!pm.environment.get('test_short_code')) {",
+									"    pm.environment.set('test_short_code', 'test123');",
+									"}"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test expects success or not found",
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test('Response has analytics data', function () {",
+									"        const jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('short_code');",
+									"        pm.expect(jsonData).to.have.property('original_url');",
+									"        pm.expect(jsonData).to.have.property('total_clicks');",
+									"        pm.expect(jsonData).to.have.property('created_at');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/{{test_short_code}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "{{test_short_code}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Analytics - Invalid Short Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('Response has error message', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/nonexistent456",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "nonexistent456"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Performance Tests",
+			"item": [
+				{
+					"name": "Response Time - Shorten",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Response time is acceptable', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1000);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\": \"https://www.example.com/perf-test\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/shorten",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "shorten"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

@@ -31,10 +31,11 @@ func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool
+	// Configure connection pool with granular settings
 	db.SetMaxOpenConns(config.DBMaxConns)
-	db.SetMaxIdleConns(config.DBMaxConns / 2)
-	db.SetConnMaxLifetime(time.Hour)
+	db.SetMaxIdleConns(config.DBMaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(config.DBConnMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(config.DBConnMaxIdleTime) * time.Second)
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
@@ -54,6 +55,22 @@ func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
 // Close closes the database connection
 func (p *PostgresStorage) Close() error {
 	return p.db.Close()
+}
+
+// GetPoolStats returns database connection pool statistics
+func (p *PostgresStorage) GetPoolStats() map[string]interface{} {
+	stats := p.db.Stats()
+	return map[string]interface{}{
+		"max_open_connections":   stats.MaxOpenConnections,
+		"open_connections":       stats.OpenConnections,
+		"in_use":                 stats.InUse,
+		"idle":                   stats.Idle,
+		"wait_count":             stats.WaitCount,
+		"wait_duration":          stats.WaitDuration.String(),
+		"max_idle_closed":        stats.MaxIdleClosed,
+		"max_idle_time_closed":   stats.MaxIdleTimeClosed,
+		"max_lifetime_closed":    stats.MaxLifetimeClosed,
+	}
 }
 
 // Database access methods for authentication services

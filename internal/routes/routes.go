@@ -26,6 +26,12 @@ func SetupRoutes(
 	// Health check
 	router.GET("/health", handler.HealthCheck)
 
+	// Database connection pool statistics (for monitoring)
+	router.GET("/health/db-pool", handler.DBPoolStats)
+
+	// Goroutine error statistics (for monitoring)
+	router.GET("/health/goroutines", handler.GoroutineStats)
+
 	// Public routes (no authentication required)
 	setupPublicRoutes(router, handler, authMiddleware)
 

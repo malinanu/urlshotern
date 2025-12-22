@@ -4,12 +4,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -23,6 +25,7 @@ type Handler struct {
 	realtimeService        *services.RealtimeAnalyticsService
 	attributionService     *services.AttributionService
 	billingService         *services.BillingService  // Added for usage limit enforcement
+	db                     *storage.PostgresStorage  // Database storage for monitoring
 	AuthHandlers           *AuthHandlers
 	AnalyticsHandlers      *AnalyticsHandlers
 	ConversionHandlers     *ConversionTrackingHandler
@@ -52,6 +55,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		realtimeService:        realtimeService,
 		attributionService:     attributionService,
 		billingService:         billingHandler.billingService,  // Store billing service for usage limit checks
+		db:                     db,  // Store database for monitoring
 		AuthHandlers:           authHandlers,
 		AnalyticsHandlers:      analyticsHandlers,
 		ConversionHandlers:     NewConversionTrackingHandler(conversionService),
@@ -71,6 +75,48 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 		"status":    "healthy",
 		"service":   "url-shortener",
 		"timestamp": gin.H{},
+	})
+}
+
+// DBPoolStats handles database connection pool statistics requests
+func (h *Handler) DBPoolStats(c *gin.Context) {
+	stats := h.db.GetPoolStats()
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   stats,
+	})
+}
+
+// GoroutineStats handles goroutine error statistics requests
+func (h *Handler) GoroutineStats(c *gin.Context) {
+	stats := utils.GetGoroutineStats()
+
+	// Get recent errors if requested
+	limitStr := c.DefaultQuery("limit", "10")
+	limit := 10
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	recentErrors := utils.GetRecentGoroutineErrors(limit)
+
+	// Format errors for response
+	formattedErrors := make([]gin.H, len(recentErrors))
+	for i, err := range recentErrors {
+		formattedErrors[i] = gin.H{
+			"timestamp": err.Timestamp.Format(time.RFC3339),
+			"operation": err.Operation,
+			"error":     err.Error.Error(),
+			"recovered": err.Recovered,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data": gin.H{
+			"stats":         stats,
+			"recent_errors": formattedErrors,
+		},
 	})
 }
 
@@ -176,13 +222,10 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 	clientIP := getClientIP(c)
 	userAgent := c.GetHeader("User-Agent")
 	referrer := c.GetHeader("Referer")
-	
-	go func() {
-		if err := h.shortenerService.RecordClick(shortCode, clientIP, userAgent, referrer); err != nil {
-			// Log error but don't fail the redirect
-			// In production, you'd use proper logging
-		}
-	}()
+
+	utils.Go("record_click", func() error {
+		return h.shortenerService.RecordClick(shortCode, clientIP, userAgent, referrer)
+	})
 
 	// Perform the redirect
 	c.Redirect(http.StatusMovedPermanently, mapping.OriginalURL)
