@@ -31,12 +31,9 @@ export default function PricingPage() {
       }
     };
 
-    if (isAuthenticated) {
-      fetchProducts();
-    } else {
-      setProductsLoading(false);
-    }
-  }, [isAuthenticated]);
+    // Always fetch products, regardless of authentication status
+    fetchProducts();
+  }, []);
 
   // Handler for plan selection
   const handlePlanClick = async (planName: string, productId: string | null, planType: string) => {

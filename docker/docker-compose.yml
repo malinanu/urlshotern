@@ -4,13 +4,13 @@ services:
   app:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "8080:8080"
     environment:
       - SERVER_PORT=8080
       - DB_HOST=pgbouncer
-      - DB_PORT=6432
+      - DB_PORT=5432
       - DB_USER=urlshortener
       - DB_PASSWORD=${DB_PASSWORD:-securepassword}
       - DB_NAME=urlshortener_db
@@ -18,11 +18,12 @@ services:
       - DB_MAX_IDLE_CONNECTIONS=${DB_MAX_IDLE_CONNECTIONS:-10}
       - DB_CONN_MAX_LIFETIME=${DB_CONN_MAX_LIFETIME:-3600}
       - DB_CONN_MAX_IDLE_TIME=${DB_CONN_MAX_IDLE_TIME:-600}
+      - DB_SSLMODE=disable
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - NODE_ID=1
       - BASE_URL=${BASE_URL:-http://localhost:8080}
-      - ENVIRONMENT=production
+      - ENVIRONMENT=development
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -97,7 +98,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=${DB_PASSWORD:-securepassword} psql -h localhost -U urlshortener -d pgbouncer -c 'SHOW POOLS;' || exit 1"]
+      test: ["CMD-SHELL", "PGPASSWORD=${DB_PASSWORD:-securepassword} psql -h localhost -U urlshortener -d urlshortener_db -c 'SELECT 1;' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

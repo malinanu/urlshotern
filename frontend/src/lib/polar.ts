@@ -97,16 +97,18 @@ export interface CheckoutSessionResponse {
 
 /**
  * Fetches available Polar products/plans from the backend
+ * Uses public endpoint - no authentication required
  * @returns Promise with array of Polar products
  */
 export async function getProducts(): Promise<PolarProduct[]> {
   try {
-    const response = await fetch(API_ENDPOINTS.billing.products, {
+    // Use public endpoint - no authentication required
+    const response = await fetch(API_ENDPOINTS.billing.publicProducts, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
+      // No credentials needed for public endpoint
     });
 
     if (!response.ok) {

@@ -64,7 +64,8 @@ export const API_ENDPOINTS = {
   billing: {
     subscription: `${API_BASE_URL}/api/v1/billing/subscription`,
     plans: `${API_BASE_URL}/api/v1/billing/plans`,
-    products: `${API_BASE_URL}/api/v1/billing/products`,
+    products: `${API_BASE_URL}/api/v1/billing/products`,      // Protected - requires auth
+    publicProducts: `${API_BASE_URL}/api/v1/products`,         // Public - no auth required
     usage: `${API_BASE_URL}/api/v1/billing/usage`,
     checkout: `${API_BASE_URL}/api/v1/billing/checkout`,
     cancel: `${API_BASE_URL}/api/v1/billing/cancel-subscription`,
