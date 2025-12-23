@@ -445,11 +445,34 @@ func (bh *BillingHandler) GetCustomerPortalURL(c *gin.Context) {
 func (bh *BillingHandler) GetProducts(c *gin.Context) {
 	polarService := bh.billingService.GetPolarService()
 
-	// Try to sync products from Polar
-	err := polarService.SyncProductsFromPolar()
-	if err != nil {
-		// Log error but continue - we can still return cached products
-		c.Error(err)
+	// Check if we need to sync (database is empty or force sync requested)
+	var productCount int64
+	bh.billingService.GetDB().
+		Table("polar_products").
+		Where("is_archived = ?", false).
+		Count(&productCount)
+
+	shouldSync := productCount == 0 || c.Query("sync") == "true"
+
+	// Try to sync products from Polar if needed
+	if shouldSync {
+		log.Printf("[Billing] Syncing products from Polar (count=%d, force=%v)", productCount, c.Query("sync") == "true")
+		err := polarService.SyncProductsFromPolar()
+		if err != nil {
+			log.Printf("[Billing] Failed to sync products from Polar: %v", err)
+			// If database is empty and sync failed, this is a critical error
+			if productCount == 0 {
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					"error":   "Failed to fetch products from payment gateway",
+					"details": "Unable to sync products and no cached data available. Please try again later.",
+				})
+				return
+			}
+			// Otherwise, log warning and continue with cached data
+			log.Printf("[Billing] Using cached product data due to sync failure")
+		} else {
+			log.Printf("[Billing] Successfully synced products from Polar")
+		}
 	}
 
 	// Get products from database
@@ -463,12 +486,13 @@ func (bh *BillingHandler) GetProducts(c *gin.Context) {
 		Benefits    interface{} `json:"benefits"`
 	}
 
-	err = bh.billingService.GetDB().
+	err := bh.billingService.GetDB().
 		Table("polar_products").
 		Where("is_archived = ?", false).
 		Scan(&products).Error
 
 	if err != nil {
+		log.Printf("[Billing] Failed to retrieve products from database: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to get products",
 			"details": err.Error(),
@@ -476,8 +500,42 @@ func (bh *BillingHandler) GetProducts(c *gin.Context) {
 		return
 	}
 
+	log.Printf("[Billing] Returning %d products", len(products))
 	c.JSON(http.StatusOK, gin.H{
 		"products": products,
+	})
+}
+
+// SyncProducts manually triggers a product sync from Polar (admin/debugging endpoint)
+func (bh *BillingHandler) SyncProducts(c *gin.Context) {
+	polarService := bh.billingService.GetPolarService()
+
+	log.Printf("[Billing] Manual product sync triggered")
+
+	err := polarService.SyncProductsFromPolar()
+	if err != nil {
+		log.Printf("[Billing] Manual sync failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to sync products",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Count synced products
+	var productCount int64
+	bh.billingService.GetDB().
+		Table("polar_products").
+		Where("is_archived = ?", false).
+		Count(&productCount)
+
+	log.Printf("[Billing] Manual sync successful: %d products", productCount)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"message":       "Products synced successfully",
+		"product_count": productCount,
 	})
 }
 

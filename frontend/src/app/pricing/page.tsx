@@ -75,6 +75,14 @@ export default function PricingPage() {
   // Helper to find Polar product by plan type
   const getPolarProductId = (planType: string): string | null => {
     const product = polarProducts.find(p => p.plan_type === planType);
+
+    if (!product) {
+      console.error(`[Pricing] No product found for plan type: ${planType}`);
+      console.error('[Pricing] Available products:', polarProducts);
+      console.error('[Pricing] This may indicate a sync issue with Polar API');
+      console.error('[Pricing] Try manually syncing: POST /api/v1/billing/sync-products');
+    }
+
     return product?.id || null;
   };
 

@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
@@ -209,7 +211,9 @@ func (ps *PolarService) ListProducts() ([]PolarProduct, error) {
 	}
 
 	var response ProductsResponse
-	err := ps.makeRequest("GET", fmt.Sprintf("/products?organization_id=%s", ps.config.PolarOrganizationID), nil, &response)
+	// Note: Polar API requires trailing slash on /products/ endpoint
+	// The organization_id is inferred from the auth token, no need to pass it
+	err := ps.makeRequest("GET", "/products/", nil, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list products: %w", err)
 	}
@@ -326,13 +330,8 @@ func (ps *PolarService) SyncProductsFromPolar() error {
 			}
 		}
 
-		// Determine plan type from metadata or name
-		planType := "premium" // default
-		if product.Metadata != nil {
-			if pt, ok := product.Metadata["plan_type"].(string); ok {
-				planType = pt
-			}
-		}
+		// Determine plan type using multi-strategy detection
+		planType := ps.determinePlanType(product)
 
 		localProduct := models.PolarProduct{
 			ID:             product.ID,
@@ -357,6 +356,59 @@ func (ps *PolarService) SyncProductsFromPolar() error {
 	}
 
 	return nil
+}
+
+// determinePlanType uses multiple strategies to determine the plan type from a Polar product
+func (ps *PolarService) determinePlanType(product PolarProduct) string {
+	// Strategy 1: Check metadata.plan_type (most reliable if set)
+	if product.Metadata != nil {
+		if planType, ok := product.Metadata["plan_type"].(string); ok && planType != "" {
+			log.Printf("[Polar] Plan type for %s from metadata: %s", product.Name, planType)
+			return planType
+		}
+	}
+
+	// Strategy 2: Match against known product IDs
+	switch product.ID {
+	case "1216afa1-650c-4dda-95cd-7010dbb03404":
+		log.Printf("[Polar] Plan type for %s matched by ID: premium", product.Name)
+		return "premium"
+	case "f5ffabdf-e116-4aba-99f3-cdebe0f09486":
+		log.Printf("[Polar] Plan type for %s matched by ID: enterprise", product.Name)
+		return "enterprise"
+	}
+
+	// Strategy 3: Infer from product name
+	nameLower := strings.ToLower(product.Name)
+	if strings.Contains(nameLower, "free") {
+		log.Printf("[Polar] Plan type for %s inferred from name: free", product.Name)
+		return "free"
+	} else if strings.Contains(nameLower, "pro") || strings.Contains(nameLower, "professional") {
+		log.Printf("[Polar] Plan type for %s inferred from name: premium", product.Name)
+		return "premium"
+	} else if strings.Contains(nameLower, "ultra") || strings.Contains(nameLower, "enterprise") {
+		log.Printf("[Polar] Plan type for %s inferred from name: enterprise", product.Name)
+		return "enterprise"
+	}
+
+	// Strategy 4: Infer from price (if prices exist)
+	if len(product.Prices) > 0 {
+		price := product.Prices[0].PriceAmount
+		if price == 0 {
+			log.Printf("[Polar] Plan type for %s inferred from price $0: free", product.Name)
+			return "free"
+		} else if price >= 20000 { // $200+
+			log.Printf("[Polar] Plan type for %s inferred from price $%.2f: enterprise", product.Name, float64(price)/100)
+			return "enterprise"
+		} else if price >= 500 { // $5+
+			log.Printf("[Polar] Plan type for %s inferred from price $%.2f: premium", product.Name, float64(price)/100)
+			return "premium"
+		}
+	}
+
+	// Default: free (safest default)
+	log.Printf("[Polar] Plan type for %s defaulting to: free", product.Name)
+	return "free"
 }
 
 // SaveSubscription saves a Polar subscription to the database
@@ -402,15 +454,24 @@ func (ps *PolarService) ValidateWebhookSignature(payload []byte, signature strin
 // makeRequest makes an HTTP request to the Polar API
 func (ps *PolarService) makeRequest(method, endpoint string, payload interface{}, result interface{}) error {
 	var body io.Reader
+	var payloadStr string
 	if payload != nil {
 		jsonData, err := json.Marshal(payload)
 		if err != nil {
 			return fmt.Errorf("failed to marshal payload: %w", err)
 		}
 		body = bytes.NewBuffer(jsonData)
+		payloadStr = string(jsonData)
 	}
 
 	url := ps.baseURL + endpoint
+
+	// Enhanced logging for diagnostics
+	log.Printf("[Polar API] Request: %s %s", method, url)
+	if payloadStr != "" {
+		log.Printf("[Polar API] Payload: %s", payloadStr)
+	}
+
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -422,6 +483,7 @@ func (ps *PolarService) makeRequest(method, endpoint string, payload interface{}
 
 	resp, err := ps.client.Do(req)
 	if err != nil {
+		log.Printf("[Polar API] Request failed: %v", err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -431,13 +493,18 @@ func (ps *PolarService) makeRequest(method, endpoint string, payload interface{}
 		return fmt.Errorf("failed to read response: %w", err)
 	}
 
+	// Log response details
+	log.Printf("[Polar API] Response: Status=%d, Body=%s", resp.StatusCode, string(respBody))
+
 	if resp.StatusCode >= 400 {
+		log.Printf("[Polar API] Error response: %s", string(respBody))
 		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	if result != nil && len(respBody) > 0 {
 		err = json.Unmarshal(respBody, result)
 		if err != nil {
+			log.Printf("[Polar API] Failed to unmarshal response: %v", err)
 			return fmt.Errorf("failed to unmarshal response: %w", err)
 		}
 	}

@@ -270,6 +270,9 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	billing.GET("/portal", handler.BillingHandlers.GetCustomerPortalURL)
 	billing.GET("/products", handler.BillingHandlers.GetProducts)
 
+	// Admin: Manual product sync (for debugging)
+	billing.POST("/sync-products", handler.BillingHandlers.SyncProducts)
+
 	// Payment methods
 	billing.POST("/payment-method", handler.BillingHandlers.UpdatePaymentMethod)
 	billing.GET("/history", handler.BillingHandlers.GetBillingHistory)
