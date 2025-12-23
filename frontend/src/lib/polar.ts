@@ -133,24 +133,38 @@ export async function getPlans(): Promise<PolarProduct[]> {
 
 /**
  * Redirects to Polar checkout for a specific product
- * @param productId - Polar product ID
+ *
+ * @param productId - Polar product ID (required)
+ * @param accessToken - User's JWT access token (required)
  * @param priceId - Optional specific price ID (for products with multiple prices)
- * @param accessToken - User's JWT access token
  * @returns Promise with checkout URL
+ * @throws Error if authentication fails or checkout creation fails
+ *
+ * @example
+ * const token = getAccessToken();
+ * await redirectToCheckout('prod_abc123', token);
+ *
+ * // With specific price
+ * await redirectToCheckout('prod_abc123', token, 'price_xyz789');
  */
 export async function redirectToCheckout(
   productId: string,
-  priceId?: string,
-  accessToken?: string
+  accessToken: string,
+  priceId?: string
 ): Promise<string> {
   try {
+    // Validate token
+    if (!accessToken || accessToken.trim() === '') {
+      console.error('[Polar] redirectToCheckout called without access token');
+      throw new Error('Authentication required. Please log in to continue.');
+    }
+
+    console.log('[Polar] Creating checkout session for product:', productId);
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
     };
-
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
 
     const response = await fetch(API_ENDPOINTS.billing.checkout, {
       method: 'POST',
@@ -164,10 +178,24 @@ export async function redirectToCheckout(
 
     if (!response.ok) {
       const errorData = await response.json();
+
+      // Enhanced error handling for authentication failures
+      if (response.status === 401) {
+        console.error('[Polar] Authentication failed - token may be expired');
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
+      console.error('[Polar] Checkout failed:', {
+        status: response.status,
+        error: errorData
+      });
+
       throw new Error(errorData.error || 'Failed to create checkout session');
     }
 
     const data: CheckoutSessionResponse = await response.json();
+
+    console.log('[Polar] Checkout session created:', data.checkout_id);
 
     // Redirect to Polar checkout page
     if (data.checkout_url) {

@@ -8,24 +8,61 @@ import { useAuth } from '@/contexts/AuthContext';
 import { redirectToCheckout, getProducts, type PolarProduct } from '@/lib/polar';
 
 export default function PricingPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, getAccessToken } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [productsFetchError, setProductsFetchError] = useState<{
+    type: 'network' | 'api' | null;
+    message: string;
+  } | null>(null);
 
   // Fetch Polar products on mount
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setProductsLoading(true);
+        setProductsFetchError(null);
+
+        console.log('[Pricing] Fetching products from API...');
         const products = await getProducts();
+
         setPolarProducts(products);
-        console.log('[Pricing] Loaded Polar products:', products);
+        console.log('[Pricing] Successfully loaded products:', {
+          count: products.length,
+          plan_types: products.map(p => p.plan_type)
+        });
+
       } catch (error) {
         console.error('[Pricing] Failed to load products:', error);
-        // Continue with static plans if products fail to load
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        if (errorMessage.includes('fetch') ||
+            errorMessage.includes('network') ||
+            errorMessage.includes('Failed to fetch')) {
+          // Network/CORS error
+          setProductsFetchError({
+            type: 'network',
+            message: 'Unable to connect to the server. Please check your internet connection.'
+          });
+          console.error('[Pricing] Network error detected. Check:');
+          console.error('  1. Backend server is running (http://localhost:8080)');
+          console.error('  2. CORS is configured (check browser DevTools Network tab)');
+          console.error('  3. No ad blockers or extensions blocking requests');
+        } else {
+          // API error
+          setProductsFetchError({
+            type: 'api',
+            message: `API error: ${errorMessage}`
+          });
+          console.error('[Pricing] API error:', errorMessage);
+          console.error('  - Backend may be experiencing issues');
+        }
+
+        setPolarProducts([]);
       } finally {
         setProductsLoading(false);
       }
@@ -58,15 +95,34 @@ export default function PricingPage() {
       return;
     }
 
+    // Get access token
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      console.error('[Pricing] User is authenticated but no access token found');
+      alert('Session expired. Please log in again.');
+      router.push(`/login?returnUrl=${encodeURIComponent('/pricing')}`);
+      return;
+    }
+
     // User is authenticated - redirect to Polar checkout
     try {
       setIsLoading(true);
       setLoadingPlan(planName);
       console.log(`[Pricing] Creating checkout for product: ${productId}`);
-      await redirectToCheckout(productId);
+      await redirectToCheckout(productId, accessToken);
     } catch (error) {
-      console.error('Failed to create checkout session:', error);
-      alert('Failed to start checkout. Please try again or contact support.');
+      console.error('[Pricing] Failed to create checkout session:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start checkout';
+
+      if (errorMessage.includes('session has expired') || errorMessage.includes('log in again')) {
+        // Token expired - redirect to login
+        router.push(`/login?returnUrl=${encodeURIComponent('/pricing')}`);
+      } else {
+        // Other error - show user-friendly message
+        alert(errorMessage + '\n\nPlease try again or contact support if the problem persists.');
+      }
+
       setIsLoading(false);
       setLoadingPlan(null);
     }
@@ -77,10 +133,18 @@ export default function PricingPage() {
     const product = polarProducts.find(p => p.plan_type === planType);
 
     if (!product) {
-      console.error(`[Pricing] No product found for plan type: ${planType}`);
-      console.error('[Pricing] Available products:', polarProducts);
-      console.error('[Pricing] This may indicate a sync issue with Polar API');
-      console.error('[Pricing] Try manually syncing: POST /api/v1/billing/sync-products');
+      // Context-aware error messages
+      if (productsFetchError?.type === 'network') {
+        console.error(`[Pricing] Cannot load ${planType} plan - network error occurred`);
+        console.error('[Pricing] Check browser DevTools → Network tab for failed requests');
+      } else if (polarProducts.length === 0) {
+        console.error(`[Pricing] No products returned from API`);
+        console.error('[Pricing] Admin action: POST /api/v1/billing/sync-products');
+      } else {
+        console.error(`[Pricing] Product not found for plan type: ${planType}`);
+        console.error('[Pricing] Available plan types:', polarProducts.map(p => p.plan_type));
+        console.error('[Pricing] Admin may need to re-sync from Polar');
+      }
     }
 
     return product?.id || null;
@@ -184,6 +248,36 @@ export default function PricingPage() {
 
   return (
     <Layout>
+      {/* Error Banner */}
+      {productsFetchError && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  {productsFetchError.type === 'network' ? (
+                    <>
+                      <strong>Connection Issue:</strong> Unable to load pricing information.
+                      Please check your internet connection and refresh the page.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Service Issue:</strong> Our pricing service is temporarily unavailable.
+                      Please try again in a few moments.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary-50 to-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
