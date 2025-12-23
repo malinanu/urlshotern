@@ -89,14 +89,35 @@ END $$;
 CREATE TABLE IF NOT EXISTS api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id BIGINT NOT NULL,
+    key_hash VARCHAR(255) NOT NULL UNIQUE,
+    key_prefix VARCHAR(100) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    key_hash VARCHAR(255) NOT NULL,
+    description TEXT,
+    permissions JSONB DEFAULT '[]',
+    rate_limit INTEGER DEFAULT 1000,
     last_used_at TIMESTAMP WITH TIME ZONE,
+    last_used_ip INET,
     expires_at TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT TRUE,
-    permissions JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- API Key Usage table for tracking and analytics
+CREATE TABLE IF NOT EXISTS api_key_usage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    api_key_id UUID NOT NULL,
+    endpoint VARCHAR(255) NOT NULL,
+    method VARCHAR(10) NOT NULL,
+    status_code INTEGER NOT NULL,
+    response_time_ms INTEGER,
+    ip_address INET,
+    user_agent TEXT,
+    request_size INTEGER,
+    response_size INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE
 );
 
 -- User preferences
@@ -136,5 +157,13 @@ CREATE INDEX IF NOT EXISTS idx_phone_verifications_user_id ON phone_verification
 CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_user_id ON url_mappings(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active);
+CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at);
+CREATE INDEX IF NOT EXISTS idx_api_keys_created_at ON api_keys(created_at);
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_api_key_id ON api_key_usage(api_key_id);
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage(created_at);
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_endpoint ON api_key_usage(endpoint);
+CREATE INDEX IF NOT EXISTS idx_api_key_usage_status_code ON api_key_usage(status_code);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);

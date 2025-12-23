@@ -423,8 +423,8 @@ CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
 
 -- User sessions indexes
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_started_at ON user_sessions(started_at);
-CREATE INDEX IF NOT EXISTS idx_user_sessions_active ON user_sessions(is_active);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_created_at ON user_sessions(created_at);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
 
 -- URL mappings indexes (additional to existing ones)
 CREATE INDEX IF NOT EXISTS idx_url_mappings_user_id ON url_mappings(user_id);

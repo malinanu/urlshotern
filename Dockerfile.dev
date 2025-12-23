@@ -59,11 +59,11 @@ RUN apk add --no-cache postgresql-client
 # Copy migration scripts
 COPY scripts/ /app/scripts/
 COPY configs/migrations/ /app/configs/migrations/
-RUN chmod +x /app/scripts/*.sh
+RUN find /app/scripts -name "*.sh" -exec sed -i 's/\r$//' {} \; && chmod +x /app/scripts/*.sh
 
 # Copy and set entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Use entrypoint to run migrations before starting app
 ENTRYPOINT ["/entrypoint.sh"]
