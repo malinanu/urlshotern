@@ -24,7 +24,6 @@ services:
       - ..:/app
       - /app/tmp
       - /app/frontend/node_modules
-      - /app/static
     depends_on:
       - postgres
       - redis

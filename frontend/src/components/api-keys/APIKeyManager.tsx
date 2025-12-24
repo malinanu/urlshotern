@@ -16,7 +16,7 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface APIKey {
-  id: number;
+  id: string;
   key_prefix: string;
   name: string;
   description?: string;
@@ -39,7 +39,7 @@ interface CreateAPIKeyRequest {
 }
 
 interface APIKeyStats {
-  api_key_id: number;
+  api_key_id: string;
   total_requests: number;
   today_requests: number;
   week_requests: number;
@@ -145,7 +145,7 @@ export default function APIKeyManager() {
     }
   };
 
-  const handleDelete = async (keyId: number) => {
+  const handleDelete = async (keyId: string) => {
     if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) return;
 
     const token = getAccessToken();
@@ -169,7 +169,7 @@ export default function APIKeyManager() {
     }
   };
 
-  const handleRevoke = async (keyId: number) => {
+  const handleRevoke = async (keyId: string) => {
     if (!confirm('Are you sure you want to revoke this API key?')) return;
 
     const token = getAccessToken();
@@ -193,7 +193,7 @@ export default function APIKeyManager() {
     }
   };
 
-  const fetchStats = async (keyId: number) => {
+  const fetchStats = async (keyId: string) => {
     const token = getAccessToken();
     if (!token) return;
 
@@ -206,7 +206,7 @@ export default function APIKeyManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setSelectedStats(data.stats);
+        setSelectedStats(data);
       }
     } catch (error) {
       console.error('Error fetching API key stats:', error);

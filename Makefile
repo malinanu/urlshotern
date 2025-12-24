@@ -1,6 +1,6 @@
 # Makefile for URL Shortener
 
-.PHONY: build test clean install dev docker-build docker-run docker-stop lint format help
+.PHONY: build test clean install dev dev-frontend dev-backend dev-separate dev-docker docker-build docker-run docker-stop lint format help
 
 # Variables
 BINARY_NAME=url-shortener
@@ -21,6 +21,10 @@ help:
 	@echo "  clean               - Clean build artifacts"
 	@echo "  install             - Install dependencies"
 	@echo "  dev                 - Start development environment"
+	@echo "  dev-frontend        - Run frontend dev server (Mode 2)"
+	@echo "  dev-backend         - Run backend locally (Mode 2)"
+	@echo "  dev-separate        - Show instructions for Mode 2 setup"
+	@echo "  dev-docker          - Run full Docker stack (Mode 1)"
 	@echo "  run                 - Run the application locally"
 	@echo "  docker-build        - Build Docker image"
 	@echo "  docker-run          - Run with Docker Compose"
@@ -94,6 +98,40 @@ dev:
 		echo "Docker Compose is required for development environment"; \
 		exit 1; \
 	fi
+
+# Run frontend dev server separately (Mode 2: Separate Dev Servers)
+dev-frontend:
+	@echo "🎨 Starting Next.js development server on http://localhost:3000..."
+	@cd frontend && npm run dev
+
+# Run backend separately (Mode 2: Separate Dev Servers)
+dev-backend:
+	@echo "🚀 Starting Go backend server on http://localhost:8080..."
+	@go run cmd/server/main.go
+
+# Show instructions for running frontend and backend separately (Mode 2)
+dev-separate:
+	@echo "📚 Mode 2: Separate Dev Servers"
+	@echo ""
+	@echo "This mode runs frontend and backend in separate processes for fast hot-reloading."
+	@echo ""
+	@echo "Open two terminals and run:"
+	@echo ""
+	@echo "  Terminal 1:  make dev-backend"
+	@echo "  Terminal 2:  make dev-frontend"
+	@echo ""
+	@echo "Access points:"
+	@echo "  - Frontend: http://localhost:3000  (Next.js dev server with HMR)"
+	@echo "  - Backend:  http://localhost:8080  (Go API server)"
+	@echo ""
+	@echo "💡 Tip: Use this mode for frontend development with instant hot-reloading!"
+	@echo ""
+	@echo "For more information, see docs/DEVELOPMENT.md"
+
+# Run full Docker stack (Mode 1: Docker-Only)
+dev-docker:
+	@echo "🐳 Starting full Docker development stack..."
+	@docker-compose -f docker/docker-compose.local.yml up --build
 
 # Run the application locally
 run: build

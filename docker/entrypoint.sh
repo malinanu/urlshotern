@@ -25,5 +25,20 @@ fi
 echo "✅ Application initialization complete!"
 echo ""
 
+# Check if frontend is built, if not, build it now
+if [ ! -f "/app/static/index.html" ]; then
+    echo "🎨 Frontend not found, building now..."
+    if [ -d "/app/frontend" ]; then
+        cd /app/frontend && npm run build
+        echo "📦 Copying frontend build to /app/static..."
+        mkdir -p /app/static
+        cp -r /app/frontend/out/* /app/static/
+        echo "✅ Frontend build complete!"
+    else
+        echo "⚠️  Frontend directory not found, skipping frontend build"
+    fi
+    cd /app
+fi
+
 # Execute the main command (air for development, or the Go binary for production)
 exec "$@"

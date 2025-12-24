@@ -6,12 +6,8 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Note: eslint and typescript configs moved to next.config.js or removed in Next.js 16
+  // Use next lint --no-eslint and tsc --noEmit for type checking instead
 
   // Enable React Compiler and experimental features
   experimental: {
@@ -36,69 +32,22 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
 
-  // PWA and mobile optimization
-  async headers() {
-    return [
-      {
-        source: '/manifest.json',
-        headers: [
-          {
-            key: 'Content-Type',
-            value: 'application/manifest+json',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/sw.js',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
-          },
-        ],
-      },
-      {
-        source: '/:all*(svg|jpg|jpeg|png|gif|ico|webp|avif)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on',
-          },
-        ],
-      },
-    ]
-  },
+  // Note: headers() function removed - incompatible with output: 'export'
+  // Static exports don't support custom headers
+  // Headers should be configured at the web server level (nginx, etc.)
 
   // Enable static export for production build
   output: 'export',
 
+  // Silence workspace lockfile warning
+  outputFileTracingRoot: __dirname,
+
   // Production source maps for error tracking (smaller than dev maps)
   productionBrowserSourceMaps: false,
 
-  // Optimize CSS
-  optimizeFonts: true,
+  // Turbopack is now the default in Next.js 16
+  // Empty config to silence webpack compatibility warning
+  turbopack: {},
 
   // Simplified webpack configuration for Next.js 15 compatibility
   // The aggressive chunking strategy was causing module resolution issues
