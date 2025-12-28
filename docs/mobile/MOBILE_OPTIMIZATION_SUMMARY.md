@@ -1,5 +1,7 @@
 # Mobile Optimization Implementation Summary
 
+> **Note (December 2025):** Workbox has been removed from this project as advanced offline features and push notifications were deemed unnecessary for this URL shortener system. The application now uses a basic service worker (`sw.js`) with native Cache API, which provides all essential PWA functionality without the additional complexity. References to Workbox and `sw-advanced.js` in this document are historical and no longer applicable.
+
 ## Overview
 
 This document summarizes the comprehensive mobile optimization and Progressive Web App (PWA) features implemented in the URL Shortener application.

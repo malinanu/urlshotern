@@ -13,8 +13,6 @@ console.log('🚀 Mobile Optimization Setup\n');
 // Check dependencies
 const packageJson = require('../package.json');
 const requiredDeps = [
-  'workbox-webpack-plugin',
-  'workbox-window',
   'idb',
   'react-intersection-observer',
   '@tanstack/react-virtual',
@@ -52,7 +50,6 @@ const requiredFiles = [
   'src/components/MobileAppShell.tsx',
   'src/components/mobile/VirtualScrollList.tsx',
   'src/components/mobile/MobileOptimizedAnalytics.tsx',
-  'public/sw-advanced.js',
   'public/manifest.json',
 ];
 
