@@ -78,24 +78,24 @@ export async function getDB(): Promise<IDBPDatabase<URLShortenerDB>> {
 
       if (!db.objectStoreNames.contains('cached-urls')) {
         const urlStore = db.createObjectStore('cached-urls', { keyPath: 'id' });
-        urlStore.createIndex('shortCode', 'shortCode', { unique: false });
-        urlStore.createIndex('lastAccessed', 'lastAccessed', { unique: false });
+        (urlStore as any).createIndex('shortCode', 'shortCode', { unique: false });
+        (urlStore as any).createIndex('lastAccessed', 'lastAccessed', { unique: false });
       }
 
       if (!db.objectStoreNames.contains('analytics-cache')) {
         const analyticsStore = db.createObjectStore('analytics-cache', {
           keyPath: 'shortCode',
         });
-        analyticsStore.createIndex('timestamp', 'timestamp', { unique: false });
-        analyticsStore.createIndex('expiresAt', 'expiresAt', { unique: false });
+        (analyticsStore as any).createIndex('timestamp', 'timestamp', { unique: false });
+        (analyticsStore as any).createIndex('expiresAt', 'expiresAt', { unique: false });
       }
 
       if (!db.objectStoreNames.contains('pending-actions')) {
         const actionsStore = db.createObjectStore('pending-actions', {
           keyPath: 'id',
         });
-        actionsStore.createIndex('timestamp', 'timestamp', { unique: false });
-        actionsStore.createIndex('type', 'type', { unique: false });
+        (actionsStore as any).createIndex('timestamp', 'timestamp', { unique: false });
+        (actionsStore as any).createIndex('type', 'type', { unique: false });
       }
     },
   });
@@ -183,10 +183,10 @@ export async function cacheURL(urlData: {
 export async function getCachedURLs(limit: number = 50) {
   const db = await getDB();
   const tx = db.transaction('cached-urls', 'readonly');
-  const index = tx.store.index('lastAccessed');
+  const index = (tx.store as any).index('lastAccessed');
 
   const urls = await index.getAll();
-  return urls.sort((a, b) => b.lastAccessed - a.lastAccessed).slice(0, limit);
+  return urls.sort((a: any, b: any) => b.lastAccessed - a.lastAccessed).slice(0, limit);
 }
 
 /**
@@ -195,7 +195,7 @@ export async function getCachedURLs(limit: number = 50) {
 export async function getCachedURL(shortCode: string) {
   const db = await getDB();
   const tx = db.transaction('cached-urls', 'readonly');
-  const index = tx.store.index('shortCode');
+  const index = (tx.store as any).index('shortCode');
 
   const urls = await index.getAll(shortCode);
   return urls[0] || null;
@@ -245,7 +245,7 @@ export async function getCachedAnalytics(shortCode: string) {
 export async function clearExpiredAnalyticsCache(): Promise<void> {
   const db = await getDB();
   const tx = db.transaction('analytics-cache', 'readwrite');
-  const index = tx.store.index('expiresAt');
+  const index = (tx.store as any).index('expiresAt');
 
   const now = Date.now();
   const cursor = await index.openCursor();

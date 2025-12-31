@@ -6,7 +6,7 @@
 import { useEffect, RefObject } from 'react';
 
 interface UseIntersectionObserverOptions {
-  target: RefObject<Element>;
+  target: RefObject<Element | null>;
   onIntersect: () => void;
   threshold?: number;
   rootMargin?: string;

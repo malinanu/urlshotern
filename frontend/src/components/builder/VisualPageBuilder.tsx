@@ -717,7 +717,7 @@ export function VisualPageBuilder() {
           <div className="flex items-center space-x-4">
             <Button
               onClick={() => setPreviewMode(!previewMode)}
-              variant={previewMode ? 'solid' : 'ghost'}
+              variant={previewMode ? 'default' : 'ghost'}
               className="flex items-center space-x-2"
             >
               <EyeIcon className="h-4 w-4" />

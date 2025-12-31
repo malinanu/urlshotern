@@ -4,13 +4,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LinkIcon,
-  TrendingUpIcon,
-  GlobeIcon,
+  GlobeAltIcon,
   TagIcon,
   ChartBarIcon,
   EyeIcon,
   ArrowTrendingUpIcon,
-  ExternalLinkIcon
+  ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -101,8 +100,8 @@ const CATEGORY_COLORS: { [key: string]: string } = {
 };
 
 const CATEGORY_ICONS: { [key: string]: React.ReactNode } = {
-  social: <GlobeIcon className="w-4 h-4" />,
-  search: <TrendingUpIcon className="w-4 h-4" />,
+  social: <GlobeAltIcon className="w-4 h-4" />,
+  search: <ArrowTrendingUpIcon className="w-4 h-4" />,
   direct: <LinkIcon className="w-4 h-4" />,
   email: <TagIcon className="w-4 h-4" />,
   news: <ChartBarIcon className="w-4 h-4" />,
@@ -248,7 +247,7 @@ export default function ReferrerAnalytics({
         <div className="flex justify-between items-center">
           <div>
             <h3 className="font-medium text-gray-900 flex items-center">
-              <ExternalLinkIcon className="w-5 h-5 mr-2 text-blue-600" />
+              <ArrowTopRightOnSquareIcon className="w-5 h-5 mr-2 text-blue-600" />
               Referrer Analytics
             </h3>
             <p className="text-sm text-gray-600">

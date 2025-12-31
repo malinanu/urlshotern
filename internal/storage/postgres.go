@@ -1,8 +1,10 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -78,6 +80,11 @@ func (p *PostgresStorage) GetPoolStats() map[string]interface{} {
 // QueryRow executes a query that returns at most one row
 func (p *PostgresStorage) QueryRow(query string, args ...interface{}) *sql.Row {
 	return p.db.QueryRow(query, args...)
+}
+
+// QueryRowContext executes a query with context that returns at most one row
+func (p *PostgresStorage) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return p.db.QueryRowContext(ctx, query, args...)
 }
 
 // Exec executes a query that doesn't return rows
@@ -844,8 +851,26 @@ func (p *PostgresStorage) UpdateUserProfile(userID int64, updates map[string]int
 	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d",
 		strings.Join(setClauses, ", "), argIndex)
 
-	_, err := p.Exec(query, args...)
-	return err
+	// Log the update for debugging
+	log.Printf("[DEBUG] UpdateUserProfile: userID=%d, query=%s, args=%v",
+		userID, query, args)
+
+	result, err := p.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute update: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no user found with id %d or no changes made", userID)
+	}
+
+	log.Printf("[INFO] Profile updated successfully for user %d, rows affected: %d", userID, rowsAffected)
+	return nil
 }
 
 // UpdateUserStatus updates user status (active/inactive)
@@ -872,15 +897,30 @@ func (p *PostgresStorage) GetUserPreferences(userID int64) (*models.UserPreferen
 	return prefs, nil
 }
 
-// UpdateUserPreferences updates user preferences
+// UpdateUserPreferences updates user preferences (creates if not exists)
 func (p *PostgresStorage) UpdateUserPreferences(prefs *models.UserPreferences) error {
 	query := `
-		UPDATE user_preferences 
-		SET default_expiration = $1, analytics_public = $2, email_notifications = $3,
-		    marketing_emails = $4, timezone = $5, theme = $6
-		WHERE user_id = $7
+		INSERT INTO user_preferences (
+			user_id, default_expiration, analytics_public,
+			email_notifications, marketing_emails, timezone, theme
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (user_id) DO UPDATE SET
+			default_expiration = EXCLUDED.default_expiration,
+			analytics_public = EXCLUDED.analytics_public,
+			email_notifications = EXCLUDED.email_notifications,
+			marketing_emails = EXCLUDED.marketing_emails,
+			timezone = EXCLUDED.timezone,
+			theme = EXCLUDED.theme
 	`
-	_, err := p.Exec(query, prefs.DefaultExpiration, prefs.AnalyticsPublic,
-		prefs.EmailNotifications, prefs.MarketingEmails, prefs.Timezone, prefs.Theme, prefs.UserID)
+	_, err := p.Exec(query,
+		prefs.UserID,
+		prefs.DefaultExpiration,
+		prefs.AnalyticsPublic,
+		prefs.EmailNotifications,
+		prefs.MarketingEmails,
+		prefs.Timezone,
+		prefs.Theme,
+	)
 	return err
 }

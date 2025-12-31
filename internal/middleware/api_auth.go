@@ -59,18 +59,16 @@ func APIKeyAuthMiddleware(apiKeyService *services.APIKeyService) gin.HandlerFunc
 			endpoint := c.Request.URL.Path
 			method := c.Request.Method
 			userAgent := c.GetHeader("User-Agent")
-			
+
 			// Calculate response time (simplified - you might want to use a more accurate method)
 			responseTime := int(time.Since(time.Now()).Milliseconds())
-			
+
 			_ = apiKeyService.RecordAPIKeyUsage(
 				keyData.ID,
 				endpoint,
 				method,
 				statusCode,
 				responseTime,
-				int(c.Request.ContentLength),
-				c.Writer.Size(),
 				ipAddress,
 				userAgent,
 			)

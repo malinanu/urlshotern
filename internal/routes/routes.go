@@ -104,11 +104,13 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 	
 	// Protected auth routes (require authentication)
 	protected := auth.Group("/")
-	// protected.Use(authMiddleware.RequireAuth())  // Temporarily disabled
+	protected.Use(authMiddleware.RequireAuth())  // Re-enabled authentication middleware
 	{
 		protected.GET("/profile", authHandlers.GetProfile)
 		protected.PUT("/profile", authHandlers.UpdateProfile)
-		protected.POST("/change-password", authHandlers.ChangePassword)
+		protected.GET("/preferences", authHandlers.GetPreferences)
+		protected.PUT("/preferences", authHandlers.UpdatePreferences)
+		protected.PUT("/change-password", authHandlers.ChangePassword)
 		protected.POST("/logout", authHandlers.Logout)
 		protected.POST("/send-otp", authHandlers.SendOTP) // For authenticated users
 	}

@@ -701,7 +701,7 @@ export default function APIDocsPage() {
                           <div className="absolute top-4 right-4 flex items-center gap-2">
                             <span className="text-xs text-gray-400 font-mono">JSON</span>
                             <button
-                              onClick={() => copyToClipboard(selectedEndpoint.example.response, 'example-response')}
+                              onClick={() => copyToClipboard(selectedEndpoint.example!.response, 'example-response')}
                               className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
                             >
                               {copiedCode === 'example-response' ? (
@@ -712,7 +712,7 @@ export default function APIDocsPage() {
                             </button>
                           </div>
                           <pre className="text-green-400 text-sm overflow-x-auto font-mono leading-relaxed pt-8">
-                            <code>{selectedEndpoint.example.response}</code>
+                            <code>{selectedEndpoint.example!.response}</code>
                           </pre>
                         </div>
                       </div>

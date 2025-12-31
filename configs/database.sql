@@ -75,26 +75,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- User preferences table
-CREATE TABLE IF NOT EXISTS user_preferences (
-    user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    theme VARCHAR(20) DEFAULT 'light',
-    notifications_email BOOLEAN DEFAULT TRUE,
-    notifications_push BOOLEAN DEFAULT TRUE,
-    notifications_sms BOOLEAN DEFAULT FALSE,
-    analytics_enabled BOOLEAN DEFAULT TRUE,
-    public_profile BOOLEAN DEFAULT FALSE,
-    custom_domain_limit INTEGER DEFAULT 0,
-    url_limit INTEGER DEFAULT 1000,
-    click_tracking BOOLEAN DEFAULT TRUE,
-    password_expires_at TIMESTAMP WITH TIME ZONE,
-    two_factor_enabled BOOLEAN DEFAULT FALSE,
-    two_factor_secret VARCHAR(32),
-    backup_codes JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- OAuth providers table
 CREATE TABLE IF NOT EXISTS oauth_providers (
     id BIGSERIAL PRIMARY KEY,

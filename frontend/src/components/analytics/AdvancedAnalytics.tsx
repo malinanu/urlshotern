@@ -329,6 +329,11 @@ const ChartSkeleton = () => (
 
 // Geographic Analytics Component
 function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic'] }) {
+  // Compute chart data from the geographic data
+  const topCountriesForChart = data?.countries?.slice(0, 10) || [];
+  const topCountriesForPie = data?.countries?.slice(0, 8) || [];
+  const chartColors = topCountriesForPie.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+
   return (
     <div className="space-y-6">
       {/* Countries Chart */}

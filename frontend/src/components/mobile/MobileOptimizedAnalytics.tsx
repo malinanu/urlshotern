@@ -5,11 +5,10 @@
 
 'use client';
 
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useRef, useEffect, RefObject } from 'react';
 import { useNetworkStatus, useAdaptiveLoading } from '@/hooks/useNetworkStatus';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { getCachedAnalytics, cacheAnalytics } from '@/utils/offlineSync';
-import { useRef, useEffect } from 'react';
 
 // Lazy load heavy chart components
 const LazyLineChart = lazy(() =>
@@ -50,19 +49,19 @@ export function MobileOptimizedAnalytics({
 
   // Lazy load sections as they come into view
   useIntersectionObserver({
-    target: timelineRef,
+    target: timelineRef as RefObject<Element | null>,
     onIntersect: () => setVisibleSections(prev => ({ ...prev, timeline: true })),
     enabled: !visibleSections.timeline,
   });
 
   useIntersectionObserver({
-    target: geographyRef,
+    target: geographyRef as RefObject<Element | null>,
     onIntersect: () => setVisibleSections(prev => ({ ...prev, geography: true })),
     enabled: !visibleSections.geography,
   });
 
   useIntersectionObserver({
-    target: devicesRef,
+    target: devicesRef as RefObject<Element | null>,
     onIntersect: () => setVisibleSections(prev => ({ ...prev, devices: true })),
     enabled: !visibleSections.devices,
   });

@@ -404,7 +404,7 @@ export function PageTemplateManager() {
               </div>
               <div className="flex flex-col items-end space-y-2">
                 {template.is_default && (
-                  <Badge variant="warning" className="flex items-center">
+                  <Badge variant="outline" className="flex items-center">
                     <SparklesIcon className="h-3 w-3 mr-1" />
                     Default
                   </Badge>
@@ -649,7 +649,7 @@ export function PageTemplateManager() {
               Template Content *
             </label>
             <RichTextEditor
-              value={formData.content}
+              content={formData.content}
               onChange={(content) => setFormData(prev => ({ ...prev, content }))}
               placeholder="Enter your template content here. Use variables with ${variable_name} syntax."
             />
@@ -692,7 +692,7 @@ export function PageTemplateManager() {
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">{previewTemplate.category}</Badge>
               {previewTemplate.is_default && (
-                <Badge variant="warning">Default</Badge>
+                <Badge variant="outline">Default</Badge>
               )}
               <span className="text-sm text-gray-500">{previewTemplate.slug}</span>
             </div>

@@ -2,11 +2,12 @@ FROM golang:1.23-alpine
 
 WORKDIR /app
 
-# Install Node.js and npm for frontend build
-RUN apk add --no-cache nodejs npm
+# Install Node.js, npm, and git for development tools
+RUN apk add --no-cache nodejs npm git
 
 # Install air for hot reloading (compatible version)
-RUN go install github.com/cosmtrek/air@v1.49.0
+# Use direct mode to bypass proxy issues
+RUN GOPROXY=direct go install github.com/cosmtrek/air@v1.49.0
 
 # Copy go mod files
 COPY go.mod go.sum ./

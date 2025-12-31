@@ -1,8 +1,9 @@
 services:
-  app:
+  backend:
     build:
       context: ..
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.backend.dev
+    container_name: urlshortener-backend-dev
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -23,10 +24,41 @@ services:
     volumes:
       - ..:/app
       - /app/tmp
-      - /app/frontend/node_modules
     depends_on:
       - postgres
       - redis
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - urlshortener
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.frontend.dev
+    container_name: urlshortener-frontend-dev
+    environment:
+      # Use localhost:8080 for browser requests (port is exposed to host)
+      # BACKEND_URL is used for server-side Next.js rewrites (uses Docker network)
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - BACKEND_URL=http://backend:8080
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+      # Enable WebSocket support for HMR
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - urlshortener
 

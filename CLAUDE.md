@@ -9,16 +9,28 @@ This is a high-performance URL shortener service built with Go, featuring Redis 
 ## Common Development Commands
 
 ```bash
-# Development setup (Windows)
-.\scripts\setup-local.ps1
+# Development with Docker (Recommended - Hot Reload Enabled)
+docker-compose -f docker/docker-compose.local.yml up --build  # First time only
+docker-compose -f docker/docker-compose.local.yml up          # Daily development
 
-# Development setup (Unix/Linux/macOS)  
-make dev
+# Access points:
+# - Frontend (Main):  http://localhost:3000  (Next.js with HMR)
+# - Backend API:      http://localhost:8080  (Go with air hot reload)
+# - Adminer (DB UI):  http://localhost:8081  (Database management)
+
+# Docker commands
+make docker-build       # Build production Docker image
+make docker-run         # Start production stack
+make docker-stop        # Stop all services
+
+# Development setup (Alternative - without Docker)
+.\scripts\setup-local.ps1  # Windows
+make dev                   # Unix/Linux/macOS
 
 # Build the application
 make build
 
-# Run the application locally
+# Run the application locally (without Docker)
 go run cmd/server/main.go
 # or
 make run
@@ -28,11 +40,6 @@ make test                # All tests
 make test-unit          # Unit tests only
 make test-integration   # Integration tests only
 make test-coverage      # With coverage report
-
-# Docker commands
-make docker-build       # Build Docker image
-make docker-run         # Start production stack
-make docker-stop        # Stop all services
 
 # Code quality
 make lint               # Run linters

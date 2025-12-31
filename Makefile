@@ -128,10 +128,37 @@ dev-separate:
 	@echo ""
 	@echo "For more information, see docs/DEVELOPMENT.md"
 
-# Run full Docker stack (Mode 1: Docker-Only)
+# Run full Docker stack with hot reload (Mode 1: Docker with Hot Reload)
 dev-docker:
-	@echo "🐳 Starting full Docker development stack..."
+	@echo "🐳 Starting full Docker development stack with hot reload..."
+	@echo "📋 Access points:"
+	@echo "  - Frontend (Main):  http://localhost:3000  (Next.js with HMR)"
+	@echo "  - Backend API:      http://localhost:8080  (Go with air hot reload)"
+	@echo "  - Adminer (DB UI):  http://localhost:8081  (Database management)"
+	@echo ""
+	@echo "✨ Hot reload enabled:"
+	@echo "  - Frontend changes: ~100ms HMR"
+	@echo "  - Backend changes:  ~1-3s air rebuild"
+	@echo ""
 	@docker-compose -f docker/docker-compose.local.yml up --build
+
+# View frontend container logs
+dev-docker-logs-frontend:
+	@docker-compose -f docker/docker-compose.local.yml logs -f frontend
+
+# View backend container logs
+dev-docker-logs-backend:
+	@docker-compose -f docker/docker-compose.local.yml logs -f backend
+
+# Restart frontend container (useful after package.json changes)
+dev-docker-restart-frontend:
+	@echo "🔄 Restarting frontend container..."
+	@docker-compose -f docker/docker-compose.local.yml restart frontend
+
+# Restart backend container
+dev-docker-restart-backend:
+	@echo "🔄 Restarting backend container..."
+	@docker-compose -f docker/docker-compose.local.yml restart backend
 
 # Run the application locally
 run: build

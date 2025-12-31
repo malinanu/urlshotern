@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -193,7 +194,7 @@ func (h *AuthHandlers) GetProfile(c *gin.Context) {
 
 // UpdateProfile handles profile updates
 func (h *AuthHandlers) UpdateProfile(c *gin.Context) {
-	_, exists := middleware.GetUserID(c)
+	userID, exists := middleware.GetUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -205,9 +206,15 @@ func (h *AuthHandlers) UpdateProfile(c *gin.Context) {
 		return
 	}
 
+	log.Printf("[DEBUG] Profile update request - UserID: %d, Request: %+v", userID, req)
+
 	// Validate request
 	if err := h.validator.Struct(req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation failed",
+			"message": err.Error(),
+			"details": err.Error(),
+		})
 		return
 	}
 
@@ -217,25 +224,85 @@ func (h *AuthHandlers) UpdateProfile(c *gin.Context) {
 		middleware.LogInfo(c, "Profile update requested with phone number")
 	}
 
-	// Get user ID from context
+	log.Printf("[DEBUG] Calling UpdateProfile service - UserID: %d, Name: %v, Phone: %v", userID, req.Name, req.Phone)
+
+	// Update profile using auth service
+	updatedUser, err := h.authService.UpdateProfile(userID, &req, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		log.Printf("[ERROR] Profile update failed for user %d: %v", userID, err)
+		middleware.LogError(c, err, "Failed to update profile")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to update profile",
+			"message": err.Error(),
+			"details": err.Error(),
+		})
+		return
+	}
+
+	log.Printf("[INFO] Profile updated successfully for user %d", userID)
+
+	middleware.LogInfo(c, "Profile updated successfully")
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profile updated successfully",
+		"user":    updatedUser.ToPublic(),
+	})
+}
+
+// GetPreferences returns user preferences
+func (h *AuthHandlers) GetPreferences(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
-	// Update profile using auth service
-	updatedUser, err := h.authService.UpdateProfile(userID, &req, c.ClientIP(), c.Request.UserAgent())
+	// Get preferences using auth service
+	preferences, err := h.authService.GetUserPreferences(userID)
 	if err != nil {
-		middleware.LogError(c, err, "Failed to update profile")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		middleware.LogError(c, err, "Failed to get user preferences")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get preferences"})
 		return
 	}
 
-	middleware.LogInfo(c, "Profile updated successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Profile updated successfully",
-		"user":    updatedUser.ToPublic(),
+		"preferences": preferences,
+	})
+}
+
+// UpdatePreferences handles updating user preferences
+func (h *AuthHandlers) UpdatePreferences(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req models.UserPreferences
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Update preferences using auth service
+	err := h.authService.UpdateUserPreferences(userID, &req)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to update preferences")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update preferences"})
+		return
+	}
+
+	// Get updated preferences to return
+	updatedPreferences, err := h.authService.GetUserPreferences(userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get updated preferences")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get updated preferences"})
+		return
+	}
+
+	middleware.LogInfo(c, "User preferences updated successfully")
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Preferences updated successfully",
+		"preferences": updatedPreferences,
 	})
 }
 

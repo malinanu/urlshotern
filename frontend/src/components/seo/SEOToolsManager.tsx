@@ -69,7 +69,8 @@ interface MetaTag {
 }
 
 export function SEOToolsManager() {
-  const { user, token } = useAuth();
+  const { user, getAccessToken } = useAuth();
+  const token = getAccessToken();
   const [activeTab, setActiveTab] = useState<'analysis' | 'sitemap' | 'meta' | 'schema'>('analysis');
   const [analyses, setAnalyses] = useState<SEOAnalysis[]>([]);
   const [sitemap, setSitemap] = useState<SitemapEntry[]>([]);
@@ -255,9 +256,9 @@ export function SEOToolsManager() {
   };
 
   const getScoreBadge = (score: number) => {
-    if (score >= 90) return 'success';
-    if (score >= 70) return 'warning';
-    return 'danger';
+    if (score >= 90) return 'default';
+    if (score >= 70) return 'outline';
+    return 'destructive';
   };
 
   const getIssueIcon = (type: string) => {

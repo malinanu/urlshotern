@@ -384,7 +384,7 @@ export function ContentBlockManager() {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge variant={block.is_global ? 'success' : 'secondary'}>
+                <Badge variant={block.is_global ? 'default' : 'secondary'}>
                   {block.is_global ? 'Global' : 'Local'}
                 </Badge>
               </div>
@@ -610,7 +610,7 @@ export function ContentBlockManager() {
               />
             ) : (
               <RichTextEditor
-                value={formData.content}
+                content={formData.content}
                 onChange={(content) => setFormData(prev => ({ ...prev, content }))}
                 placeholder="Enter your content here..."
               />
@@ -650,7 +650,7 @@ export function ContentBlockManager() {
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">{previewBlock.type}</Badge>
-              <Badge variant={previewBlock.is_global ? 'success' : 'secondary'}>
+              <Badge variant={previewBlock.is_global ? 'default' : 'secondary'}>
                 {previewBlock.is_global ? 'Global' : 'Local'}
               </Badge>
               <span className="text-sm text-gray-500">{previewBlock.category}</span>

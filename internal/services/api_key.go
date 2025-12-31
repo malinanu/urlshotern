@@ -1,18 +1,28 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/google/uuid"
+)
+
+// Constants for API key statistics time intervals
+const (
+	statsQueryTimeout = 5 * time.Second // Max time for stats query execution
+	dayInterval       = 1                // Current day
+	weekInterval      = 7                // Last 7 days
+	monthInterval     = 30               // Last 30 days
 )
 
 type APIKeyService struct {
@@ -165,15 +175,15 @@ func (s *APIKeyService) UpdateAPIKeyUsage(keyID uuid.UUID, ipAddress string) err
 }
 
 // RecordAPIKeyUsage records API key usage for analytics
-func (s *APIKeyService) RecordAPIKeyUsage(keyID uuid.UUID, endpoint, method string, statusCode, responseTimeMs, requestSize, responseSize int, ipAddress, userAgent string) error {
+func (s *APIKeyService) RecordAPIKeyUsage(keyID uuid.UUID, endpoint, method string, statusCode, responseTimeMs int, ipAddress, userAgent string) error {
 	query := `
 		INSERT INTO api_key_usage (api_key_id, endpoint, method, status_code, response_time_ms,
-			ip_address, user_agent, request_size, response_size, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+			ip_address, user_agent, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err := s.db.Exec(query,
 		keyID, endpoint, method, statusCode, responseTimeMs,
-		ipAddress, userAgent, requestSize, responseSize, time.Now(),
+		ipAddress, userAgent, time.Now(),
 	)
 
 	return err
@@ -318,38 +328,77 @@ func (s *APIKeyService) DeleteAPIKey(id uuid.UUID, userID int64) error {
 	return nil
 }
 
-// GetAPIKeyStats gets usage statistics for an API key
+// GetAPIKeyStats gets usage statistics for an API key with production-ready features:
+// - Context timeout to prevent long-running queries
+// - Comprehensive error logging for debugging
+// - Input validation
+// - NULL-safe SQL with COALESCE
 func (s *APIKeyService) GetAPIKeyStats(keyID uuid.UUID, userID int64) (*models.APIKeyStats, error) {
-	// First verify the key belongs to the user
-	_, err := s.GetAPIKey(keyID, userID)
-	if err != nil {
-		return nil, err
+	// Input validation
+	if keyID == uuid.Nil {
+		log.Printf("[ERROR] GetAPIKeyStats: invalid API key ID (nil UUID) for user %d", userID)
+		return nil, fmt.Errorf("invalid API key ID")
+	}
+	if userID <= 0 {
+		log.Printf("[ERROR] GetAPIKeyStats: invalid user ID %d for API key %s", userID, keyID)
+		return nil, fmt.Errorf("invalid user ID")
 	}
 
+	// Verify the key belongs to the user (authorization check)
+	apiKey, err := s.GetAPIKey(keyID, userID)
+	if err != nil {
+		log.Printf("[WARN] GetAPIKeyStats: API key %s not found or not owned by user %d: %v", keyID, userID, err)
+		return nil, fmt.Errorf("API key not found or access denied")
+	}
+
+	// Create context with timeout to prevent slow queries from blocking
+	ctx, cancel := context.WithTimeout(context.Background(), statsQueryTimeout)
+	defer cancel()
+
+	// Note: COALESCE ensures 0.0 is returned instead of NULL for keys with no usage
+	// This prevents Scan errors when an API key has never been used
+	// Uses parameterized query to prevent SQL injection
 	query := `
-		SELECT 
+		SELECT
 			COUNT(*) as total_requests,
 			COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as today_requests,
-			COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as week_requests,
-			COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as month_requests,
-			ROUND(
-				COUNT(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 END) * 100.0 / 
-				NULLIF(COUNT(*), 0), 2
+			COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '` + fmt.Sprintf("%d days", weekInterval) + `' THEN 1 END) as week_requests,
+			COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '` + fmt.Sprintf("%d days", monthInterval) + `' THEN 1 END) as month_requests,
+			COALESCE(
+				ROUND(
+					COUNT(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 END) * 100.0 /
+					NULLIF(COUNT(*), 0), 2
+				), 0.0
 			) as success_rate,
-			ROUND(AVG(response_time_ms), 2) as avg_response_time
-		FROM api_key_usage 
+			COALESCE(ROUND(AVG(response_time_ms), 2), 0.0) as avg_response_time
+		FROM api_key_usage
 		WHERE api_key_id = $1`
 
 	var stats models.APIKeyStats
-	err = s.db.QueryRow(query, keyID).Scan(
+	err = s.db.QueryRowContext(ctx, query, keyID).Scan(
 		&stats.TotalRequests, &stats.TodayRequests, &stats.WeekRequests,
 		&stats.MonthRequests, &stats.SuccessRate, &stats.AvgResponseTime,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API key stats: %w", err)
+		// Check if context timeout occurred
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Printf("[ERROR] GetAPIKeyStats: query timeout after %v for API key %s (user %d)",
+				statsQueryTimeout, keyID, userID)
+			return nil, fmt.Errorf("stats query timeout: please try again later")
+		}
+
+		// Log detailed error for debugging
+		log.Printf("[ERROR] GetAPIKeyStats: database error for API key %s (user %d, name: %s): %v",
+			keyID, userID, apiKey.Name, err)
+		return nil, fmt.Errorf("failed to retrieve API key statistics: %w", err)
 	}
 
 	stats.APIKeyID = keyID
+
+	// Log successful stats retrieval for audit/debugging
+	log.Printf("[INFO] GetAPIKeyStats: retrieved stats for API key %s (user %d, name: %s): %d total requests",
+		keyID, userID, apiKey.Name, stats.TotalRequests)
+
 	return &stats, nil
 }
 

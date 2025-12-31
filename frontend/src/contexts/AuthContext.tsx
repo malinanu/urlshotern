@@ -37,6 +37,7 @@ interface AuthResponse {
 
 interface AuthContextType {
   user: User | null;
+  updateUser: (user: User | null) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
@@ -106,6 +107,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).catch((error) => {
         logger.error('Logout endpoint error:', error);
       });
+    }
+  }, []);
+
+  // Update user in both state and localStorage
+  const updateUser = useCallback((newUser: User | null) => {
+    setUser(newUser);
+
+    if (newUser) {
+      // Update localStorage with fresh user data
+      localStorage.setItem('user_data', JSON.stringify(newUser));
+      logger.debug('User data updated in state and localStorage', { userId: newUser.id });
+    } else {
+      // Clear localStorage if user is null
+      localStorage.removeItem('user_data');
+      logger.debug('User data cleared from state and localStorage');
     }
   }, []);
 
@@ -307,8 +323,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'access_token' && e.newValue) {
         logger.debug('Token updated in another tab');
-        // Update local state without triggering another refresh
-        setIsAuthenticated(true);
+        // Reload user data from localStorage
+        const userData = localStorage.getItem('user_data');
+        if (userData && userData !== 'undefined') {
+          try {
+            setUser(JSON.parse(userData));
+          } catch (error) {
+            logger.error('Failed to parse user data from storage:', error);
+          }
+        }
       }
     };
 
@@ -417,6 +440,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
+    updateUser,
     isAuthenticated,
     isLoading,
     login,

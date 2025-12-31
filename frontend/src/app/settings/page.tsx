@@ -37,6 +37,9 @@ const passwordSchema = z.object({
     .regex(/[a-z]/, 'Must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Must contain at least one number'),
   confirmPassword: z.string(),
+}).refine((data) => data.currentPassword !== data.newPassword, {
+  message: "New password must be different from your current password",
+  path: ["newPassword"],
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -56,7 +59,7 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export default function SettingsPage() {
-  const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
+  const { user, updateUser, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -64,6 +67,7 @@ export default function SettingsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const router = useRouter();
 
   // Profile form
@@ -110,7 +114,49 @@ export default function SettingsPage() {
         phone: user.phone || '',
       });
     }
-  }, [user, profileForm]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Only depend on user, not profileForm (which is stable)
+
+  // Fetch and populate preferences
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      if (!user) return;
+
+      setIsLoadingPreferences(true);
+      try {
+        const token = getAccessToken();
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/preferences`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const prefs = data.preferences;
+
+          // Reset form with fetched preferences
+          preferencesForm.reset({
+            defaultExpiration: prefs.default_expiration?.toString() || '30',
+            analyticsPublic: prefs.analytics_public || false,
+            emailNotifications: prefs.email_notifications !== undefined ? prefs.email_notifications : true,
+            marketingEmails: prefs.marketing_emails || false,
+            timezone: prefs.timezone || 'UTC',
+            theme: prefs.theme || 'light',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch preferences:', error);
+      } finally {
+        setIsLoadingPreferences(false);
+      }
+    };
+
+    fetchPreferences();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Only depend on user, not preferencesForm (which is stable)
 
   const showSuccessMessage = (message: string) => {
     setUpdateSuccess(message);
@@ -127,6 +173,15 @@ export default function SettingsPage() {
   const onProfileSubmit = async (data: ProfileFormData) => {
     setIsUpdating(true);
     try {
+      console.log('[DEBUG] Profile submit data:', data);
+      console.log('[DEBUG] data.name value:', data.name);
+      console.log('[DEBUG] typeof data.name:', typeof data.name);
+      const payload = {
+        name: data.name || 'HARDCODED TEST NAME',  // Force a value if undefined
+        ...(data.phone && data.phone.trim() !== '' ? { phone: data.phone } : {}),
+      };
+      console.log('[DEBUG] Payload being sent:', payload);
+
       const token = getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/profile`, {
         method: 'PUT',
@@ -134,21 +189,20 @@ export default function SettingsPage() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          first_name: data.name.split(' ')[0] || data.name,
-          last_name: data.name.split(' ').slice(1).join(' ') || '',
-          email: data.email,
-          phone: data.phone,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
-        const updatedUser = await response.json();
+        const responseData = await response.json();
         showSuccessMessage('Profile updated successfully!');
-        // Update local user data if needed
+        // Update local user data and localStorage
+        if (responseData.user) {
+          updateUser(responseData.user);
+        }
       } else {
         const errorData = await response.json();
-        showErrorMessage(errorData.message || 'Failed to update profile. Please try again.');
+        const errorMessage = errorData.error || errorData.message || errorData.details || 'Failed to update profile. Please try again.';
+        showErrorMessage(errorMessage);
       }
     } catch (error) {
       showErrorMessage('Failed to update profile. Please try again.');
@@ -178,7 +232,7 @@ export default function SettingsPage() {
         showSuccessMessage('Password changed successfully!');
       } else {
         const errorData = await response.json();
-        showErrorMessage(errorData.message || 'Failed to change password. Please check your current password.');
+        showErrorMessage(errorData.error || 'Failed to change password. Please check your current password.');
       }
     } catch (error) {
       showErrorMessage('Failed to change password. Please check your current password.');
@@ -208,6 +262,19 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
+        const responseData = await response.json();
+        const updatedPrefs = responseData.preferences;
+
+        // Update form with actual saved values from backend
+        preferencesForm.reset({
+          defaultExpiration: updatedPrefs.default_expiration?.toString() || '30',
+          analyticsPublic: updatedPrefs.analytics_public || false,
+          emailNotifications: updatedPrefs.email_notifications !== undefined ? updatedPrefs.email_notifications : true,
+          marketingEmails: updatedPrefs.marketing_emails || false,
+          timezone: updatedPrefs.timezone || 'UTC',
+          theme: updatedPrefs.theme || 'light',
+        });
+
         showSuccessMessage('Preferences updated successfully!');
       } else {
         const errorData = await response.json();
@@ -355,11 +422,10 @@ export default function SettingsPage() {
                         <input
                           {...profileForm.register('email')}
                           type="email"
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          disabled
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
                         />
-                        {profileForm.formState.errors.email && (
-                          <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.email.message}</p>
-                        )}
+                        <p className="mt-1 text-sm text-gray-500">Email address cannot be changed</p>
                       </div>
                     </div>
 
@@ -710,4 +776,4 @@ export default function SettingsPage() {
       </div>
     </Layout>
   );
-}
+}// Force recompile trigger

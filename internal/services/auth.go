@@ -326,6 +326,16 @@ func (a *AuthService) ChangePassword(userID int64, req *models.ChangePasswordReq
 	return nil
 }
 
+// GetUserPreferences retrieves user preferences
+func (a *AuthService) GetUserPreferences(userID int64) (*models.UserPreferences, error) {
+	return a.userService.GetUserPreferences(userID)
+}
+
+// UpdateUserPreferences updates user preferences
+func (a *AuthService) UpdateUserPreferences(userID int64, preferences *models.UserPreferences) error {
+	return a.userService.UpdateUserPreferences(userID, preferences)
+}
+
 // GoogleAuth handles Google OAuth authentication
 func (a *AuthService) GoogleAuth(req *models.GoogleAuthRequest, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// Implement Google OAuth verification
