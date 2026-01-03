@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -89,9 +90,22 @@ func main() {
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
 
-	// Initialize webhook retry worker
+	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
-	webhookRetryWorker := workers.NewWebhookRetryWorker(gormDB, webhookProcessor)
+
+	// Parse alert emails from config (comma-separated list)
+	var alertEmails []string
+	if config.WebhookAlertEmails != "" {
+		emails := strings.Split(config.WebhookAlertEmails, ",")
+		for _, email := range emails {
+			trimmedEmail := strings.TrimSpace(email)
+			if trimmedEmail != "" {
+				alertEmails = append(alertEmails, trimmedEmail)
+			}
+		}
+	}
+
+	webhookRetryWorker := workers.NewWebhookRetryWorker(gormDB, webhookProcessor, emailService, alertEmails)
 	webhookAdminHandler := handlers.NewWebhookAdminHandler(webhookRetryWorker)
 
 	// Start webhook retry worker in background

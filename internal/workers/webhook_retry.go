@@ -21,6 +21,8 @@ type WebhookRetryWorker struct {
 	webhookHandler WebhookProcessor
 	retryInterval  time.Duration
 	stopChan       chan struct{}
+	emailService   EmailNotifier
+	alertEmails    []string
 }
 
 // WebhookProcessor interface for processing webhooks
@@ -28,13 +30,20 @@ type WebhookProcessor interface {
 	ProcessWebhookEvent(event *models.PolarWebhookEvent) error
 }
 
+// EmailNotifier interface for sending email notifications
+type EmailNotifier interface {
+	SendEmail(to, subject, htmlBody, textBody string) error
+}
+
 // NewWebhookRetryWorker creates a new webhook retry worker
-func NewWebhookRetryWorker(db *gorm.DB, webhookHandler WebhookProcessor) *WebhookRetryWorker {
+func NewWebhookRetryWorker(db *gorm.DB, webhookHandler WebhookProcessor, emailService EmailNotifier, alertEmails []string) *WebhookRetryWorker {
 	return &WebhookRetryWorker{
 		db:             db,
 		webhookHandler: webhookHandler,
 		retryInterval:  5 * time.Minute, // Check every 5 minutes
 		stopChan:       make(chan struct{}),
+		emailService:   emailService,
+		alertEmails:    alertEmails,
 	}
 }
 
@@ -152,17 +161,131 @@ func (w *WebhookRetryWorker) shouldRetryNow(event *models.PolarWebhookEvent) boo
 
 // alertDeadLetter sends an alert when an event enters the dead letter queue
 func (w *WebhookRetryWorker) alertDeadLetter(event *models.PolarWebhookEvent) {
-	// TODO: Implement alerting (Slack, email, PagerDuty, etc.)
 	log.Printf("🚨 ALERT: Webhook event %s (type: %s) entered dead letter queue", event.PolarEventID, event.EventType)
 	log.Printf("   Reason: %s", *event.DeadLetterReason)
 
-	// You can integrate with:
-	// - Slack webhook
-	// - Email service
-	// - PagerDuty
-	// - Prometheus metrics + Alertmanager
-	// - CloudWatch Alarms
-	// - Datadog
+	// Send email alert if email service is configured
+	if w.emailService != nil && len(w.alertEmails) > 0 {
+		subject := fmt.Sprintf("🚨 Webhook Failure Alert: %s", event.EventType)
+
+		htmlBody := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .alert-box { background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 5px; padding: 15px; margin: 20px 0; }
+        .header { background-color: #dc3545; color: white; padding: 15px; border-radius: 5px 5px 0 0; }
+        .details { background-color: #f8f9fa; padding: 15px; border-radius: 0 0 5px 5px; }
+        .detail-row { margin: 10px 0; padding: 8px; background-color: white; border-left: 3px solid #dc3545; }
+        .label { font-weight: bold; color: #495057; }
+        .value { color: #212529; }
+        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 12px; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>🚨 Webhook Event Failed - Dead Letter Queue</h2>
+        </div>
+        <div class="details">
+            <div class="alert-box">
+                <strong>⚠️ A webhook event has exhausted all retry attempts and has been moved to the dead letter queue.</strong>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Event ID:</span>
+                <span class="value">%s</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Event Type:</span>
+                <span class="value">%s</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Retry Count:</span>
+                <span class="value">%d attempts</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Failure Reason:</span>
+                <span class="value">%s</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Last Error:</span>
+                <span class="value">%s</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Timestamp:</span>
+                <span class="value">%s</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Action Required:</strong> Please investigate this webhook failure and take appropriate action.</p>
+            <p>This is an automated alert from the URL Shortener Webhook Retry System.</p>
+        </div>
+    </div>
+</body>
+</html>`,
+			event.PolarEventID,
+			event.EventType,
+			event.RetryCount,
+			getStringValue(event.DeadLetterReason),
+			getStringValue(event.ErrorMessage),
+			time.Now().Format("2006-01-02 15:04:05 MST"),
+		)
+
+		textBody := fmt.Sprintf(`
+🚨 WEBHOOK FAILURE ALERT - Dead Letter Queue
+
+A webhook event has exhausted all retry attempts and requires investigation.
+
+Event Details:
+---------------
+Event ID:       %s
+Event Type:     %s
+Retry Count:    %d attempts
+Failure Reason: %s
+Last Error:     %s
+Timestamp:      %s
+
+ACTION REQUIRED: Please investigate this webhook failure and take appropriate action.
+
+---
+This is an automated alert from the URL Shortener Webhook Retry System.
+`,
+			event.PolarEventID,
+			event.EventType,
+			event.RetryCount,
+			getStringValue(event.DeadLetterReason),
+			getStringValue(event.ErrorMessage),
+			time.Now().Format("2006-01-02 15:04:05 MST"),
+		)
+
+		// Send to all configured alert email addresses
+		for _, email := range w.alertEmails {
+			if err := w.emailService.SendEmail(email, subject, htmlBody, textBody); err != nil {
+				log.Printf("❌ Failed to send alert email to %s: %v", email, err)
+			} else {
+				log.Printf("✅ Alert email sent to %s for event %s", email, event.PolarEventID)
+			}
+		}
+	} else {
+		log.Printf("⚠️  Email alerting not configured (emailService: %v, alertEmails: %d)", w.emailService != nil, len(w.alertEmails))
+	}
+}
+
+// getStringValue safely gets a string value from a pointer
+func getStringValue(ptr *string) string {
+	if ptr == nil {
+		return "N/A"
+	}
+	return *ptr
 }
 
 // RetryWebhookManually manually retries a specific webhook event (for admin use)

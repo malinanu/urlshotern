@@ -188,6 +188,11 @@ func (e *EmailService) sendEmail(emailAddr, token string) error {
 	return e.SendEmailVerification(emailAddr, token)
 }
 
+// SendEmail sends a generic email (for alerts, notifications, etc.)
+func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
+	return e.provider.SendEmail(to, subject, htmlBody, textBody)
+}
+
 // generateVerificationToken generates a random verification token
 func (e *EmailService) generateVerificationToken() (string, error) {
 	bytes := make([]byte, 32)
