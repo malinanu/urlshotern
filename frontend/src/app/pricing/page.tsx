@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { CheckIcon, XMarkIcon, StarIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { redirectToCheckout, getProducts, type PolarProduct } from '@/lib/polar';
+import { redirectToCheckout, getProducts, type PolarProduct, formatPrice } from '@/lib/polar';
 
 export default function PricingPage() {
   const { isAuthenticated, getAccessToken } = useAuth();
@@ -128,33 +128,89 @@ export default function PricingPage() {
     }
   };
 
-  // Helper to find Polar product by plan type
+  // Helper function to find Polar product by plan type
   const getPolarProductId = (planType: string): string | null => {
     const product = polarProducts.find(p => p.plan_type === planType);
 
     if (!product) {
-      // Context-aware error messages
-      if (productsFetchError?.type === 'network') {
-        console.error(`[Pricing] Cannot load ${planType} plan - network error occurred`);
-        console.error('[Pricing] Check browser DevTools → Network tab for failed requests');
-      } else if (polarProducts.length === 0) {
-        console.error(`[Pricing] No products returned from API`);
-        console.error('[Pricing] Admin action: POST /api/v1/billing/sync-products');
-      } else {
-        console.error(`[Pricing] Product not found for plan type: ${planType}`);
-        console.error('[Pricing] Available plan types:', polarProducts.map(p => p.plan_type));
-        console.error('[Pricing] Admin may need to re-sync from Polar');
+      // Don't log errors during initial loading phase - this is expected behavior
+      if (!productsLoading) {
+        // Context-aware error messages
+        if (productsFetchError?.type === 'network') {
+          console.error(`[Pricing] Cannot load ${planType} plan - network error occurred`);
+          console.error('[Pricing] Check browser DevTools → Network tab for failed requests');
+        } else if (polarProducts.length === 0) {
+          console.error(`[Pricing] No products returned from API`);
+          console.error('[Pricing] Admin action: POST /api/v1/billing/sync-products');
+        } else {
+          console.error(`[Pricing] Product not found for plan type: ${planType}`);
+          console.error('[Pricing] Available plan types:', polarProducts.map(p => p.plan_type));
+          console.error('[Pricing] Admin may need to re-sync from Polar');
+        }
       }
     }
 
     return product?.id || null;
   };
 
+  /**
+   * Extract the primary price for display from a Polar product
+   * Returns formatted price string and billing period
+   */
+  const getPriceDisplay = (planType: string): { price: string; period: string } => {
+    // Free plan always shows $0
+    if (planType === 'free') {
+      return { price: '$0', period: '/month' };
+    }
+
+    // Find the product for this plan type
+    const product = polarProducts.find(p => p.plan_type === planType);
+
+    // Fallback during loading or if product not found
+    if (!product || productsLoading) {
+      const fallbacks: Record<string, { price: string; period: string }> = {
+        premium: { price: '$5', period: '/month' },
+        enterprise: { price: '$29.99', period: '/month' },
+      };
+      return fallbacks[planType] || { price: '—', period: '' };
+    }
+
+    // No prices available
+    if (!product.prices || product.prices.length === 0) {
+      console.warn(`[Pricing] No prices found for ${planType} plan`);
+      return { price: 'Contact Us', period: '' };
+    }
+
+    // Prioritize monthly pricing
+    const monthlyPrice = product.prices.find(
+      p => !p.is_archived && p.recurring_interval === 'month'
+    );
+
+    if (monthlyPrice) {
+      return {
+        price: formatPrice(monthlyPrice.price_amount, monthlyPrice.price_currency),
+        period: '/month'
+      };
+    }
+
+    // Fall back to first active price
+    const firstActivePrice = product.prices.find(p => !p.is_archived);
+    if (firstActivePrice) {
+      const interval = firstActivePrice.recurring_interval || 'month';
+      return {
+        price: formatPrice(firstActivePrice.price_amount, firstActivePrice.price_currency),
+        period: interval === 'year' ? '/year' : '/month'
+      };
+    }
+
+    // All prices archived
+    return { price: 'Unavailable', period: '' };
+  };
+
   const plans = [
     {
       name: 'Free',
-      price: '$0',
-      period: '/month',
+      ...getPriceDisplay('free'),
       description: 'Perfect for getting started',
       features: [
         { name: '10 short links', included: true },
@@ -175,8 +231,7 @@ export default function PricingPage() {
     },
     {
       name: 'Pro',
-      price: '$5',
-      period: '/month',
+      ...getPriceDisplay('premium'),
       description: 'For growing businesses',
       features: [
         { name: '1,000 short links', included: true },
@@ -197,8 +252,7 @@ export default function PricingPage() {
     },
     {
       name: 'Ultra',
-      price: '$29.99',
-      period: '/month',
+      ...getPriceDisplay('enterprise'),
       description: 'For enterprises & power users',
       features: [
         { name: 'Unlimited short links', included: true },

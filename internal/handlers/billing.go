@@ -27,6 +27,11 @@ func NewBillingHandler(db *gorm.DB, config *configs.Config) *BillingHandler {
 	}
 }
 
+// GetPolarService returns the Polar service for product sync
+func (bh *BillingHandler) GetPolarService() *services.PolarService {
+	return bh.billingService.GetPolarService()
+}
+
 // GetSubscription returns the current user's subscription details
 func (bh *BillingHandler) GetSubscription(c *gin.Context) {
 	userID := c.GetInt64("user_id")
@@ -472,21 +477,13 @@ func (bh *BillingHandler) GetProducts(c *gin.Context) {
 		}
 	}
 
-	// Get products from database
-	var products []struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		PlanType    string `json:"plan_type"`
-		IsRecurring bool   `json:"is_recurring"`
-		Prices      interface{} `json:"prices"`
-		Benefits    interface{} `json:"benefits"`
-	}
+	// Get products from database using PolarProduct model
+	// JSONB fields (prices, benefits, features) will be included using custom Scanners
+	var products []models.PolarProduct
 
 	err := bh.billingService.GetDB().
-		Table("polar_products").
 		Where("is_archived = ?", false).
-		Scan(&products).Error
+		Find(&products).Error
 
 	if err != nil {
 		log.Printf("[Billing] Failed to retrieve products from database: %v", err)
