@@ -157,7 +157,6 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
-	log.Printf("[DEBUG] Checkout request body: %s", string(bodyBytes))
 
 	// Restore the request body for binding
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -177,8 +176,6 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		})
 		return
 	}
-
-	log.Printf("[DEBUG] Parsed checkout request - ProductID: %s, SuccessURL: %s, CancelURL: %s", req.ProductID, req.SuccessURL, req.CancelURL)
 
 	// Set default URLs if not provided
 	if req.SuccessURL == "" {

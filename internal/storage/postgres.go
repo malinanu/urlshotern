@@ -851,10 +851,6 @@ func (p *PostgresStorage) UpdateUserProfile(userID int64, updates map[string]int
 	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d",
 		strings.Join(setClauses, ", "), argIndex)
 
-	// Log the update for debugging
-	log.Printf("[DEBUG] UpdateUserProfile: userID=%d, query=%s, args=%v",
-		userID, query, args)
-
 	result, err := p.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute update: %w", err)

@@ -206,8 +206,6 @@ func (h *AuthHandlers) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[DEBUG] Profile update request - UserID: %d, Request: %+v", userID, req)
-
 	// Validate request
 	if err := h.validator.Struct(req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -223,8 +221,6 @@ func (h *AuthHandlers) UpdateProfile(c *gin.Context) {
 		// Phone validation is already handled by validator tag, but we can add extra checks here if needed
 		middleware.LogInfo(c, "Profile update requested with phone number")
 	}
-
-	log.Printf("[DEBUG] Calling UpdateProfile service - UserID: %d, Name: %v, Phone: %v", userID, req.Name, req.Phone)
 
 	// Update profile using auth service
 	updatedUser, err := h.authService.UpdateProfile(userID, &req, c.ClientIP(), c.Request.UserAgent())

@@ -173,14 +173,10 @@ export default function SettingsPage() {
   const onProfileSubmit = async (data: ProfileFormData) => {
     setIsUpdating(true);
     try {
-      console.log('[DEBUG] Profile submit data:', data);
-      console.log('[DEBUG] data.name value:', data.name);
-      console.log('[DEBUG] typeof data.name:', typeof data.name);
       const payload = {
-        name: data.name || 'HARDCODED TEST NAME',  // Force a value if undefined
+        name: data.name,
         ...(data.phone && data.phone.trim() !== '' ? { phone: data.phone } : {}),
       };
-      console.log('[DEBUG] Payload being sent:', payload);
 
       const token = getAccessToken();
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/profile`, {
