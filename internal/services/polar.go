@@ -117,9 +117,10 @@ type PolarBenefit struct {
 
 // CreateCustomer creates a new customer in Polar
 func (ps *PolarService) CreateCustomer(email string, name *string, metadata map[string]interface{}) (*PolarCustomer, error) {
+	// Note: organization_id is automatically set by the organization token
+	// and should NOT be included in the payload when using organization tokens
 	payload := map[string]interface{}{
-		"email":           email,
-		"organization_id": ps.config.PolarOrganizationID,
+		"email": email,
 	}
 	if name != nil {
 		payload["name"] = *name
@@ -149,21 +150,35 @@ func (ps *PolarService) GetCustomer(customerID string) (*PolarCustomer, error) {
 
 // CreateCheckoutSession creates a new checkout session
 func (ps *PolarService) CreateCheckoutSession(productID string, productPriceID *string, customerEmail string, successURL string, metadata map[string]interface{}) (*PolarCheckoutSession, error) {
-	payload := map[string]interface{}{
-		"product_id":    productID,
-		"customer_email": customerEmail,
-		"success_url":   successURL,
+	var endpoint string
+	var payload map[string]interface{}
+
+	if productPriceID != nil && *productPriceID != "" {
+		// Use /checkouts/custom endpoint for specific price ID
+		endpoint = "/checkouts/custom"
+		payload = map[string]interface{}{
+			"product_price_id": *productPriceID,
+			"customer_email":   customerEmail,
+			"success_url":      successURL,
+		}
+	} else {
+		// Use /checkouts endpoint with product ID array
+		endpoint = "/checkouts"
+		payload = map[string]interface{}{
+			"products":       []string{productID}, // Polar expects array of product ID strings
+			"customer_email": customerEmail,
+			"success_url":    successURL,
+		}
 	}
 
-	if productPriceID != nil {
-		payload["product_price_id"] = *productPriceID
-	}
 	if metadata != nil {
 		payload["metadata"] = metadata
 	}
 
+	log.Printf("[Polar] Creating checkout with endpoint: %s, payload: %+v", endpoint, payload)
+
 	var checkout PolarCheckoutSession
-	err := ps.makeRequest("POST", "/checkouts", payload, &checkout)
+	err := ps.makeRequest("POST", endpoint, payload, &checkout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create checkout session: %w", err)
 	}

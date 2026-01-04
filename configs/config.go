@@ -64,6 +64,9 @@ type Config struct {
 
 	// Webhook Alert Configuration
 	WebhookAlertEmails string
+
+	// Product Sync Configuration
+	ProductSyncIntervalMinutes int // How often to sync products from Polar (in minutes)
 }
 
 func LoadConfig() (*Config, error) {
@@ -119,6 +122,9 @@ func LoadConfig() (*Config, error) {
 
 		// Webhook Alert Configuration
 		WebhookAlertEmails: getEnv("WEBHOOK_ALERT_EMAILS", ""),
+
+		// Product Sync Configuration
+		ProductSyncIntervalMinutes: getEnvAsInt("PRODUCT_SYNC_INTERVAL_MINUTES", 60), // Default: sync every hour
 	}
 
 	return config, nil

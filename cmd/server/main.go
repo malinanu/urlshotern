@@ -114,6 +114,13 @@ func main() {
 	go webhookRetryWorker.Start(workerCtx)
 	log.Println("✅ Webhook retry worker started")
 
+	// Start product sync worker in background
+	syncInterval := time.Duration(config.ProductSyncIntervalMinutes) * time.Minute
+	polarSvc := handler.BillingHandlers.GetPolarService()
+	productSyncWorker := workers.NewProductSyncWorker(polarSvc, syncInterval)
+	go productSyncWorker.Start(workerCtx)
+	log.Printf("✅ Product sync worker started (interval: %v)", syncInterval)
+
 	// Setup Gin router
 	if config.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
