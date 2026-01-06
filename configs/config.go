@@ -7,23 +7,51 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// DatabaseConfig represents a database connection configuration
+type DatabaseConfig struct {
+	Host            string
+	Port            string
+	User            string
+	Password        string
+	DBName          string
+	MaxConns        int
+	MaxIdleConns    int
+	ConnMaxLifetime int // in seconds
+	ConnMaxIdleTime int // in seconds
+}
+
+// ConnectionString returns the PostgreSQL connection string
+func (d *DatabaseConfig) ConnectionString() string {
+	return "host=" + d.Host +
+		" port=" + d.Port +
+		" user=" + d.User +
+		" password=" + d.Password +
+		" dbname=" + d.DBName +
+		" sslmode=disable"
+}
+
 type Config struct {
 	// Server Configuration
-	ServerPort string
-	ServerHost string
-	BaseURL    string
+	ServerPort  string
+	ServerHost  string
+	BaseURL     string
 	Environment string
 
-	// Database Configuration
-	DBHost              string
-	DBPort              string
-	DBUser              string
-	DBPassword          string
-	DBName              string
-	DBMaxConns          int
-	DBMaxIdleConns      int
-	DBConnMaxLifetime   int // in seconds
-	DBConnMaxIdleTime   int // in seconds
+	// Database Configuration (Legacy - for backward compatibility)
+	DBHost            string
+	DBPort            string
+	DBUser            string
+	DBPassword        string
+	DBName            string
+	DBMaxConns        int
+	DBMaxIdleConns    int
+	DBConnMaxLifetime int // in seconds
+	DBConnMaxIdleTime int // in seconds
+
+	// Multi-User Database Configuration
+	AppDB      DatabaseConfig // Regular application user (limited permissions)
+	AdminDB    DatabaseConfig // Admin operations user (full permissions)
+	ReadOnlyDB DatabaseConfig // Read-only user (for analytics)
 
 	// Redis Configuration
 	RedisHost     string
@@ -73,21 +101,64 @@ func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
 	godotenv.Load()
 
+	// Legacy database config (for backward compatibility)
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbPort := getEnv("DB_PORT", "5432")
+	dbName := getEnv("DB_NAME", "urlshortener_db")
+
 	config := &Config{
 		ServerPort:  getEnv("SERVER_PORT", "8080"),
 		ServerHost:  getEnv("SERVER_HOST", "localhost"),
 		BaseURL:     getEnv("BASE_URL", "http://localhost:8080"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 
-		DBHost:            getEnv("DB_HOST", "localhost"),
-		DBPort:            getEnv("DB_PORT", "5432"),
+		// Legacy database configuration (for backward compatibility)
+		DBHost:            dbHost,
+		DBPort:            dbPort,
 		DBUser:            getEnv("DB_USER", "urlshortener"),
 		DBPassword:        getEnv("DB_PASSWORD", "password"),
-		DBName:            getEnv("DB_NAME", "urlshortener_db"),
+		DBName:            dbName,
 		DBMaxConns:        getEnvAsInt("DB_MAX_CONNECTIONS", 25),
 		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 10),
 		DBConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),
 		DBConnMaxIdleTime: getEnvAsInt("DB_CONN_MAX_IDLE_TIME", 600),
+
+		// Multi-User Database Configuration
+		AppDB: DatabaseConfig{
+			Host:            getEnv("DB_APP_HOST", dbHost),
+			Port:            getEnv("DB_APP_PORT", dbPort),
+			User:            getEnv("DB_APP_USER", "urlshort_app"),
+			Password:        getEnv("DB_APP_PASSWORD", ""),
+			DBName:          getEnv("DB_APP_NAME", dbName),
+			MaxConns:        getEnvAsInt("DB_APP_MAX_CONNECTIONS", 50),
+			MaxIdleConns:    getEnvAsInt("DB_APP_MAX_IDLE_CONNECTIONS", 10),
+			ConnMaxLifetime: getEnvAsInt("DB_APP_CONN_MAX_LIFETIME", 3600),
+			ConnMaxIdleTime: getEnvAsInt("DB_APP_CONN_MAX_IDLE_TIME", 600),
+		},
+
+		AdminDB: DatabaseConfig{
+			Host:            getEnv("DB_ADMIN_HOST", dbHost),
+			Port:            getEnv("DB_ADMIN_PORT", dbPort),
+			User:            getEnv("DB_ADMIN_USER", "urlshort_admin"),
+			Password:        getEnv("DB_ADMIN_PASSWORD", ""),
+			DBName:          getEnv("DB_ADMIN_NAME", dbName),
+			MaxConns:        getEnvAsInt("DB_ADMIN_MAX_CONNECTIONS", 10),
+			MaxIdleConns:    getEnvAsInt("DB_ADMIN_MAX_IDLE_CONNECTIONS", 2),
+			ConnMaxLifetime: getEnvAsInt("DB_ADMIN_CONN_MAX_LIFETIME", 3600),
+			ConnMaxIdleTime: getEnvAsInt("DB_ADMIN_CONN_MAX_IDLE_TIME", 600),
+		},
+
+		ReadOnlyDB: DatabaseConfig{
+			Host:            getEnv("DB_READONLY_HOST", dbHost),
+			Port:            getEnv("DB_READONLY_PORT", dbPort),
+			User:            getEnv("DB_READONLY_USER", "urlshort_readonly"),
+			Password:        getEnv("DB_READONLY_PASSWORD", ""),
+			DBName:          getEnv("DB_READONLY_NAME", dbName),
+			MaxConns:        getEnvAsInt("DB_READONLY_MAX_CONNECTIONS", 20),
+			MaxIdleConns:    getEnvAsInt("DB_READONLY_MAX_IDLE_CONNECTIONS", 5),
+			ConnMaxLifetime: getEnvAsInt("DB_READONLY_CONN_MAX_LIFETIME", 3600),
+			ConnMaxIdleTime: getEnvAsInt("DB_READONLY_CONN_MAX_IDLE_TIME", 600),
+		},
 
 		RedisHost:     getEnv("REDIS_HOST", "localhost"),
 		RedisPort:     getEnv("REDIS_PORT", "6379"),

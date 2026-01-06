@@ -17,6 +17,7 @@ func SetupRoutes(
 	router *gin.Engine,
 	handler *handlers.Handler,
 	authMiddleware *middleware.AuthMiddleware,
+	adminMiddleware *middleware.AdminMiddleware,
 ) {
 	// Add global middleware
 	router.Use(middleware.CORSMiddleware())
@@ -41,8 +42,8 @@ func SetupRoutes(
 	// Protected routes (authentication required - supports both JWT and API keys)
 	setupProtectedRoutes(router, handler, authMiddleware)
 
-	// Admin routes (admin access required) - temporarily disabled
-	// setupAdminRoutes(router, handler, authService)
+	// Admin routes (admin access required) - ENABLED
+	SetupAdminRoutes(router, handler, authMiddleware, adminMiddleware)
 
 	// Static file serving for frontend (must be last to not interfere with API routes)
 	setupStaticRoutes(router)
