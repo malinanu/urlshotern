@@ -13,7 +13,8 @@ RUN GOPROXY=direct go install github.com/cosmtrek/air@v1.49.0
 COPY go.mod go.sum ./
 
 # Download Go dependencies
-RUN go mod download
+# Use direct mode or proxy.golang.org for faster downloads
+RUN GOPROXY=https://proxy.golang.org,direct go mod download
 
 # Copy source code (backend only)
 COPY . .
