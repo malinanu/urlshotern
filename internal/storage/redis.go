@@ -201,6 +201,11 @@ func (r *RedisStorage) FlushDB() error {
 	return r.client.FlushDB(r.ctx).Err()
 }
 
+// GetClient returns the underlying Redis client (for advanced operations)
+func (r *RedisStorage) GetClient() *redis.Client {
+	return r.client
+}
+
 // Get retrieves a value from Redis by key
 func (r *RedisStorage) Get(key string) (string, error) {
 	val, err := r.client.Get(r.ctx, key).Result()

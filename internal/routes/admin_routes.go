@@ -34,12 +34,12 @@ func SetupAdminRoutes(
 		// List and search users
 		users.GET("",
 			adminMiddleware.AuditLog(models.AuditActionUserView, models.ResourceTypeUser),
-			handler.AdminUserList)
+			handler.AdminHandlers.UserHandlers.AdminUserList)
 
 		// Get specific user details
 		users.GET("/:id",
 			adminMiddleware.AuditLog(models.AuditActionUserView, models.ResourceTypeUser),
-			handler.AdminGetUser)
+			handler.AdminHandlers.UserHandlers.AdminGetUser)
 
 		// User management operations (require manage permission)
 		usersManage := users.Group("")
@@ -49,77 +49,77 @@ func SetupAdminRoutes(
 			usersManage.PUT("/:id",
 				adminMiddleware.PreventSelfAction(),
 				adminMiddleware.AuditLog(models.AuditActionUserUpdate, models.ResourceTypeUser),
-				handler.AdminUpdateUser)
+				handler.AdminHandlers.UserHandlers.AdminUpdateUser)
 
 			// Ban user
 			usersManage.POST("/:id/ban",
 				adminMiddleware.PreventSelfAction(),
 				adminMiddleware.RequireSuperAdmin(), // Only super admin can ban
 				adminMiddleware.AuditLog(models.AuditActionUserBan, models.ResourceTypeUser),
-				handler.AdminBanUser)
+				handler.AdminHandlers.UserHandlers.AdminBanUser)
 
 			// Unban user
 			usersManage.DELETE("/:id/ban",
 				adminMiddleware.RequireSuperAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionUserUnban, models.ResourceTypeUser),
-				handler.AdminUnbanUser)
+				handler.AdminHandlers.UserHandlers.AdminUnbanUser)
 
 			// Force email verification
 			usersManage.PUT("/:id/verify",
 				adminMiddleware.AuditLog(models.AuditActionUserVerify, models.ResourceTypeUser),
-				handler.AdminVerifyUser)
+				handler.AdminHandlers.UserHandlers.AdminVerifyUser)
 
 			// Force password reset
 			usersManage.POST("/:id/reset-password",
 				adminMiddleware.PreventSelfAction(),
 				adminMiddleware.AuditLog(models.AuditActionUserPasswordReset, models.ResourceTypeUser),
-				handler.AdminResetUserPassword)
+				handler.AdminHandlers.UserHandlers.AdminResetUserPassword)
 
 			// Delete user (soft delete)
 			usersManage.DELETE("/:id",
 				adminMiddleware.PreventSelfAction(),
 				adminMiddleware.RequireSuperAdmin(), // Only super admin can delete
 				adminMiddleware.AuditLog(models.AuditActionUserDelete, models.ResourceTypeUser),
-				handler.AdminDeleteUser)
+				handler.AdminHandlers.UserHandlers.AdminDeleteUser)
 
 			// Impersonate user (for support)
 			usersManage.POST("/:id/impersonate",
 				adminMiddleware.PreventSelfAction(),
 				adminMiddleware.RequireAdminPermission(models.PermissionAdminUserImpersonate),
 				adminMiddleware.AuditLog(models.AuditActionUserImpersonate, models.ResourceTypeUser),
-				handler.AdminImpersonateUser)
+				handler.AdminHandlers.UserHandlers.AdminImpersonateUser)
 
 			// Update user limits
 			usersManage.PUT("/:id/limits",
 				adminMiddleware.AuditLog(models.AuditActionUserUpdate, models.ResourceTypeUser),
-				handler.AdminUpdateUserLimits)
+				handler.AdminHandlers.UserHandlers.AdminUpdateUserLimits)
 
 			// Change user subscription
 			usersManage.PUT("/:id/plan",
 				adminMiddleware.RequireAdminPermission(models.PermissionAdminBillingManage),
 				adminMiddleware.AuditLog(models.AuditActionSubscriptionUpdate, models.ResourceTypeSubscription),
-				handler.AdminUpdateUserPlan)
+				handler.AdminHandlers.UserHandlers.AdminUpdateUserPlan)
 
 			// Send notification to user
 			usersManage.POST("/:id/notify",
 				adminMiddleware.AuditLog("user.notify", models.ResourceTypeUser),
-				handler.AdminNotifyUser)
+				handler.AdminHandlers.UserHandlers.AdminNotifyUser)
 		}
 
 		// User activity and history
 		users.GET("/:id/activity",
 			adminMiddleware.AuditLog(models.AuditActionUserView, models.ResourceTypeUser),
-			handler.AdminGetUserActivity)
+			handler.AdminHandlers.UserHandlers.AdminGetUserActivity)
 
 		users.GET("/:id/urls",
 			adminMiddleware.AuditLog(models.AuditActionURLView, models.ResourceTypeURL),
-			handler.AdminGetUserURLs)
+			handler.AdminHandlers.UserHandlers.AdminGetUserURLs)
 
 		// Bulk operations (super admin only)
 		users.POST("/bulk-export",
 			adminMiddleware.RequireSuperAdmin(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsExport, "user_export"),
-			handler.AdminExportUsers)
+			handler.AdminHandlers.UserHandlers.AdminExportUsers)
 	}
 
 	// ================================================================
@@ -131,12 +131,12 @@ func SetupAdminRoutes(
 		// List all URLs
 		urls.GET("",
 			adminMiddleware.AuditLog(models.AuditActionURLView, models.ResourceTypeURL),
-			handler.AdminListURLs)
+			handler.AdminHandlers.URLHandlers.AdminListURLs)
 
 		// Get specific URL details
 		urls.GET("/:shortCode",
 			adminMiddleware.AuditLog(models.AuditActionURLView, models.ResourceTypeURL),
-			handler.AdminGetURL)
+			handler.AdminHandlers.URLHandlers.AdminGetURL)
 
 		// URL management operations (require manage permission)
 		urlsManage := urls.Group("")
@@ -145,39 +145,39 @@ func SetupAdminRoutes(
 			// Update URL status
 			urlsManage.PUT("/:shortCode/status",
 				adminMiddleware.AuditLog(models.AuditActionURLUpdate, models.ResourceTypeURL),
-				handler.AdminUpdateURLStatus)
+				handler.AdminHandlers.URLHandlers.AdminUpdateURLStatus)
 
 			// Delete URL
 			urlsManage.DELETE("/:shortCode",
 				adminMiddleware.AuditLog(models.AuditActionURLDelete, models.ResourceTypeURL),
-				handler.AdminDeleteURL)
+				handler.AdminHandlers.URLHandlers.AdminDeleteURL)
 
 			// Transfer URL ownership
 			urlsManage.PUT("/:shortCode/owner",
 				adminMiddleware.RequireSystemAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionURLTransfer, models.ResourceTypeURL),
-				handler.AdminTransferURL)
+				handler.AdminHandlers.URLHandlers.AdminTransferURL)
 
 			// Extend URL expiration
 			urlsManage.PUT("/:shortCode/expiration",
 				adminMiddleware.AuditLog(models.AuditActionURLUpdate, models.ResourceTypeURL),
-				handler.AdminExtendURLExpiration)
+				handler.AdminHandlers.URLHandlers.AdminExtendExpiration)
 		}
 
 		// Flagged URLs management
 		urls.GET("/flagged",
 			adminMiddleware.AuditLog("url.flag.view", models.ResourceTypeURL),
-			handler.AdminGetFlaggedURLs)
+			handler.AdminHandlers.URLHandlers.AdminGetFlaggedURLs)
 
 		urls.POST("/:shortCode/flag",
 			adminMiddleware.RequireAdminPermission(models.PermissionAdminURLFlag),
 			adminMiddleware.AuditLog(models.AuditActionURLFlag, models.ResourceTypeURL),
-			handler.AdminFlagURL)
+			handler.AdminHandlers.URLHandlers.AdminFlagURL)
 
 		urls.DELETE("/:shortCode/flag",
 			adminMiddleware.RequireAdminPermission(models.PermissionAdminURLManage),
 			adminMiddleware.AuditLog(models.AuditActionURLUnflag, models.ResourceTypeURL),
-			handler.AdminUnflagURL)
+			handler.AdminHandlers.URLHandlers.AdminUnflagURL)
 	}
 
 	// ================================================================
@@ -189,19 +189,19 @@ func SetupAdminRoutes(
 		// List blocked domains
 		domains.GET("/blocked",
 			adminMiddleware.AuditLog("domain.blocked.view", models.ResourceTypeDomain),
-			handler.AdminGetBlockedDomains)
+			handler.AdminHandlers.DomainHandlers.AdminGetBlockedDomains)
 
 		// Block domain
 		domains.POST("/block",
 			adminMiddleware.RequireSystemAdmin(),
 			adminMiddleware.AuditLog(models.AuditActionDomainBlock, models.ResourceTypeDomain),
-			handler.AdminBlockDomain)
+			handler.AdminHandlers.DomainHandlers.AdminBlockDomain)
 
 		// Unblock domain
 		domains.DELETE("/block/:domain",
 			adminMiddleware.RequireSystemAdmin(),
 			adminMiddleware.AuditLog(models.AuditActionDomainUnblock, models.ResourceTypeDomain),
-			handler.AdminUnblockDomain)
+			handler.AdminHandlers.DomainHandlers.AdminUnblockDomain)
 	}
 
 	// ================================================================
@@ -214,62 +214,62 @@ func SetupAdminRoutes(
 		analytics.GET("/dashboard",
 			adminMiddleware.ReadOnlyDBContext(), // Use read-only connection for analytics
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "dashboard"),
-			handler.AdminDashboard)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetDashboard)
 
 		// User analytics
 		analytics.GET("/users",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "users"),
-			handler.AdminUserAnalytics)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetUserAnalytics)
 
 		// URL analytics
 		analytics.GET("/urls",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "urls"),
-			handler.AdminURLAnalytics)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetURLAnalytics)
 
 		// Click analytics
 		analytics.GET("/clicks",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "clicks"),
-			handler.AdminClickAnalytics)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetClickAnalytics)
 
 		// Revenue analytics (requires billing permission)
 		analytics.GET("/revenue",
 			adminMiddleware.RequireAdminPermission(models.PermissionAdminBillingView),
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "revenue"),
-			handler.AdminRevenueAnalytics)
+			handler.AdminHandlers.BillingHandlers.AdminGetRevenue)
 
 		// Geographic analytics
 		analytics.GET("/geography",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "geography"),
-			handler.AdminGeographicAnalytics)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetGeographicAnalytics)
 
 		// Device/browser analytics
 		analytics.GET("/devices",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "devices"),
-			handler.AdminDeviceAnalytics)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetDeviceAnalytics)
 
 		// Trend analytics
 		analytics.GET("/trends",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "trends"),
-			handler.AdminTrendAnalytics)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetTrendAnalytics)
 
 		// Top performing URLs
 		analytics.GET("/top-urls",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "top_urls"),
-			handler.AdminTopURLs)
+			handler.AdminHandlers.AnalyticsHandlers.AdminGetTopURLs)
 
 		// Export report (requires export permission)
 		analytics.POST("/export",
 			adminMiddleware.RequireAdminPermission(models.PermissionAdminAnalyticsExport),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsExport, "report"),
-			handler.AdminExportReport)
+			handler.AdminHandlers.AnalyticsHandlers.AdminExportReport)
 	}
 
 	// ================================================================
@@ -281,12 +281,12 @@ func SetupAdminRoutes(
 		// List all subscriptions
 		billing.GET("/subscriptions",
 			adminMiddleware.AuditLog(models.AuditActionSubscriptionView, models.ResourceTypeSubscription),
-			handler.AdminListSubscriptions)
+			handler.AdminHandlers.BillingHandlers.AdminListSubscriptions)
 
 		// Get subscription details
 		billing.GET("/subscriptions/:id",
 			adminMiddleware.AuditLog(models.AuditActionSubscriptionView, models.ResourceTypeSubscription),
-			handler.AdminGetSubscription)
+			handler.AdminHandlers.BillingHandlers.AdminGetSubscription)
 
 		// Subscription management (requires manage permission)
 		billingManage := billing.Group("")
@@ -295,57 +295,57 @@ func SetupAdminRoutes(
 			// Update subscription
 			billingManage.PUT("/subscriptions/:id",
 				adminMiddleware.AuditLog(models.AuditActionSubscriptionUpdate, models.ResourceTypeSubscription),
-				handler.AdminUpdateSubscription)
+				handler.AdminHandlers.BillingHandlers.AdminUpdateSubscription)
 
 			// Cancel subscription
 			billingManage.POST("/subscriptions/:id/cancel",
 				adminMiddleware.AuditLog(models.AuditActionSubscriptionCancel, models.ResourceTypeSubscription),
-				handler.AdminCancelSubscription)
+				handler.AdminHandlers.BillingHandlers.AdminCancelSubscription)
 
 			// Process refund
 			billingManage.POST("/subscriptions/:id/refund",
 				adminMiddleware.RequireSuperAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionSubscriptionRefund, models.ResourceTypeSubscription),
-				handler.AdminRefundSubscription)
+				handler.AdminHandlers.BillingHandlers.AdminRefundSubscription)
 		}
 
 		// Plan management (super admin only)
 		plans := billing.Group("/plans")
 		plans.Use(adminMiddleware.RequireSuperAdmin())
 		{
-			plans.GET("", handler.AdminListPlans)
+			plans.GET("", handler.AdminHandlers.BillingHandlers.AdminListPlans)
 			plans.POST("",
 				adminMiddleware.AuditLog("plan.create", "plan"),
-				handler.AdminCreatePlan)
+				handler.AdminHandlers.BillingHandlers.AdminCreatePlan)
 			plans.PUT("/:id",
 				adminMiddleware.AuditLog("plan.update", "plan"),
-				handler.AdminUpdatePlan)
+				handler.AdminHandlers.BillingHandlers.AdminUpdatePlan)
 			plans.DELETE("/:id",
 				adminMiddleware.AuditLog("plan.delete", "plan"),
-				handler.AdminDeletePlan)
+				handler.AdminHandlers.BillingHandlers.AdminDeletePlan)
 		}
 
 		// Revenue analytics
 		billing.GET("/revenue",
 			adminMiddleware.ReadOnlyDBContext(),
 			adminMiddleware.AuditLog(models.AuditActionAnalyticsView, "revenue"),
-			handler.AdminRevenueAnalytics)
+			handler.AdminHandlers.BillingHandlers.AdminGetRevenue)
 
 		// Webhook management
 		billing.GET("/webhooks",
 			adminMiddleware.AuditLog("webhook.view", "webhook"),
-			handler.AdminListWebhookEvents)
+			handler.AdminHandlers.BillingHandlers.AdminListWebhookEvents)
 
 		billing.POST("/webhooks/:id/retry",
 			adminMiddleware.RequireSystemAdmin(),
 			adminMiddleware.AuditLog("webhook.retry", "webhook"),
-			handler.AdminRetryWebhook)
+			handler.AdminHandlers.BillingHandlers.AdminRetryWebhook)
 
 		// Sync with Polar
 		billing.POST("/sync",
 			adminMiddleware.RequireSystemAdmin(),
 			adminMiddleware.AuditLog("billing.sync", "polar"),
-			handler.AdminSyncPolar)
+			handler.AdminHandlers.BillingHandlers.AdminSyncPolar)
 	}
 
 	// ================================================================
@@ -357,8 +357,8 @@ func SetupAdminRoutes(
 		// Roles
 		roles := rbac.Group("/roles")
 		{
-			roles.GET("", handler.AdminListRoles)
-			roles.GET("/:id", handler.AdminGetRole)
+			roles.GET("", handler.AdminHandlers.RBACHandlers.AdminListRoles)
+			roles.GET("/:id", handler.AdminHandlers.RBACHandlers.AdminGetRole)
 
 			// Role management (requires manage permission)
 			rolesManage := roles.Group("")
@@ -367,53 +367,53 @@ func SetupAdminRoutes(
 				rolesManage.POST("",
 					adminMiddleware.RequireSuperAdmin(),
 					adminMiddleware.AuditLog(models.AuditActionRoleCreate, models.ResourceTypeRole),
-					handler.AdminCreateRole)
+					handler.AdminHandlers.RBACHandlers.AdminCreateRole)
 
 				rolesManage.PUT("/:id",
 					adminMiddleware.RequireSuperAdmin(),
 					adminMiddleware.AuditLog(models.AuditActionRoleUpdate, models.ResourceTypeRole),
-					handler.AdminUpdateRole)
+					handler.AdminHandlers.RBACHandlers.AdminUpdateRole)
 
 				rolesManage.DELETE("/:id",
 					adminMiddleware.RequireSuperAdmin(),
 					adminMiddleware.AuditLog(models.AuditActionRoleDelete, models.ResourceTypeRole),
-					handler.AdminDeleteRole)
+					handler.AdminHandlers.RBACHandlers.AdminDeleteRole)
 
 				// Assign permissions to role
 				rolesManage.POST("/:id/permissions",
 					adminMiddleware.RequireSuperAdmin(),
 					adminMiddleware.AuditLog(models.AuditActionPermissionAssign, models.ResourceTypeRole),
-					handler.AdminAssignPermissionToRole)
+					handler.AdminHandlers.RBACHandlers.AdminAssignPermissionToRole)
 
 				rolesManage.DELETE("/:id/permissions/:permId",
 					adminMiddleware.RequireSuperAdmin(),
 					adminMiddleware.AuditLog(models.AuditActionPermissionRevoke, models.ResourceTypeRole),
-					handler.AdminRemovePermissionFromRole)
+					handler.AdminHandlers.RBACHandlers.AdminRemovePermissionFromRole)
 			}
 		}
 
 		// Permissions
 		permissions := rbac.Group("/permissions")
 		{
-			permissions.GET("", handler.AdminListPermissions)
-			permissions.GET("/:id", handler.AdminGetPermission)
+			permissions.GET("", handler.AdminHandlers.RBACHandlers.AdminListPermissions)
+			permissions.GET("/:id", handler.AdminHandlers.RBACHandlers.AdminGetPermission)
 		}
 
 		// User role assignments
 		userRoles := rbac.Group("/users/:userId/roles")
 		userRoles.Use(adminMiddleware.RequireAdminPermission(models.PermissionAdminRBACManage))
 		{
-			userRoles.GET("", handler.AdminGetUserRoles)
+			userRoles.GET("", handler.AdminHandlers.UserHandlers.AdminGetUserRoles)
 
 			userRoles.POST("",
 				adminMiddleware.RequireSystemAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionRoleAssign, models.ResourceTypeRole),
-				handler.AdminAssignRoleToUser)
+				handler.AdminHandlers.RBACHandlers.AdminAssignRoleToUser)
 
 			userRoles.DELETE("/:roleId",
 				adminMiddleware.RequireSystemAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionRoleRevoke, models.ResourceTypeRole),
-				handler.AdminRemoveRoleFromUser)
+				handler.AdminHandlers.RBACHandlers.AdminRemoveRoleFromUser)
 		}
 	}
 
@@ -426,13 +426,13 @@ func SetupAdminRoutes(
 		// Get all settings or by category
 		settings.GET("",
 			adminMiddleware.AuditLog(models.AuditActionSettingView, models.ResourceTypeSetting),
-			handler.AdminGetSettings)
+			handler.AdminHandlers.SettingsHandlers.AdminGetSettings)
 
-		settings.GET("/categories", handler.AdminGetSettingCategories)
+		settings.GET("/categories", handler.AdminHandlers.SettingsHandlers.AdminGetSettingCategories)
 
 		settings.GET("/:key",
 			adminMiddleware.AuditLog(models.AuditActionSettingView, models.ResourceTypeSetting),
-			handler.AdminGetSetting)
+			handler.AdminHandlers.SettingsHandlers.AdminGetSetting)
 
 		// Update settings (requires manage permission)
 		settingsManage := settings.Group("")
@@ -441,17 +441,17 @@ func SetupAdminRoutes(
 			settingsManage.PUT("/:key",
 				adminMiddleware.RequireSystemAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionSettingUpdate, models.ResourceTypeSetting),
-				handler.AdminUpdateSetting)
+				handler.AdminHandlers.SettingsHandlers.AdminUpdateSetting)
 
 			settingsManage.PUT("/bulk",
 				adminMiddleware.RequireSystemAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionSettingUpdate, models.ResourceTypeSetting),
-				handler.AdminBulkUpdateSettings)
+				handler.AdminHandlers.SettingsHandlers.AdminBulkUpdateSettings)
 
 			settingsManage.POST("/reset",
 				adminMiddleware.RequireSuperAdmin(),
 				adminMiddleware.AuditLog(models.AuditActionSettingReset, models.ResourceTypeSetting),
-				handler.AdminResetSettings)
+				handler.AdminHandlers.SettingsHandlers.AdminResetSettings)
 		}
 	}
 
@@ -464,9 +464,9 @@ func SetupAdminRoutes(
 		// Pages
 		pages := cms.Group("/pages")
 		{
-			pages.GET("", handler.AdminListCMSPages)
-			pages.GET("/:id", handler.AdminGetCMSPage)
-			pages.GET("/:id/versions", handler.AdminGetCMSPageVersions)
+			pages.GET("", handler.AdminHandlers.CMSHandlers.AdminListPages)
+			pages.GET("/:id", handler.AdminHandlers.CMSHandlers.AdminGetPage)
+			pages.GET("/:id/versions", handler.AdminHandlers.CMSHandlers.AdminGetPageVersions)
 
 			// Page management (requires manage permission)
 			pagesManage := pages.Group("")
@@ -474,19 +474,19 @@ func SetupAdminRoutes(
 			{
 				pagesManage.POST("",
 					adminMiddleware.AuditLog(models.AuditActionCMSPageCreate, models.ResourceTypePage),
-					handler.AdminCreateCMSPage)
+					handler.AdminHandlers.CMSHandlers.AdminCreatePage)
 
 				pagesManage.PUT("/:id",
 					adminMiddleware.AuditLog(models.AuditActionCMSPageUpdate, models.ResourceTypePage),
-					handler.AdminUpdateCMSPage)
+					handler.AdminHandlers.CMSHandlers.AdminUpdatePage)
 
 				pagesManage.DELETE("/:id",
 					adminMiddleware.AuditLog(models.AuditActionCMSPageDelete, models.ResourceTypePage),
-					handler.AdminDeleteCMSPage)
+					handler.AdminHandlers.CMSHandlers.AdminDeletePage)
 
 				pagesManage.POST("/:id/publish",
 					adminMiddleware.AuditLog("cms.page.publish", models.ResourceTypePage),
-					handler.AdminPublishCMSPage)
+					handler.AdminHandlers.CMSHandlers.AdminPublishPage)
 			}
 		}
 
@@ -494,13 +494,13 @@ func SetupAdminRoutes(
 		media := cms.Group("/media")
 		media.Use(adminMiddleware.RequireAdminPermission(models.PermissionAdminCMSManage))
 		{
-			media.GET("", handler.AdminListMedia)
+			media.GET("", handler.AdminHandlers.CMSHandlers.AdminListMedia)
 			media.POST("",
 				adminMiddleware.AuditLog("cms.media.upload", "media"),
-				handler.AdminUploadMedia)
+				handler.AdminHandlers.CMSHandlers.AdminUploadMedia)
 			media.DELETE("/:id",
 				adminMiddleware.AuditLog("cms.media.delete", "media"),
-				handler.AdminDeleteMedia)
+				handler.AdminHandlers.CMSHandlers.AdminDeleteMedia)
 		}
 	}
 
@@ -511,33 +511,33 @@ func SetupAdminRoutes(
 	auditLogs.Use(adminMiddleware.RequireAdminPermission(models.PermissionAdminAuditView))
 	{
 		// List audit logs with filters
-		auditLogs.GET("", handler.AdminListAuditLogs)
+		auditLogs.GET("", handler.AdminHandlers.AuditHandlers.AdminListAuditLogs)
 
 		// Get specific audit log
-		auditLogs.GET("/:id", handler.AdminGetAuditLog)
+		auditLogs.GET("/:id", handler.AdminHandlers.AuditHandlers.AdminGetAuditLog)
 
 		// User audit trail
-		auditLogs.GET("/user/:userId", handler.AdminGetUserAuditTrail)
+		auditLogs.GET("/user/:userId", handler.AdminHandlers.UserHandlers.AdminGetUserAuditTrail)
 
 		// Resource audit trail
-		auditLogs.GET("/resource/:type/:id", handler.AdminGetResourceAuditTrail)
+		auditLogs.GET("/resource/:type/:id", handler.AdminHandlers.AuditHandlers.AdminGetResourceAuditTrail)
 
 		// Recent critical actions
-		auditLogs.GET("/critical", handler.AdminGetCriticalActions)
+		auditLogs.GET("/critical", handler.AdminHandlers.AuditHandlers.AdminGetCriticalActions)
 
 		// Audit statistics
-		auditLogs.GET("/stats", handler.AdminGetAuditStats)
+		auditLogs.GET("/stats", handler.AdminHandlers.AuditHandlers.AdminGetAuditStatistics)
 
 		// Export audit logs (super admin only)
 		auditLogs.POST("/export",
 			adminMiddleware.RequireSuperAdmin(),
-			handler.AdminExportAuditLogs)
+			handler.AdminHandlers.AuditHandlers.AdminExportAuditLogs)
 
 		// Cleanup old logs (super admin only)
 		auditLogs.DELETE("/cleanup",
 			adminMiddleware.RequireSuperAdmin(),
 			adminMiddleware.AuditLog("audit.cleanup", "audit_logs"),
-			handler.AdminCleanupAuditLogs)
+			handler.AdminHandlers.AuditHandlers.AdminCleanupAuditLogs)
 	}
 
 	// ================================================================
@@ -547,20 +547,20 @@ func SetupAdminRoutes(
 	monitoring.Use(adminMiddleware.RequireAdminPermission(models.PermissionAdminMonitoringView))
 	{
 		// System health
-		monitoring.GET("/health", handler.AdminSystemHealth)
-		monitoring.GET("/health/database", handler.AdminDatabaseHealth)
-		monitoring.GET("/health/redis", handler.AdminRedisHealth)
-		monitoring.GET("/health/services", handler.AdminServicesHealth)
+		monitoring.GET("/health", handler.AdminHandlers.MonitoringHandlers.AdminGetSystemHealth)
+		monitoring.GET("/health/database", handler.AdminHandlers.MonitoringHandlers.AdminGetDatabaseHealth)
+		monitoring.GET("/health/redis", handler.AdminHandlers.MonitoringHandlers.AdminGetRedisHealth)
+		monitoring.GET("/health/services", handler.AdminHandlers.MonitoringHandlers.AdminGetServicesHealth)
 
 		// System metrics
-		monitoring.GET("/metrics", handler.AdminSystemMetrics)
-		monitoring.GET("/metrics/performance", handler.AdminPerformanceMetrics)
+		monitoring.GET("/metrics", handler.AdminHandlers.MonitoringHandlers.AdminGetSystemMetrics)
+		monitoring.GET("/metrics/performance", handler.AdminHandlers.MonitoringHandlers.AdminGetPerformanceMetrics)
 
 		// Alerts
 		alerts := monitoring.Group("/alerts")
 		{
-			alerts.GET("", handler.AdminListAlerts)
-			alerts.GET("/:id", handler.AdminGetAlert)
+			alerts.GET("", handler.AdminHandlers.MonitoringHandlers.AdminListAlerts)
+			alerts.GET("/:id", handler.AdminHandlers.MonitoringHandlers.AdminGetAlert)
 
 			// Alert management (requires manage permission)
 			alertsManage := alerts.Group("")
@@ -568,16 +568,16 @@ func SetupAdminRoutes(
 			{
 				alertsManage.POST("/:id/acknowledge",
 					adminMiddleware.AuditLog(models.AuditActionSystemAlertAck, models.ResourceTypeAlert),
-					handler.AdminAcknowledgeAlert)
+					handler.AdminHandlers.MonitoringHandlers.AdminAcknowledgeAlert)
 
 				alertsManage.POST("/:id/resolve",
 					adminMiddleware.AuditLog(models.AuditActionSystemAlertResolve, models.ResourceTypeAlert),
-					handler.AdminResolveAlert)
+					handler.AdminHandlers.MonitoringHandlers.AdminResolveAlert)
 			}
 		}
 
 		// Error logs
-		monitoring.GET("/errors", handler.AdminGetErrorLogs)
+		monitoring.GET("/errors", handler.AdminHandlers.MonitoringHandlers.AdminGetErrorLogs)
 	}
 
 	// ================================================================
@@ -589,33 +589,33 @@ func SetupAdminRoutes(
 		// List all API keys across users
 		apiKeys.GET("",
 			adminMiddleware.AuditLog("api_key.view", "api_key"),
-			handler.AdminListAllAPIKeys)
+			handler.AdminHandlers.APIKeyHandlers.AdminListAPIKeys)
 
 		// Get API key details
 		apiKeys.GET("/:id",
 			adminMiddleware.AuditLog("api_key.view", "api_key"),
-			handler.AdminGetAPIKey)
+			handler.AdminHandlers.APIKeyHandlers.AdminGetAPIKey)
 
 		// Revoke API key
 		apiKeys.PUT("/:id/revoke",
 			adminMiddleware.AuditLog("api_key.revoke", "api_key"),
-			handler.AdminRevokeAPIKey)
+			handler.AdminHandlers.APIKeyHandlers.AdminRevokeAPIKey)
 
 		// Delete API key
 		apiKeys.DELETE("/:id",
 			adminMiddleware.RequireSuperAdmin(),
 			adminMiddleware.AuditLog("api_key.delete", "api_key"),
-			handler.AdminDeleteAPIKey)
+			handler.AdminHandlers.APIKeyHandlers.AdminDeleteAPIKey)
 
 		// API key usage stats
 		apiKeys.GET("/:id/usage",
 			adminMiddleware.ReadOnlyDBContext(),
-			handler.AdminGetAPIKeyUsage)
+			handler.AdminHandlers.APIKeyHandlers.AdminGetAPIKeyUsage)
 
 		// Create system API key
 		apiKeys.POST("/system",
 			adminMiddleware.RequireSuperAdmin(),
 			adminMiddleware.AuditLog("api_key.system.create", "api_key"),
-			handler.AdminCreateSystemAPIKey)
+			handler.AdminHandlers.APIKeyHandlers.AdminCreateSystemAPIKey)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
+	"github.com/URLshorter/url-shortener/internal/handlers/admin"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
@@ -36,10 +37,11 @@ type Handler struct {
 	PolarWebhookHandler    *PolarWebhookHandler
 	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
 	AttributionHandlers    *AttributionHandler
+	AdminHandlers          *admin.AdminHandlers  // Admin panel handlers
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminHandlers *admin.AdminHandlers) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
 
@@ -66,6 +68,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		PolarWebhookHandler:    NewPolarWebhookHandler(gormDB, billingHandler.billingService),
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
+		AdminHandlers:          adminHandlers,
 	}
 }
 

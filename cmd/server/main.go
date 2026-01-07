@@ -13,10 +13,12 @@ import (
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
+	"github.com/URLshorter/url-shortener/internal/handlers/admin"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 	"github.com/URLshorter/url-shortener/internal/workers"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -55,6 +57,13 @@ func main() {
 	}
 	defer redis.Close()
 
+	// Initialize DatabaseManager for admin services
+	dbManager, err := storage.NewDatabaseManager(config)
+	if err != nil {
+		log.Fatalf("Failed to initialize DatabaseManager: %v", err)
+	}
+	defer dbManager.Close()
+
 	// Initialize services
 	shortenerService := services.NewShortenerService(db, redis, config)
 	analyticsService := services.NewAnalyticsService(db)
@@ -73,9 +82,11 @@ func main() {
 	abTestingService := services.NewABTestingService(db, redis)
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
-	// cmsService := services.NewCMSService(db)  // Temporarily disabled
-	// apiKeyService := services.NewAPIKeyService(db)  // Temporarily disabled
-	
+	cmsService := services.NewCMSService(db)
+	mediaService := services.NewMediaService(db, "./uploads", config.BaseURL)
+	apiKeyService := services.NewAPIKeyService(db)
+	globalSettingsService := services.NewGlobalSettingsService(db)
+
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
 	
@@ -85,10 +96,48 @@ func main() {
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
 
+	// Initialize billing handler (needed for admin handlers)
+	billingHandler := handlers.NewBillingHandler(gormDB, config)
+
+	// Initialize admin services (needed before admin middleware)
+	snowflakeGen, err := utils.NewSnowflakeGenerator(config.NodeID)
+	if err != nil {
+		log.Fatalf("Failed to create snowflake generator: %v", err)
+	}
+	adminAuditService := services.NewAdminAuditService(dbManager, snowflakeGen)
+
+	// Initialize admin middleware
+	adminMiddleware := middleware.NewAdminMiddleware(dbManager, adminAuditService, rbacService)
+
+	// Initialize remaining admin services
+	adminUserService := services.NewAdminUserService(dbManager, emailService, userService)
+	adminURLService := services.NewAdminURLService(dbManager)
+	domainBlocklistService := services.NewDomainBlocklistService(dbManager)
+	adminAnalyticsService := services.NewAdminAnalyticsService(dbManager)
+	monitoringService := services.NewMonitoringService(dbManager, redis)
+
+	// Initialize admin handlers
+	adminHandlers := admin.NewAdminHandlers(
+		dbManager,
+		redis,
+		adminUserService,
+		adminURLService,
+		domainBlocklistService,
+		adminAnalyticsService,
+		monitoringService,
+		adminAuditService,
+		rbacService,
+		billingHandler.GetBillingService(),
+		globalSettingsService,
+		cmsService,
+		mediaService,
+		apiKeyService,
+	)
+
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminHandlers)
 
 	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
@@ -129,7 +178,7 @@ func main() {
 	router := gin.Default()
 
 	// Setup all routes
-	routes.SetupRoutes(router, handler, authMiddleware)
+	routes.SetupRoutes(router, handler, authMiddleware, adminMiddleware)
 
 	// Setup webhook admin routes
 	routes.SetupWebhookAdminRoutes(router, webhookAdminHandler, authMiddleware)

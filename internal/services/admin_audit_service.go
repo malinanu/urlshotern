@@ -447,3 +447,31 @@ func (s *AdminAuditService) GetAuditStatistics(ctx context.Context, startDate, e
 		"billing_actions":  stats.BillingActions,
 	}, nil
 }
+
+// LogActionHelper is a convenience method for logging actions with individual parameters
+// This simplifies calling LogAction from handlers
+func (s *AdminAuditService) LogActionHelper(
+	ctx context.Context,
+	userID int64,
+	action string,
+	resourceType string,
+	resourceID *int64,
+	details map[string]interface{},
+) error {
+	var resourceIDStr string
+	if resourceID != nil {
+		resourceIDStr = fmt.Sprintf("%d", *resourceID)
+	}
+
+	req := models.CreateAuditLogRequest{
+		UserID:       &userID,
+		Action:       action,
+		ResourceType: resourceType,
+		ResourceID:   resourceIDStr,
+		Details:      details,
+		Status:       models.AuditStatusSuccess,
+		Severity:     models.AuditSeverityInfo,
+	}
+
+	return s.LogAction(ctx, req)
+}

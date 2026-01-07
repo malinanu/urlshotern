@@ -32,6 +32,11 @@ func (bh *BillingHandler) GetPolarService() *services.PolarService {
 	return bh.billingService.GetPolarService()
 }
 
+// GetBillingService returns the billing service for admin use
+func (bh *BillingHandler) GetBillingService() *services.BillingService {
+	return bh.billingService
+}
+
 // GetSubscription returns the current user's subscription details
 func (bh *BillingHandler) GetSubscription(c *gin.Context) {
 	userID := c.GetInt64("user_id")
