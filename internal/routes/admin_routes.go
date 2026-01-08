@@ -26,6 +26,15 @@ func SetupAdminRoutes(
 	admin.Use(adminMiddleware.AdminAccessLog())                // Log all admin panel access
 
 	// ================================================================
+	// ADMIN DASHBOARD
+	// ================================================================
+	// Root endpoint returns dashboard overview
+	admin.GET("", handler.AdminHandlers.DashboardHandlers.GetDashboardOverview)
+
+	// Additional dashboard stats endpoint
+	admin.GET("/stats", handler.AdminHandlers.DashboardHandlers.AdminDashboardStats)
+
+	// ================================================================
 	// ADMIN USER MANAGEMENT
 	// ================================================================
 	users := admin.Group("/users")

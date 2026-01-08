@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -208,6 +209,47 @@ func (s *SMSService) sendSMS(phone, message string) error {
 	return nil
 }
 
+// HealthCheck performs a lightweight health check on SMS API
+// In development mode, always returns nil
+// In production, attempts to connect to TextLK API
+func (s *SMSService) HealthCheck(ctx context.Context) error {
+	// For development, SMS is always "healthy" (we just log)
+	if s.config.Environment == "development" {
+		return nil
+	}
+
+	// Check if API key is configured
+	apiKey := s.getTextLKAPIKey()
+	if apiKey == "" {
+		return fmt.Errorf("SMS API key not configured")
+	}
+
+	// Test connection to TextLK API with a lightweight request
+	apiURL := "https://textit.business/api/v1/send"
+
+	// Create a test request (won't actually send, just test connectivity)
+	req, err := http.NewRequestWithContext(ctx, "HEAD", apiURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create SMS health check request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("SMS API unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Consider 200, 401, 403, 405 (Method Not Allowed) as "API is reachable"
+	// 405 is expected for HEAD requests if endpoint doesn't support it
+	if resp.StatusCode == 200 || resp.StatusCode == 401 || resp.StatusCode == 403 || resp.StatusCode == 405 {
+		return nil
+	}
+
+	return fmt.Errorf("SMS API returned status %d", resp.StatusCode)
+}
+
 // generateOTP generates a 6-digit OTP
 func (s *SMSService) generateOTP() (string, error) {
 	// Generate a random number between 100000 and 999999
@@ -303,7 +345,7 @@ func (s *SMSService) InvalidatePhoneVerifications(userID int64) error {
 func (s *SMSService) GetUserByID(userID int64) (*models.User, error) {
 	user := &models.User{}
 	query := "SELECT id, email, phone, phone_verified FROM users WHERE id = $1"
-	
+
 	err := s.db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Phone, &user.PhoneVerified)
 	return user, err
 }

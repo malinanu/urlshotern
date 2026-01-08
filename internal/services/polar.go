@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -525,6 +526,36 @@ func (ps *PolarService) makeRequest(method, endpoint string, payload interface{}
 	}
 
 	return nil
+}
+
+// HealthCheck performs a lightweight health check on Polar API
+// Returns nil if the API is reachable (HTTP 200/401/403), error otherwise
+func (ps *PolarService) HealthCheck(ctx context.Context) error {
+	// Use a lightweight endpoint with limit=1 to minimize load
+	endpoint := "/products/?limit=1"
+	url := ps.baseURL + endpoint
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create health check request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+ps.config.PolarAccessToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := ps.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("polar API unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Consider 200, 401, 403 as "API is reachable"
+	// 401/403 means auth issue but API is up
+	if resp.StatusCode == 200 || resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil
+	}
+
+	return fmt.Errorf("polar API returned status %d", resp.StatusCode)
 }
 
 // stringValue safely dereferences a string pointer

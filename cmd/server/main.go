@@ -110,11 +110,16 @@ func main() {
 	adminMiddleware := middleware.NewAdminMiddleware(dbManager, adminAuditService, rbacService)
 
 	// Initialize remaining admin services
-	adminUserService := services.NewAdminUserService(dbManager, emailService, userService)
+	adminUserService := services.NewAdminUserService(dbManager, emailService, userService, jwtService)
 	adminURLService := services.NewAdminURLService(dbManager)
 	domainBlocklistService := services.NewDomainBlocklistService(dbManager)
 	adminAnalyticsService := services.NewAdminAnalyticsService(dbManager)
 	monitoringService := services.NewMonitoringService(dbManager, redis)
+
+	// Wire services to monitoring for health checks
+	monitoringService.SetPolarService(billingHandler.GetPolarService())
+	monitoringService.SetEmailProvider(emailService.GetProvider())
+	monitoringService.SetSMSService(smsService)
 
 	// Initialize admin handlers
 	adminHandlers := admin.NewAdminHandlers(
@@ -138,6 +143,9 @@ func main() {
 	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminHandlers)
+
+	// Initialize admin auth handlers
+	adminAuthHandlers := admin.NewAdminAuthHandlers(authService, adminAuditService, userService)
 
 	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
@@ -182,6 +190,12 @@ func main() {
 
 	// Setup webhook admin routes
 	routes.SetupWebhookAdminRoutes(router, webhookAdminHandler, authMiddleware)
+
+	// Setup admin auth routes (login, logout, refresh)
+	routes.SetupAdminAuthRoutes(router, handler.AdminHandlers, adminAuthHandlers, authMiddleware, adminMiddleware)
+
+	// Setup admin panel routes (dashboard, users, analytics, etc.)
+	routes.SetupAdminRoutes(router, handler, authMiddleware, adminMiddleware)
 
 	// Setup server
 	srv := &http.Server{

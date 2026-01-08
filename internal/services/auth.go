@@ -80,7 +80,7 @@ func (a *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 	}
 
 	// Log registration event
-	a.logAuditEvent(&registrationData.User.ID, "user_registered", "user", fmt.Sprintf("%d", registrationData.User.ID), 
+	a.LogAuditEvent(&registrationData.User.ID, "user_registered", "user", fmt.Sprintf("%d", registrationData.User.ID), 
 		map[string]interface{}{
 			"email": registrationData.User.Email,
 			"provider": "email",
@@ -95,7 +95,7 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	user, sessionID, err := a.userService.AuthenticateUser(req)
 	if err != nil {
 		// Log failed login attempt
-		a.logAuditEvent(nil, "login_failed", "authentication", "", 
+		a.LogAuditEvent(nil, "login_failed", "authentication", "", 
 			map[string]interface{}{
 				"email": req.Email,
 				"reason": err.Error(),
@@ -110,7 +110,7 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	}
 
 	// Log successful login
-	a.logAuditEvent(&user.ID, "login_success", "authentication", fmt.Sprintf("%d", user.ID), 
+	a.LogAuditEvent(&user.ID, "login_success", "authentication", fmt.Sprintf("%d", user.ID), 
 		map[string]interface{}{
 			"email": user.Email,
 			"session_id": sessionID,
@@ -122,6 +122,58 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    int64(tokenPair.ExpiresAt.Sub(time.Now()).Seconds()),
 	}, nil
+}
+
+// AdminLogin validates admin credentials and returns tokens
+func (a *AuthService) AdminLogin(req *models.LoginRequest, ipAddress, userAgent string) (*models.AuthResponse, error) {
+	// Call regular Login() method
+	response, err := a.Login(req, ipAddress, userAgent)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch user and verify admin status
+	user, err := a.userService.GetUserByEmail(req.Email)
+	if err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	// Check if user is admin
+	if !user.IsAdmin && !isAdminAccountType(user.AccountType) {
+		// Log unauthorized admin access attempt
+		a.LogAuditEvent(nil, "admin_login_rejected", "authentication", "",
+			map[string]interface{}{
+				"email":  req.Email,
+				"reason": "not_admin",
+			}, ipAddress, userAgent)
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	// Log successful admin login
+	a.LogAuditEvent(&user.ID, "admin_login_success", "authentication", fmt.Sprintf("%d", user.ID),
+		map[string]interface{}{
+			"email":      user.Email,
+			"admin_type": user.AccountType,
+		}, ipAddress, userAgent)
+
+	return response, nil
+}
+
+// isAdminAccountType checks if the account type is an admin type
+func isAdminAccountType(accountType string) bool {
+	adminTypes := []string{
+		"super_admin",
+		"system_admin",
+		"support_admin",
+		"billing_admin",
+		"content_admin",
+	}
+	for _, t := range adminTypes {
+		if accountType == t {
+			return true
+		}
+	}
+	return false
 }
 
 // RefreshTokens generates new tokens using refresh token
@@ -155,7 +207,7 @@ func (a *AuthService) RefreshTokens(req *models.RefreshTokenRequest, ipAddress, 
 	}
 
 	// Log token refresh
-	a.logAuditEvent(&user.ID, "token_refreshed", "authentication", fmt.Sprintf("%d", user.ID),
+	a.LogAuditEvent(&user.ID, "token_refreshed", "authentication", fmt.Sprintf("%d", user.ID),
 		map[string]interface{}{
 			"email": user.Email,
 			"session_id": claims.SessionID,
@@ -169,6 +221,14 @@ func (a *AuthService) RefreshTokens(req *models.RefreshTokenRequest, ipAddress, 
 	}, nil
 }
 
+// RefreshToken is a convenience method that takes just the refresh token string
+func (a *AuthService) RefreshToken(refreshToken string) (*models.AuthResponse, error) {
+	req := &models.RefreshTokenRequest{
+		RefreshToken: refreshToken,
+	}
+	return a.RefreshTokens(req, "", "")
+}
+
 // VerifyEmail verifies user email with token
 func (a *AuthService) VerifyEmail(token string, ipAddress, userAgent string) (*models.User, error) {
 	user, err := a.userService.VerifyEmail(token)
@@ -177,7 +237,7 @@ func (a *AuthService) VerifyEmail(token string, ipAddress, userAgent string) (*m
 	}
 
 	// Log email verification
-	a.logAuditEvent(&user.ID, "email_verified", "user", fmt.Sprintf("%d", user.ID), 
+	a.LogAuditEvent(&user.ID, "email_verified", "user", fmt.Sprintf("%d", user.ID),
 		map[string]interface{}{
 			"email": user.Email,
 		}, ipAddress, userAgent)
@@ -193,7 +253,7 @@ func (a *AuthService) SendOTP(req *models.ResendOTPRequest, ipAddress, userAgent
 	}
 
 	// Log OTP sent
-	a.logAuditEvent(&req.UserID, "otp_sent", "verification", fmt.Sprintf("%d", req.UserID), 
+	a.LogAuditEvent(&req.UserID, "otp_sent", "verification", fmt.Sprintf("%d", req.UserID),
 		map[string]interface{}{
 			"type": "phone",
 		}, ipAddress, userAgent)
@@ -206,7 +266,7 @@ func (a *AuthService) VerifyOTP(req *models.OTPRequest, ipAddress, userAgent str
 	err := a.userService.VerifyOTP(req.UserID, req.OTP)
 	if err != nil {
 		// Log failed OTP verification
-		a.logAuditEvent(&req.UserID, "otp_verification_failed", "verification", fmt.Sprintf("%d", req.UserID), 
+		a.LogAuditEvent(&req.UserID, "otp_verification_failed", "verification", fmt.Sprintf("%d", req.UserID),
 			map[string]interface{}{
 				"reason": err.Error(),
 			}, ipAddress, userAgent)
@@ -214,7 +274,7 @@ func (a *AuthService) VerifyOTP(req *models.OTPRequest, ipAddress, userAgent str
 	}
 
 	// Log successful OTP verification
-	a.logAuditEvent(&req.UserID, "otp_verified", "verification", fmt.Sprintf("%d", req.UserID), 
+	a.LogAuditEvent(&req.UserID, "otp_verified", "verification", fmt.Sprintf("%d", req.UserID),
 		map[string]interface{}{
 			"type": "phone",
 		}, ipAddress, userAgent)
@@ -239,7 +299,7 @@ func (a *AuthService) ForgotPassword(req *models.ForgotPasswordRequest, ipAddres
 	}
 
 	// Log password reset request (don't log user ID to prevent enumeration)
-	a.logAuditEvent(nil, "password_reset_requested", "authentication", "", 
+	a.LogAuditEvent(nil, "password_reset_requested", "authentication", "",
 		map[string]interface{}{
 			"email": req.Email,
 		}, ipAddress, userAgent)
@@ -255,7 +315,7 @@ func (a *AuthService) ResetPassword(req *models.ResetPasswordRequest, ipAddress,
 	}
 
 	// Log password reset
-	a.logAuditEvent(nil, "password_reset_completed", "authentication", "", 
+	a.LogAuditEvent(nil, "password_reset_completed", "authentication", "",
 		map[string]interface{}{
 			"token_used": true,
 		}, ipAddress, userAgent)
@@ -295,7 +355,7 @@ func (a *AuthService) UpdateProfile(userID int64, req *models.UpdateProfileReque
 	}
 
 	// Log profile update
-	a.logAuditEvent(&userID, "profile_updated", "user", fmt.Sprintf("%d", userID),
+	a.LogAuditEvent(&userID, "profile_updated", "user", fmt.Sprintf("%d", userID),
 		map[string]interface{}{
 			"fields_updated": updates,
 		}, ipAddress, userAgent)
@@ -318,7 +378,7 @@ func (a *AuthService) ChangePassword(userID int64, req *models.ChangePasswordReq
 	}
 
 	// Log password change
-	a.logAuditEvent(&userID, "password_changed", "user", fmt.Sprintf("%d", userID),
+	a.LogAuditEvent(&userID, "password_changed", "user", fmt.Sprintf("%d", userID),
 		map[string]interface{}{
 			"method": "self_service",
 		}, ipAddress, userAgent)
@@ -355,7 +415,7 @@ func (a *AuthService) Logout(userID int64, sessionID string, ipAddress, userAgen
 	// This would be implemented in the UserService or directly here
 
 	// Log logout
-	a.logAuditEvent(&userID, "logout", "authentication", fmt.Sprintf("%d", userID),
+	a.LogAuditEvent(&userID, "logout", "authentication", fmt.Sprintf("%d", userID),
 		map[string]interface{}{
 			"session_id": sessionID,
 		}, ipAddress, userAgent)
@@ -405,7 +465,8 @@ func (a *AuthService) validateRegistrationRequest(req *models.RegisterRequest) e
 	return nil
 }
 
-func (a *AuthService) logAuditEvent(userID *int64, action, resourceType, resourceID string, details map[string]interface{}, ipAddress, userAgent string) {
+// LogAuditEvent logs an audit event (exported for use in handlers)
+func (a *AuthService) LogAuditEvent(userID *int64, action, resourceType, resourceID string, details map[string]interface{}, ipAddress, userAgent string) {
 	// This would log to the audit_logs table
 	// Implementation would depend on your storage layer
 	auditLog := &models.AuditLog{

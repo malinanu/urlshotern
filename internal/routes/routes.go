@@ -42,8 +42,8 @@ func SetupRoutes(
 	// Protected routes (authentication required - supports both JWT and API keys)
 	setupProtectedRoutes(router, handler, authMiddleware)
 
-	// Admin routes (admin access required) - ENABLED
-	SetupAdminRoutes(router, handler, authMiddleware, adminMiddleware)
+	// Note: Admin routes are set up separately in main.go after admin auth routes
+	// to ensure proper middleware ordering and avoid route conflicts
 
 	// Static file serving for frontend (must be last to not interfere with API routes)
 	setupStaticRoutes(router)

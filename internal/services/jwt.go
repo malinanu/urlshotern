@@ -25,12 +25,13 @@ type JWTService struct {
 }
 
 type Claims struct {
-	UserID      int64  `json:"user_id"`
-	Email       string `json:"email"`
-	Role        string `json:"role"`
-	AccountType string `json:"account_type"`
-	SessionID   string `json:"session_id"`
-	TokenType   string `json:"token_type"` // "access" or "refresh"
+	UserID         int64  `json:"user_id"`
+	Email          string `json:"email"`
+	Role           string `json:"role"`
+	AccountType    string `json:"account_type"`
+	SessionID      string `json:"session_id"`
+	TokenType      string `json:"token_type"` // "access" or "refresh"
+	ImpersonatedBy *int64 `json:"impersonated_by,omitempty"` // Admin ID who is impersonating
 	jwt.RegisteredClaims
 }
 
@@ -316,6 +317,57 @@ func (j *JWTService) ValidateEmailVerificationToken(tokenString string) (*Claims
 
 	if claims.TokenType != "email_verification" {
 		return nil, errors.New("invalid token type for email verification")
+	}
+
+	return claims, nil
+}
+
+// CreateImpersonationToken creates a special token for admin impersonation
+func (j *JWTService) CreateImpersonationToken(targetUser *models.User, adminID int64, sessionID string, duration time.Duration) (string, time.Time, error) {
+	now := time.Now()
+	expiresAt := now.Add(duration)
+
+	claims := &Claims{
+		UserID:         targetUser.ID,
+		Email:          targetUser.Email,
+		Role:           j.getUserRole(targetUser),
+		AccountType:    targetUser.AccountType,
+		SessionID:      sessionID,
+		TokenType:      "impersonation",
+		ImpersonatedBy: &adminID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    j.issuer,
+			Subject:   fmt.Sprintf("%d", targetUser.ID),
+			Audience:  []string{"url-shortener-impersonation"},
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			NotBefore: jwt.NewNumericDate(now),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ID:        j.generateTokenID(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(j.secretKey))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	return tokenString, expiresAt, nil
+}
+
+// ValidateImpersonationToken validates an impersonation token
+func (j *JWTService) ValidateImpersonationToken(tokenString string) (*Claims, error) {
+	claims, err := j.ValidateToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+
+	if claims.TokenType != "impersonation" {
+		return nil, errors.New("invalid token type for impersonation")
+	}
+
+	if claims.ImpersonatedBy == nil || *claims.ImpersonatedBy == 0 {
+		return nil, errors.New("impersonation token missing admin ID")
 	}
 
 	return claims, nil

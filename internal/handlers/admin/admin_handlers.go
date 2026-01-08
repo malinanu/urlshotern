@@ -7,6 +7,7 @@ import (
 
 // AdminHandlers aggregates all admin handler groups
 type AdminHandlers struct {
+	DashboardHandlers  *AdminDashboardHandlers
 	UserHandlers       *AdminUserHandlers
 	URLHandlers        *AdminURLHandlers
 	DomainHandlers     *AdminDomainHandlers
@@ -38,6 +39,7 @@ func NewAdminHandlers(
 	apiKeyService *services.APIKeyService,
 ) *AdminHandlers {
 	return &AdminHandlers{
+		DashboardHandlers:  NewAdminDashboardHandlers(adminAnalyticsService, monitoringService, adminAuditService),
 		UserHandlers:       NewAdminUserHandlers(adminUserService, adminAuditService),
 		URLHandlers:        NewAdminURLHandlers(adminURLService, adminAuditService),
 		DomainHandlers:     NewAdminDomainHandlers(domainBlocklistService, adminAuditService),

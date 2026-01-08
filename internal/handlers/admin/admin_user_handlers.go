@@ -359,7 +359,7 @@ func (h *AdminUserHandlers) AdminDeleteUser(c *gin.Context) {
 	})
 }
 
-// AdminImpersonateUser creates an impersonation session (placeholder)
+// AdminImpersonateUser creates an impersonation session
 // POST /api/v1/admin/users/:id/impersonate
 func (h *AdminUserHandlers) AdminImpersonateUser(c *gin.Context) {
 	adminID, exists := c.Get("user_id")
@@ -389,14 +389,26 @@ func (h *AdminUserHandlers) AdminImpersonateUser(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual impersonation logic
-	// This would typically create a special session token
+	// Create impersonation token
+	token, expiresAt, err := h.adminUserService.CreateImpersonationToken(c.Request.Context(), userID, adminID.(int64))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "impersonation_failed",
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// Audit log
 	h.auditService.LogActionHelper(c.Request.Context(), adminID.(int64), "admin.user.impersonate", "user", &userID, nil)
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Impersonation feature not yet implemented",
+		"message":     "Impersonation token created successfully",
+		"token":       token,
+		"token_type":  "Bearer",
+		"expires_at":  expiresAt,
+		"target_user": userID,
+		"impersonated_by": adminID,
 	})
 }
 

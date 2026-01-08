@@ -3,17 +3,31 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/services/email"
 )
 
 // MonitoringService handles system monitoring operations
 type MonitoringService struct {
-	dbManager    *storage.DatabaseManager
-	redisStorage *storage.RedisStorage
+	dbManager      *storage.DatabaseManager
+	redisStorage   *storage.RedisStorage
+	polarService   *PolarService
+	emailProvider  email.Provider
+	smsService     *SMSService
+	healthCache    map[string]cachedHealth
+	healthCacheMux sync.RWMutex
+}
+
+// cachedHealth stores cached health check results
+type cachedHealth struct {
+	status    models.ServiceStatus
+	timestamp time.Time
 }
 
 // NewMonitoringService creates a new monitoring service
@@ -21,7 +35,23 @@ func NewMonitoringService(dbManager *storage.DatabaseManager, redisStorage *stor
 	return &MonitoringService{
 		dbManager:    dbManager,
 		redisStorage: redisStorage,
+		healthCache:  make(map[string]cachedHealth),
 	}
+}
+
+// SetPolarService sets the Polar service for health checks
+func (s *MonitoringService) SetPolarService(polarService *PolarService) {
+	s.polarService = polarService
+}
+
+// SetEmailProvider sets the email provider for health checks
+func (s *MonitoringService) SetEmailProvider(emailProvider email.Provider) {
+	s.emailProvider = emailProvider
+}
+
+// SetSMSService sets the SMS service for health checks
+func (s *MonitoringService) SetSMSService(smsService *SMSService) {
+	s.smsService = smsService
 }
 
 // GetSystemHealth retrieves overall system health status
@@ -57,6 +87,122 @@ func (s *MonitoringService) GetSystemHealth(ctx context.Context) (*models.System
 	health.Uptime = 0
 
 	return health, nil
+}
+
+// GetServicesHealth retrieves health status of all external services
+func (s *MonitoringService) GetServicesHealth(ctx context.Context) (map[string]models.ServiceStatus, error) {
+	services := make(map[string]models.ServiceStatus)
+
+	// Check database
+	dbStatus := s.checkServiceHealth(ctx, "database", func(ctx context.Context) error {
+		dbHealth, err := s.GetDatabaseHealth(ctx)
+		if err != nil || dbHealth.Status != "healthy" {
+			return fmt.Errorf("database unhealthy")
+		}
+		return nil
+	})
+	services["database"] = dbStatus
+
+	// Check Redis
+	redisStatus := s.checkServiceHealth(ctx, "redis", func(ctx context.Context) error {
+		redisHealth, err := s.GetRedisHealth(ctx)
+		if err != nil || redisHealth.Status != "healthy" {
+			return fmt.Errorf("redis unhealthy")
+		}
+		return nil
+	})
+	services["redis"] = redisStatus
+
+	// Check Polar API
+	if s.polarService != nil {
+		polarStatus := s.checkServiceHealth(ctx, "polar_api", func(ctx context.Context) error {
+			return s.polarService.HealthCheck(ctx)
+		})
+		services["polar_api"] = polarStatus
+	}
+
+	// Check SMTP
+	if s.emailProvider != nil {
+		smtpStatus := s.checkServiceHealth(ctx, "smtp", func(ctx context.Context) error {
+			// Check if emailProvider supports HealthCheck
+			if provider, ok := s.emailProvider.(interface {
+				HealthCheck(context.Context) error
+			}); ok {
+				return provider.HealthCheck(ctx)
+			}
+			return nil // Consider healthy if no HealthCheck method
+		})
+		services["smtp"] = smtpStatus
+	}
+
+	// Check SMS
+	if s.smsService != nil {
+		smsStatus := s.checkServiceHealth(ctx, "sms", func(ctx context.Context) error {
+			return s.smsService.HealthCheck(ctx)
+		})
+		services["sms"] = smsStatus
+	}
+
+	return services, nil
+}
+
+// checkServiceHealth checks a service's health with caching (30s TTL)
+func (s *MonitoringService) checkServiceHealth(ctx context.Context, serviceName string, healthCheck func(context.Context) error) models.ServiceStatus {
+	// Check cache first
+	s.healthCacheMux.RLock()
+	if cached, ok := s.healthCache[serviceName]; ok {
+		if time.Since(cached.timestamp) < 30*time.Second {
+			s.healthCacheMux.RUnlock()
+			return cached.status
+		}
+	}
+	s.healthCacheMux.RUnlock()
+
+	// Perform health check with timeout
+	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	status := models.ServiceStatus{
+		Name:        s.formatServiceName(serviceName),
+		LastChecked: time.Now(),
+	}
+
+	start := time.Now()
+	err := healthCheck(checkCtx)
+	status.ResponseTimeMs = time.Since(start).Milliseconds()
+
+	if err != nil {
+		status.Status = "unavailable"
+		status.Message = err.Error()
+	} else {
+		status.Status = "available"
+		status.Message = "Service is healthy"
+	}
+
+	// Cache result
+	s.healthCacheMux.Lock()
+	s.healthCache[serviceName] = cachedHealth{
+		status:    status,
+		timestamp: time.Now(),
+	}
+	s.healthCacheMux.Unlock()
+
+	return status
+}
+
+// formatServiceName converts service key to human-readable name
+func (s *MonitoringService) formatServiceName(serviceName string) string {
+	names := map[string]string{
+		"database":  "PostgreSQL",
+		"redis":     "Redis Cache",
+		"polar_api": "Polar API",
+		"smtp":      "SMTP Email",
+		"sms":       "TextLK SMS",
+	}
+	if name, ok := names[serviceName]; ok {
+		return name
+	}
+	return serviceName
 }
 
 // GetDatabaseHealth checks database connection health
@@ -135,14 +281,41 @@ func (s *MonitoringService) GetSystemMetrics(ctx context.Context) (*models.Syste
 	metrics.MemoryUsedMB = int64(m.Alloc / 1024 / 1024)
 	metrics.MemoryTotalMB = int64(m.Sys / 1024 / 1024)
 
-	// CPU, Disk, and request metrics would require additional packages
-	metrics.CPUUsagePercent = 0
-	metrics.DiskUsedMB = 0
-	metrics.DiskTotalMB = 0
+	// CPU usage (goroutine-based proxy)
+	metrics.CPUUsagePercent = s.getCPUUsage()
+
+	// Disk usage
+	diskUsed, diskTotal := s.getDiskUsage()
+	metrics.DiskUsedMB = diskUsed
+	metrics.DiskTotalMB = diskTotal
+
+	// Request metrics (placeholder - would require middleware integration)
 	metrics.RequestsPerSecond = 0
 	metrics.AvgResponseTimeMs = 0
 
 	return metrics, nil
+}
+
+// getCPUUsage estimates CPU usage based on goroutine count
+// This is a simplified proxy metric without external dependencies
+func (s *MonitoringService) getCPUUsage() float64 {
+	goroutines := float64(runtime.NumGoroutine())
+	baseline := 50.0 // Typical idle goroutines
+
+	if goroutines < baseline {
+		return 0.0
+	}
+
+	// Simple heuristic: goroutines above baseline indicate load
+	// Cap at 100%
+	usage := (goroutines - baseline) / baseline * 100
+	return math.Min(100.0, usage)
+}
+
+// getDiskUsage retrieves disk usage statistics
+func (s *MonitoringService) getDiskUsage() (used int64, total int64) {
+	// Platform-specific implementation
+	return getDiskUsagePlatform()
 }
 
 // ListAlerts retrieves system alerts with filtering

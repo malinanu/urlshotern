@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
@@ -288,23 +289,42 @@ func (h *AdminMonitoringHandlers) AdminGetErrorLogs(c *gin.Context) {
 // AdminGetServicesHealth retrieves health status of all services
 // GET /api/v1/admin/monitoring/health/services
 func (h *AdminMonitoringHandlers) AdminGetServicesHealth(c *gin.Context) {
-	// TODO: Implement services health check
+	services, err := h.monitoringService.GetServicesHealth(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Failed to check services health",
+		})
+		return
+	}
+
+	// Determine overall status
+	overallStatus := "healthy"
+	for _, svc := range services {
+		if svc.Status == "unavailable" {
+			overallStatus = "degraded"
+			break
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"services": gin.H{
-			"database": "healthy",
-			"redis":    "healthy",
-			"api":      "healthy",
-		},
+		"overall_status": overallStatus,
+		"services":       services,
+		"checked_at":     time.Now(),
 	})
 }
 
 // AdminGetPerformanceMetrics retrieves performance metrics
 // GET /api/v1/admin/monitoring/metrics/performance
 func (h *AdminMonitoringHandlers) AdminGetPerformanceMetrics(c *gin.Context) {
-	// TODO: Implement performance metrics
-	c.JSON(http.StatusOK, gin.H{
-		"cpu_usage":    0,
-		"memory_usage": 0,
-		"response_time": 0,
-	})
+	metrics, err := h.monitoringService.GetSystemMetrics(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Failed to retrieve performance metrics",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
 }

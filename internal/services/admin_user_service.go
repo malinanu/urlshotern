@@ -15,14 +15,16 @@ type AdminUserService struct {
 	dbManager    *storage.DatabaseManager
 	emailService *EmailService
 	userService  *UserService
+	jwtService   *JWTService
 }
 
 // NewAdminUserService creates a new admin user service
-func NewAdminUserService(dbManager *storage.DatabaseManager, emailService *EmailService, userService *UserService) *AdminUserService {
+func NewAdminUserService(dbManager *storage.DatabaseManager, emailService *EmailService, userService *UserService, jwtService *JWTService) *AdminUserService {
 	return &AdminUserService{
 		dbManager:    dbManager,
 		emailService: emailService,
 		userService:  userService,
+		jwtService:   jwtService,
 	}
 }
 
@@ -400,4 +402,29 @@ func (s *AdminUserService) ExportUsers(ctx context.Context, filter models.UserFi
 	// This would generate CSV/JSON export
 	// Placeholder implementation
 	return []byte{}, nil
+}
+
+// CreateImpersonationToken generates an impersonation JWT token for admins to impersonate users
+func (s *AdminUserService) CreateImpersonationToken(ctx context.Context, targetUserID, adminID int64) (string, time.Time, error) {
+	// Get target user
+	targetUser, err := s.GetUserByID(ctx, targetUserID)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("target user not found: %w", err)
+	}
+
+	// Check if target user is an admin (prevent impersonating other admins)
+	if targetUser.IsAdmin {
+		return "", time.Time{}, fmt.Errorf("cannot impersonate admin users")
+	}
+
+	// Generate session ID for impersonation
+	sessionID := fmt.Sprintf("impersonate_%d_%d_%d", adminID, targetUserID, time.Now().Unix())
+
+	// Create impersonation token with 15 minute expiration
+	token, expiresAt, err := s.jwtService.CreateImpersonationToken(targetUser, adminID, sessionID, 15*time.Minute)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("failed to create impersonation token: %w", err)
+	}
+
+	return token, expiresAt, nil
 }

@@ -357,9 +357,9 @@ func (s *MediaService) GetFilesByIDs(ids []int64, userID int64) ([]*models.Media
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, user_id, filename, original_name, file_path, file_url, file_size, 
+		SELECT id, user_id, filename, original_name, file_path, file_url, file_size,
 			mime_type, file_type, width, height, alt, caption, is_public, created_at, updated_at
-		FROM media_files 
+		FROM media_files
 		WHERE (user_id = $1 OR is_public = true) AND id IN (%s)
 		ORDER BY created_at DESC`, strings.Join(placeholders, ","))
 
@@ -385,4 +385,101 @@ func (s *MediaService) GetFilesByIDs(ids []int64, userID int64) ([]*models.Media
 	}
 
 	return files, nil
+}
+
+// AdminListMediaFiles lists all media files across all users (admin use)
+func (s *MediaService) AdminListMediaFiles(fileType string, limit, offset int) ([]*models.MediaFile, int64, error) {
+	// Build query with optional file type filter
+	baseQuery := `FROM media_files WHERE 1=1`
+	args := []interface{}{}
+	argIndex := 1
+
+	if fileType != "" {
+		baseQuery += fmt.Sprintf(" AND file_type = $%d", argIndex)
+		args = append(args, fileType)
+		argIndex++
+	}
+
+	// Get total count
+	countQuery := "SELECT COUNT(*) " + baseQuery
+	var total int64
+	err := s.db.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count media files: %w", err)
+	}
+
+	// Get files
+	selectQuery := fmt.Sprintf(`
+		SELECT id, user_id, filename, original_name, file_path, file_url, file_size,
+			mime_type, file_type, width, height, alt, caption, is_public, created_at, updated_at
+		%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
+		baseQuery, argIndex, argIndex+1)
+
+	args = append(args, limit, offset)
+
+	rows, err := s.db.Query(selectQuery, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list media files: %w", err)
+	}
+	defer rows.Close()
+
+	var files []*models.MediaFile
+	for rows.Next() {
+		var media models.MediaFile
+		err := rows.Scan(
+			&media.ID, &media.UserID, &media.Filename, &media.OriginalName,
+			&media.FilePath, &media.FileURL, &media.FileSize, &media.MimeType,
+			&media.FileType, &media.Width, &media.Height, &media.Alt,
+			&media.Caption, &media.IsPublic, &media.CreatedAt, &media.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan media file: %w", err)
+		}
+		files = append(files, &media)
+	}
+
+	return files, total, nil
+}
+
+// AdminDeleteMediaFile deletes a media file (admin use - no user check)
+func (s *MediaService) AdminDeleteMediaFile(id int64) error {
+	// First get file info to delete physical file
+	var media models.MediaFile
+	query := `SELECT id, user_id, filename, original_name, file_path, file_url, file_size,
+		mime_type, file_type, width, height, alt, caption, is_public, created_at, updated_at
+		FROM media_files WHERE id = $1`
+
+	err := s.db.QueryRow(query, id).Scan(
+		&media.ID, &media.UserID, &media.Filename, &media.OriginalName,
+		&media.FilePath, &media.FileURL, &media.FileSize, &media.MimeType,
+		&media.FileType, &media.Width, &media.Height, &media.Alt,
+		&media.Caption, &media.IsPublic, &media.CreatedAt, &media.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get media file: %w", err)
+	}
+
+	// Delete from database
+	deleteQuery := `DELETE FROM media_files WHERE id = $1`
+	result, err := s.db.Exec(deleteQuery, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete media file record: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("media file not found")
+	}
+
+	// Delete physical file
+	if err := os.Remove(media.FilePath); err != nil && !os.IsNotExist(err) {
+		// Log error but don't fail the operation
+		fmt.Printf("Warning: failed to delete physical file %s: %v\n", media.FilePath, err)
+	}
+
+	return nil
 }

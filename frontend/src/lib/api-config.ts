@@ -75,8 +75,16 @@ export const API_ENDPOINTS = {
     history: `${API_BASE_URL}/api/v1/billing/history`,
   },
 
-  // Admin endpoints (temporarily disabled in backend)
+  // Admin authentication endpoints
+  adminAuth: {
+    login: `${API_BASE_URL}/api/v1/admin/auth/login`,
+    logout: `${API_BASE_URL}/api/v1/admin/auth/logout`,
+    refresh: `${API_BASE_URL}/api/v1/admin/auth/refresh`,
+  },
+
+  // Admin endpoints
   admin: {
+    dashboard: `${API_BASE_URL}/api/v1/admin`,
     stats: `${API_BASE_URL}/api/v1/admin/stats`,
     users: `${API_BASE_URL}/api/v1/admin/users`,
     activity: `${API_BASE_URL}/api/v1/admin/activity`,

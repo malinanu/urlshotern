@@ -57,6 +57,11 @@ func getEmailProvider(config *configs.Config) string {
 	return "console"
 }
 
+// GetProvider returns the email provider for health checks
+func (e *EmailService) GetProvider() email.Provider {
+	return e.provider
+}
+
 // SendVerificationEmail creates and sends email verification
 func (e *EmailService) SendVerificationEmail(userID int64, email string) (*models.EmailVerification, error) {
 	// Generate verification token
@@ -283,7 +288,20 @@ func (e *EmailService) InvalidateEmailVerifications(userID int64) error {
 func (e *EmailService) GetUserByID(userID int64) (*models.User, error) {
 	user := &models.User{}
 	query := "SELECT id, email, email_verified FROM users WHERE id = $1"
-	
+
 	err := e.db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.EmailVerified)
 	return user, err
+}
+
+// HealthCheck verifies email service connectivity
+func (e *EmailService) HealthCheck() error {
+	// For console provider, always return success
+	if e.provider == nil {
+		return fmt.Errorf("email provider not initialized")
+	}
+
+	// Email providers typically don't have a health check endpoint
+	// We just verify the provider is configured
+	// In a real implementation, you might try to connect to SMTP server
+	return nil
 }

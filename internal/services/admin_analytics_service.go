@@ -26,7 +26,7 @@ func (s *AdminAnalyticsService) GetDashboard(ctx context.Context) (*models.Dashb
 	dash := &models.DashboardResponse{}
 
 	// Total users
-	err := s.dbManager.ReadOnlyQueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&dash.TotalUsers)
+	err := s.dbManager.ReadOnlyQueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE is_active = TRUE").Scan(&dash.TotalUsers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count total users: %w", err)
 	}
@@ -112,7 +112,7 @@ func (s *AdminAnalyticsService) GetUserAnalytics(ctx context.Context, startDate,
 	analytics := &models.UserAnalyticsResponse{}
 
 	// Total users
-	err := s.dbManager.ReadOnlyQueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&analytics.TotalUsers)
+	err := s.dbManager.ReadOnlyQueryRowContext(ctx, "SELECT COUNT(*) FROM users WHERE is_active = TRUE").Scan(&analytics.TotalUsers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count users: %w", err)
 	}
@@ -148,7 +148,7 @@ func (s *AdminAnalyticsService) GetUserAnalytics(ctx context.Context, startDate,
 	planQuery := `
 		SELECT subscription_tier, COUNT(*) as count
 		FROM users
-		WHERE deleted_at IS NULL
+		WHERE is_active = TRUE
 		GROUP BY subscription_tier
 	`
 

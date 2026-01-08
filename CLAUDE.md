@@ -55,7 +55,46 @@ make migrate-dry-run DIRECTION=down VERSION=005  # Preview rollback
 # Or use scripts directly (cross-platform)
 ./scripts/migrate.sh status            # Linux/macOS
 .\scripts\migrate.ps1 status           # Windows PowerShell
+
+# Create admin users
+.\scripts\create-admin.ps1             # Windows (interactive)
+./scripts/create-admin.sh              # Linux/macOS (interactive)
+
+# Or with command-line arguments
+.\scripts\create-admin.ps1 -Name "Admin" -Email "admin@example.com" -Password "secure123" -Type "super_admin"
+./scripts/create-admin.sh -n "Admin" -e "admin@example.com" -p "secure123" -t "super_admin"
 ```
+
+## Admin Access
+
+The application has a separate admin portal with its own authentication system:
+
+- **Admin Login**: `http://localhost:3000/admin/login`
+- **Admin Dashboard**: `http://localhost:3000/admin`
+
+### Creating Admin Users
+
+Use the admin creation scripts to create admin accounts:
+
+```bash
+# Windows (Interactive)
+.\scripts\create-admin.ps1
+
+# Linux/macOS (Interactive)
+./scripts/create-admin.sh
+
+# Direct command
+go run scripts/create-admin.go -name="Admin" -email="admin@example.com" -password="secure123"
+```
+
+**Admin Account Types:**
+- `super_admin` - Full system access
+- `system_admin` - System management
+- `support_admin` - User support
+- `billing_admin` - Billing management
+- `content_admin` - Content management
+
+See `scripts/README.md` for detailed documentation.
 
 ## Architecture Overview
 

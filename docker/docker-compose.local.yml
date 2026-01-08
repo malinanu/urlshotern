@@ -7,10 +7,20 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USER=urlshortener
+      - DB_USER=urlshort_app
       # SECURITY: For local development only. Use strong password in production.
-      - DB_PASSWORD=${DB_PASSWORD:-devpassword}
+      - DB_PASSWORD=${DB_PASSWORD:-app_dev_password}
       - DB_NAME=urlshortener_db
+      # Multi-user database configuration
+      - DB_APP_NAME=urlshortener_db
+      - DB_APP_USER=urlshort_app
+      - DB_APP_PASSWORD=app_dev_password
+      - DB_ADMIN_NAME=urlshortener_db
+      - DB_ADMIN_USER=urlshort_admin
+      - DB_ADMIN_PASSWORD=admin_dev_password
+      - DB_READONLY_NAME=urlshortener_db
+      - DB_READONLY_USER=urlshort_readonly
+      - DB_READONLY_PASSWORD=readonly_dev_password
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SERVER_PORT=8080
@@ -76,6 +86,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ../configs/database.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ../configs/auth_schema.sql:/docker-entrypoint-initdb.d/02-auth-schema.sql
+      - ../migrations/002_setup_database_users.sql:/docker-entrypoint-initdb.d/03-setup-users.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U urlshortener -d urlshortener_db"]
       interval: 10s

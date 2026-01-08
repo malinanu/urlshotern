@@ -437,3 +437,273 @@ func (s *APIKeyService) CleanupExpiredAPIKeys() error {
 	_, err := s.db.Exec(query, time.Now())
 	return err
 }
+
+// ========== Admin Methods ==========
+
+// AdminListAPIKeys lists all API keys across users with optional user filter
+func (s *APIKeyService) AdminListAPIKeys(userID *int64, page, limit int) ([]models.APIKey, int64, error) {
+	offset := (page - 1) * limit
+
+	// Build base query
+	baseQuery := `
+		SELECT id, user_id, key_hash, key_prefix, name, description, permissions,
+			rate_limit, last_used_at, last_used_ip, expires_at, is_active,
+			created_at, updated_at
+		FROM api_keys`
+	countQuery := `SELECT COUNT(*) FROM api_keys`
+
+	// Build WHERE clause
+	var args []interface{}
+	whereClause := ""
+	if userID != nil {
+		whereClause = " WHERE user_id = $1"
+		args = append(args, *userID)
+	}
+
+	baseQuery += whereClause + " ORDER BY created_at DESC"
+	countQuery += whereClause
+
+	// Get total count
+	var total int64
+	if len(args) > 0 {
+		err := s.db.QueryRow(countQuery, args...).Scan(&total)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to count API keys: %w", err)
+		}
+	} else {
+		err := s.db.QueryRow(countQuery).Scan(&total)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to count API keys: %w", err)
+		}
+	}
+
+	// Add pagination
+	if len(args) > 0 {
+		baseQuery += " LIMIT $2 OFFSET $3"
+		args = append(args, limit, offset)
+	} else {
+		baseQuery += " LIMIT $1 OFFSET $2"
+		args = append(args, limit, offset)
+	}
+
+	// Execute query
+	rows, err := s.db.Query(baseQuery, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list API keys: %w", err)
+	}
+	defer rows.Close()
+
+	var apiKeys []models.APIKey
+	for rows.Next() {
+		var apiKey models.APIKey
+		err := rows.Scan(
+			&apiKey.ID, &apiKey.UserID, &apiKey.KeyHash, &apiKey.KeyPrefix,
+			&apiKey.Name, &apiKey.Description, &apiKey.Permissions,
+			&apiKey.RateLimit, &apiKey.LastUsedAt, &apiKey.LastUsedIP,
+			&apiKey.ExpiresAt, &apiKey.IsActive, &apiKey.CreatedAt, &apiKey.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan API key: %w", err)
+		}
+		apiKeys = append(apiKeys, apiKey)
+	}
+
+	return apiKeys, total, nil
+}
+
+// AdminGetAPIKey retrieves an API key by ID without user restriction
+func (s *APIKeyService) AdminGetAPIKey(id uuid.UUID) (*models.APIKey, error) {
+	query := `
+		SELECT id, user_id, key_hash, key_prefix, name, description, permissions,
+			rate_limit, last_used_at, last_used_ip, expires_at, is_active,
+			created_at, updated_at
+		FROM api_keys
+		WHERE id = $1`
+
+	var apiKey models.APIKey
+	err := s.db.QueryRow(query, id).Scan(
+		&apiKey.ID, &apiKey.UserID, &apiKey.KeyHash, &apiKey.KeyPrefix,
+		&apiKey.Name, &apiKey.Description, &apiKey.Permissions,
+		&apiKey.RateLimit, &apiKey.LastUsedAt, &apiKey.LastUsedIP,
+		&apiKey.ExpiresAt, &apiKey.IsActive, &apiKey.CreatedAt, &apiKey.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("API key not found")
+		}
+		return nil, fmt.Errorf("failed to get API key: %w", err)
+	}
+
+	return &apiKey, nil
+}
+
+// AdminRevokeAPIKey revokes an API key (admin version - no user check)
+func (s *APIKeyService) AdminRevokeAPIKey(id uuid.UUID, reason string) error {
+	query := `UPDATE api_keys SET is_active = false, updated_at = $1 WHERE id = $2`
+	result, err := s.db.Exec(query, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to revoke API key: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("API key not found")
+	}
+
+	log.Printf("[INFO] Admin revoked API key %s. Reason: %s", id, reason)
+	return nil
+}
+
+// AdminDeleteAPIKey permanently deletes an API key (admin version - no user check)
+func (s *APIKeyService) AdminDeleteAPIKey(id uuid.UUID) error {
+	query := `DELETE FROM api_keys WHERE id = $1`
+	result, err := s.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete API key: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("API key not found")
+	}
+
+	log.Printf("[INFO] Admin deleted API key %s", id)
+	return nil
+}
+
+// AdminGetAPIKeyUsage retrieves usage statistics for an API key (admin version)
+func (s *APIKeyService) AdminGetAPIKeyUsage(keyID uuid.UUID, days int) (*models.APIKeyStats, error) {
+	if keyID == uuid.Nil {
+		return nil, fmt.Errorf("invalid API key ID")
+	}
+
+	// Verify the key exists
+	_, err := s.AdminGetAPIKey(keyID)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), statsQueryTimeout)
+	defer cancel()
+
+	// Query with custom day range
+	query := `
+		SELECT
+			COUNT(*) as total_requests,
+			COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END) as today_requests,
+			COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '` + fmt.Sprintf("%d days", days) + `' THEN 1 END) as custom_requests,
+			COALESCE(
+				ROUND(
+					COUNT(CASE WHEN status_code >= 200 AND status_code < 400 THEN 1 END) * 100.0 /
+					NULLIF(COUNT(*), 0), 2
+				), 0.0
+			) as success_rate,
+			COALESCE(ROUND(AVG(response_time_ms), 2), 0.0) as avg_response_time
+		FROM api_key_usage
+		WHERE api_key_id = $1`
+
+	var stats models.APIKeyStats
+	var customRequests int64
+	err = s.db.QueryRowContext(ctx, query, keyID).Scan(
+		&stats.TotalRequests, &stats.TodayRequests, &customRequests,
+		&stats.SuccessRate, &stats.AvgResponseTime,
+	)
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("stats query timeout")
+		}
+		return nil, fmt.Errorf("failed to retrieve API key statistics: %w", err)
+	}
+
+	stats.APIKeyID = keyID
+	stats.WeekRequests = customRequests // Use custom period
+
+	return &stats, nil
+}
+
+// AdminResetAPIKeyQuota resets rate limit quota for an API key
+// In this implementation, we simply update last_used_at to reset the rate limit window
+func (s *APIKeyService) AdminResetAPIKeyQuota(keyID uuid.UUID) error {
+	// Verify key exists
+	_, err := s.AdminGetAPIKey(keyID)
+	if err != nil {
+		return err
+	}
+
+	// Reset last_used_at to allow fresh quota
+	// Note: Actual rate limiting is typically done in Redis/cache
+	query := `UPDATE api_keys SET last_used_at = NULL, updated_at = $1 WHERE id = $2`
+	_, err = s.db.Exec(query, time.Now(), keyID)
+	if err != nil {
+		return fmt.Errorf("failed to reset API key quota: %w", err)
+	}
+
+	log.Printf("[INFO] Admin reset quota for API key %s", keyID)
+	return nil
+}
+
+// AdminCreateSystemAPIKey creates a system-level API key (no user association)
+func (s *APIKeyService) AdminCreateSystemAPIKey(name, description string, permissions []string, rateLimit int) (*models.CreateAPIKeyResponse, error) {
+	// Generate API key
+	plainKey, keyHash, err := s.generateAPIKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate API key: %w", err)
+	}
+
+	// Create prefix for display
+	keyPrefix := plainKey[:8] + "..." + plainKey[len(plainKey)-4:]
+
+	// Set defaults
+	if rateLimit <= 0 {
+		rateLimit = 10000 // Higher limit for system keys
+	}
+	if len(permissions) == 0 {
+		permissions = []string{"*"} // Full access for system keys
+	}
+
+	now := time.Now()
+	newID := uuid.New()
+	query := `
+		INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name, description, permissions,
+			rate_limit, expires_at, is_active, created_at, updated_at)
+		VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, NULL, $8, $9, $10)
+		RETURNING id, created_at, updated_at`
+
+	var apiKey models.APIKey
+	err = s.db.QueryRow(query,
+		newID, keyHash, keyPrefix, name, description, permissions,
+		rateLimit, true, now, now,
+	).Scan(&apiKey.ID, &apiKey.CreatedAt, &apiKey.UpdatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create system API key: %w", err)
+	}
+
+	// Populate the API key
+	apiKey.KeyHash = keyHash
+	apiKey.KeyPrefix = keyPrefix
+	apiKey.Name = name
+	if description != "" {
+		apiKey.Description = &description
+	}
+	apiKey.Permissions = permissions
+	apiKey.RateLimit = rateLimit
+	apiKey.IsActive = true
+
+	log.Printf("[INFO] Admin created system API key: %s (%s)", name, newID)
+
+	return &models.CreateAPIKeyResponse{
+		APIKey:    &apiKey,
+		PlainKey:  plainKey,
+		KeyPrefix: keyPrefix,
+	}, nil
+}

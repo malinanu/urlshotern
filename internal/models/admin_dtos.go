@@ -368,10 +368,11 @@ type RedisHealthStatus struct {
 
 // ServiceStatus represents external service health
 type ServiceStatus struct {
-	Name           string `json:"name"`
-	Status         string `json:"status"` // available, unavailable, degraded
-	ResponseTimeMs int64  `json:"response_time_ms"`
+	Name           string    `json:"name"`
+	Status         string    `json:"status"` // available, unavailable, degraded
+	ResponseTimeMs int64     `json:"response_time_ms"`
 	LastChecked    time.Time `json:"last_checked"`
+	Message        string    `json:"message,omitempty"` // Optional error/status message
 }
 
 // SystemMetricsResponse represents system resource metrics

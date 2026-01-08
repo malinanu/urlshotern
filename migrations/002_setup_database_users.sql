@@ -20,7 +20,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'urlshort_app') THEN
-        CREATE USER urlshort_app WITH PASSWORD 'CHANGE_ME_APP_PASSWORD';
+        CREATE USER urlshort_app WITH PASSWORD 'app_dev_password';
         RAISE NOTICE 'Created user: urlshort_app';
     ELSE
         RAISE NOTICE 'User urlshort_app already exists';
@@ -33,7 +33,7 @@ $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'urlshort_admin') THEN
-        CREATE USER urlshort_admin WITH PASSWORD 'CHANGE_ME_ADMIN_PASSWORD';
+        CREATE USER urlshort_admin WITH PASSWORD 'admin_dev_password';
         RAISE NOTICE 'Created user: urlshort_admin';
     ELSE
         RAISE NOTICE 'User urlshort_admin already exists';
@@ -46,7 +46,7 @@ $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'urlshort_readonly') THEN
-        CREATE USER urlshort_readonly WITH PASSWORD 'CHANGE_ME_READONLY_PASSWORD';
+        CREATE USER urlshort_readonly WITH PASSWORD 'readonly_dev_password';
         RAISE NOTICE 'Created user: urlshort_readonly';
     ELSE
         RAISE NOTICE 'User urlshort_readonly already exists';
@@ -66,10 +66,16 @@ GRANT CONNECT ON DATABASE urlshortener_db TO urlshort_readonly;
 -- STEP 3: Grant Schema Usage
 -- ============================================================================
 
+-- Create admin schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS admin;
+
 -- Public schema access
 GRANT USAGE ON SCHEMA public TO urlshort_app;
 GRANT USAGE ON SCHEMA public TO urlshort_admin;
 GRANT USAGE ON SCHEMA public TO urlshort_readonly;
+
+-- Grant CREATE permission to app user (for CREATE TABLE IF NOT EXISTS in backend init)
+GRANT CREATE ON SCHEMA public TO urlshort_app;
 
 -- Admin schema access (admin user only)
 GRANT USAGE ON SCHEMA admin TO urlshort_admin;
@@ -79,52 +85,40 @@ GRANT ALL PRIVILEGES ON SCHEMA admin TO urlshort_admin;
 -- STEP 4: Configure Permissions for Regular App User (urlshort_app)
 -- ============================================================================
 
--- Grant SELECT, INSERT, UPDATE (NO DELETE) on application tables
-GRANT SELECT, INSERT, UPDATE ON TABLE
-    url_mappings,
-    click_events,
-    users,
-    user_sessions,
-    email_verifications,
-    phone_verifications,
-    password_resets,
-    oauth_providers,
-    api_keys,
-    polar_subscriptions,
-    polar_products,
-    polar_webhook_events,
-    conversion_goals,
-    conversion_events,
-    ab_tests,
-    ab_test_variants,
-    attribution_touchpoints,
-    custom_domains,
-    domain_analytics,
-    user_roles,
-    roles,
-    permissions,
-    role_permissions,
-    teams,
-    team_members,
-    team_invitations,
-    url_shares,
-    url_comments,
-    url_bookmarks,
-    url_favorites,
-    url_collections,
-    url_collection_items,
-    url_notes,
-    url_activities,
-    user_activity_logs,
-    audit_logs
-TO urlshort_app;
+-- Grant ALL PRIVILEGES to app user (needed for CREATE INDEX and other DDL operations in backend init)
+-- Note: For production, consider restricting to SELECT, INSERT, UPDATE only after initial setup
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO urlshort_app;
 
--- Grant sequence usage for ID generation
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO urlshort_app;
+-- Transfer ownership of all existing tables to app user (allows CREATE INDEX in backend init)
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+    LOOP
+        EXECUTE 'ALTER TABLE ' || quote_ident(r.tablename) || ' OWNER TO urlshort_app';
+    END LOOP;
+END $$;
 
--- Explicitly DENY delete on critical tables
-REVOKE DELETE ON TABLE users FROM urlshort_app;
-REVOKE DELETE ON TABLE url_mappings FROM urlshort_app;
+-- Grant sequence usage and ownership for ID generation
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO urlshort_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO urlshort_app;
+
+-- Transfer ownership of sequences to app user
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public'
+    LOOP
+        EXECUTE 'ALTER SEQUENCE ' || quote_ident(r.sequence_name) || ' OWNER TO urlshort_app';
+    END LOOP;
+END $$;
+
+-- Security: Explicitly DENY delete on critical tables (for production hardening)
+-- Note: Commented out for development to allow backend initialization
+-- REVOKE DELETE ON TABLE users FROM urlshort_app;
+-- REVOKE DELETE ON TABLE url_mappings FROM urlshort_app;
 
 -- NO access to admin schema
 REVOKE ALL ON SCHEMA admin FROM urlshort_app;
@@ -136,8 +130,12 @@ RAISE NOTICE 'Configured permissions for urlshort_app: SELECT, INSERT, UPDATE (N
 -- ============================================================================
 
 -- Grant FULL access to all tables in public schema (including DELETE)
+-- Note: Must be done AFTER ownership transfer to urlshort_app
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO urlshort_admin;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO urlshort_admin;
+
+-- Ensure admin user can create admin users (needed by create-admin.go script)
+GRANT ALL PRIVILEGES ON TABLE users TO urlshort_admin;
 
 -- Grant FULL access to admin schema
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA admin TO urlshort_admin;

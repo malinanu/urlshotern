@@ -1,10 +1,13 @@
 package email
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"strings"
+	"time"
 )
 
 // SMTPProvider implements email sending via SMTP
@@ -93,6 +96,40 @@ func (s *SMTPProvider) sendWithTLS(addr string, auth smtp.Auth, to string, msg s
 	if err != nil {
 		return fmt.Errorf("failed to close data connection: %w", err)
 	}
+
+	return nil
+}
+
+// HealthCheck performs a lightweight health check on SMTP server
+// Attempts to connect to SMTP server without sending email
+func (s *SMTPProvider) HealthCheck(ctx context.Context) error {
+	addr := fmt.Sprintf("%s:%d", s.config.SMTPHost, s.config.SMTPPort)
+
+	// Create connection with timeout
+	dialer := &net.Dialer{
+		Timeout: 5 * time.Second,
+	}
+
+	// For TLS connections (port 465)
+	if s.config.SMTPPort == 465 {
+		tlsconfig := &tls.Config{
+			ServerName: s.config.SMTPHost,
+			MinVersion: tls.VersionTLS12,
+		}
+		conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsconfig)
+		if err != nil {
+			return fmt.Errorf("SMTP server unreachable (TLS): %w", err)
+		}
+		conn.Close()
+		return nil
+	}
+
+	// For STARTTLS connections (port 587, 25) - just test TCP connection
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return fmt.Errorf("SMTP server unreachable: %w", err)
+	}
+	conn.Close()
 
 	return nil
 }

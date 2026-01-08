@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
-import { useAuth } from '@/contexts/AuthContext';
+import { adminAuthService } from '@/lib/admin-auth-service';
 import { API_ENDPOINTS, buildApiUrl } from '@/lib/api-config';
 import { StatsSkeleton, UserTableSkeleton, ActivitySkeleton } from '@/components/skeletons/AdminSkeletons';
 import { 
@@ -64,7 +64,6 @@ interface RecentActivity {
 }
 
 export default function AdminPage() {
-  const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
@@ -74,23 +73,14 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();
 
-  // Check if user is admin
-  const isAdmin = user?.account_type === 'admin';
-
-  // Redirect if not authenticated or not admin
-  useEffect(() => {
-    if (!isLoading && (!isAuthenticated || !isAdmin)) {
-      router.push('/dashboard');
-    }
-  }, [isAuthenticated, isLoading, isAdmin, router]);
-
   // Fetch admin data
   useEffect(() => {
-    if (!isAuthenticated || !isAdmin) return;
-
     const fetchAdminData = async () => {
-      const token = getAccessToken();
-      if (!token) return;
+      const token = adminAuthService.getAdminToken();
+      if (!token) {
+        router.push('/admin/login');
+        return;
+      }
 
       const headers = {
         'Authorization': `Bearer ${token}`,
@@ -98,12 +88,22 @@ export default function AdminPage() {
       };
 
       try {
-        // Fetch system stats
+        // Fetch dashboard overview (includes system stats)
         setLoadingStats(true);
-        const statsResponse = await fetch(API_ENDPOINTS.admin.stats, { headers });
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData);
+        const dashboardResponse = await fetch(API_ENDPOINTS.admin.dashboard, { headers });
+        if (dashboardResponse.ok) {
+          const dashboardData = await dashboardResponse.json();
+          // Map dashboard data to stats format
+          setStats({
+            total_users: dashboardData.users?.total || 0,
+            active_users: dashboardData.users?.active || 0,
+            total_urls: dashboardData.urls?.total || 0,
+            total_clicks: dashboardData.urls?.total_clicks || 0,
+            storage_used: '0 GB', // Placeholder
+            daily_signups: dashboardData.users?.new_today || 0,
+            daily_urls_created: 0, // Can be added if needed
+            system_status: dashboardData.health?.status === 'healthy' ? 'healthy' : 'warning',
+          });
         }
         setLoadingStats(false);
 
@@ -134,10 +134,10 @@ export default function AdminPage() {
     };
 
     fetchAdminData();
-  }, [isAuthenticated, isAdmin, getAccessToken]);
+  }, [router]);
 
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
-    const token = getAccessToken();
+    const token = adminAuthService.getAdminToken();
     if (!token) return;
 
     try {
@@ -166,7 +166,7 @@ export default function AdminPage() {
       return;
     }
 
-    const token = getAccessToken();
+    const token = adminAuthService.getAdminToken();
     if (!token) return;
 
     try {
@@ -214,20 +214,6 @@ export default function AdminPage() {
       default: return <ClockIcon className="h-4 w-4" />;
     }
   };
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!isAuthenticated || !isAdmin) {
-    return null; // Will redirect
-  }
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: ChartBarIcon },

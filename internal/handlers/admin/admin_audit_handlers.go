@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -212,7 +214,7 @@ func (h *AdminAuditHandlers) AdminGetAuditStatistics(c *gin.Context) {
 	})
 }
 
-// AdminExportAuditLogs exports audit logs (placeholder for CSV/JSON export)
+// AdminExportAuditLogs exports audit logs to CSV format
 // GET /api/v1/admin/audit/export
 func (h *AdminAuditHandlers) AdminExportAuditLogs(c *gin.Context) {
 	adminID, exists := c.Get("user_id")
@@ -255,9 +257,83 @@ func (h *AdminAuditHandlers) AdminExportAuditLogs(c *gin.Context) {
 		Severity:     models.AuditSeverityInfo,
 	})
 
-	// TODO: Convert to CSV format
-	// For now, return JSON
-	c.JSON(http.StatusOK, response)
+	// Convert to CSV format
+	csv := h.convertAuditLogsToCSV(response.Logs)
+
+	// Return CSV data
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=audit_logs_export.csv")
+	c.Data(http.StatusOK, "text/csv", csv)
+}
+
+// convertAuditLogsToCSV converts audit logs to CSV format
+func (h *AdminAuditHandlers) convertAuditLogsToCSV(logs []models.AdminAuditLog) []byte {
+	var csv string
+
+	// CSV header
+	csv += "ID,User ID,Username,Action,Resource Type,Resource ID,Status,Severity,IP Address,User Agent,Details,Created At\n"
+
+	// CSV rows
+	for _, log := range logs {
+		// Escape CSV fields (handle commas and quotes)
+		username := h.escapeCSV(log.Username)
+		action := h.escapeCSV(log.Action)
+		resourceType := h.escapeCSV(log.ResourceType)
+		resourceID := h.escapeCSV(log.ResourceID)
+		status := h.escapeCSV(string(log.Status))
+		severity := h.escapeCSV(string(log.Severity))
+		ipAddress := h.escapeCSV(log.IPAddress)
+		userAgent := h.escapeCSV(log.UserAgent)
+
+		// Convert JSONB details to string
+		detailsStr := ""
+		if log.Details != nil {
+			detailsBytes, _ := json.Marshal(log.Details)
+			detailsStr = string(detailsBytes)
+		}
+		details := h.escapeCSV(detailsStr)
+
+		createdAt := log.CreatedAt.Format(time.RFC3339)
+
+		csv += fmt.Sprintf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+			log.ID, log.UserID, username, action, resourceType, resourceID,
+			status, severity, ipAddress, userAgent, details, createdAt,
+		)
+	}
+
+	return []byte(csv)
+}
+
+// escapeCSV escapes a field for CSV format
+func (h *AdminAuditHandlers) escapeCSV(field string) string {
+	// If field contains comma, newline, or quote, wrap in quotes and escape quotes
+	if len(field) == 0 {
+		return ""
+	}
+
+	needsQuotes := false
+	for _, char := range field {
+		if char == ',' || char == '\n' || char == '\r' || char == '"' {
+			needsQuotes = true
+			break
+		}
+	}
+
+	if !needsQuotes {
+		return field
+	}
+
+	// Escape quotes by doubling them
+	escaped := ""
+	for _, char := range field {
+		if char == '"' {
+			escaped += "\"\""
+		} else {
+			escaped += string(char)
+		}
+	}
+
+	return "\"" + escaped + "\""
 }
 
 // AdminCleanupAuditLogs deletes old audit logs

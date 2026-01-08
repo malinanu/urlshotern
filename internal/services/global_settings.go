@@ -338,3 +338,140 @@ func (s *GlobalSettingsService) GetSocialLinks() map[string]string {
 
 	return result
 }
+
+// GetAllSettings retrieves all settings (admin use)
+func (s *GlobalSettingsService) GetAllSettings() ([]*models.GlobalSetting, error) {
+	return s.GetSettings("", false)
+}
+
+// GetCategories retrieves distinct setting categories
+func (s *GlobalSettingsService) GetCategories() ([]string, error) {
+	query := `SELECT DISTINCT category FROM global_settings ORDER BY category`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get categories: %w", err)
+	}
+	defer rows.Close()
+
+	var categories []string
+	for rows.Next() {
+		var category string
+		if err := rows.Scan(&category); err != nil {
+			return nil, fmt.Errorf("failed to scan category: %w", err)
+		}
+		categories = append(categories, category)
+	}
+
+	return categories, nil
+}
+
+// ResetSetting resets a setting to its default value
+func (s *GlobalSettingsService) ResetSetting(key string) error {
+	// Define default values for common settings
+	defaults := map[string]string{
+		"site_name":         "URL Shortener",
+		"site_tagline":      "The best URL shortening service",
+		"maintenance_mode":  "false",
+		"rate_limit":        "100",
+		"max_url_length":    "2048",
+		"min_short_length":  "6",
+		"default_ttl_days":  "365",
+		"analytics_enabled": "true",
+	}
+
+	defaultValue, exists := defaults[key]
+	if !exists {
+		return fmt.Errorf("no default value defined for setting '%s'", key)
+	}
+
+	query := `UPDATE global_settings SET value = $1, updated_at = $2 WHERE key = $3`
+	result, err := s.db.Exec(query, defaultValue, time.Now(), key)
+	if err != nil {
+		return fmt.Errorf("failed to reset setting: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("setting with key '%s' not found", key)
+	}
+
+	return nil
+}
+
+// ResetAllSettings resets all settings to default values
+func (s *GlobalSettingsService) ResetAllSettings() error {
+	// Define default values
+	defaults := map[string]string{
+		"site_name":         "URL Shortener",
+		"site_tagline":      "The best URL shortening service",
+		"maintenance_mode":  "false",
+		"rate_limit":        "100",
+		"max_url_length":    "2048",
+		"min_short_length":  "6",
+		"default_ttl_days":  "365",
+		"analytics_enabled": "true",
+	}
+
+	// Start transaction
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Reset each setting
+	for key, value := range defaults {
+		query := `UPDATE global_settings SET value = $1, updated_at = $2 WHERE key = $3`
+		_, err := tx.Exec(query, value, time.Now(), key)
+		if err != nil {
+			// Continue even if setting doesn't exist
+			continue
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// ValidateSetting validates a setting value before update
+func (s *GlobalSettingsService) ValidateSetting(key, value string) error {
+	// Get setting to check its type
+	setting, err := s.GetSetting(key)
+	if err != nil {
+		return fmt.Errorf("setting not found: %w", err)
+	}
+
+	// Validate based on type
+	switch setting.Type {
+	case "boolean":
+		if value != "true" && value != "false" {
+			return fmt.Errorf("invalid boolean value: must be 'true' or 'false'")
+		}
+	case "number":
+		// Basic number validation - could be enhanced
+		if value == "" {
+			return fmt.Errorf("number value cannot be empty")
+		}
+	case "email":
+		// Basic email validation
+		if !strings.Contains(value, "@") {
+			return fmt.Errorf("invalid email format")
+		}
+	case "url":
+		// Basic URL validation
+		if !strings.HasPrefix(value, "http://") && !strings.HasPrefix(value, "https://") {
+			return fmt.Errorf("invalid URL: must start with http:// or https://")
+		}
+	}
+
+	return nil
+}
