@@ -475,3 +475,77 @@ func (s *AdminAuditService) LogActionHelper(
 
 	return s.LogAction(ctx, req)
 }
+
+// GetRecentActivity retrieves recent activity logs for dashboard activity feed
+func (s *AdminAuditService) GetRecentActivity(ctx context.Context, limit int) ([]models.AdminAuditLog, error) {
+	if limit == 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	query := `
+		SELECT id, user_id, username, action, resource_type, resource_id,
+		       details, changes, ip_address, user_agent, session_id,
+		       status, error_message, severity, created_at
+		FROM admin.audit_logs
+		ORDER BY created_at DESC
+		LIMIT $1
+	`
+
+	rows, err := s.dbManager.AdminQueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent activity: %w", err)
+	}
+	defer rows.Close()
+
+	logs := []models.AdminAuditLog{}
+	for rows.Next() {
+		var log models.AdminAuditLog
+		var detailsJSON, changesJSON []byte
+
+		err := rows.Scan(
+			&log.ID,
+			&log.UserID,
+			&log.Username,
+			&log.Action,
+			&log.ResourceType,
+			&log.ResourceID,
+			&detailsJSON,
+			&changesJSON,
+			&log.IPAddress,
+			&log.UserAgent,
+			&log.SessionID,
+			&log.Status,
+			&log.ErrorMessage,
+			&log.Severity,
+			&log.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan activity log: %w", err)
+		}
+
+		// Parse JSONB fields
+		if len(detailsJSON) > 0 {
+			if err := json.Unmarshal(detailsJSON, &log.Details); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal details: %w", err)
+			}
+		}
+
+		if len(changesJSON) > 0 {
+			log.Changes = &models.AuditLogChange{}
+			if err := json.Unmarshal(changesJSON, log.Changes); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal changes: %w", err)
+			}
+		}
+
+		logs = append(logs, log)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating activity logs: %w", err)
+	}
+
+	return logs, nil
+}

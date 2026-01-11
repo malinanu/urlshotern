@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Layout from '@/components/layout/Layout';
 import { adminAuthService } from '@/lib/admin-auth-service';
 import { API_ENDPOINTS, buildApiUrl } from '@/lib/api-config';
@@ -25,7 +26,7 @@ import {
   CubeIcon,
 } from '@heroicons/react/24/outline';
 import CMSManager from '@/components/cms/CMSManager';
-import APIKeyManager from '@/components/api-keys/APIKeyManager';
+import AdminAPIKeyManager from '@/components/admin/AdminAPIKeyManager';
 import { SEOToolsManager } from '@/components/seo/SEOToolsManager';
 import { VisualPageBuilder } from '@/components/builder/VisualPageBuilder';
 
@@ -49,7 +50,7 @@ interface User {
   account_type: string;
   created_at: string;
   last_login_at?: string;
-  urls_count: number;
+  url_count: number;
   total_clicks: number;
 }
 
@@ -378,7 +379,12 @@ export default function AdminPage() {
                         <tr key={user.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div>
-                              <div className="text-sm font-medium text-black">{user.name}</div>
+                              <Link
+                                href={`/admin/users/${user.id}`}
+                                className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline"
+                              >
+                                {user.name}
+                              </Link>
                               <div className="text-sm text-gray-600">{user.email}</div>
                             </div>
                           </td>
@@ -397,7 +403,7 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-black">
-                              {user.urls_count} URLs, {user.total_clicks} clicks
+                              {user.url_count} URLs, {user.total_clicks} clicks
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -497,7 +503,7 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'api-keys' && (
-            <APIKeyManager />
+            <AdminAPIKeyManager />
           )}
 
           {activeTab === 'system' && (

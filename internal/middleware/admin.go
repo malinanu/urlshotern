@@ -194,6 +194,33 @@ func (am *AdminMiddleware) RequireAdminPermission(permission string) gin.Handler
 			return
 		}
 
+		// Get user to check account type
+		user, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+				Error:   "unauthorized",
+				Message: "Authentication required",
+			})
+			c.Abort()
+			return
+		}
+
+		u, ok := user.(*models.User)
+		if !ok {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "invalid_user",
+				Message: "Invalid user context",
+			})
+			c.Abort()
+			return
+		}
+
+		// Super admins have all permissions by default
+		if u.AccountType == "super_admin" {
+			c.Next()
+			return
+		}
+
 		// Check if user has the permission
 		hasPermission, err := am.rbacService.UserHasPermission(userID.(int64), permission)
 		if err != nil {

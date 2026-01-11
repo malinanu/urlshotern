@@ -50,7 +50,8 @@ func (h *AdminUserHandlers) AdminUserList(c *gin.Context) {
 		filter.Verified = &v
 	}
 
-	users, total, err := h.adminUserService.ListUsers(c.Request.Context(), filter, page, limit)
+	// Use ListUsersWithStats to get users with their usage statistics
+	users, total, err := h.adminUserService.ListUsersWithStats(c.Request.Context(), filter, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
@@ -92,6 +93,31 @@ func (h *AdminUserHandlers) AdminGetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"user": user,
 	})
+}
+
+// AdminGetUserDetailedStats retrieves comprehensive statistics for a specific user
+// GET /api/v1/admin/users/:id/stats
+func (h *AdminUserHandlers) AdminGetUserDetailedStats(c *gin.Context) {
+	userID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_user_id",
+			Message: "Invalid user ID",
+		})
+		return
+	}
+
+	stats, err := h.adminUserService.GetUserDetailedStats(c.Request.Context(), userID)
+	if err != nil {
+		log.Printf("ERROR: Failed to get user detailed stats for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "stats_fetch_failed",
+			Message: "Failed to retrieve user statistics: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }
 
 // AdminUpdateUser updates user information

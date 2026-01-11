@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -118,4 +119,43 @@ func (h *AdminDashboardHandlers) AdminDashboardStats(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, stats)
+}
+
+// GetActivityFeed returns recent activity logs for the dashboard
+// GET /api/v1/admin/activity
+func (h *AdminDashboardHandlers) GetActivityFeed(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Get limit from query param
+	limit := 50
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if parsedLimit, ok := parseIntSafe(limitParam); ok && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	// Get recent activity from audit service
+	activities, err := h.auditService.GetRecentActivity(ctx, limit)
+	if err != nil {
+		log.Printf("ERROR: GetRecentActivity failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve activity feed: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"activities": activities,
+		"count":      len(activities),
+	})
+}
+
+// parseIntSafe safely parses an integer from a string
+func parseIntSafe(s string) (int, bool) {
+	var result int
+	_, err := fmt.Sscanf(s, "%d", &result)
+	if err == nil && result > 0 {
+		return result, true
+	}
+	return 0, false
 }

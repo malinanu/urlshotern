@@ -61,6 +61,23 @@ type UserActivityFilter struct {
 	Limit     int
 }
 
+// UserWithStats extends User with usage statistics
+type UserWithStats struct {
+	ID            int64      `json:"id"`
+	Email         string     `json:"email"`
+	Name          string     `json:"name"`
+	AccountType   string     `json:"account_type"`
+	EmailVerified bool       `json:"email_verified"`
+	PhoneVerified bool       `json:"phone_verified"`
+	IsActive      bool       `json:"is_active"`
+	IsAdmin       bool       `json:"is_admin"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	LastLoginAt   *time.Time `json:"last_login_at"`
+	URLCount      int64      `json:"url_count"`
+	TotalClicks   int64      `json:"total_clicks"`
+}
+
 // UserListResponse represents a paginated list of users
 type UserListResponse struct {
 	Users      []User `json:"users"`
@@ -68,6 +85,57 @@ type UserListResponse struct {
 	Page       int    `json:"page"`
 	PageSize   int    `json:"page_size"`
 	TotalPages int    `json:"total_pages"`
+}
+
+// UserListWithStatsResponse represents a paginated list of users with usage statistics
+type UserListWithStatsResponse struct {
+	Users      []UserWithStats `json:"users"`
+	TotalCount int64           `json:"total_count"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"page_size"`
+	TotalPages int             `json:"total_pages"`
+}
+
+// UserDetailedStats represents comprehensive statistics for a single user
+type UserDetailedStats struct {
+	User           User                 `json:"user"`
+	Stats          UserStats            `json:"stats"`
+	TopURLs        []URLWithClicks      `json:"top_urls"`
+	RecentActivity []ActivityLog        `json:"recent_activity"`
+	URLsOverTime   []TimeSeriesDataPoint `json:"urls_over_time"`
+	ClicksOverTime []TimeSeriesDataPoint `json:"clicks_over_time"`
+}
+
+// UserStats represents aggregated statistics for a user
+type UserStats struct {
+	TotalURLs       int64   `json:"total_urls"`
+	TotalClicks     int64   `json:"total_clicks"`
+	AvgClicksPerURL float64 `json:"avg_clicks_per_url"`
+	ActiveURLs      int64   `json:"active_urls"`
+	ExpiredURLs     int64   `json:"expired_urls"`
+	TotalRevenue    float64 `json:"total_revenue,omitempty"`
+}
+
+// URLWithClicks represents a URL with its click count
+type URLWithClicks struct {
+	ID          int64     `json:"id"`
+	ShortCode   string    `json:"short_code"`
+	OriginalURL string    `json:"original_url"`
+	ClickCount  int64     `json:"click_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+}
+
+// ActivityLog represents a user activity entry
+type ActivityLog struct {
+	ID           int64     `json:"id"`
+	UserID       int64     `json:"user_id"`
+	Action       string    `json:"action"`
+	ResourceType string    `json:"resource_type,omitempty"`
+	ResourceID   *int64    `json:"resource_id,omitempty"`
+	IPAddress    string    `json:"ip_address,omitempty"`
+	UserAgent    string    `json:"user_agent,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // ============================================================================

@@ -34,6 +34,9 @@ func SetupAdminRoutes(
 	// Additional dashboard stats endpoint
 	admin.GET("/stats", handler.AdminHandlers.DashboardHandlers.AdminDashboardStats)
 
+	// Activity feed endpoint
+	admin.GET("/activity", handler.AdminHandlers.DashboardHandlers.GetActivityFeed)
+
 	// ================================================================
 	// ADMIN USER MANAGEMENT
 	// ================================================================
@@ -49,6 +52,11 @@ func SetupAdminRoutes(
 		users.GET("/:id",
 			adminMiddleware.AuditLog(models.AuditActionUserView, models.ResourceTypeUser),
 			handler.AdminHandlers.UserHandlers.AdminGetUser)
+
+		// Get user detailed statistics
+		users.GET("/:id/stats",
+			adminMiddleware.AuditLog(models.AuditActionUserView, models.ResourceTypeUser),
+			handler.AdminHandlers.UserHandlers.AdminGetUserDetailedStats)
 
 		// User management operations (require manage permission)
 		usersManage := users.Group("")
