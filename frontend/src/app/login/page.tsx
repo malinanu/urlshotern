@@ -47,11 +47,18 @@ export default function LoginPage() {
 
     try {
       await login(data.email, data.password, data.rememberMe);
-      
+
       // Redirect to dashboard (for now, redirect to home)
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid email or password. Please try again.');
+      // Detailed error logging for debugging
+      console.error('Login failed:', err);
+
+      const errorMessage = err instanceof Error
+        ? err.message
+        : 'Invalid email or password. Please try again.';
+
+      setError(errorMessage);
     }
   };
 

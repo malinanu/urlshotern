@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -237,6 +238,49 @@ func (ps *PolarService) ListProducts() ([]PolarProduct, error) {
 	return response.Items, nil
 }
 
+// ListCustomers retrieves customers with optional email filter
+func (ps *PolarService) ListCustomers(email *string, limit int) ([]PolarCustomer, error) {
+	type CustomersResponse struct {
+		Items []PolarCustomer `json:"items"`
+	}
+
+	// Build query parameters
+	endpoint := "/customers"
+	if email != nil {
+		// URL encode email and add as query parameter
+		endpoint = fmt.Sprintf("/customers?email=%s", url.QueryEscape(*email))
+	}
+	if limit > 0 {
+		if email != nil {
+			endpoint += fmt.Sprintf("&limit=%d", limit)
+		} else {
+			endpoint += fmt.Sprintf("?limit=%d", limit)
+		}
+	}
+
+	var response CustomersResponse
+	err := ps.makeRequest("GET", endpoint, nil, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list customers: %w", err)
+	}
+
+	return response.Items, nil
+}
+
+// GetCustomerByEmail retrieves a customer by email address
+func (ps *PolarService) GetCustomerByEmail(email string) (*PolarCustomer, error) {
+	customers, err := ps.ListCustomers(&email, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get customer by email: %w", err)
+	}
+
+	if len(customers) == 0 {
+		return nil, nil // No customer found (not an error)
+	}
+
+	return &customers[0], nil
+}
+
 // GetProduct retrieves a product by ID
 func (ps *PolarService) GetProduct(productID string) (*PolarProduct, error) {
 	var product PolarProduct
@@ -293,22 +337,50 @@ func (ps *PolarService) GetOrder(orderID string) (*PolarOrder, error) {
 
 // GetOrCreatePolarCustomer gets or creates a Polar customer for a user
 func (ps *PolarService) GetOrCreatePolarCustomer(userID int64, email string, name *string) (string, error) {
-	// Check if user already has a Polar subscription with customer ID
+	// STEP 1: Check if user already has a Polar subscription with customer ID in our DB
 	var subscription models.PolarSubscription
 	err := ps.db.Where("user_id = ?", userID).Order("created_at DESC").First(&subscription).Error
 	if err == nil && subscription.PolarCustomerID != "" {
+		log.Printf("[Polar] Found existing customer ID in database: %s", subscription.PolarCustomerID)
 		return subscription.PolarCustomerID, nil
 	}
 
-	// Create new customer in Polar
+	// STEP 2: No subscription found locally, check if customer exists in Polar by email
+	log.Printf("[Polar] No local subscription found for user %d, checking Polar API by email: %s", userID, email)
+	existingCustomer, err := ps.GetCustomerByEmail(email)
+	if err != nil {
+		log.Printf("[Polar] Error checking for existing customer: %v", err)
+		// Continue to create - don't fail on lookup errors
+	}
+
+	// STEP 3: If customer exists in Polar, return their ID
+	if existingCustomer != nil {
+		log.Printf("[Polar] Found existing customer in Polar: %s (email: %s)", existingCustomer.ID, email)
+		return existingCustomer.ID, nil
+	}
+
+	// STEP 4: Customer doesn't exist anywhere, create new customer in Polar
+	log.Printf("[Polar] Creating new customer in Polar for email: %s", email)
 	metadata := map[string]interface{}{
 		"user_id": userID,
 	}
 	customer, err := ps.CreateCustomer(email, name, metadata)
 	if err != nil {
-		return "", err
+		// STEP 5: If creation fails with "already exists", try fetching again
+		// (Race condition: customer might have been created between our check and create attempt)
+		if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "422") {
+			log.Printf("[Polar] Customer creation failed with 'already exists', fetching existing customer")
+			existingCustomer, fetchErr := ps.GetCustomerByEmail(email)
+			if fetchErr == nil && existingCustomer != nil {
+				log.Printf("[Polar] Successfully fetched existing customer: %s", existingCustomer.ID)
+				return existingCustomer.ID, nil
+			}
+			log.Printf("[Polar] Failed to fetch existing customer after 422 error: %v", fetchErr)
+		}
+		return "", fmt.Errorf("failed to create customer: %w", err)
 	}
 
+	log.Printf("[Polar] Successfully created new customer: %s", customer.ID)
 	return customer.ID, nil
 }
 

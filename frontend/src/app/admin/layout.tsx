@@ -1,69 +1,62 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { adminAuthService } from '@/lib/admin-auth-service';
-import { API_ENDPOINTS } from '@/lib/api-config';
+import { AdminAuthProvider, useAdminAuth } from '@/contexts/AdminAuthContext';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [isLoading, setIsLoading] = useState(true);
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAdminAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      // Skip check for login page
-      if (pathname === '/admin/login') {
-        setIsLoading(false);
-        return;
-      }
+    // Skip check for login page
+    if (pathname === '/admin/login') {
+      return;
+    }
 
-      const token = adminAuthService.getAdminToken();
+    // Redirect to login if not authenticated
+    if (!isLoading && !isAuthenticated) {
+      console.log('[AdminLayout] Not authenticated, redirecting to login');
+      router.push('/admin/login');
+    }
+  }, [isAuthenticated, isLoading, pathname, router]);
 
-      if (!token) {
-        router.push('/admin/login');
-        return;
-      }
-
-      // Validate token with backend
-      try {
-        const response = await fetch(API_ENDPOINTS.admin.dashboard, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Invalid token');
-        }
-
-        // Token is valid, allow access
-        setIsLoading(false);
-      } catch (error) {
-        // Token is invalid, clear storage and redirect to login
-        adminAuthService.logout();
-        router.push('/admin/login');
-      }
-    };
-
-    checkAuth();
-  }, [pathname, router]);
-
+  // Show loading spinner while checking auth
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading if redirecting to login
+  if (!isAuthenticated && pathname !== '/admin/login') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Redirecting to login...</p>
         </div>
       </div>
     );
   }
 
   return <>{children}</>;
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AdminAuthProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AdminAuthProvider>
+  );
 }

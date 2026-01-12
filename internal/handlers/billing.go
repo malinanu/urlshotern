@@ -174,8 +174,8 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	var req struct {
 		ProductID  string  `json:"product_id" binding:"required"`
 		PriceID    *string `json:"price_id,omitempty"`
-		SuccessURL string  `json:"success_url"`
-		CancelURL  string  `json:"cancel_url"`
+		SuccessURL string  `json:"success_url,omitempty"`
+		CancelURL  string  `json:"cancel_url,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {

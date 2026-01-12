@@ -17,8 +17,8 @@ import (
 )
 
 type ShortenerService struct {
-	db          *storage.PostgresStorage
-	redis       *storage.RedisStorage
+	db          storage.PostgresStorageInterface
+	redis       storage.RedisStorageInterface
 	config      *configs.Config
 	analytics   *AnalyticsService
 	realtime    *RealtimeAnalyticsService
@@ -26,20 +26,25 @@ type ShortenerService struct {
 }
 
 // NewShortenerService creates a new shortener service
-func NewShortenerService(db *storage.PostgresStorage, redis *storage.RedisStorage, config *configs.Config) *ShortenerService {
+func NewShortenerService(db storage.PostgresStorageInterface, redis storage.RedisStorageInterface, config *configs.Config) *ShortenerService {
 	// Initialize Snowflake ID generator
 	utils.InitializeSnowflake(config.NodeID)
-	
+
 	service := &ShortenerService{
 		db:     db,
 		redis:  redis,
 		config: config,
 	}
-	
-	// Initialize analytics service
-	service.analytics = NewAnalyticsService(db)
-	service.analytics.SetRedis(redis)
-	
+
+	// Initialize analytics service if db is a concrete PostgresStorage
+	// For mocks in tests, analytics will need to be set separately
+	if concreteDB, ok := db.(*storage.PostgresStorage); ok {
+		service.analytics = NewAnalyticsService(concreteDB)
+		if concreteRedis, ok := redis.(*storage.RedisStorage); ok {
+			service.analytics.SetRedis(concreteRedis)
+		}
+	}
+
 	return service
 }
 

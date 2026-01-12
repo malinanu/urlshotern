@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { adminAuthService } from '@/lib/admin-auth-service';
 import RichTextEditor from '@/components/editor/RichTextEditor';
 import { ContentBlockManager } from './ContentBlockManager';
 import { PageTemplateManager } from './PageTemplateManager';
@@ -49,7 +49,6 @@ interface CreatePageRequest {
 }
 
 export default function CMSManager() {
-  const { getAccessToken } = useAuth();
   const [pages, setPages] = useState<StaticPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -73,7 +72,9 @@ export default function CMSManager() {
   }, [searchTerm, publishedFilter]);
 
   const fetchPages = async () => {
-    const token = getAccessToken();
+    console.log('CMSManager fetchPages called - using adminAuthService');
+    const token = adminAuthService.getAdminToken();
+    console.log('Token retrieved:', token ? 'exists' : 'missing');
     if (!token) return;
 
     try {
@@ -105,7 +106,7 @@ export default function CMSManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = getAccessToken();
+    const token = adminAuthService.getAdminToken();
     if (!token) return;
 
     try {
@@ -165,7 +166,7 @@ export default function CMSManager() {
   const handleDelete = async (pageId: number) => {
     if (!confirm('Are you sure you want to delete this page?')) return;
 
-    const token = getAccessToken();
+    const token = adminAuthService.getAdminToken();
     if (!token) return;
 
     try {
@@ -187,7 +188,7 @@ export default function CMSManager() {
   };
 
   const togglePublished = async (page: StaticPage) => {
-    const token = getAccessToken();
+    const token = adminAuthService.getAdminToken();
     if (!token) return;
 
     try {

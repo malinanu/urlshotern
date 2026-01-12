@@ -63,8 +63,8 @@ export default function RootLayout({
         {/* Optimize critical CSS rendering */}
         <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 
-        {/* Service Worker Registration */}
-        <script dangerouslySetInnerHTML={{
+        {/* Service Worker Registration - DISABLED temporarily for development */}
+        {/* <script dangerouslySetInnerHTML={{
           __html: `
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', () => {
@@ -78,7 +78,7 @@ export default function RootLayout({
               });
             }
           `
-        }} />
+        }} /> */}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

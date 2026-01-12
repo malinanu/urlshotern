@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { adminAuthService } from '@/lib/admin-auth-service';
 import RichTextEditor from '../editor/RichTextEditor';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
@@ -62,8 +62,9 @@ const templateCategories = [
   'custom'
 ];
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export function PageTemplateManager() {
-  const { user, getAccessToken } = useAuth();
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<PageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,9 +95,10 @@ export function PageTemplateManager() {
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('/api/v1/admin/page-templates', {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/page-templates`, {
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -153,17 +155,18 @@ export function PageTemplateManager() {
     e.preventDefault();
 
     try {
-      const url = editingTemplate 
-        ? `/api/v1/admin/page-templates/${editingTemplate.id}`
-        : '/api/v1/admin/page-templates';
-      
+      const token = adminAuthService.getAdminToken();
+      const url = editingTemplate
+        ? `${API_BASE_URL}/api/v1/admin/page-templates/${editingTemplate.id}`
+        : `${API_BASE_URL}/api/v1/admin/page-templates`;
+
       const method = editingTemplate ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -204,10 +207,11 @@ export function PageTemplateManager() {
     }
 
     try {
-      const response = await fetch(`/api/v1/admin/page-templates/${template.id}`, {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/page-templates/${template.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -238,9 +242,10 @@ export function PageTemplateManager() {
 
   const handlePreview = async (template: PageTemplate) => {
     try {
-      const response = await fetch(`/api/v1/admin/page-templates/${template.id}/render`, {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/page-templates/${template.id}/render`, {
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -258,10 +263,11 @@ export function PageTemplateManager() {
 
   const handleSetDefault = async (template: PageTemplate) => {
     try {
-      const response = await fetch(`/api/v1/admin/page-templates/${template.id}/set-default`, {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/page-templates/${template.id}/set-default`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 

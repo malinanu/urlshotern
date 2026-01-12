@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Layout from '@/components/layout/Layout';
+import AdminAdminLayout from '@/components/admin/AdminAdminLayout';
 import { adminAuthService } from '@/lib/admin-auth-service';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import {
@@ -139,20 +139,20 @@ export default function UserDetailPage() {
 
   if (loading) {
     return (
-      <Layout>
+      <AdminLayout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading user details...</p>
           </div>
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
   if (error || !userStats) {
     return (
-      <Layout>
+      <AdminLayout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <ExclamationCircleIcon className="h-12 w-12 text-red-600 mx-auto" />
@@ -166,14 +166,14 @@ export default function UserDetailPage() {
             </button>
           </div>
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
   const { user, stats, top_urls, recent_activity, urls_over_time, clicks_over_time } = userStats;
 
   return (
-    <Layout>
+    <AdminLayout>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header with Back Button */}
@@ -386,6 +386,6 @@ export default function UserDetailPage() {
           </div>
         </div>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 }

@@ -123,7 +123,10 @@ END $$;
 -- NO access to admin schema
 REVOKE ALL ON SCHEMA admin FROM urlshort_app;
 
-RAISE NOTICE 'Configured permissions for urlshort_app: SELECT, INSERT, UPDATE (NO DELETE on critical tables)';
+DO $$
+BEGIN
+    RAISE NOTICE 'Configured permissions for urlshort_app: SELECT, INSERT, UPDATE (NO DELETE on critical tables)';
+END $$;
 
 -- ============================================================================
 -- STEP 5: Configure Permissions for Admin User (urlshort_admin)
@@ -147,7 +150,10 @@ ALTER SCHEMA admin OWNER TO urlshort_admin;
 -- Grant ability to create tables in admin schema
 GRANT CREATE ON SCHEMA admin TO urlshort_admin;
 
-RAISE NOTICE 'Configured permissions for urlshort_admin: FULL ACCESS to all schemas';
+DO $$
+BEGIN
+    RAISE NOTICE 'Configured permissions for urlshort_admin: FULL ACCESS to all schemas';
+END $$;
 
 -- ============================================================================
 -- STEP 6: Configure Permissions for Read-Only User (urlshort_readonly)
@@ -162,7 +168,10 @@ REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public FROM urlshort_reado
 -- NO access to admin schema (sensitive audit logs)
 REVOKE ALL ON SCHEMA admin FROM urlshort_readonly;
 
-RAISE NOTICE 'Configured permissions for urlshort_readonly: SELECT only on public schema';
+DO $$
+BEGIN
+    RAISE NOTICE 'Configured permissions for urlshort_readonly: SELECT only on public schema';
+END $$;
 
 -- ============================================================================
 -- STEP 7: Row-Level Security (RLS) Policies
@@ -177,7 +186,7 @@ DROP POLICY IF EXISTS app_user_access ON users;
 CREATE POLICY app_user_access ON users
     FOR ALL
     TO urlshort_app
-    USING (deleted_at IS NULL AND is_active = true);
+    USING (is_active = true);
 
 -- Policy: Admin can access all users (including deleted and inactive)
 DROP POLICY IF EXISTS admin_user_access ON users;
@@ -191,7 +200,7 @@ DROP POLICY IF EXISTS readonly_user_access ON users;
 CREATE POLICY readonly_user_access ON users
     FOR SELECT
     TO urlshort_readonly
-    USING (deleted_at IS NULL AND is_active = true);
+    USING (is_active = true);
 
 -- Policy: Regular app can only access active URLs
 DROP POLICY IF EXISTS app_url_access ON url_mappings;
@@ -214,7 +223,10 @@ CREATE POLICY readonly_url_access ON url_mappings
     TO urlshort_readonly
     USING (is_active = true);
 
-RAISE NOTICE 'Configured Row-Level Security policies';
+DO $$
+BEGIN
+    RAISE NOTICE 'Configured Row-Level Security policies';
+END $$;
 
 -- ============================================================================
 -- STEP 8: Grant Future Privileges
@@ -246,7 +258,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA admin
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT ON TABLES TO urlshort_readonly;
 
-RAISE NOTICE 'Configured default privileges for future tables';
+DO $$
+BEGIN
+    RAISE NOTICE 'Configured default privileges for future tables';
+END $$;
 
 -- ============================================================================
 -- STEP 9: Security Verification

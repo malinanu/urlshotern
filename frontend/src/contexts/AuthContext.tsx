@@ -343,6 +343,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logger.info('Logging in user:', email);
 
     try {
+      // DEFENSIVE CHECK: Verify API endpoint is defined
+      if (!API_ENDPOINTS?.auth?.login) {
+        throw new Error('API configuration error: login endpoint not found');
+      }
+
       const response = await fetch(API_ENDPOINTS.auth.login, {
         method: 'POST',
         headers: {
@@ -356,10 +361,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signal: AbortSignal.timeout(15000),
       });
 
+      // IMPROVED: Check response.ok BEFORE parsing JSON
+      if (!response.ok) {
+        // Try to parse error response, fallback to status text
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          errorMessage = `Login failed with status ${response.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse successful response
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+      // DEFENSIVE CHECK: Validate response structure
+      if (!data || !data.access_token || !data.refresh_token || !data.user) {
+        throw new Error('Invalid response from server: missing required fields');
       }
 
       logger.info('Login successful');

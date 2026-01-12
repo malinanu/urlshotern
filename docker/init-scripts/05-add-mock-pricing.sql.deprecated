@@ -1,0 +1,122 @@
+-- ============================================================================
+-- Mock Pricing Data for Development
+-- Description: Adds mock Premium and Enterprise products with pricing
+-- Version: 05
+-- Author: Admin Panel Implementation
+-- Date: 2026-01-11
+-- ============================================================================
+--
+-- SECURITY WARNING: This is for DEVELOPMENT ONLY!
+-- For production, configure real products in Polar Dashboard
+--
+-- Mock Products:
+-- Premium Plan:    $5.00/month (500 cents)
+-- Enterprise Plan: $29.99/month (2999 cents)
+
+-- Insert Premium product
+INSERT INTO polar_products (
+    id,
+    polar_product_id,
+    name,
+    description,
+    plan_type,
+    is_recurring,
+    prices,
+    benefits,
+    organization_id,
+    created_at,
+    updated_at
+) VALUES (
+    'premium_plan',
+    'premium_plan',
+    'Premium Plan',
+    'Perfect for growing teams with advanced features',
+    'premium',
+    true,
+    '[
+        {
+            "id": "premium_monthly",
+            "price_amount": 500,
+            "price_currency": "USD",
+            "recurring_interval": "month",
+            "is_archived": false
+        }
+    ]'::jsonb,
+    '[
+        {"id": "unlimited_urls", "type": "custom", "description": "Unlimited URLs"},
+        {"id": "unlimited_clicks", "type": "custom", "description": "Unlimited clicks"},
+        {"id": "custom_domains", "type": "custom", "description": "Custom branded domains"},
+        {"id": "advanced_analytics", "type": "custom", "description": "Advanced analytics dashboard"},
+        {"id": "api_access", "type": "custom", "description": "API access"},
+        {"id": "email_support", "type": "custom", "description": "Email support"}
+    ]'::jsonb,
+    'default',
+    NOW(),
+    NOW()
+) ON CONFLICT (id) DO UPDATE SET
+    prices = EXCLUDED.prices,
+    benefits = EXCLUDED.benefits,
+    updated_at = NOW();
+
+-- Insert Enterprise product
+INSERT INTO polar_products (
+    id,
+    polar_product_id,
+    name,
+    description,
+    plan_type,
+    is_recurring,
+    prices,
+    benefits,
+    organization_id,
+    created_at,
+    updated_at
+) VALUES (
+    'enterprise_plan',
+    'enterprise_plan',
+    'Enterprise Plan',
+    'For large organizations requiring premium support',
+    'enterprise',
+    true,
+    '[
+        {
+            "id": "enterprise_monthly",
+            "price_amount": 2999,
+            "price_currency": "USD",
+            "recurring_interval": "month",
+            "is_archived": false
+        }
+    ]'::jsonb,
+    '[
+        {"id": "white_label", "type": "custom", "description": "White-label solution"},
+        {"id": "priority_support", "type": "custom", "description": "24/7 priority support"},
+        {"id": "sla_guarantee", "type": "custom", "description": "99.9% uptime SLA"},
+        {"id": "dedicated_manager", "type": "custom", "description": "Dedicated account manager"},
+        {"id": "custom_integrations", "type": "custom", "description": "Custom integrations"},
+        {"id": "advanced_security", "type": "custom", "description": "Advanced security features"},
+        {"id": "bulk_operations", "type": "custom", "description": "Bulk URL operations"},
+        {"id": "team_management", "type": "custom", "description": "Team management & permissions"}
+    ]'::jsonb,
+    'default',
+    NOW(),
+    NOW()
+) ON CONFLICT (id) DO UPDATE SET
+    prices = EXCLUDED.prices,
+    benefits = EXCLUDED.benefits,
+    updated_at = NOW();
+
+-- Log the creation
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '==================================================';
+    RAISE NOTICE 'MOCK PRICING DATA CREATED';
+    RAISE NOTICE '==================================================';
+    RAISE NOTICE 'Premium Plan:    $5.00/month (500 cents)';
+    RAISE NOTICE 'Enterprise Plan: $29.99/month (2999 cents)';
+    RAISE NOTICE '';
+    RAISE NOTICE 'WARNING: These are MOCK products for development!';
+    RAISE NOTICE 'For production, configure real products in Polar';
+    RAISE NOTICE '==================================================';
+    RAISE NOTICE '';
+END $$;

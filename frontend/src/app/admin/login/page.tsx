@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,14 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login, isAuthenticated } = useAdminAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/admin');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -16,33 +25,17 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      // Direct API call to bypass import issues
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Invalid credentials' }));
-        throw new Error(errorData.error || 'Invalid credentials');
-      }
-
-      const data = await response.json();
-
-      // Store auth data in localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('admin_access_token', data.access_token);
-        localStorage.setItem('admin_refresh_token', data.refresh_token);
-        localStorage.setItem('admin_user', JSON.stringify(data.user));
-      }
-
+      await login(email, password);
+      // On success, redirect to admin dashboard
       router.push('/admin');
     } catch (err: any) {
-      setError(err.message || 'Invalid credentials. Admin access only.');
+      console.error('Admin login failed:', err);
+
+      const errorMessage = err instanceof Error
+        ? err.message
+        : 'Invalid credentials. Admin access only.';
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

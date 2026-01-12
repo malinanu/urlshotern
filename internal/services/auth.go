@@ -126,27 +126,27 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 
 // AdminLogin validates admin credentials and returns tokens
 func (a *AuthService) AdminLogin(req *models.LoginRequest, ipAddress, userAgent string) (*models.AuthResponse, error) {
-	// Call regular Login() method
-	response, err := a.Login(req, ipAddress, userAgent)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch user and verify admin status
+	// Get user first to check admin status BEFORE authenticating
 	user, err := a.userService.GetUserByEmail(req.Email)
 	if err != nil {
+		// Don't reveal whether user exists - return generic error
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
-	// Check if user is admin
+	// Check admin status BEFORE authentication (fail fast for non-admin users)
 	if !user.IsAdmin && !isAdminAccountType(user.AccountType) {
-		// Log unauthorized admin access attempt
 		a.LogAuditEvent(nil, "admin_login_rejected", "authentication", "",
 			map[string]interface{}{
 				"email":  req.Email,
 				"reason": "not_admin",
 			}, ipAddress, userAgent)
 		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	// Now authenticate (will fetch user again internally, but ensures fresh data and proper password check)
+	response, err := a.Login(req, ipAddress, userAgent)
+	if err != nil {
+		return nil, err
 	}
 
 	// Log successful admin login

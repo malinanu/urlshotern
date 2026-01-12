@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/pprof"
@@ -13,11 +14,15 @@ import (
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
+	"github.com/URLshorter/url-shortener/internal/handlers/admin"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 // ProfilingServer runs the application with profiling enabled
@@ -35,11 +40,30 @@ func main() {
 	}
 	defer db.Close()
 
+	// Initialize GORM database for billing and Polar integration
+	sslMode := "disable"
+	if config.Environment == "production" {
+		sslMode = "require"
+	}
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, sslMode)
+	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to GORM database: %v", err)
+	}
+
 	redis, err := storage.NewRedisStorage(config)
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	defer redis.Close()
+
+	// Initialize DatabaseManager for admin services
+	dbManager, err := storage.NewDatabaseManager(config)
+	if err != nil {
+		log.Fatalf("Failed to initialize DatabaseManager: %v", err)
+	}
+	defer dbManager.Close()
 
 	// Initialize services
 	shortenerService := services.NewShortenerService(db, redis, config)
@@ -63,12 +87,54 @@ func main() {
 	shortenerService.SetAttributionService(attributionService)
 
 	// Initialize auth middleware
-	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService)
+	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
+
+	// Initialize billing handler (needed for admin handlers)
+	billingHandler := handlers.NewBillingHandler(gormDB, config)
+
+	// Initialize admin services (needed before admin middleware)
+	snowflakeGen, err := utils.NewSnowflakeGenerator(config.NodeID)
+	if err != nil {
+		log.Fatalf("Failed to create snowflake generator: %v", err)
+	}
+	adminAuditService := services.NewAdminAuditService(dbManager, snowflakeGen)
+
+	// Initialize admin middleware
+	adminMiddleware := middleware.NewAdminMiddleware(dbManager, adminAuditService, rbacService)
+
+	// Initialize remaining admin services
+	adminUserService := services.NewAdminUserService(dbManager, emailService, userService, jwtService)
+	adminURLService := services.NewAdminURLService(dbManager)
+	domainBlocklistService := services.NewDomainBlocklistService(dbManager)
+	adminAnalyticsService := services.NewAdminAnalyticsService(dbManager)
+	monitoringService := services.NewMonitoringService(dbManager, redis)
+	cmsService := services.NewCMSService(db)
+	mediaService := services.NewMediaService(db, "./uploads", config.BaseURL)
+	apiKeyService := services.NewAPIKeyService(db)
+	globalSettingsService := services.NewGlobalSettingsService(db)
+
+	// Initialize admin handlers
+	adminHandlers := admin.NewAdminHandlers(
+		dbManager,
+		redis,
+		adminUserService,
+		adminURLService,
+		domainBlocklistService,
+		adminAnalyticsService,
+		monitoringService,
+		adminAuditService,
+		rbacService,
+		billingHandler.GetBillingService(),
+		globalSettingsService,
+		cmsService,
+		mediaService,
+		apiKeyService,
+	)
 
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, config)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminHandlers)
 
 	// Setup Gin router with metrics middleware
 	gin.SetMode(gin.ReleaseMode)
@@ -77,7 +143,7 @@ func main() {
 	router.Use(middleware.MetricsMiddleware()) // Add metrics collection
 
 	// Setup all routes
-	routes.SetupRoutes(router, handler, authMiddleware)
+	routes.SetupRoutes(router, handler, authMiddleware, adminMiddleware)
 
 	// Add profiling endpoints
 	router.GET("/debug/pprof/", gin.WrapF(pprof.Index))

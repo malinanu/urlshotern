@@ -9,28 +9,51 @@ import (
 
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
+	"github.com/URLshorter/url-shortener/internal/handlers/admin"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTestRouter() (*gin.Engine, *handlers.Handler) {
+func setupBasicTestRouter() (*gin.Engine, *handlers.Handler) {
 	gin.SetMode(gin.TestMode)
-	
-	// Mock storage and services for integration tests
-	// In a real integration test, you'd use test databases
+
+	// For this example, we'll create a mock handler with nil services
+	// In practice, you'd set up test databases and real services
+	var shortenerService *services.ShortenerService
+	var analyticsService *services.AnalyticsService
+	var advancedAnalyticsService *services.AdvancedAnalyticsService
+	var conversionService *services.ConversionTrackingService
+	var abTestService *services.ABTestingService
+	var realtimeService *services.RealtimeAnalyticsService
+	var attributionService *services.AttributionService
+	var authHandlers *handlers.AuthHandlers
+	var analyticsHandlers *handlers.AnalyticsHandlers
+	var db *storage.PostgresStorage
+	var adminHandlers *admin.AdminHandlers
+
 	config := &configs.Config{
 		BaseURL:    "http://localhost:8080",
 		ServerHost: "localhost",
 	}
-	
-	// For this example, we'll create a mock handler
-	// In practice, you'd set up test databases and real services
-	var shortenerService *services.ShortenerService
-	var analyticsService *services.AnalyticsService
-	
-	handler := handlers.NewHandler(shortenerService, analyticsService)
+
+	handler := handlers.NewHandler(
+		shortenerService,
+		analyticsService,
+		advancedAnalyticsService,
+		conversionService,
+		abTestService,
+		realtimeService,
+		attributionService,
+		authHandlers,
+		analyticsHandlers,
+		db,
+		nil, // gormDB
+		config,
+		adminHandlers,
+	)
 	
 	router := gin.New()
 	
@@ -51,7 +74,7 @@ func setupTestRouter() (*gin.Engine, *handlers.Handler) {
 }
 
 func TestHealthCheck(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/health", nil)
@@ -66,7 +89,7 @@ func TestHealthCheck(t *testing.T) {
 }
 
 func TestShortenURL_Integration(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	requestBody := models.ShortenRequest{
 		URL: "https://www.example.com",
@@ -86,7 +109,7 @@ func TestShortenURL_Integration(t *testing.T) {
 }
 
 func TestInvalidJSONRequest(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	invalidJSON := `{"url": "https://example.com", "invalid": }`
 	
@@ -104,7 +127,7 @@ func TestInvalidJSONRequest(t *testing.T) {
 }
 
 func TestMissingURLField(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	requestBody := map[string]string{
 		"custom_code": "test123",
@@ -122,7 +145,7 @@ func TestMissingURLField(t *testing.T) {
 }
 
 func TestRedirectEndpoint_NotFound(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/nonexistent", nil)
@@ -134,7 +157,7 @@ func TestRedirectEndpoint_NotFound(t *testing.T) {
 }
 
 func TestAnalyticsEndpoint(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/analytics/test123", nil)
@@ -146,7 +169,7 @@ func TestAnalyticsEndpoint(t *testing.T) {
 }
 
 func TestAnalyticsEndpoint_InvalidDaysParameter(t *testing.T) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/v1/analytics/test123?days=invalid", nil)
@@ -175,7 +198,7 @@ func TestCompleteFlow_WithRealServices(t *testing.T) {
 
 // Benchmark test for API performance
 func BenchmarkShortenURL(b *testing.B) {
-	router, _ := setupTestRouter()
+	router, _ := setupBasicTestRouter()
 	
 	requestBody := models.ShortenRequest{
 		URL: "https://www.example.com",

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { adminAuthService } from '@/lib/admin-auth-service';
 import RichTextEditor from '../editor/RichTextEditor';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
@@ -70,8 +70,9 @@ const categories = [
   'custom'
 ];
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export function ContentBlockManager() {
-  const { user, getAccessToken } = useAuth();
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [filteredBlocks, setFilteredBlocks] = useState<ContentBlock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,9 +103,10 @@ export function ContentBlockManager() {
 
   const fetchBlocks = async () => {
     try {
-      const response = await fetch('/api/v1/admin/content-blocks', {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/content-blocks`, {
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -150,17 +152,18 @@ export function ContentBlockManager() {
     e.preventDefault();
 
     try {
-      const url = editingBlock 
-        ? `/api/v1/admin/content-blocks/${editingBlock.id}`
-        : '/api/v1/admin/content-blocks';
-      
+      const token = adminAuthService.getAdminToken();
+      const url = editingBlock
+        ? `${API_BASE_URL}/api/v1/admin/content-blocks/${editingBlock.id}`
+        : `${API_BASE_URL}/api/v1/admin/content-blocks`;
+
       const method = editingBlock ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -200,10 +203,11 @@ export function ContentBlockManager() {
     }
 
     try {
-      const response = await fetch(`/api/v1/admin/content-blocks/${block.id}`, {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/content-blocks/${block.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -233,9 +237,10 @@ export function ContentBlockManager() {
 
   const handlePreview = async (block: ContentBlock) => {
     try {
-      const response = await fetch(`/api/v1/admin/content-blocks/${block.id}/render`, {
+      const token = adminAuthService.getAdminToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/content-blocks/${block.id}/render`, {
         headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 

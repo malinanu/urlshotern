@@ -87,6 +87,7 @@ services:
       - ../configs/database.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ../configs/auth_schema.sql:/docker-entrypoint-initdb.d/02-auth-schema.sql
       - ../migrations/002_setup_database_users.sql:/docker-entrypoint-initdb.d/03-setup-users.sql
+      - ./init-scripts/04-create-admin-user.sql:/docker-entrypoint-initdb.d/04-create-admin-user.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U urlshortener -d urlshortener_db"]
       interval: 10s

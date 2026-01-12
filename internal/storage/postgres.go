@@ -25,19 +25,22 @@ func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
 		sslMode = "disable"
 	}
 
+	// Use AppDB configuration for multi-user database architecture
+	// This ensures we connect as 'urlshort_app' user with proper RLS policies
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, sslMode)
+		config.AppDB.Host, config.AppDB.Port, config.AppDB.User,
+		config.AppDB.Password, config.AppDB.DBName, sslMode)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool with granular settings
-	db.SetMaxOpenConns(config.DBMaxConns)
-	db.SetMaxIdleConns(config.DBMaxIdleConns)
-	db.SetConnMaxLifetime(time.Duration(config.DBConnMaxLifetime) * time.Second)
-	db.SetConnMaxIdleTime(time.Duration(config.DBConnMaxIdleTime) * time.Second)
+	// Configure connection pool with AppDB-specific settings
+	db.SetMaxOpenConns(config.AppDB.MaxConns)
+	db.SetMaxIdleConns(config.AppDB.MaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(config.AppDB.ConnMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(config.AppDB.ConnMaxIdleTime) * time.Second)
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
