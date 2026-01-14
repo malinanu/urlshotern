@@ -43,7 +43,7 @@ interface SystemStats {
 }
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   is_active: boolean;

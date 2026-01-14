@@ -184,7 +184,9 @@
       "Bash(gh issue create --title \"[SECURITY] Webhook replay attack possible\" --body \"**Priority**: P1 - High Priority\n\n**Issue**: No timestamp validation on webhooks\n\n**Fix**: Add 5-minute time window check on webhook timestamps\n\n**Estimated Time**: 2 hours\n**Phase**: 4 - Validation & Authorization\" --label \"production-readiness,security,P1\")",
       "Bash(gh issue create --title \"[DATA INTEGRITY] No audit trail for financial operations\" --body \"**Priority**: P1 - High Priority\n\n**Issue**: Refunds, cancellations lack comprehensive audit logs\n\n**Fix**: Enhance audit logging with before/after snapshots for all financial changes\n\n**Estimated Time**: 1 day\n**Phase**: 2 - Reliability & Data Integrity\" --label \"production-readiness,compliance,reliability,P1\")",
       "Bash(jq:*)",
-      "Bash(docker rmi:*)"
+      "Bash(docker rmi:*)",
+      "mcp__playwright__browser_navigate_back",
+      "mcp__playwright__browser_handle_dialog"
     ],
     "deny": [],
     "ask": []

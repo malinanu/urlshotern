@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -68,7 +69,7 @@ func (h *AdminCMSHandlers) AdminListPages(c *gin.Context) {
 	totalPages := (result.Total + int64(limit) - 1) / int64(limit)
 
 	c.JSON(http.StatusOK, gin.H{
-		"pages":       result.Data,
+		"data":        result.Data,
 		"total":       result.Total,
 		"page":        page,
 		"limit":       limit,
@@ -178,6 +179,8 @@ func (h *AdminCMSHandlers) AdminUpdatePage(c *gin.Context) {
 	// Update page
 	page, err := h.cmsService.UpdateStaticPage(pageID, &req, adminID.(int64))
 	if err != nil {
+		// Log the error for debugging
+		fmt.Printf("ERROR: Failed to update CMS page %d: %v\n", pageID, err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),

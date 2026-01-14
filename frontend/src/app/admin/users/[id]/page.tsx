@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import AdminAdminLayout from '@/components/admin/AdminAdminLayout';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { adminAuthService } from '@/lib/admin-auth-service';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import {

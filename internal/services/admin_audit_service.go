@@ -30,11 +30,7 @@ func NewAdminAuditService(dbManager *storage.DatabaseManager, snowflake *utils.S
 
 // LogAction logs an admin action to the audit trail
 func (s *AdminAuditService) LogAction(ctx context.Context, req models.CreateAuditLogRequest) error {
-	// Generate a unique ID for the audit log
-	id, err := s.snowflake.Generate()
-	if err != nil {
-		return fmt.Errorf("failed to generate audit log ID: %w", err)
-	}
+	var err error
 
 	// Set defaults
 	if req.Status == "" {
@@ -56,39 +52,44 @@ func (s *AdminAuditService) LogAction(ctx context.Context, req models.CreateAudi
 	}
 
 	// Convert changes to JSONB
+	// PostgreSQL JSONB columns require valid JSON, not nil
 	var changesJSON []byte
 	if req.Changes != nil {
 		changesJSON, err = json.Marshal(req.Changes)
 		if err != nil {
 			return fmt.Errorf("failed to marshal changes: %w", err)
 		}
+	} else {
+		// Set empty JSON object instead of nil for PostgreSQL JSONB compatibility
+		changesJSON = []byte("{}")
 	}
 
-	// Insert into admin.audit_logs table using admin database connection
+	// Insert into audit_logs table using admin database connection
+	// Map to actual table schema: id, user_id, action, resource_type, resource_id,
+	// old_values, new_values, metadata, ip_address, user_agent, success, error_message
 	query := `
-		INSERT INTO admin.audit_logs (
-			id, user_id, username, action, resource_type, resource_id,
-			details, changes, ip_address, user_agent, session_id,
-			status, error_message, severity, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		INSERT INTO audit_logs (
+			user_id, action, resource_type, resource_id,
+			old_values, new_values, metadata, ip_address, user_agent,
+			success, error_message
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
+	// Determine success based on status
+	success := req.Status == "success" || req.ErrorMessage == ""
+
 	_, err = s.dbManager.AdminExecContext(ctx, query,
-		id,
 		req.UserID,
-		req.Username,
 		req.Action,
 		req.ResourceType,
 		req.ResourceID,
-		detailsJSON,
+		nil, // old_values - can be populated if needed
 		changesJSON,
+		detailsJSON,
 		req.IPAddress,
 		req.UserAgent,
-		req.SessionID,
-		req.Status,
+		success,
 		req.ErrorMessage,
-		req.Severity,
-		time.Now(),
 	)
 
 	if err != nil {
@@ -100,32 +101,32 @@ func (s *AdminAuditService) LogAction(ctx context.Context, req models.CreateAudi
 
 // GetAuditLog retrieves a single audit log by ID
 func (s *AdminAuditService) GetAuditLog(ctx context.Context, id int64) (*models.AdminAuditLog, error) {
+	// Query actual table columns
 	query := `
-		SELECT id, user_id, username, action, resource_type, resource_id,
-		       details, changes, ip_address, user_agent, session_id,
-		       status, error_message, severity, created_at
-		FROM admin.audit_logs
+		SELECT id, user_id, action, resource_type, resource_id,
+		       old_values, new_values, metadata, ip_address, user_agent,
+		       success, error_message, created_at
+		FROM audit_logs
 		WHERE id = $1
 	`
 
 	var log models.AdminAuditLog
-	var detailsJSON, changesJSON []byte
+	var oldValuesJSON, newValuesJSON, metadataJSON []byte
+	var success bool
 
 	err := s.dbManager.AdminQueryRowContext(ctx, query, id).Scan(
 		&log.ID,
 		&log.UserID,
-		&log.Username,
 		&log.Action,
 		&log.ResourceType,
 		&log.ResourceID,
-		&detailsJSON,
-		&changesJSON,
+		&oldValuesJSON,
+		&newValuesJSON,
+		&metadataJSON,
 		&log.IPAddress,
 		&log.UserAgent,
-		&log.SessionID,
-		&log.Status,
+		&success,
 		&log.ErrorMessage,
-		&log.Severity,
 		&log.CreatedAt,
 	)
 
@@ -136,16 +137,23 @@ func (s *AdminAuditService) GetAuditLog(ctx context.Context, id int64) (*models.
 		return nil, fmt.Errorf("failed to get audit log: %w", err)
 	}
 
+	// Map success boolean to status string
+	if success {
+		log.Status = "success"
+	} else {
+		log.Status = "failed"
+	}
+
 	// Parse JSONB fields
-	if len(detailsJSON) > 0 {
-		if err := json.Unmarshal(detailsJSON, &log.Details); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal details: %w", err)
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &log.Details); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
 	}
 
-	if len(changesJSON) > 0 {
+	if len(newValuesJSON) > 0 {
 		log.Changes = &models.AuditLogChange{}
-		if err := json.Unmarshal(changesJSON, log.Changes); err != nil {
+		if err := json.Unmarshal(newValuesJSON, log.Changes); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal changes: %w", err)
 		}
 	}
@@ -166,11 +174,7 @@ func (s *AdminAuditService) ListAuditLogs(ctx context.Context, filter models.Aud
 		argIndex++
 	}
 
-	if filter.Username != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("username ILIKE $%d", argIndex))
-		args = append(args, "%"+filter.Username+"%")
-		argIndex++
-	}
+	// Note: username filter removed as table doesn't have username column
 
 	if filter.Action != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("action = $%d", argIndex))
@@ -190,17 +194,8 @@ func (s *AdminAuditService) ListAuditLogs(ctx context.Context, filter models.Aud
 		argIndex++
 	}
 
-	if filter.Status != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("status = $%d", argIndex))
-		args = append(args, filter.Status)
-		argIndex++
-	}
-
-	if filter.Severity != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("severity = $%d", argIndex))
-		args = append(args, filter.Severity)
-		argIndex++
-	}
+	// Note: status and severity filters removed as table doesn't have these columns
+	// Table has 'success' boolean instead of 'status' string
 
 	if filter.IPAddress != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("ip_address = $%d", argIndex))
@@ -226,7 +221,7 @@ func (s *AdminAuditService) ListAuditLogs(ctx context.Context, filter models.Aud
 	}
 
 	// Get total count
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM admin.audit_logs %s", whereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM audit_logs %s", whereClause)
 	var totalCount int64
 	err := s.dbManager.AdminQueryRowContext(ctx, countQuery, args...).Scan(&totalCount)
 	if err != nil {
@@ -247,12 +242,12 @@ func (s *AdminAuditService) ListAuditLogs(ctx context.Context, filter models.Aud
 		offset = 0
 	}
 
-	// Get audit logs
+	// Get audit logs - query actual table columns
 	query := fmt.Sprintf(`
-		SELECT id, user_id, username, action, resource_type, resource_id,
-		       details, changes, ip_address, user_agent, session_id,
-		       status, error_message, severity, created_at
-		FROM admin.audit_logs
+		SELECT id, user_id, action, resource_type, resource_id,
+		       old_values, new_values, metadata, ip_address, user_agent,
+		       success, error_message, created_at
+		FROM audit_logs
 		%s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
@@ -269,39 +264,45 @@ func (s *AdminAuditService) ListAuditLogs(ctx context.Context, filter models.Aud
 	logs := []models.AdminAuditLog{}
 	for rows.Next() {
 		var log models.AdminAuditLog
-		var detailsJSON, changesJSON []byte
+		var oldValuesJSON, newValuesJSON, metadataJSON []byte
+		var success bool
 
 		err := rows.Scan(
 			&log.ID,
 			&log.UserID,
-			&log.Username,
 			&log.Action,
 			&log.ResourceType,
 			&log.ResourceID,
-			&detailsJSON,
-			&changesJSON,
+			&oldValuesJSON,
+			&newValuesJSON,
+			&metadataJSON,
 			&log.IPAddress,
 			&log.UserAgent,
-			&log.SessionID,
-			&log.Status,
+			&success,
 			&log.ErrorMessage,
-			&log.Severity,
 			&log.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan audit log: %w", err)
 		}
 
+		// Map success boolean to status string
+		if success {
+			log.Status = "success"
+		} else {
+			log.Status = "failed"
+		}
+
 		// Parse JSONB fields
-		if len(detailsJSON) > 0 {
-			if err := json.Unmarshal(detailsJSON, &log.Details); err != nil {
+		if len(metadataJSON) > 0 {
+			if err := json.Unmarshal(metadataJSON, &log.Details); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal details: %w", err)
 			}
 		}
 
-		if len(changesJSON) > 0 {
+		if len(newValuesJSON) > 0 {
 			log.Changes = &models.AuditLogChange{}
-			if err := json.Unmarshal(changesJSON, log.Changes); err != nil {
+			if err := json.Unmarshal(newValuesJSON, log.Changes); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal changes: %w", err)
 			}
 		}
@@ -350,6 +351,7 @@ func (s *AdminAuditService) GetResourceAuditTrail(ctx context.Context, resourceT
 }
 
 // GetRecentCriticalActions retrieves recent critical audit logs
+// Note: Since the table doesn't have severity column, this returns recent logs
 func (s *AdminAuditService) GetRecentCriticalActions(ctx context.Context, limit int) ([]models.AdminAuditLog, error) {
 	if limit == 0 {
 		limit = 20
@@ -358,18 +360,8 @@ func (s *AdminAuditService) GetRecentCriticalActions(ctx context.Context, limit 
 		limit = 100
 	}
 
-	filter := models.AuditLogFilter{
-		Severity: models.AuditSeverityCritical,
-		Limit:    limit,
-		Offset:   0,
-	}
-
-	response, err := s.ListAuditLogs(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Logs, nil
+	// Since severity column doesn't exist in table, just return recent activity
+	return s.GetRecentActivity(ctx, limit)
 }
 
 // CleanupOldLogs deletes audit logs older than the specified retention period
@@ -380,12 +372,13 @@ func (s *AdminAuditService) CleanupOldLogs(ctx context.Context, retentionDays in
 
 	cutoffDate := time.Now().AddDate(0, 0, -retentionDays)
 
+	// Note: severity column removed as it doesn't exist in table
 	query := `
-		DELETE FROM admin.audit_logs
-		WHERE created_at < $1 AND severity != $2
+		DELETE FROM audit_logs
+		WHERE created_at < $1
 	`
 
-	result, err := s.dbManager.AdminExecContext(ctx, query, cutoffDate, models.AuditSeverityCritical)
+	result, err := s.dbManager.AdminExecContext(ctx, query, cutoffDate)
 	if err != nil {
 		return 0, fmt.Errorf("failed to cleanup old audit logs: %w", err)
 	}
@@ -400,34 +393,32 @@ func (s *AdminAuditService) CleanupOldLogs(ctx context.Context, retentionDays in
 
 // GetAuditStatistics returns statistics about audit logs
 func (s *AdminAuditService) GetAuditStatistics(ctx context.Context, startDate, endDate time.Time) (map[string]interface{}, error) {
+	// Note: Using 'success' boolean instead of 'status' string, removed severity
 	query := `
 		SELECT
 			COUNT(*) as total_actions,
 			COUNT(DISTINCT user_id) as unique_users,
-			COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_actions,
-			COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_actions,
+			COUNT(CASE WHEN success = false THEN 1 END) as failed_actions,
 			COUNT(CASE WHEN action LIKE 'user.%' THEN 1 END) as user_actions,
 			COUNT(CASE WHEN action LIKE 'url.%' THEN 1 END) as url_actions,
 			COUNT(CASE WHEN action LIKE 'subscription.%' THEN 1 END) as billing_actions
-		FROM admin.audit_logs
+		FROM audit_logs
 		WHERE created_at BETWEEN $1 AND $2
 	`
 
 	var stats struct {
-		TotalActions    int64
-		UniqueUsers     int64
-		FailedActions   int64
-		CriticalActions int64
-		UserActions     int64
-		URLActions      int64
-		BillingActions  int64
+		TotalActions   int64
+		UniqueUsers    int64
+		FailedActions  int64
+		UserActions    int64
+		URLActions     int64
+		BillingActions int64
 	}
 
 	err := s.dbManager.AdminQueryRowContext(ctx, query, startDate, endDate).Scan(
 		&stats.TotalActions,
 		&stats.UniqueUsers,
 		&stats.FailedActions,
-		&stats.CriticalActions,
 		&stats.UserActions,
 		&stats.URLActions,
 		&stats.BillingActions,
@@ -438,13 +429,12 @@ func (s *AdminAuditService) GetAuditStatistics(ctx context.Context, startDate, e
 	}
 
 	return map[string]interface{}{
-		"total_actions":    stats.TotalActions,
-		"unique_users":     stats.UniqueUsers,
-		"failed_actions":   stats.FailedActions,
-		"critical_actions": stats.CriticalActions,
-		"user_actions":     stats.UserActions,
-		"url_actions":      stats.URLActions,
-		"billing_actions":  stats.BillingActions,
+		"total_actions":  stats.TotalActions,
+		"unique_users":   stats.UniqueUsers,
+		"failed_actions": stats.FailedActions,
+		"user_actions":   stats.UserActions,
+		"url_actions":    stats.URLActions,
+		"billing_actions": stats.BillingActions,
 	}, nil
 }
 
@@ -485,11 +475,13 @@ func (s *AdminAuditService) GetRecentActivity(ctx context.Context, limit int) ([
 		limit = 200
 	}
 
+	// Query actual table columns: id, user_id, action, resource_type, resource_id,
+	// old_values, new_values, metadata, ip_address, user_agent, success, error_message, created_at
 	query := `
-		SELECT id, user_id, username, action, resource_type, resource_id,
-		       details, changes, ip_address, user_agent, session_id,
-		       status, error_message, severity, created_at
-		FROM admin.audit_logs
+		SELECT id, user_id, action, resource_type, resource_id,
+		       old_values, new_values, metadata, ip_address, user_agent,
+		       success, error_message, created_at
+		FROM audit_logs
 		ORDER BY created_at DESC
 		LIMIT $1
 	`
@@ -503,39 +495,45 @@ func (s *AdminAuditService) GetRecentActivity(ctx context.Context, limit int) ([
 	logs := []models.AdminAuditLog{}
 	for rows.Next() {
 		var log models.AdminAuditLog
-		var detailsJSON, changesJSON []byte
+		var oldValuesJSON, newValuesJSON, metadataJSON []byte
+		var success bool
 
 		err := rows.Scan(
 			&log.ID,
 			&log.UserID,
-			&log.Username,
 			&log.Action,
 			&log.ResourceType,
 			&log.ResourceID,
-			&detailsJSON,
-			&changesJSON,
+			&oldValuesJSON,
+			&newValuesJSON,
+			&metadataJSON,
 			&log.IPAddress,
 			&log.UserAgent,
-			&log.SessionID,
-			&log.Status,
+			&success,
 			&log.ErrorMessage,
-			&log.Severity,
 			&log.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan activity log: %w", err)
 		}
 
+		// Map success boolean to status string
+		if success {
+			log.Status = "success"
+		} else {
+			log.Status = "failed"
+		}
+
 		// Parse JSONB fields
-		if len(detailsJSON) > 0 {
-			if err := json.Unmarshal(detailsJSON, &log.Details); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal details: %w", err)
+		if len(metadataJSON) > 0 {
+			if err := json.Unmarshal(metadataJSON, &log.Details); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 			}
 		}
 
-		if len(changesJSON) > 0 {
+		if len(newValuesJSON) > 0 {
 			log.Changes = &models.AuditLogChange{}
-			if err := json.Unmarshal(changesJSON, log.Changes); err != nil {
+			if err := json.Unmarshal(newValuesJSON, log.Changes); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal changes: %w", err)
 			}
 		}

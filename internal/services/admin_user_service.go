@@ -295,7 +295,7 @@ func (s *AdminUserService) GetUserDetailedStats(ctx context.Context, userID int6
 	// Get recent activity (last 10 actions)
 	activityQuery := `
 		SELECT id, user_id, action, resource_type, resource_id, ip_address, user_agent, created_at
-		FROM admin.audit_logs
+		FROM audit_logs
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 		LIMIT 10

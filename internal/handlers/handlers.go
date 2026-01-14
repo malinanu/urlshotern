@@ -38,6 +38,7 @@ type Handler struct {
 	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
 	AttributionHandlers    *AttributionHandler
 	AdminHandlers          *admin.AdminHandlers  // Admin panel handlers
+	CMSHandlers            *CMSHandlers          // Public CMS page handlers
 }
 
 // NewHandler creates a new handler instance
@@ -47,6 +48,10 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 
 	// Create billing service and handlers
 	billingHandler := NewBillingHandler(gormDB, config)
+
+	// Create CMS service and handlers for public pages
+	cmsService := services.NewCMSService(db)
+	cmsHandlers := NewCMSHandlers(cmsService, apiKeyService)
 
 	return &Handler{
 		shortenerService:       shortenerService,
@@ -69,6 +74,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 		AdminHandlers:          adminHandlers,
+		CMSHandlers:            cmsHandlers,
 	}
 }
 

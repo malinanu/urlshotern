@@ -74,8 +74,8 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	// Public product listing for pricing page (no auth required)
 	router.GET("/api/v1/products", handler.BillingHandlers.GetProducts)
 
-	// Public CMS pages - temporarily disabled
-	// router.GET("/api/v1/pages/:slug", handler.CMSHandlers.PublicPageHandler)
+	// Public CMS pages
+	router.GET("/api/v1/pages/:slug", handler.CMSHandlers.PublicPageHandler)
 }
 
 // setupAuthRoutes configures authentication routes

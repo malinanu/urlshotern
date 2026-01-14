@@ -82,7 +82,7 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 	query := `
 		SELECT p.id, p.slug, p.title, p.content, p.meta_description, p.meta_keywords,
 			p.is_published, p.sort_order, p.template, p.author_id, p.published_at,
-			p.created_at, p.updated_at, COALESCE(u.first_name || ' ' || u.last_name, u.email) as author_name
+			p.created_at, p.updated_at, COALESCE(u.name, u.email) as author_name
 		FROM static_pages p
 		LEFT JOIN users u ON p.author_id = u.id
 		WHERE p.slug = $1`
@@ -114,7 +114,7 @@ func (s *CMSService) GetStaticPageByID(id int64) (*models.StaticPage, error) {
 	query := `
 		SELECT p.id, p.slug, p.title, p.content, p.meta_description, p.meta_keywords,
 			p.is_published, p.sort_order, p.template, p.author_id, p.published_at,
-			p.created_at, p.updated_at, COALESCE(u.first_name || ' ' || u.last_name, u.email) as author_name
+			p.created_at, p.updated_at, COALESCE(u.name, u.email) as author_name
 		FROM static_pages p
 		LEFT JOIN users u ON p.author_id = u.id
 		WHERE p.id = $1`
@@ -250,7 +250,7 @@ func (s *CMSService) ListStaticPages(query *models.ListPagesQuery) (*models.Pagi
 	baseQuery := `
 		SELECT p.id, p.slug, p.title, p.content, p.meta_description, p.meta_keywords,
 			p.is_published, p.sort_order, p.template, p.author_id, p.published_at,
-			p.created_at, p.updated_at, COALESCE(u.first_name || ' ' || u.last_name, u.email) as author_name
+			p.created_at, p.updated_at, COALESCE(u.name, u.email) as author_name
 		FROM static_pages p
 		LEFT JOIN users u ON p.author_id = u.id`
 
@@ -384,8 +384,8 @@ func (s *CMSService) CreatePageRevision(pageID int64, page *models.StaticPage, a
 func (s *CMSService) GetPageRevisions(pageID int64, limit int) ([]models.PageRevision, error) {
 	query := `
 		SELECT r.id, r.page_id, r.title, r.content, r.meta_description, r.meta_keywords,
-			r.revision_number, r.author_id, r.created_at, 
-			COALESCE(u.first_name || ' ' || u.last_name, u.email) as author_name
+			r.revision_number, r.author_id, r.created_at,
+			COALESCE(u.name, u.email) as author_name
 		FROM page_revisions r
 		LEFT JOIN users u ON r.author_id = u.id
 		WHERE r.page_id = $1

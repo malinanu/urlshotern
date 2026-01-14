@@ -73,12 +73,18 @@ export default function AdminAPIKeyManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setAPIKeys(data.data || data || []);
+        // Ensure we always set an array, regardless of API response format
+        const apiKeysData = Array.isArray(data?.data)
+          ? data.data
+          : (Array.isArray(data) ? data : []);
+        setAPIKeys(apiKeysData);
       } else {
         console.error('Failed to fetch API keys:', response.statusText);
+        setAPIKeys([]); // Set empty array on error to prevent crashes
       }
     } catch (error) {
       console.error('Error fetching API keys:', error);
+      setAPIKeys([]); // Set empty array on error to prevent crashes
     } finally {
       setLoading(false);
     }
@@ -248,7 +254,7 @@ export default function AdminAPIKeyManager() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {apiKeys.map((apiKey) => (
+                {(Array.isArray(apiKeys) ? apiKeys : []).map((apiKey) => (
                   <tr key={apiKey.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div>

@@ -63,7 +63,7 @@ type UserActivityFilter struct {
 
 // UserWithStats extends User with usage statistics
 type UserWithStats struct {
-	ID            int64      `json:"id"`
+	ID            int64      `json:"id,string"`
 	Email         string     `json:"email"`
 	Name          string     `json:"name"`
 	AccountType   string     `json:"account_type"`
