@@ -522,6 +522,35 @@ func SetupAdminRoutes(
 	}
 
 	// ================================================================
+	// CONTENT BLOCKS
+	// ================================================================
+	contentBlocks := admin.Group("/content-blocks")
+	contentBlocks.Use(adminMiddleware.RequireAdminPermission(models.PermissionAdminCMSView))
+	{
+		// List and get content blocks
+		contentBlocks.GET("", handler.AdminHandlers.ContentBlockHandlers.AdminListContentBlocks)
+		contentBlocks.GET("/:id", handler.AdminHandlers.ContentBlockHandlers.AdminGetContentBlock)
+		contentBlocks.GET("/:id/render", handler.AdminHandlers.ContentBlockHandlers.AdminRenderContentBlock)
+
+		// Content block management (requires manage permission)
+		contentBlocksManage := contentBlocks.Group("")
+		contentBlocksManage.Use(adminMiddleware.RequireAdminPermission(models.PermissionAdminCMSManage))
+		{
+			contentBlocksManage.POST("",
+				adminMiddleware.AuditLog("content_block.create", "content_block"),
+				handler.AdminHandlers.ContentBlockHandlers.AdminCreateContentBlock)
+
+			contentBlocksManage.PUT("/:id",
+				adminMiddleware.AuditLog("content_block.update", "content_block"),
+				handler.AdminHandlers.ContentBlockHandlers.AdminUpdateContentBlock)
+
+			contentBlocksManage.DELETE("/:id",
+				adminMiddleware.AuditLog("content_block.delete", "content_block"),
+				handler.AdminHandlers.ContentBlockHandlers.AdminDeleteContentBlock)
+		}
+	}
+
+	// ================================================================
 	// AUDIT LOGS
 	// ================================================================
 	auditLogs := admin.Group("/audit-logs")

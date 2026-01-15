@@ -86,6 +86,7 @@ func main() {
 	mediaService := services.NewMediaService(db, "./uploads", config.BaseURL)
 	apiKeyService := services.NewAPIKeyService(db)
 	globalSettingsService := services.NewGlobalSettingsService(db)
+	contentBlockService := services.NewContentBlockService(db, globalSettingsService)
 
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
@@ -136,6 +137,7 @@ func main() {
 		globalSettingsService,
 		cmsService,
 		mediaService,
+		contentBlockService,
 		apiKeyService,
 	)
 

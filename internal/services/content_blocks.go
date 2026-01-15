@@ -22,7 +22,7 @@ func NewContentBlockService(db *storage.PostgresStorage, globalSettingsService *
 	}
 }
 
-// GetContentBlock retrieves a content block by identifier
+// GetContentBlock retrieves a content block by identifier (for backward compatibility)
 func (s *ContentBlockService) GetContentBlock(identifier string) (*models.ContentBlock, error) {
 	query := `
 		SELECT id, name, identifier, content, type, is_active, sort_order, created_at, updated_at
@@ -31,9 +31,10 @@ func (s *ContentBlockService) GetContentBlock(identifier string) (*models.Conten
 	var block models.ContentBlock
 	err := s.db.QueryRow(query, identifier).Scan(
 		&block.ID, &block.Name, &block.Identifier, &block.Content,
-		&block.Type, &block.IsActive, &block.SortOrder, &block.CreatedAt, &block.UpdatedAt,
+		&block.Type, &block.IsActive, &block.SortOrder,
+		&block.CreatedAt, &block.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("content block '%s' not found", identifier)
@@ -53,9 +54,10 @@ func (s *ContentBlockService) GetContentBlockByID(id int64) (*models.ContentBloc
 	var block models.ContentBlock
 	err := s.db.QueryRow(query, id).Scan(
 		&block.ID, &block.Name, &block.Identifier, &block.Content,
-		&block.Type, &block.IsActive, &block.SortOrder, &block.CreatedAt, &block.UpdatedAt,
+		&block.Type, &block.IsActive, &block.SortOrder,
+		&block.CreatedAt, &block.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("content block with ID %d not found", id)
@@ -71,7 +73,7 @@ func (s *ContentBlockService) ListContentBlocks(blockType string, activeOnly boo
 	baseQuery := `
 		SELECT id, name, identifier, content, type, is_active, sort_order, created_at, updated_at
 		FROM content_blocks`
-	
+
 	var conditions []string
 	var args []interface{}
 	argIndex := 1
@@ -92,7 +94,7 @@ func (s *ContentBlockService) ListContentBlocks(blockType string, activeOnly boo
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += " ORDER BY type, sort_order, name"
+	query += " ORDER BY sort_order, name"
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
@@ -105,11 +107,13 @@ func (s *ContentBlockService) ListContentBlocks(blockType string, activeOnly boo
 		var block models.ContentBlock
 		err := rows.Scan(
 			&block.ID, &block.Name, &block.Identifier, &block.Content,
-			&block.Type, &block.IsActive, &block.SortOrder, &block.CreatedAt, &block.UpdatedAt,
+			&block.Type, &block.IsActive, &block.SortOrder,
+			&block.CreatedAt, &block.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan content block: %w", err)
 		}
+
 		blocks = append(blocks, &block)
 	}
 
@@ -118,11 +122,6 @@ func (s *ContentBlockService) ListContentBlocks(blockType string, activeOnly boo
 
 // CreateContentBlock creates a new content block
 func (s *ContentBlockService) CreateContentBlock(req *models.ContentBlockRequest) (*models.ContentBlock, error) {
-	// Check if identifier already exists
-	if _, err := s.GetContentBlock(req.Identifier); err == nil {
-		return nil, fmt.Errorf("content block with identifier '%s' already exists", req.Identifier)
-	}
-
 	query := `
 		INSERT INTO content_blocks (name, identifier, content, type, is_active, sort_order, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -130,12 +129,12 @@ func (s *ContentBlockService) CreateContentBlock(req *models.ContentBlockRequest
 
 	now := time.Now()
 	var block models.ContentBlock
-	
+
 	err := s.db.QueryRow(query,
 		req.Name, req.Identifier, req.Content, req.Type,
 		req.IsActive, req.SortOrder, now, now,
 	).Scan(&block.ID, &block.CreatedAt, &block.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create content block: %w", err)
 	}
@@ -154,20 +153,13 @@ func (s *ContentBlockService) CreateContentBlock(req *models.ContentBlockRequest
 // UpdateContentBlock updates an existing content block
 func (s *ContentBlockService) UpdateContentBlock(id int64, req *models.ContentBlockRequest) (*models.ContentBlock, error) {
 	// Check if block exists
-	existing, err := s.GetContentBlockByID(id)
+	_, err := s.GetContentBlockByID(id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if identifier is being changed and if new identifier already exists
-	if req.Identifier != existing.Identifier {
-		if _, err := s.GetContentBlock(req.Identifier); err == nil {
-			return nil, fmt.Errorf("content block with identifier '%s' already exists", req.Identifier)
-		}
-	}
-
 	query := `
-		UPDATE content_blocks 
+		UPDATE content_blocks
 		SET name = $1, identifier = $2, content = $3, type = $4, is_active = $5, sort_order = $6, updated_at = $7
 		WHERE id = $8`
 

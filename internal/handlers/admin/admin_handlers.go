@@ -7,18 +7,19 @@ import (
 
 // AdminHandlers aggregates all admin handler groups
 type AdminHandlers struct {
-	DashboardHandlers  *AdminDashboardHandlers
-	UserHandlers       *AdminUserHandlers
-	URLHandlers        *AdminURLHandlers
-	DomainHandlers     *AdminDomainHandlers
-	AnalyticsHandlers  *AdminAnalyticsHandlers
-	BillingHandlers    *AdminBillingHandlers
-	RBACHandlers       *AdminRBACHandlers
-	SettingsHandlers   *AdminSettingsHandlers
-	CMSHandlers        *AdminCMSHandlers
-	AuditHandlers      *AdminAuditHandlers
-	MonitoringHandlers *AdminMonitoringHandlers
-	APIKeyHandlers     *AdminAPIKeyHandlers
+	DashboardHandlers     *AdminDashboardHandlers
+	UserHandlers          *AdminUserHandlers
+	URLHandlers           *AdminURLHandlers
+	DomainHandlers        *AdminDomainHandlers
+	AnalyticsHandlers     *AdminAnalyticsHandlers
+	BillingHandlers       *AdminBillingHandlers
+	RBACHandlers          *AdminRBACHandlers
+	SettingsHandlers      *AdminSettingsHandlers
+	CMSHandlers           *AdminCMSHandlers
+	ContentBlockHandlers  *AdminContentBlockHandlers
+	AuditHandlers         *AdminAuditHandlers
+	MonitoringHandlers    *AdminMonitoringHandlers
+	APIKeyHandlers        *AdminAPIKeyHandlers
 }
 
 // NewAdminHandlers creates a new admin handlers instance with all dependencies
@@ -36,20 +37,22 @@ func NewAdminHandlers(
 	globalSettingsService *services.GlobalSettingsService,
 	cmsService *services.CMSService,
 	mediaService *services.MediaService,
+	contentBlockService *services.ContentBlockService,
 	apiKeyService *services.APIKeyService,
 ) *AdminHandlers {
 	return &AdminHandlers{
-		DashboardHandlers:  NewAdminDashboardHandlers(adminAnalyticsService, monitoringService, adminAuditService),
-		UserHandlers:       NewAdminUserHandlers(adminUserService, adminAuditService),
-		URLHandlers:        NewAdminURLHandlers(adminURLService, adminAuditService),
-		DomainHandlers:     NewAdminDomainHandlers(domainBlocklistService, adminAuditService),
-		AnalyticsHandlers:  NewAdminAnalyticsHandlers(adminAnalyticsService),
-		BillingHandlers:    NewAdminBillingHandlers(billingService, adminAuditService),
-		RBACHandlers:       NewAdminRBACHandlers(rbacService, adminAuditService),
-		SettingsHandlers:   NewAdminSettingsHandlers(globalSettingsService, adminAuditService),
-		CMSHandlers:        NewAdminCMSHandlers(cmsService, mediaService, adminAuditService),
-		AuditHandlers:      NewAdminAuditHandlers(adminAuditService),
-		MonitoringHandlers: NewAdminMonitoringHandlers(monitoringService),
-		APIKeyHandlers:     NewAdminAPIKeyHandlers(apiKeyService, adminAuditService),
+		DashboardHandlers:    NewAdminDashboardHandlers(adminAnalyticsService, monitoringService, adminAuditService),
+		UserHandlers:         NewAdminUserHandlers(adminUserService, adminAuditService),
+		URLHandlers:          NewAdminURLHandlers(adminURLService, adminAuditService),
+		DomainHandlers:       NewAdminDomainHandlers(domainBlocklistService, adminAuditService),
+		AnalyticsHandlers:    NewAdminAnalyticsHandlers(adminAnalyticsService),
+		BillingHandlers:      NewAdminBillingHandlers(billingService, adminAuditService),
+		RBACHandlers:         NewAdminRBACHandlers(rbacService, adminAuditService),
+		SettingsHandlers:     NewAdminSettingsHandlers(globalSettingsService, adminAuditService),
+		CMSHandlers:          NewAdminCMSHandlers(cmsService, mediaService, adminAuditService),
+		ContentBlockHandlers: NewAdminContentBlockHandlers(contentBlockService, adminAuditService),
+		AuditHandlers:        NewAdminAuditHandlers(adminAuditService),
+		MonitoringHandlers:   NewAdminMonitoringHandlers(monitoringService),
+		APIKeyHandlers:       NewAdminAPIKeyHandlers(apiKeyService, adminAuditService),
 	}
 }

@@ -192,15 +192,15 @@ type GlobalSetting struct {
 
 // ContentBlock represents reusable content components
 type ContentBlock struct {
-	ID          int64     `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Identifier  string    `json:"identifier" db:"identifier"`
-	Content     string    `json:"content" db:"content"`
-	Type        string    `json:"type" db:"type"` // hero, testimonial, cta, footer, etc.
-	IsActive    bool      `json:"is_active" db:"is_active"`
-	SortOrder   int       `json:"sort_order" db:"sort_order"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID         int64     `json:"id" db:"id"`
+	Name       string    `json:"name" db:"name"`
+	Identifier string    `json:"identifier" db:"identifier"`
+	Content    string    `json:"content" db:"content"`
+	Type       string    `json:"type" db:"type"` // hero, testimonial, cta, footer, etc.
+	IsActive   bool      `json:"is_active" db:"is_active"`
+	SortOrder  int       `json:"sort_order" db:"sort_order"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // PageTemplate represents available page templates
@@ -254,7 +254,7 @@ type ContentBlockRequest struct {
 	Name       string `json:"name" validate:"required"`
 	Identifier string `json:"identifier" validate:"required"`
 	Content    string `json:"content"`
-	Type       string `json:"type"`
+	Type       string `json:"type" validate:"required"`
 	IsActive   bool   `json:"is_active"`
 	SortOrder  int    `json:"sort_order"`
 }

@@ -112,6 +112,7 @@ func main() {
 	mediaService := services.NewMediaService(db, "./uploads", config.BaseURL)
 	apiKeyService := services.NewAPIKeyService(db)
 	globalSettingsService := services.NewGlobalSettingsService(db)
+	contentBlockService := services.NewContentBlockService(db, globalSettingsService)
 
 	// Initialize admin handlers
 	adminHandlers := admin.NewAdminHandlers(
@@ -128,6 +129,7 @@ func main() {
 		globalSettingsService,
 		cmsService,
 		mediaService,
+		contentBlockService,
 		apiKeyService,
 	)
 
