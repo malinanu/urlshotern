@@ -65,7 +65,7 @@ export default function TermsPage() {
             By using our service, you agree to these terms.
           </p>
           <p class="text-sm text-gray-500 mt-4">
-            <strong>Last updated:</strong> September 4, 2025
+            <strong>Last updated:</strong> January 16, 2026
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export default function TermsPage() {
             </p>
             <p class="text-gray-700">
               These Terms of Service, along with our Privacy Policy, constitute the entire agreement 
-              between you and 3logiq Technologies, Inc. ("3logiq", "we", "us", "our"), the developer of Trunc.
+              between you and Trunc Technologies ("3logiq", "we", "us", "our"), the developer of Trunc.
             </p>
           </section>
 
@@ -155,7 +155,7 @@ export default function TermsPage() {
             <h2 class="text-2xl font-semibold text-gray-900 mb-4">6. Intellectual Property Rights</h2>
             <h3 class="text-xl font-medium text-gray-800 mb-3">Our Rights</h3>
             <p class="text-gray-700 mb-4">
-              All content, features, and functionality of our Service are owned by 3logiq Technologies, Inc. and are 
+              All content, features, and functionality of our Service are owned by Trunc Technologies and are 
               protected by international copyright, trademark, and other intellectual property laws.
             </p>
             
@@ -240,7 +240,7 @@ export default function TermsPage() {
 
             <h3 class="text-xl font-medium text-gray-800 mb-3">Limitation of Liability</h3>
             <p class="text-gray-700 mb-4">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, 3LOGIQ SHALL NOT BE LIABLE FOR ANY INDIRECT, 
+              TO THE MAXIMUM EXTENT PERMITTED BY LAW, TRUNC SHALL NOT BE LIABLE FOR ANY INDIRECT, 
               INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE SERVICE.
             </p>
             
@@ -253,7 +253,7 @@ export default function TermsPage() {
           <section>
             <h2 class="text-2xl font-semibold text-gray-900 mb-4">10. Indemnification</h2>
             <p class="text-gray-700">
-              You agree to indemnify and hold harmless 3logiq Technologies, Inc., its officers, directors, employees, 
+              You agree to indemnify and hold harmless Trunc Technologies, its officers, directors, employees, 
               and agents from any claims, damages, or expenses arising from your use of the Service, 
               violation of these Terms, or infringement of any third-party rights.
             </p>
