@@ -65,7 +65,7 @@ export default function PrivacyPage() {
             and protects your information when you use our URL shortener service.
           </p>
           <p class="text-sm text-gray-500 mt-4">
-            <strong>Last updated:</strong> September 4, 2025
+            <strong>Last updated:</strong> January 16, 2026
           </p>
         </div>
 
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
             </div>
 
             <p class="text-gray-700 mt-6">
-              To exercise these rights, please contact us at <a href="mailto:privacy@3logiq.com" class="text-blue-600 hover:underline">privacy@3logiq.com</a>. 
+              To exercise these rights, please contact us at <a href="mailto:privacy@urlshorter.com" class="text-blue-600 hover:underline">privacy@urlshorter.com</a>. 
               We will respond to your request within 30 days.
             </p>
           </section>
@@ -243,8 +243,8 @@ export default function PrivacyPage() {
               please contact us:
             </p>
             <div class="space-y-2 text-gray-700">
-              <p><strong>Email:</strong> <a href="mailto:privacy@3logiq.com" class="text-blue-600 hover:underline">privacy@3logiq.com</a></p>
-              <p><strong>Address:</strong> 3logiq Technologies, 123 Tech Boulevard, San Francisco, CA 94105</p>
+              <p><strong>Email:</strong> <a href="mailto:privacy@urlshorter.com" class="text-blue-600 hover:underline">privacy@urlshorter.com</a></p>
+              <p><strong>Address:</strong> Trunc Technologies, 123 Tech Boulevard, San Francisco, CA 94105</p>
               <p><strong>Phone:</strong> <a href="tel:+1-555-0123" class="text-blue-600 hover:underline">+1 (555) 012-3456</a></p>
             </div>
           </section>
