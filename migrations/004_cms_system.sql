@@ -179,7 +179,18 @@ CREATE INDEX idx_navigation_menus_location ON navigation_menus(location);
 
 -- Insert existing pages from the frontend
 INSERT INTO static_pages (slug, title, content, meta_description, meta_title, is_published, is_sticky, template, language, sort_order) VALUES
-('home', 'Home', '<h1>Welcome to URL Shortener</h1><p>Transform your long URLs into short, memorable links. Track analytics, manage custom domains, and boost your link marketing strategy.</p><h2>Key Features</h2><ul><li>🚀 Fast and reliable URL shortening</li><li>📊 Comprehensive analytics and tracking</li><li>🎯 Custom branded short links</li><li>🔒 Secure and private</li><li>⚡ Real-time click tracking</li><li>🌍 Geographic analytics</li></ul><h2>Get Started</h2><p>Create your first short URL in seconds. No credit card required.</p>', 'Create short URLs with advanced analytics. Track clicks, analyze traffic, and optimize your link marketing strategy with our powerful URL shortener.', 'URL Shortener - Fast, Secure & Analytics-Powered', true, true, 'default', 'en', 0),
+('home', 'Home', 'Shorten URLs. Track Everything.
+
+Transform your long URLs into short, memorable links. Track analytics, manage custom domains, and boost your link marketing strategy.
+
+Key Features
+
+🚀 Fast and reliable URL shortening
+📊 Comprehensive analytics and tracking
+🎯 Custom branded short links
+🔒 Secure and private
+⚡ Real-time click tracking
+🌍 Geographic analytics', 'Create short URLs with advanced analytics. Track clicks, analyze traffic, and optimize your link marketing strategy with our powerful URL shortener.', 'URL Shortener - Fast, Secure & Analytics-Powered', true, true, 'default', 'en', 0),
 ('features', 'Features', 'Lightning fast URL shortening with advanced analytics and custom domains.', 'Explore powerful features including advanced analytics, custom domains, QR codes, and more.', NULL, true, false, 'default', 'en', 1),
 ('pricing', 'Pricing', 'Choose the perfect plan for your needs.', 'Flexible pricing plans for individuals and businesses.', NULL, true, false, 'default', 'en', 2),
 ('api-docs', 'API Documentation', 'Complete API reference for developers.', 'Developer-friendly API documentation with code examples.', NULL, true, false, 'default', 'en', 3),
