@@ -10,9 +10,15 @@ import ThemeToggle from '@/components/ThemeToggle';
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { user, isAuthenticated, logout, isLoading } = useAuth();
   const router = useRouter();
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -71,7 +77,7 @@ export default function Header() {
           {/* Auth Buttons / User Menu */}
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
-            {isLoading ? (
+            {!mounted || isLoading ? (
               <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
             ) : isAuthenticated && user ? (
               <div className="relative" ref={profileMenuRef}>
@@ -186,7 +192,11 @@ export default function Header() {
                   <span className="text-sm font-medium text-gray-700">Theme</span>
                   <ThemeToggle />
                 </div>
-                {isAuthenticated && user ? (
+                {!mounted ? (
+                  <div className="px-3 py-2">
+                    <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : isAuthenticated && user ? (
                   <>
                     <div className="px-3 py-2 text-xs text-gray-500">
                       {user.name} ({user.email})
