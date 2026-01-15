@@ -115,6 +115,8 @@ nul
 test-*.js
 test-*.py
 test-*.go
+tmpclaude-*
+*.csv
 
 # Disabled/backup files
 *.disabled*
