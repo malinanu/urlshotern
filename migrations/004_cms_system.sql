@@ -178,16 +178,17 @@ CREATE INDEX idx_navigation_menus_location ON navigation_menus(location);
 -- =============================================================================
 
 -- Insert existing pages from the frontend
-INSERT INTO static_pages (slug, title, content, meta_description, is_published, template, language) VALUES
-('features', 'Features', 'Lightning fast URL shortening with advanced analytics and custom domains.', 'Explore powerful features including advanced analytics, custom domains, QR codes, and more.', true, 'default', 'en'),
-('pricing', 'Pricing', 'Choose the perfect plan for your needs.', 'Flexible pricing plans for individuals and businesses.', true, 'default', 'en'),
-('api-docs', 'API Documentation', 'Complete API reference for developers.', 'Developer-friendly API documentation with code examples.', true, 'default', 'en'),
-('analytics', 'Analytics', 'Comprehensive analytics for your shortened URLs.', 'Track clicks, geographic data, devices, and more with detailed analytics.', true, 'default', 'en'),
-('about', 'About Us', 'Learn more about our mission and team.', 'About our URL shortening service and our commitment to privacy and performance.', true, 'default', 'en'),
-('contact', 'Contact', 'Get in touch with our team.', 'Contact us for support, partnerships, or general inquiries.', true, 'default', 'en'),
-('privacy', 'Privacy Policy', 'Our commitment to protecting your privacy.', 'Read our privacy policy to learn how we protect and handle your data.', true, 'default', 'en'),
-('terms', 'Terms of Service', 'Terms and conditions for using our service.', 'Review our terms of service before using the platform.', true, 'default', 'en'),
-('conversions', 'Conversions', 'Track conversions and measure campaign success.', 'Monitor conversion events and analyze campaign performance.', true, 'default', 'en')
+INSERT INTO static_pages (slug, title, content, meta_description, meta_title, is_published, is_sticky, template, language, sort_order) VALUES
+('home', 'Home', '<h1>Welcome to URL Shortener</h1><p>Transform your long URLs into short, memorable links. Track analytics, manage custom domains, and boost your link marketing strategy.</p><h2>Key Features</h2><ul><li>🚀 Fast and reliable URL shortening</li><li>📊 Comprehensive analytics and tracking</li><li>🎯 Custom branded short links</li><li>🔒 Secure and private</li><li>⚡ Real-time click tracking</li><li>🌍 Geographic analytics</li></ul><h2>Get Started</h2><p>Create your first short URL in seconds. No credit card required.</p>', 'Create short URLs with advanced analytics. Track clicks, analyze traffic, and optimize your link marketing strategy with our powerful URL shortener.', 'URL Shortener - Fast, Secure & Analytics-Powered', true, true, 'default', 'en', 0),
+('features', 'Features', 'Lightning fast URL shortening with advanced analytics and custom domains.', 'Explore powerful features including advanced analytics, custom domains, QR codes, and more.', NULL, true, false, 'default', 'en', 1),
+('pricing', 'Pricing', 'Choose the perfect plan for your needs.', 'Flexible pricing plans for individuals and businesses.', NULL, true, false, 'default', 'en', 2),
+('api-docs', 'API Documentation', 'Complete API reference for developers.', 'Developer-friendly API documentation with code examples.', NULL, true, false, 'default', 'en', 3),
+('analytics', 'Analytics', 'Comprehensive analytics for your shortened URLs.', 'Track clicks, geographic data, devices, and more with detailed analytics.', NULL, true, false, 'default', 'en', 4),
+('about', 'About Us', 'Learn more about our mission and team.', 'About our URL shortening service and our commitment to privacy and performance.', NULL, true, false, 'default', 'en', 5),
+('contact', 'Contact', 'Get in touch with our team.', 'Contact us for support, partnerships, or general inquiries.', NULL, true, false, 'default', 'en', 6),
+('privacy', 'Privacy Policy', 'Our commitment to protecting your privacy.', 'Read our privacy policy to learn how we protect and handle your data.', NULL, true, false, 'default', 'en', 7),
+('terms', 'Terms of Service', 'Terms and conditions for using our service.', 'Review our terms of service before using the platform.', NULL, true, false, 'default', 'en', 8),
+('conversions', 'Conversions', 'Track conversions and measure campaign success.', 'Monitor conversion events and analyze campaign performance.', NULL, true, false, 'default', 'en', 9)
 ON CONFLICT (slug) DO NOTHING;
 
 -- Insert default page templates
@@ -199,7 +200,7 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- Insert default navigation menu
 INSERT INTO navigation_menus (name, location, items, is_active) VALUES
-('main', 'header', '[{"label":"Features","url":"/features"},{"label":"Pricing","url":"/pricing"},{"label":"API Docs","url":"/api-docs"},{"label":"About","url":"/about"},{"label":"Contact","url":"/contact"}]', true),
+('main', 'header', '[{"label":"Home","url":"/"},{"label":"Features","url":"/features"},{"label":"Pricing","url":"/pricing"},{"label":"API Docs","url":"/api-docs"},{"label":"About","url":"/about"},{"label":"Contact","url":"/contact"}]', true),
 ('footer', 'footer', '[{"label":"Privacy Policy","url":"/privacy"},{"label":"Terms of Service","url":"/terms"},{"label":"Contact","url":"/contact"}]', true);
 
 COMMENT ON TABLE static_pages IS 'CMS static pages with SEO and analytics';
