@@ -555,7 +555,7 @@ export function ContentBlockManager() {
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              You can use {{`{{variable}}`}} placeholders for dynamic content
+              You can use {'{{'} variable {'}'} placeholders for dynamic content
             </p>
           </div>
 
