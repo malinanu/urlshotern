@@ -65,3 +65,60 @@ body {
 .hover\:text-primary-600:hover { color: var(--primary-600); }
 .hover\:bg-primary-700:hover { background-color: var(--primary-700); }
 .hover\:text-primary-800:hover { color: var(--primary-800); }
+
+/* CMS Content Styles */
+.cms-content {
+  @apply w-full;
+}
+
+.cms-content section {
+  @apply w-full;
+}
+
+.cms-content .max-w-7xl {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.cms-content h1 {
+  @apply text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900;
+}
+
+.cms-content h2 {
+  @apply text-3xl sm:text-4xl font-bold text-gray-900;
+}
+
+.cms-content h3 {
+  @apply text-xl sm:text-2xl font-semibold text-gray-900;
+}
+
+.cms-content p {
+  @apply text-base sm:text-lg text-gray-600 leading-relaxed;
+}
+
+.cms-content a {
+  @apply text-primary-600 hover:text-primary-700 transition-colors;
+}
+
+.cms-content .bg-white {
+  @apply bg-white;
+}
+
+.cms-content .bg-gray-50 {
+  @apply bg-gray-50;
+}
+
+.cms-content .rounded-lg {
+  @apply rounded-lg;
+}
+
+.cms-content .shadow-sm {
+  @apply shadow-sm;
+}
+
+.cms-content .border {
+  @apply border;
+}
+
+.cms-content .border-gray-200 {
+  @apply border-gray-200;
+}
