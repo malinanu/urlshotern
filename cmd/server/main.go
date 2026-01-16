@@ -82,11 +82,11 @@ func main() {
 	abTestingService := services.NewABTestingService(db, redis)
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
-	cmsService := services.NewCMSService(db)
 	mediaService := services.NewMediaService(db, "./uploads", config.BaseURL)
 	apiKeyService := services.NewAPIKeyService(db)
 	globalSettingsService := services.NewGlobalSettingsService(db)
 	contentBlockService := services.NewContentBlockService(db, globalSettingsService)
+	cmsService := services.NewCMSService(db, contentBlockService)
 
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)

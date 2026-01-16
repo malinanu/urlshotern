@@ -108,11 +108,11 @@ func main() {
 	domainBlocklistService := services.NewDomainBlocklistService(dbManager)
 	adminAnalyticsService := services.NewAdminAnalyticsService(dbManager)
 	monitoringService := services.NewMonitoringService(dbManager, redis)
-	cmsService := services.NewCMSService(db)
 	mediaService := services.NewMediaService(db, "./uploads", config.BaseURL)
 	apiKeyService := services.NewAPIKeyService(db)
 	globalSettingsService := services.NewGlobalSettingsService(db)
 	contentBlockService := services.NewContentBlockService(db, globalSettingsService)
+	cmsService := services.NewCMSService(db, contentBlockService)
 
 	// Initialize admin handlers
 	adminHandlers := admin.NewAdminHandlers(

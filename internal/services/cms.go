@@ -14,12 +14,14 @@ import (
 )
 
 type CMSService struct {
-	db *storage.PostgresStorage
+	db                  *storage.PostgresStorage
+	contentBlockService *ContentBlockService
 }
 
-func NewCMSService(db *storage.PostgresStorage) *CMSService {
+func NewCMSService(db *storage.PostgresStorage, contentBlockService *ContentBlockService) *CMSService {
 	return &CMSService{
-		db: db,
+		db:                  db,
+		contentBlockService: contentBlockService,
 	}
 }
 
@@ -89,13 +91,13 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 
 	var page models.StaticPage
 	var authorName sql.NullString
-	
+
 	err := s.db.QueryRow(query, slug).Scan(
 		&page.ID, &page.Slug, &page.Title, &page.Content, &page.MetaDescription,
 		&page.MetaKeywords, &page.IsPublished, &page.SortOrder, &page.Template,
 		&page.AuthorID, &page.PublishedAt, &page.CreatedAt, &page.UpdatedAt, &authorName,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("page with slug '%s' not found", slug)
@@ -106,6 +108,9 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 	if authorName.Valid {
 		page.AuthorName = authorName.String
 	}
+
+	// Process content blocks in page content
+	page.Content = s.ProcessContentBlocks(page.Content)
 
 	return &page, nil
 }
@@ -472,10 +477,48 @@ func generateAPIKey() (string, string, error) {
 
 	// Create key with prefix
 	plainKey := "us_" + hex.EncodeToString(bytes)
-	
+
 	// Create hash for storage
 	hash := sha256.Sum256([]byte(plainKey))
 	keyHash := hex.EncodeToString(hash[:])
-	
+
 	return plainKey, keyHash, nil
+}
+
+// ProcessContentBlocks processes {{block:identifier}} patterns in page content
+func (s *CMSService) ProcessContentBlocks(content string) string {
+	// If no content block service, return original content
+	if s.contentBlockService == nil {
+		return content
+	}
+
+	// Find all {{block:identifier}} patterns
+	for {
+		start := strings.Index(content, "{{block:")
+		if start == -1 {
+			break
+		}
+
+		end := strings.Index(content[start:], "}}")
+		if end == -1 {
+			break
+		}
+		end += start + 2
+
+		// Extract block identifier
+		blockPattern := content[start:end]
+		identifier := strings.TrimPrefix(strings.TrimSuffix(blockPattern, "}}"), "{{block:")
+
+		// Get block content
+		blockContent, err := s.contentBlockService.RenderContentBlock(identifier)
+		if err != nil {
+			// Replace with empty string if block not found or error
+			blockContent = ""
+		}
+
+		// Replace the pattern with block content
+		content = strings.ReplaceAll(content, blockPattern, blockContent)
+	}
+
+	return content
 }
