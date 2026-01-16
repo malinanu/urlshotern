@@ -22,52 +22,46 @@ import {
   VideoCameraIcon,
   DocumentTextIcon,
   ListBulletIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  CheckCircleIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 
+// Match the backend ContentBlock model
 interface ContentBlock {
   id: number;
   name: string;
-  type: 'text' | 'image' | 'video' | 'form' | 'list' | 'html';
+  identifier: string;
   content: string;
-  variables?: Record<string, string>;
-  is_global: boolean;
-  category: string;
-  description: string;
+  type: string;
+  is_active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
-  usage_count?: number;
 }
 
+// Match the backend ContentBlockRequest model
 interface ContentBlockFormData {
   name: string;
-  type: 'text' | 'image' | 'video' | 'form' | 'list' | 'html';
+  identifier: string;
   content: string;
-  variables: Record<string, string>;
-  is_global: boolean;
-  category: string;
-  description: string;
+  type: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
+// Common block types
 const blockTypes = [
-  { value: 'text', label: 'Text Content', icon: DocumentTextIcon },
-  { value: 'image', label: 'Image Block', icon: PhotoIcon },
-  { value: 'video', label: 'Video Block', icon: VideoCameraIcon },
-  { value: 'form', label: 'Form Block', icon: DocumentTextIcon },
-  { value: 'list', label: 'List Block', icon: ListBulletIcon },
-  { value: 'html', label: 'HTML Block', icon: CodeBracketIcon }
-];
-
-const categories = [
-  'general',
-  'header',
-  'footer',
-  'sidebar',
-  'hero',
-  'testimonial',
-  'pricing',
-  'contact',
-  'custom'
+  { value: 'callout', label: 'Callout Box', icon: DocumentTextIcon },
+  { value: 'cta', label: 'Call to Action', icon: PhotoIcon },
+  { value: 'warning', label: 'Warning Box', icon: VideoCameraIcon },
+  { value: 'info', label: 'Info Box', icon: DocumentTextIcon },
+  { value: 'policy', label: 'Policy Section', icon: ListBulletIcon },
+  { value: 'hero', label: 'Hero Section', icon: PhotoIcon },
+  { value: 'testimonial', label: 'Testimonial', icon: DocumentTextIcon },
+  { value: 'pricing', label: 'Pricing Component', icon: ListBulletIcon },
+  { value: 'footer', label: 'Footer Block', icon: ListBulletIcon },
+  { value: 'html', label: 'Custom HTML', icon: CodeBracketIcon }
 ];
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -82,15 +76,14 @@ export function ContentBlockManager() {
   const [previewBlock, setPreviewBlock] = useState<ContentBlock | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterActive, setFilterActive] = useState('all');
   const [formData, setFormData] = useState<ContentBlockFormData>({
     name: '',
-    type: 'text',
+    identifier: '',
     content: '',
-    variables: {},
-    is_global: true,
-    category: 'general',
-    description: ''
+    type: 'callout',
+    is_active: true,
+    sort_order: 0
   });
 
   useEffect(() => {
@@ -99,11 +92,16 @@ export function ContentBlockManager() {
 
   useEffect(() => {
     filterBlocks();
-  }, [blocks, searchTerm, filterType, filterCategory]);
+  }, [blocks, searchTerm, filterType, filterActive]);
 
   const fetchBlocks = async () => {
     try {
       const token = adminAuthService.getAdminToken();
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/content-blocks`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -112,11 +110,12 @@ export function ContentBlockManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setBlocks(data);
+        setBlocks(data || []);
       } else {
         toast.error('Failed to fetch content blocks');
       }
     } catch (error) {
+      console.error('Error fetching content blocks:', error);
       toast.error('Error fetching content blocks');
     } finally {
       setLoading(false);
@@ -130,8 +129,8 @@ export function ContentBlockManager() {
     if (searchTerm) {
       filtered = filtered.filter(block =>
         block.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        block.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        block.category.toLowerCase().includes(searchTerm.toLowerCase())
+        block.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        block.type.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -140,9 +139,10 @@ export function ContentBlockManager() {
       filtered = filtered.filter(block => block.type === filterType);
     }
 
-    // Category filter
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(block => block.category === filterCategory);
+    // Active status filter
+    if (filterActive !== 'all') {
+      const isActive = filterActive === 'active';
+      filtered = filtered.filter(block => block.is_active === isActive);
     }
 
     setFilteredBlocks(filtered);
@@ -150,6 +150,12 @@ export function ContentBlockManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate identifier format (lowercase, hyphens only)
+    if (!/^[a-z0-9-]+$/.test(formData.identifier)) {
+      toast.error('Identifier must be lowercase letters, numbers, and hyphens only');
+      return;
+    }
 
     try {
       const token = adminAuthService.getAdminToken();
@@ -176,9 +182,10 @@ export function ContentBlockManager() {
         fetchBlocks();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to save content block');
+        toast.error(error.message || 'Failed to save content block');
       }
     } catch (error) {
+      console.error('Error saving content block:', error);
       toast.error('Error saving content block');
     }
   };
@@ -187,18 +194,17 @@ export function ContentBlockManager() {
     setEditingBlock(block);
     setFormData({
       name: block.name,
-      type: block.type,
+      identifier: block.identifier,
       content: block.content,
-      variables: block.variables || {},
-      is_global: block.is_global,
-      category: block.category,
-      description: block.description
+      type: block.type,
+      is_active: block.is_active,
+      sort_order: block.sort_order
     });
     setShowForm(true);
   };
 
   const handleDelete = async (block: ContentBlock) => {
-    if (!confirm('Are you sure you want to delete this content block?')) {
+    if (!confirm(`Are you sure you want to delete the content block "${block.name}"?`)) {
       return;
     }
 
@@ -218,19 +224,19 @@ export function ContentBlockManager() {
         toast.error('Failed to delete content block');
       }
     } catch (error) {
+      console.error('Error deleting content block:', error);
       toast.error('Error deleting content block');
     }
   };
 
-  const handleDuplicate = async (block: ContentBlock) => {
+  const handleDuplicate = (block: ContentBlock) => {
     setFormData({
       name: `${block.name} (Copy)`,
-      type: block.type,
+      identifier: `${block.identifier}-copy`,
       content: block.content,
-      variables: block.variables || {},
-      is_global: block.is_global,
-      category: block.category,
-      description: block.description
+      type: block.type,
+      is_active: false, // Start as inactive
+      sort_order: block.sort_order + 1
     });
     setShowForm(true);
   };
@@ -252,6 +258,7 @@ export function ContentBlockManager() {
         toast.error('Failed to render content block');
       }
     } catch (error) {
+      console.error('Error rendering content block:', error);
       toast.error('Error rendering content block');
     }
   };
@@ -259,46 +266,11 @@ export function ContentBlockManager() {
   const resetForm = () => {
     setFormData({
       name: '',
-      type: 'text',
+      identifier: '',
       content: '',
-      variables: {},
-      is_global: true,
-      category: 'general',
-      description: ''
-    });
-  };
-
-  const addVariable = () => {
-    const key = prompt('Enter variable name:');
-    if (key) {
-      setFormData(prev => ({
-        ...prev,
-        variables: {
-          ...prev.variables,
-          [key]: ''
-        }
-      }));
-    }
-  };
-
-  const updateVariable = (key: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      variables: {
-        ...prev.variables,
-        [key]: value
-      }
-    }));
-  };
-
-  const removeVariable = (key: string) => {
-    setFormData(prev => {
-      const newVariables = { ...prev.variables };
-      delete newVariables[key];
-      return {
-        ...prev,
-        variables: newVariables
-      };
+      type: 'callout',
+      is_active: true,
+      sort_order: 0
     });
   };
 
@@ -306,6 +278,16 @@ export function ContentBlockManager() {
     const blockType = blockTypes.find(bt => bt.value === type);
     const Icon = blockType?.icon || DocumentTextIcon;
     return <Icon className="h-5 w-5" />;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   if (loading) {
@@ -325,7 +307,11 @@ export function ContentBlockManager() {
           <p className="text-gray-600">Create and manage reusable content components</p>
         </div>
         <Button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditingBlock(null);
+            resetForm();
+            setShowForm(true);
+          }}
           className="flex items-center space-x-2"
         >
           <PlusIcon className="h-5 w-5" />
@@ -358,15 +344,12 @@ export function ContentBlockManager() {
             ))}
           </Select>
           <Select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            value={filterActive}
+            onChange={(e) => setFilterActive(e.target.value)}
           >
-            <option value="all">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </option>
-            ))}
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
           </Select>
           <div className="text-sm text-gray-500 flex items-center">
             {filteredBlocks.length} block{filteredBlocks.length !== 1 ? 's' : ''}
@@ -385,25 +368,37 @@ export function ContentBlockManager() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{block.name}</h3>
-                  <p className="text-sm text-gray-500">{block.category}</p>
+                  <p className="text-xs text-gray-500 font-mono">{block.identifier}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge variant={block.is_global ? 'default' : 'secondary'}>
-                  {block.is_global ? 'Global' : 'Local'}
+                <Badge variant={block.is_active ? 'default' : 'secondary'}>
+                  {block.is_active ? (
+                    <span className="flex items-center space-x-1">
+                      <CheckCircleIcon className="h-3 w-3" />
+                      <span>Active</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-1">
+                      <XCircleIcon className="h-3 w-3" />
+                      <span>Inactive</span>
+                    </span>
+                  )}
                 </Badge>
               </div>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {block.description}
-            </p>
-
-            {block.usage_count !== undefined && (
-              <div className="text-xs text-gray-500 mb-4">
-                Used {block.usage_count} time{block.usage_count !== 1 ? 's' : ''}
+            <div className="space-y-2 mb-4">
+              <div className="text-xs text-gray-500">
+                <span className="font-medium">Type:</span> {block.type}
               </div>
-            )}
+              <div className="text-xs text-gray-500">
+                <span className="font-medium">Order:</span> {block.sort_order}
+              </div>
+              <div className="text-xs text-gray-500">
+                <span className="font-medium">Updated:</span> {formatDate(block.updated_at)}
+              </div>
+            </div>
 
             <div className="flex justify-end space-x-2">
               <Button
@@ -448,7 +443,7 @@ export function ContentBlockManager() {
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-2">No content blocks found</div>
           <p className="text-gray-400">
-            {searchTerm || filterType !== 'all' || filterCategory !== 'all'
+            {searchTerm || filterType !== 'all' || filterActive !== 'all'
               ? 'Try adjusting your filters'
               : 'Create your first content block to get started'}
           </p>
@@ -478,8 +473,28 @@ export function ContentBlockManager() {
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 required
-                placeholder="Enter block name"
+                placeholder="Privacy - Data Collection Summary"
               />
+            </div>
+
+            <div>
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+                Identifier * <span className="text-xs text-gray-500">(lowercase, hyphens only)</span>
+              </label>
+              <Input
+                id="identifier"
+                type="text"
+                value={formData.identifier}
+                onChange={(e) => setFormData(prev => ({ ...prev, identifier: e.target.value.toLowerCase() }))}
+                required
+                disabled={!!editingBlock} // Can't change identifier on edit
+                placeholder="privacy-data-collection-summary"
+                pattern="[a-z0-9-]+"
+                title="Only lowercase letters, numbers, and hyphens"
+              />
+              {editingBlock && (
+                <p className="text-xs text-gray-500 mt-1">Identifier cannot be changed after creation</p>
+              )}
             </div>
 
             <div>
@@ -489,7 +504,7 @@ export function ContentBlockManager() {
               <Select
                 id="type"
                 value={formData.type}
-                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                 required
               >
                 {blockTypes.map(type => (
@@ -501,128 +516,50 @@ export function ContentBlockManager() {
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category *
+              <label htmlFor="sort_order" className="block text-sm font-medium text-gray-700 mb-2">
+                Sort Order
               </label>
-              <Select
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                required
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="flex items-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.is_global}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_global: e.target.checked }))}
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                />
-                <span className="ml-2 text-sm text-gray-700">Global Block</span>
-              </label>
+              <Input
+                id="sort_order"
+                type="number"
+                value={formData.sort_order}
+                onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                placeholder="0"
+              />
             </div>
           </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+          <div className="flex items-center">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              />
+              <span className="ml-2 text-sm text-gray-700">Active (visible on website)</span>
             </label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of this content block"
-              rows={2}
-            />
-          </div>
-
-          {/* Variables */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-medium text-gray-700">
-                Template Variables
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={addVariable}
-              >
-                <PlusIcon className="h-4 w-4 mr-1" />
-                Add Variable
-              </Button>
-            </div>
-            {Object.keys(formData.variables).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(formData.variables).map(([key, value]) => (
-                  <div key={key} className="flex items-center space-x-3">
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        value={key}
-                        disabled
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex-2">
-                      <Input
-                        type="text"
-                        value={value}
-                        onChange={(e) => updateVariable(key, e.target.value)}
-                        placeholder="Default value"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeVariable(key)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 italic">
-                No variables defined. Variables allow you to make content dynamic.
-              </p>
-            )}
           </div>
 
           {/* Content */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Content *
+              Content * <span className="text-xs text-gray-500">(HTML content)</span>
             </label>
-            {formData.type === 'html' ? (
-              <Textarea
-                value={formData.content}
-                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                placeholder="Enter HTML content..."
-                rows={10}
-                className="font-mono text-sm"
-                required
-              />
-            ) : (
-              <RichTextEditor
-                content={formData.content}
-                onChange={(content) => setFormData(prev => ({ ...prev, content }))}
-                placeholder="Enter your content here..."
-              />
-            )}
+            <Textarea
+              value={formData.content}
+              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+              placeholder="<div>Your HTML content here...</div>"
+              rows={15}
+              className="font-mono text-sm"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              You can use {{`{{variable}}`}} placeholders for dynamic content
+            </p>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button
               type="button"
               variant="ghost"
@@ -655,10 +592,10 @@ export function ContentBlockManager() {
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">{previewBlock.type}</Badge>
-              <Badge variant={previewBlock.is_global ? 'default' : 'secondary'}>
-                {previewBlock.is_global ? 'Global' : 'Local'}
+              <Badge variant={previewBlock.is_active ? 'default' : 'secondary'}>
+                {previewBlock.is_active ? 'Active' : 'Inactive'}
               </Badge>
-              <span className="text-sm text-gray-500">{previewBlock.category}</span>
+              <span className="text-sm text-gray-500 font-mono">{previewBlock.identifier}</span>
             </div>
             <div className="border rounded-lg p-6 bg-white">
               <div
