@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import {
   LinkIcon,
@@ -9,228 +11,181 @@ import {
   CursorArrowRaysIcon,
   GlobeAltIcon,
   ClockIcon,
-  DevicePhoneMobileIcon,
-  UserGroupIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
-interface Page {
-  id: number;
-  slug: string;
-  title: string;
-  content: string;
-  meta_description: string;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Core features with descriptions
+const coreFeatures = [
+  {
+    name: 'Lightning Fast',
+    description: 'Generate short URLs in milliseconds with our high-performance infrastructure powered by Redis caching and optimized database queries.',
+    icon: LinkIcon
+  },
+  {
+    name: 'Advanced Analytics',
+    description: 'Track clicks, geographic data, referrers, and device information. Get comprehensive insights into your link performance with detailed reports.',
+    icon: ChartBarIcon
+  },
+  {
+    name: 'Enterprise Security',
+    description: 'HTTPS encryption, rate limiting, DDoS protection, and secure API authentication. Your data and links are protected with enterprise-grade security.',
+    icon: ShieldCheckIcon
+  },
+  {
+    name: 'Click Insights',
+    description: 'Real-time click tracking with detailed visitor analytics. Understand your audience with geographic, device, and browser insights.',
+    icon: CursorArrowRaysIcon
+  },
+  {
+    name: 'Global Performance',
+    description: 'Distributed infrastructure ensures fast redirects worldwide. Our globally distributed network provides low-latency access for users everywhere.',
+    icon: GlobeAltIcon
+  },
+  {
+    name: '24/7 Monitoring',
+    description: 'Continuous health checks and automated failover ensure maximum uptime. Our monitoring systems detect and resolve issues before they impact you.',
+    icon: ClockIcon
+  }
+];
+
+const additionalFeatures = [
+  'Custom Short Codes',
+  'QR Code Generation',
+  'Link Expiration',
+  'Password Protection',
+  'Team Collaboration',
+  'API Access',
+  'Webhook Integration',
+  'White-label Solution',
+  'Mobile Apps',
+  '24/7 Support',
+  'Data Export',
+  'SSO Integration'
+];
 
 export default function FeaturesPage() {
-  const [pageData, setPageData] = useState<Page | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const fallbackMainFeatures = [
-    {
-      name: 'Lightning Fast Shortening',
-      description: 'Generate short URLs instantly with our optimized infrastructure powered by Redis caching and efficient algorithms.',
-      icon: LinkIcon,
-      details: [
-        'Sub-second response times',
-        'Global CDN distribution',
-        'Auto-scaling infrastructure',
-        'Bulk URL processing'
-      ]
-    },
-    {
-      name: 'Advanced Analytics',
-      description: 'Track every click with detailed insights including geographic data, device information, and referrer analysis.',
-      icon: ChartBarIcon,
-      details: [
-        'Real-time click tracking',
-        'Geographic click mapping',
-        'Device and browser analytics',
-        'Referrer source tracking'
-      ]
-    },
-    {
-      name: 'Enterprise Security',
-      description: 'Bank-level security with SSL encryption, spam protection, and enterprise-grade infrastructure.',
-      icon: ShieldCheckIcon,
-      details: [
-        'SSL/TLS encryption',
-        'Malware URL scanning',
-        'Spam link detection',
-        '99.9% uptime SLA'
-      ]
-    },
-    {
-      name: 'Smart Click Insights',
-      description: 'Understand your audience better with detailed click analytics and user behavior patterns.',
-      icon: CursorArrowRaysIcon,
-      details: [
-        'Click heatmaps',
-        'Time-based analytics',
-        'Conversion tracking',
-        'A/B testing support'
-      ]
-    },
-    {
-      name: 'Global Performance',
-      description: 'Worldwide infrastructure ensures your short links work fast everywhere, with multi-region redundancy.',
-      icon: GlobeAltIcon,
-      details: [
-        'Multi-region deployment',
-        'Edge caching worldwide',
-        'Automatic failover',
-        'Load balancing'
-      ]
-    },
-    {
-      name: 'Real-time Monitoring',
-      description: 'Monitor your links in real-time with instant notifications and comprehensive health checks.',
-      icon: ClockIcon,
-      details: [
-        'Live click monitoring',
-        'Alert notifications',
-        'Health check endpoints',
-        'Performance metrics'
-      ]
-    }
-  ];
-
-  const fallbackAdditionalFeatures = [
-    { name: 'Custom Short Codes', icon: CheckCircleIcon },
-    { name: 'QR Code Generation', icon: CheckCircleIcon },
-    { name: 'Link Expiration', icon: CheckCircleIcon },
-    { name: 'Password Protection', icon: CheckCircleIcon },
-    { name: 'Team Collaboration', icon: CheckCircleIcon },
-    { name: 'API Access', icon: CheckCircleIcon },
-    { name: 'Webhook Integration', icon: CheckCircleIcon },
-    { name: 'White-label Solution', icon: CheckCircleIcon },
-    { name: 'Mobile Apps', icon: CheckCircleIcon },
-    { name: '24/7 Support', icon: CheckCircleIcon },
-    { name: 'Data Export', icon: CheckCircleIcon },
-    { name: 'SSO Integration', icon: CheckCircleIcon }
-  ];
-
-  useEffect(() => {
-    // Fetch CMS content
-    const fetchPageData = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-        const response = await fetch(`${apiUrl}/api/v1/pages/features`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.page?.title) {
-            document.title = data.page.title;
-          }
-          if (data.page?.meta_description) {
-            const metaDesc = document.querySelector('meta[name="description"]');
-            if (metaDesc) {
-              metaDesc.setAttribute('content', data.page.meta_description);
-            }
-          }
-          setPageData(data.page);
-        } else {
-          setError('Failed to load page content');
-        }
-      } catch (err) {
-        console.error('Failed to load CMS content:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPageData();
-  }, []);
-
-  // If CMS content is loaded, use it; otherwise show fallback
-  const shouldRenderCMSContent = pageData?.content && !loading;
-
   return (
     <Layout>
-      {/* Display error banner if CMS content failed to load */}
-      {error && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="text-sm text-yellow-700">
-              <span className="font-medium">Note:</span> Unable to load dynamic content. Showing default content. ({error})
+      {/* Hero Section - Matching Home Page Design */}
+      <section className="relative bg-gradient-to-br from-primary-50 via-white to-primary-50/30 py-20 lg:py-28">
+        {/* Grid pattern overlay like home page */}
+        <div className="absolute inset-0 bg-grid-gray-100 opacity-30" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-6">
+            <Badge variant="secondary" className="text-primary-700 bg-primary-100 hover:bg-primary-200 transition-colors">
+              Features
+            </Badge>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight">
+              Powerful Features for{' '}
+              <span className="text-primary-600">Smart URL Management</span>
+            </h1>
+
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Everything you need to create, track, and optimize your short links. From lightning-fast shortening to comprehensive analytics.
             </p>
           </div>
         </div>
-      )}
+      </section>
 
-      {loading ? (
-        <div className="py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="animate-pulse space-y-8">
-              <div className="h-16 bg-gray-200 rounded w-3/4 mx-auto"></div>
-              <div className="h-8 bg-gray-200 rounded w-2/3 mx-auto"></div>
-            </div>
+      {/* Core Features Section - Using Card Components Like Home Page */}
+      <section className="py-20 lg:py-28 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
+              Core Features
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Built for performance, designed for insights, trusted by thousands.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {coreFeatures.map((feature) => (
+              <Card
+                key={feature.name}
+                className="relative group hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-gradient-to-br from-white to-gray-50/50"
+              >
+                <CardHeader className="text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <feature.icon className="h-8 w-8 text-primary-600" />
+                  </div>
+                  <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                    {feature.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-gray-600 leading-relaxed text-center">
+                    {feature.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
-      ) : shouldRenderCMSContent ? (
-        /* Render CMS Content as HTML */
-        <div
-          className="cms-content"
-          dangerouslySetInnerHTML={{ __html: pageData?.content || '' }}
-        />
-      ) : (
-        /* Fallback content when CMS is unavailable */
-        <>
-          <section className="bg-gradient-to-br from-primary-50 to-white py-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center">
-                <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
-                  Powerful Features for{' '}
-                  <span className="text-primary-600">Smart URL Management</span>
-                </h1>
-                <p className="text-xl text-black mb-12 max-w-3xl mx-auto">
-                  Everything you need to create, track, and optimize your short links.
-                </p>
-              </div>
-            </div>
-          </section>
+      </section>
 
-          <section className="py-20 bg-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold text-black mb-4">Core Features</h2>
-                <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                  Built for performance, designed for insights, trusted by thousands.
-                </p>
-              </div>
+      {/* Additional Features Section */}
+      <section className="py-20 lg:py-28 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
+              Additional Features
+            </h2>
+            <p className="text-xl text-gray-600">
+              Even more tools to enhance your URL management experience.
+            </p>
+          </div>
 
-              <div className="grid lg:grid-cols-2 gap-12">
-                {fallbackMainFeatures.map((feature) => (
-                  <div key={feature.name} className="bg-gray-50 rounded-xl p-8">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="p-3 bg-primary-100 rounded-lg">
-                          <feature.icon className="h-8 w-8 text-primary-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-black mb-3">{feature.name}</h3>
-                        <p className="text-gray-600 mb-4 leading-relaxed">{feature.description}</p>
-                        <ul className="space-y-2">
-                          {feature.details.map((detail) => (
-                            <li key={detail} className="flex items-center space-x-2">
-                              <CheckCircleIcon className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                              <span className="text-black text-sm">{detail}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {additionalFeatures.map((feature) => (
+              <div key={feature} className="flex items-center space-x-3 bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                <CheckCircleIcon className="h-6 w-6 text-primary-600 flex-shrink-0" />
+                <span className="text-gray-900 font-medium">{feature}</span>
               </div>
-            </div>
-          </section>
-        </>
-      )}
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section - Matching Home Page Style */}
+      <section className="relative py-20 lg:py-28 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 overflow-hidden">
+        {/* Decorative elements like home page */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-600/20 to-primary-800/20" />
+        <div className="absolute top-0 right-0 -mt-40 -mr-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 -mb-40 -ml-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <Badge className="mb-6 bg-white/20 text-white hover:bg-white/30 transition-colors border-white/30">
+            🚀 Get Started Today
+          </Badge>
+
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
+            Ready to Experience These Features?
+          </h2>
+
+          <p className="text-xl text-primary-100 mb-10 max-w-2xl mx-auto">
+            Start using Trunc today and unlock the full potential of your links.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              size="lg"
+              className="bg-white text-primary-700 hover:bg-gray-50 hover:text-primary-800 font-semibold px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
+            >
+              Try It Now
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-6 text-lg transition-all duration-300"
+            >
+              View Pricing
+            </Button>
+          </div>
+        </div>
+      </section>
     </Layout>
   );
 }

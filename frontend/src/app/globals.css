@@ -68,57 +68,80 @@ body {
 
 /* CMS Content Styles */
 .cms-content {
-  @apply w-full;
+  width: 100%;
 }
 
 .cms-content section {
-  @apply w-full;
-}
-
-.cms-content .max-w-7xl {
-  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  width: 100%;
 }
 
 .cms-content h1 {
-  @apply text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+@media (min-width: 640px) {
+  .cms-content h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .cms-content h1 {
+    font-size: 3.75rem;
+  }
 }
 
 .cms-content h2 {
-  @apply text-3xl sm:text-4xl font-bold text-gray-900;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+@media (min-width: 640px) {
+  .cms-content h2 {
+    font-size: 2.25rem;
+  }
 }
 
 .cms-content h3 {
-  @apply text-xl sm:text-2xl font-semibold text-gray-900;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+@media (min-width: 640px) {
+  .cms-content h3 {
+    font-size: 1.5rem;
+  }
 }
 
 .cms-content p {
-  @apply text-base sm:text-lg text-gray-600 leading-relaxed;
+  font-size: 1rem;
+  color: #4b5563;
+  line-height: 1.75;
+}
+
+@media (min-width: 640px) {
+  .cms-content p {
+    font-size: 1.125rem;
+  }
 }
 
 .cms-content a {
-  @apply text-primary-600 hover:text-primary-700 transition-colors;
+  color: var(--primary-600);
+  transition-property: color;
+  transition-duration: 200ms;
 }
 
-.cms-content .bg-white {
-  @apply bg-white;
+.cms-content a:hover {
+  color: var(--primary-700);
 }
 
-.cms-content .bg-gray-50 {
-  @apply bg-gray-50;
-}
-
-.cms-content .rounded-lg {
-  @apply rounded-lg;
-}
-
-.cms-content .shadow-sm {
-  @apply shadow-sm;
-}
-
-.cms-content .border {
-  @apply border;
-}
-
-.cms-content .border-gray-200 {
-  @apply border-gray-200;
+/* Grid pattern background for hero sections */
+.bg-grid-gray-100 {
+  background-image: linear-gradient(to right, rgb(243 244 246 / 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(243 244 246 / 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
