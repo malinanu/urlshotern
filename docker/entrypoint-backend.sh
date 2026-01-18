@@ -15,7 +15,13 @@ fi
 
 # Run database migrations
 echo "🔄 Running database migrations..."
-if [ -f "/app/scripts/run-migrations.sh" ]; then
+if [ -f "/app/scripts/run-all-migrations.sh" ]; then
+    chmod +x /app/scripts/run-all-migrations.sh
+    chmod +x /app/scripts/run-migrations.sh
+    chmod +x /app/scripts/run-migrations-monolithic.sh
+    /app/scripts/run-all-migrations.sh
+elif [ -f "/app/scripts/run-migrations.sh" ]; then
+    # Fallback to old behavior if unified runner doesn't exist
     chmod +x /app/scripts/run-migrations.sh
     /app/scripts/run-migrations.sh
 else

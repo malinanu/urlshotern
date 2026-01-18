@@ -25,9 +25,10 @@ EXPOSE 8080
 # Install PostgreSQL client for migrations
 RUN apk add --no-cache postgresql-client
 
-# Copy migration scripts
+# Copy migration scripts and files
 COPY scripts/ /app/scripts/
 COPY configs/migrations/ /app/configs/migrations/
+COPY migrations/ /app/migrations/
 RUN find /app/scripts -name "*.sh" -exec sed -i 's/\r$//' {} \; && chmod +x /app/scripts/*.sh
 
 # Copy and set entrypoint script
