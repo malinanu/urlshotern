@@ -2,6 +2,8 @@
 
 A high-performance URL shortener service built with Go, featuring Redis caching, PostgreSQL persistence, and comprehensive analytics.
 
+> **Latest Update (2026-02-07)**: Security vulnerabilities fixed! All Docker and frontend dependencies updated. See [SECURITY_UPDATE.md](SECURITY_UPDATE.md) for details.
+
 ## Features
 
 - ⚡ Fast URL shortening with Base62 encoding
@@ -19,7 +21,8 @@ A high-performance URL shortener service built with Go, featuring Redis caching,
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24 or later
+- Node.js 18 or later (for frontend)
 - Docker and Docker Compose
 - PostgreSQL (for production)
 - Redis (for caching)
@@ -237,10 +240,27 @@ docker-compose -f docker/docker-compose.yml up -d
 - XSS protection headers
 - CSRF protection
 - IP-based analytics (anonymized)
+- Regular security updates via Snyk scanning
+- Automated vulnerability detection and patching
+
+### Recent Security Updates
+
+**February 2026 Security Update:**
+- ✅ Updated Go to 1.24.1 (Docker base images)
+- ✅ Fixed Alpine Linux vulnerabilities (BusyBox, OpenSSL)
+- ✅ Updated Next.js to 16.1.6 (security patches)
+- ✅ Updated React to 19.2.3 (security patches)
+- ✅ Updated all frontend dependencies to latest secure versions
+- ✅ Fixed CI/CD pipeline Go version mismatch
+
+See [SECURITY_UPDATE.md](SECURITY_UPDATE.md) for complete details.
 
 ## Monitoring
 
-Health check endpoint available at `/health` for monitoring systems.
+Health check endpoints:
+- `/health` - Basic health check
+- `/health/db-pool` - Database connection pool statistics
+- `/health/goroutines` - Goroutine error statistics and monitoring
 
 ## License
 
@@ -253,6 +273,14 @@ MIT License - see LICENSE file for details.
 3. Make your changes
 4. Add tests
 5. Submit a pull request
+
+## Documentation
+
+- [CLAUDE.md](CLAUDE.md) - Development guidelines and common commands
+- [SECURITY_UPDATE.md](SECURITY_UPDATE.md) - Latest security updates and fixes
+- [docs/MIGRATIONS.md](docs/MIGRATIONS.md) - Database migration guide
+- [docs/ROLLBACK_PROCEDURES.md](docs/ROLLBACK_PROCEDURES.md) - Rollback procedures
+- [docker/README_PGBOUNCER.md](docker/README_PGBOUNCER.md) - Connection pooling guide
 
 ## Support
 
