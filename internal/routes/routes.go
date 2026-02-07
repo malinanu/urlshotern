@@ -32,6 +32,23 @@ func SetupRoutes(
 	// Goroutine error statistics (for monitoring)
 	router.GET("/health/goroutines", handler.GoroutineStats)
 
+	// Serve common static files BEFORE /:shortCode route to prevent them from being treated as short codes
+	commonStaticFiles := []string{
+		"/manifest.json", "/robots.txt", "/sitemap.xml",
+		"/favicon.ico", "/sw.js", "/apple-touch-icon.png",
+	}
+	for _, file := range commonStaticFiles {
+		filePath := file // Capture for closure
+		router.GET(filePath, func(c *gin.Context) {
+			staticPath := filepath.Join("./static", filePath)
+			if _, err := os.Stat(staticPath); err == nil {
+				c.File(staticPath)
+			} else {
+				c.JSON(404, gin.H{"error": "File not found"})
+			}
+		})
+	}
+
 	// Public routes (no authentication required)
 	setupPublicRoutes(router, handler, authMiddleware)
 
