@@ -23,6 +23,18 @@ func SetupRoutes(
 	router.Use(middleware.RequestIDMiddleware())
 	router.Use(middleware.LoggingMiddleware())
 
+	// Handle HEAD requests by converting them to GET requests
+	// This allows Next.js prefetching to work correctly
+	router.Use(func(c *gin.Context) {
+		if c.Request.Method == "HEAD" {
+			c.Request.Method = "GET"
+			c.Next()
+			c.Request.Method = "HEAD"
+		} else {
+			c.Next()
+		}
+	})
+
 	// Health check
 	router.GET("/health", handler.HealthCheck)
 
@@ -330,10 +342,12 @@ func setupStaticRoutes(router *gin.Engine) {
 	router.StaticFS("/_next", http.Dir("./static/_next"))
 
 	// Serve index.html for root path
-	router.GET("/", func(c *gin.Context) {
+	rootHandler := func(c *gin.Context) {
 		indexPath := filepath.Join("./static", "index.html")
 		c.File(indexPath)
-	})
+	}
+	router.GET("/", rootHandler)
+	router.HEAD("/", rootHandler)
 
 	// All frontend routes that need static HTML
 	frontendRoutes := []string{
@@ -348,7 +362,7 @@ func setupStaticRoutes(router *gin.Engine) {
 	for _, route := range frontendRoutes {
 		routePath := route // Local copy to avoid closure issues
 
-		router.GET(routePath, func(c *gin.Context) {
+		routeHandler := func(c *gin.Context) {
 			// Try to serve the specific HTML file for this route (e.g., /features.html)
 			htmlPath := filepath.Join("./static", routePath+".html")
 			if _, err := os.Stat(htmlPath); err == nil {
@@ -364,13 +378,17 @@ func setupStaticRoutes(router *gin.Engine) {
 			// Fallback to root index.html for client-side routing
 			indexPath := filepath.Join("./static", "index.html")
 			c.File(indexPath)
-		})
+		}
+		router.GET(routePath, routeHandler)
+		router.HEAD(routePath, routeHandler)
 
 		// Handle sub-routes with /*path
-		router.GET(routePath+"/*path", func(c *gin.Context) {
+		subRouteHandler := func(c *gin.Context) {
 			indexPath := filepath.Join("./static", "index.html")
 			c.File(indexPath)
-		})
+		}
+		router.GET(routePath+"/*path", subRouteHandler)
+		router.HEAD(routePath+"/*path", subRouteHandler)
 	}
 
 	// Catch-all route handler (MUST be registered LAST)
