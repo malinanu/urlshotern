@@ -20,7 +20,7 @@ services:
       - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID:-65dca2de-3a3e-4a9a-9464-ee6053485626}
       - POLAR_API_URL=${POLAR_API_URL:-https://sandbox-api.polar.sh/v1}
     ports:
-      - "8080:8080"
+      - "8090:8080"
     volumes:
       - ..:/app
       - /app/tmp
@@ -42,9 +42,9 @@ services:
       dockerfile: Dockerfile.frontend.dev
     container_name: urlshortener-frontend-dev
     environment:
-      # Use localhost:8080 for browser requests (port is exposed to host)
+      # Use localhost:8090 for browser requests (port is exposed to host)
       # BACKEND_URL is used for server-side Next.js rewrites (uses Docker network)
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8090
       - BACKEND_URL=http://backend:8080
       - NODE_ENV=development
       - NEXT_TELEMETRY_DISABLED=1

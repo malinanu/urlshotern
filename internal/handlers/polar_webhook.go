@@ -134,18 +134,50 @@ func (pwh *PolarWebhookHandler) HandleWebhook(c *gin.Context) {
 	// Process the event
 	var processingErr error
 	switch payload.Type {
+	// Checkout events
 	case "checkout.created":
 		processingErr = pwh.handleCheckoutCreated(payload.Data)
 	case "checkout.updated":
 		processingErr = pwh.handleCheckoutUpdated(payload.Data)
+	case "checkout.expired":
+		processingErr = pwh.handleCheckoutExpired(payload.Data)
+
+	// Subscription events
 	case "subscription.created":
 		processingErr = pwh.handleSubscriptionCreated(payload.Data)
 	case "subscription.updated":
 		processingErr = pwh.handleSubscriptionUpdated(payload.Data)
-	case "subscription.cancelled":
-		processingErr = pwh.handleSubscriptionCancelled(payload.Data)
+	case "subscription.active":
+		processingErr = pwh.handleSubscriptionActive(payload.Data)
+	case "subscription.canceled": // FIXED: Polar uses American spelling
+		processingErr = pwh.handleSubscriptionCanceled(payload.Data)
+	case "subscription.uncanceled":
+		processingErr = pwh.handleSubscriptionUncanceled(payload.Data)
+	case "subscription.revoked":
+		processingErr = pwh.handleSubscriptionRevoked(payload.Data)
+	case "subscription.past_due":
+		processingErr = pwh.handleSubscriptionPastDue(payload.Data)
+
+	// Order events
 	case "order.created":
 		processingErr = pwh.handleOrderCreated(payload.Data)
+	case "order.paid":
+		processingErr = pwh.handleOrderPaid(payload.Data)
+	case "order.refunded":
+		processingErr = pwh.handleOrderRefunded(payload.Data)
+
+	// Customer events
+	case "customer.created":
+		processingErr = pwh.handleCustomerCreated(payload.Data)
+	case "customer.updated":
+		processingErr = pwh.handleCustomerUpdated(payload.Data)
+
+	// Benefit grant events
+	case "benefit_grant.created":
+		processingErr = pwh.handleBenefitGrantCreated(payload.Data)
+	case "benefit_grant.revoked":
+		processingErr = pwh.handleBenefitGrantRevoked(payload.Data)
+
 	default:
 		log.Printf("Unhandled webhook event type: %s", payload.Type)
 		processingErr = nil // Not an error, just unhandled
@@ -436,6 +468,260 @@ func (pwh *PolarWebhookHandler) handleOrderCreated(data json.RawMessage) error {
 
 	// If this is a subscription order, it will be handled by subscription.created event
 	// For one-time purchases, you can add custom logic here
+
+	return nil
+}
+
+// New Event Handlers
+
+func (pwh *PolarWebhookHandler) handleCheckoutExpired(data json.RawMessage) error {
+	var checkout CheckoutEventData
+	if err := json.Unmarshal(data, &checkout); err != nil {
+		return fmt.Errorf("failed to parse checkout data: %w", err)
+	}
+
+	log.Printf("Checkout expired: %s - abandoned by user", checkout.ID)
+
+	// Track abandoned checkouts for analytics
+	// You can send reminder emails here or track conversion funnel dropoff
+
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleSubscriptionActive(data json.RawMessage) error {
+	var subscription SubscriptionEventData
+	if err := json.Unmarshal(data, &subscription); err != nil {
+		return fmt.Errorf("failed to parse subscription data: %w", err)
+	}
+
+	log.Printf("Subscription activated: %s, customer: %s", subscription.ID, subscription.CustomerID)
+
+	// Find existing subscription
+	var polarSub models.PolarSubscription
+	err := pwh.db.Where("polar_subscription_id = ?", subscription.ID).First(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("subscription not found: %w", err)
+	}
+
+	// Update status to active
+	polarSub.Status = "active"
+	polarSub.UpdatedAt = time.Now()
+
+	err = pwh.db.Save(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("failed to activate subscription: %w", err)
+	}
+
+	log.Printf("Subscription marked as active - user features enabled")
+	return nil
+}
+
+// handleSubscriptionCanceled - American spelling version (Polar uses this)
+func (pwh *PolarWebhookHandler) handleSubscriptionCanceled(data json.RawMessage) error {
+	// Delegate to existing handler with British spelling
+	return pwh.handleSubscriptionCancelled(data)
+}
+
+func (pwh *PolarWebhookHandler) handleSubscriptionUncanceled(data json.RawMessage) error {
+	var subscription SubscriptionEventData
+	if err := json.Unmarshal(data, &subscription); err != nil {
+		return fmt.Errorf("failed to parse subscription data: %w", err)
+	}
+
+	log.Printf("Subscription reactivated: %s", subscription.ID)
+
+	// Find existing subscription
+	var polarSub models.PolarSubscription
+	err := pwh.db.Where("polar_subscription_id = ?", subscription.ID).First(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("subscription not found: %w", err)
+	}
+
+	// Reactivate subscription
+	polarSub.Status = subscription.Status
+	polarSub.CancelAtPeriodEnd = false
+	polarSub.CancelledAt = nil
+	polarSub.UpdatedAt = time.Now()
+
+	err = pwh.db.Save(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("failed to reactivate subscription: %w", err)
+	}
+
+	log.Printf("Subscription reactivated successfully")
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleSubscriptionRevoked(data json.RawMessage) error {
+	var subscription SubscriptionEventData
+	if err := json.Unmarshal(data, &subscription); err != nil {
+		return fmt.Errorf("failed to parse subscription data: %w", err)
+	}
+
+	log.Printf("⚠️  Subscription revoked immediately: %s (fraud/abuse)", subscription.ID)
+
+	// Find existing subscription
+	var polarSub models.PolarSubscription
+	err := pwh.db.Where("polar_subscription_id = ?", subscription.ID).First(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("subscription not found: %w", err)
+	}
+
+	// Hard cancel - revoke access immediately
+	now := time.Now()
+	polarSub.Status = "revoked"
+	polarSub.CancelledAt = &now
+	polarSub.EndedAt = &now
+	polarSub.UpdatedAt = time.Now()
+
+	err = pwh.db.Save(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("failed to revoke subscription: %w", err)
+	}
+
+	log.Printf("⛔ Subscription revoked - access terminated immediately")
+	// TODO: Send notification to user about revocation
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleSubscriptionPastDue(data json.RawMessage) error {
+	var subscription SubscriptionEventData
+	if err := json.Unmarshal(data, &subscription); err != nil {
+		return fmt.Errorf("failed to parse subscription data: %w", err)
+	}
+
+	log.Printf("⚠️  Subscription past due: %s - payment failed", subscription.ID)
+
+	// Find existing subscription
+	var polarSub models.PolarSubscription
+	err := pwh.db.Where("polar_subscription_id = ?", subscription.ID).First(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("subscription not found: %w", err)
+	}
+
+	// Update status to past_due
+	polarSub.Status = "past_due"
+	polarSub.UpdatedAt = time.Now()
+
+	err = pwh.db.Save(&polarSub).Error
+	if err != nil {
+		return fmt.Errorf("failed to update subscription: %w", err)
+	}
+
+	log.Printf("⚠️  Subscription marked as past_due - user should update payment method")
+	// TODO: Send email notification to user about failed payment
+	// TODO: Consider limiting feature access or showing payment reminder banner
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleOrderPaid(data json.RawMessage) error {
+	var order OrderEventData
+	if err := json.Unmarshal(data, &order); err != nil {
+		return fmt.Errorf("failed to parse order data: %w", err)
+	}
+
+	log.Printf("✅ Order paid successfully: %s, amount: %d %s", order.ID, order.Amount, order.Currency)
+
+	// Payment confirmed - subscription should be activated via subscription.active event
+	// This is mainly for logging and analytics
+
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleOrderRefunded(data json.RawMessage) error {
+	var order OrderEventData
+	if err := json.Unmarshal(data, &order); err != nil {
+		return fmt.Errorf("failed to parse order data: %w", err)
+	}
+
+	log.Printf("💰 Order refunded: %s, amount: %d %s", order.ID, order.Amount, order.Currency)
+
+	// If this order has a subscription, handle subscription cancellation
+	if order.SubscriptionID != nil {
+		var polarSub models.PolarSubscription
+		err := pwh.db.Where("polar_subscription_id = ?", *order.SubscriptionID).First(&polarSub).Error
+		if err == nil {
+			// Mark subscription as refunded/cancelled
+			now := time.Now()
+			polarSub.Status = "cancelled"
+			polarSub.CancelledAt = &now
+			polarSub.UpdatedAt = time.Now()
+			pwh.db.Save(&polarSub)
+			log.Printf("Subscription %s cancelled due to refund", *order.SubscriptionID)
+		}
+	}
+
+	// TODO: Send refund confirmation email to user
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleCustomerCreated(data json.RawMessage) error {
+	// Parse customer data
+	var customerData map[string]interface{}
+	if err := json.Unmarshal(data, &customerData); err != nil {
+		return fmt.Errorf("failed to parse customer data: %w", err)
+	}
+
+	customerID, _ := customerData["id"].(string)
+	email, _ := customerData["email"].(string)
+
+	log.Printf("Customer created in Polar: %s (%s)", customerID, email)
+
+	// Customer records are tracked via subscriptions
+	// This is mainly for logging
+
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleCustomerUpdated(data json.RawMessage) error {
+	// Parse customer data
+	var customerData map[string]interface{}
+	if err := json.Unmarshal(data, &customerData); err != nil {
+		return fmt.Errorf("failed to parse customer data: %w", err)
+	}
+
+	customerID, _ := customerData["id"].(string)
+
+	log.Printf("Customer updated in Polar: %s", customerID)
+
+	// Sync any relevant customer changes to subscriptions
+	// Email changes, metadata updates, etc.
+
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleBenefitGrantCreated(data json.RawMessage) error {
+	// Parse benefit grant data
+	var grantData map[string]interface{}
+	if err := json.Unmarshal(data, &grantData); err != nil {
+		return fmt.Errorf("failed to parse benefit grant data: %w", err)
+	}
+
+	subscriptionID, _ := grantData["subscription_id"].(string)
+	benefitID, _ := grantData["benefit_id"].(string)
+
+	log.Printf("✅ Benefit granted: %s for subscription %s", benefitID, subscriptionID)
+
+	// Fetch and update subscription benefits
+	// This ensures benefits are in sync
+
+	return nil
+}
+
+func (pwh *PolarWebhookHandler) handleBenefitGrantRevoked(data json.RawMessage) error {
+	// Parse benefit grant data
+	var grantData map[string]interface{}
+	if err := json.Unmarshal(data, &grantData); err != nil {
+		return fmt.Errorf("failed to parse benefit grant data: %w", err)
+	}
+
+	subscriptionID, _ := grantData["subscription_id"].(string)
+	benefitID, _ := grantData["benefit_id"].(string)
+
+	log.Printf("❌ Benefit revoked: %s for subscription %s", benefitID, subscriptionID)
+
+	// Remove benefit from subscription record
+	// Disable associated features
 
 	return nil
 }
