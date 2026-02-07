@@ -1,0 +1,92 @@
+version: '3.8'
+
+# Oracle Server Production Deployment
+# This compose file deploys URLShortener to Oracle Cloud Server
+# with centralized PostgreSQL (postgresql-central container)
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend.dev
+    container_name: urlshortener-app
+    ports:
+      - "8090:8080"
+    environment:
+      # Server Configuration
+      - SERVER_PORT=8080
+      - ENVIRONMENT=production
+      - NODE_ID=1
+      - BASE_URL=${BASE_URL:-https://your-domain.com}
+
+      # Database Configuration (Centralized PostgreSQL)
+      - DB_HOST=postgresql-central
+      - DB_PORT=5432
+      - DB_USER=urlshortener_user
+      - DB_PASSWORD=${DB_PASSWORD:-URLShortenerSecurePassword123!}
+      - DB_NAME=urlshortener_db
+      - DB_MAX_CONNECTIONS=25
+      - DB_MAX_IDLE_CONNECTIONS=10
+      - DB_CONN_MAX_LIFETIME=3600
+      - DB_CONN_MAX_IDLE_TIME=600
+      - DB_SSLMODE=disable
+
+      # Redis Configuration
+      - REDIS_HOST=urlshortener-redis
+      - REDIS_PORT=6379
+
+      # Polar Configuration (Optional)
+      - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-}
+      - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID:-}
+      - POLAR_API_URL=${POLAR_API_URL:-https://sandbox-api.polar.sh/v1}
+
+    depends_on:
+      - redis
+    networks:
+      - shared-db-network      # Connect to shared PostgreSQL
+      - urlshortener-network   # Connect to Redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: urlshortener-redis
+    ports:
+      - "127.0.0.1:6380:6379"  # Bind to localhost only, different port
+    volumes:
+      - redis-data:/data
+    networks:
+      - urlshortener-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  adminer:
+    image: adminer:latest
+    container_name: urlshortener-adminer
+    ports:
+      - "8081:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgresql-central
+    networks:
+      - shared-db-network
+    restart: unless-stopped
+
+networks:
+  shared-db-network:
+    external: true           # External network for centralized PostgreSQL
+  urlshortener-network:
+    driver: bridge
+
+volumes:
+  redis-data:
