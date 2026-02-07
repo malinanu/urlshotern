@@ -14,7 +14,7 @@ Oracle Cloud Server (Ubuntu)
 │   └── Database: [future applications]
 │
 ├── Odoo Stack (Port 8069)
-├── URLShortener Stack (Port 8080)
+├── URLShortener Stack (Port 8090)
 ├── Mailcow Stack (Ports 25, 110, 143, 465, 587, 993, 995)
 └── Adminer - Database UI (Port 8081)
 ```
@@ -36,7 +36,7 @@ docker run -d \
   --name postgresql-central \
   --network shared-db-network \
   -p 5432:5432 \
-  -e POSTGRES_PASSWORD=YourSecurePostgresPassword123! \
+  -e POSTGRES_PASSWORD=CvUpK3NYZy2h5K9#oyVk3754mbQa45ra \
   -e POSTGRES_USER=postgres \
   -v /opt/postgresql/data:/var/lib/postgresql/data \
   --restart unless-stopped \
@@ -171,7 +171,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: urlshortener-app
     ports:
-      - "8080:8080"
+      - "8090:8080"
     environment:
       - SERVER_PORT=8080
       - DB_HOST=postgresql-central     # Centralized PostgreSQL
@@ -198,7 +198,7 @@ services:
       - urlshortener-network       # Internal network for Redis
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -244,6 +244,8 @@ volumes:
 
 **Deploy URLShortener:**
 
+#### Option A: Deploy via Docker CLI (Direct)
+
 ```bash
 # Build and start
 docker-compose -f docker-compose.oracle.yml up -d --build
@@ -254,6 +256,82 @@ docker logs -f urlshortener-app
 # Verify health
 curl http://localhost:8080/health
 ```
+
+#### Option B: Deploy via Portainer (Recommended for Easier Management)
+
+**Prerequisites:**
+- Portainer installed and accessible (e.g., `https://your-oracle-server:9443`)
+- Access to your Git repository (public or with credentials)
+
+**Step-by-Step Portainer Deployment:**
+
+1. **Access Portainer:**
+   - Open your browser: `https://your-oracle-server:9443`
+   - Log in with your Portainer credentials
+
+2. **Create or Update Stack:**
+   - Navigate to **Stacks** in the left sidebar
+   - If `urlshortener` stack exists: Click on it → **Editor** button
+   - If new: Click **+ Add stack** button
+
+3. **Configure Stack:**
+   - **Name:** `urlshortener`
+   - **Build method:** Choose "Repository" (recommended)
+   - **Repository URL:** `https://github.com/malinanu/urlshotern`
+   - **Branch:** `main`
+   - **Compose path:** `docker-compose.oracle.yml`
+   - **Authentication:** Add if private repository
+
+4. **Set Environment Variables:**
+   Scroll to **Environment variables** section and add:
+   ```
+   BASE_URL=https://url.yourdomain.com
+   DB_PASSWORD=URLShortenerSecurePassword123!
+   POLAR_ACCESS_TOKEN=your_token_here (optional)
+   POLAR_WEBHOOK_SECRET=your_secret_here (optional)
+   ```
+
+5. **Deploy:**
+   - Check **Pull and redeploy** checkbox (rebuilds with latest code)
+   - Click **Deploy the stack** (new) or **Update the stack** (existing)
+   - Wait 8-12 minutes for first build (installs Node.js + Go dependencies, builds frontend)
+
+6. **Monitor Deployment:**
+   - Go to **Containers** → `urlshortener-app`
+   - Click **Logs** tab
+   - Toggle **Auto-refresh logs**
+   - Watch for successful build messages:
+     - `📦 Building frontend...`
+     - `✅ Frontend build complete!`
+     - `Server starting on port 8080`
+
+7. **Verify Static Files:**
+   - Click **Console** button on container
+   - Select `/bin/sh`, click **Connect**
+   - Run: `ls -la /app/static/`
+   - Should see: `index.html`, `_next/` directory, etc.
+
+**Portainer Management Tips:**
+
+- **View Logs in Real-Time:**
+  - Containers → `urlshortener-app` → **Logs** → Toggle **Auto-refresh**
+
+- **Restart Container:**
+  - Containers → `urlshortener-app` → **Restart** button
+  - Useful for config changes without rebuilding
+
+- **Rebuild After Code Changes:**
+  - Stacks → your stack → **Editor**
+  - Check **Pull and redeploy**
+  - Click **Update the stack**
+
+- **Check Resource Usage:**
+  - Containers → `urlshortener-app` → **Stats** tab
+  - View CPU, memory, network usage
+
+- **Delete Old Images (if rebuild fails):**
+  - Images → Find `docker-backend` → Delete
+  - Return to stack and update again
 
 ### Step 6: Configure Domain Mapping in Oracle Cloud Panel
 
@@ -267,7 +345,7 @@ curl http://localhost:8080/health
 2. **Configure Firewall Rules:**
    ```bash
    # On Oracle server
-   sudo ufw allow 8080/tcp  # URLShortener
+   sudo ufw allow 8090/tcp  # URLShortener
    sudo ufw allow 8069/tcp  # Odoo
    sudo ufw allow 8081/tcp  # Adminer (optional, can restrict to specific IPs)
    sudo ufw reload
@@ -286,13 +364,16 @@ sudo nano /etc/nginx/sites-available/urlshortener
 
 **Nginx configuration (`/etc/nginx/sites-available/urlshortener`):**
 
+> **Note:** The URLShortener uses a unified container architecture where the Go backend serves both the API endpoints and the frontend static files. Nginx proxies all requests to the backend container on port 8090.
+
 ```nginx
 server {
     listen 80;
     server_name url.yourdomain.com;
 
+    # Proxy all requests to backend (serves both API and frontend static files)
     location / {
-        proxy_pass http://localhost:8080;
+        proxy_pass http://localhost:8090;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -301,6 +382,11 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
+
+        # Increase timeouts for long-running requests
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
     }
 }
 
@@ -355,6 +441,8 @@ sudo systemctl status certbot.timer
 
 ### Step 7: Verify Deployment
 
+#### Container Health Checks
+
 ```bash
 # Check all containers
 docker ps
@@ -362,13 +450,19 @@ docker ps
 # Expected containers:
 # - postgresql-central (Port 5432)
 # - odoo-central (Port 8069)
-# - urlshortener-app (Port 8080)
+# - urlshortener-app (Port 8090)
 # - urlshortener-redis (Port 6380)
 # - urlshortener-adminer (Port 8081)
 # - mailcow containers (existing)
 
+# Check URLShortener container status
+docker ps --filter "name=urlshortener-app" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# View container logs
+docker logs --tail=50 urlshortener-app
+
 # Test URLShortener health
-curl http://localhost:8080/health
+curl http://localhost:8090/health
 
 # Test Odoo
 curl http://localhost:8069/web/database/selector
@@ -379,6 +473,79 @@ curl http://localhost:8069/web/database/selector
 # Username: postgres (or urlshortener_user/odoo_user)
 # Password: [as configured]
 ```
+
+#### Frontend Verification Checklist
+
+After deployment, verify the unified container is serving both frontend and backend:
+
+**✓ Static Files Exist:**
+```bash
+docker exec urlshortener-app ls -la /app/static/
+# Expected output:
+# - index.html
+# - _next/ directory
+# - Other static assets (CSS, JS files)
+```
+
+**✓ Frontend Homepage Loads:**
+```bash
+# Test from server
+curl http://localhost:8090/ | head -20
+# Should return HTML content starting with <!DOCTYPE html>
+
+# Test via browser
+# Visit: https://url.yourdomain.com
+# Should show: URLShortener homepage with login/signup interface
+```
+
+**✓ Frontend Routes Work:**
+- `https://url.yourdomain.com/` - Homepage ✓
+- `https://url.yourdomain.com/dashboard` - Dashboard page ✓
+- `https://url.yourdomain.com/login` - Login page ✓
+- `https://url.yourdomain.com/signup` - Signup page ✓
+
+**✓ API Endpoints Work:**
+```bash
+# Health check
+curl https://url.yourdomain.com/api/v1/health
+# Expected: {"status":"ok","database":"connected","redis":"connected"}
+
+# Database pool stats
+curl https://url.yourdomain.com/health/db-pool
+```
+
+**✓ Static Assets Load:**
+- Browser console: No 404 errors for `/_next/static/*` files
+- CSS styles applied correctly
+- JavaScript interactive elements work
+
+**✓ Short URL Redirects Work:**
+```bash
+# Create a short URL
+curl -X POST https://url.yourdomain.com/api/v1/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+
+# Test redirect (use short code from response)
+curl -I https://url.yourdomain.com/{shortCode}
+# Expected: HTTP 302 redirect to original URL
+```
+
+**✓ Nginx Proxying Correctly:**
+```bash
+# Check Nginx access logs
+sudo tail -f /var/log/nginx/access.log
+
+# Visit frontend in browser, should see requests proxied to backend
+# Look for: GET / HTTP/1.1 200 (HTML page)
+#           GET /_next/static/... HTTP/1.1 200 (static assets)
+```
+
+**Architecture Confirmation:**
+- ✓ **Single Container:** Only `urlshortener-app` running (no separate frontend container)
+- ✓ **Port 8090:** Container exposes port 8080, mapped to host 8090
+- ✓ **Nginx Proxy:** All routes proxied to `localhost:8090`
+- ✓ **Backend Serves Both:** Go backend serves API at `/api/v1/*` and static files at `/`
 
 ### Step 8: Monitor and Maintain
 
@@ -435,7 +602,7 @@ sudo crontab -e
    - Keep PostgreSQL image updated
 
 2. **Firewall:**
-   - Only expose necessary ports (8069, 8080, 443, 80)
+   - Only expose necessary ports (8069, 8090, 443, 80)
    - Restrict Adminer access to trusted IPs
    - Use UFW or Oracle Cloud security lists
 
@@ -542,6 +709,88 @@ docker exec -it postgresql-central psql -U urlshortener_user -d urlshortener_db
 
 # Run migrations manually if needed
 docker exec urlshortener-app /app/scripts/migrate.sh status
+```
+
+**Issue: Frontend not loading (blank page or 404 errors)**
+
+This issue occurs if the unified container was built with `Dockerfile.backend.dev` instead of `Dockerfile.dev`.
+
+**Symptoms:**
+- Visiting domain shows blank page or Nginx error
+- API endpoints work (`/api/v1/health` returns JSON)
+- Browser console shows 404 errors for static assets
+
+**Solution:**
+1. Update `docker-compose.oracle.yml` to use correct Dockerfile:
+   ```yaml
+   dockerfile: Dockerfile.dev  # Not Dockerfile.backend.dev
+   ```
+
+2. Add frontend environment variables:
+   ```yaml
+   environment:
+     - NODE_ENV=production
+     - NEXT_TELEMETRY_DISABLED=1
+     - NEXT_PUBLIC_API_URL=${BASE_URL}
+   ```
+
+3. Rebuild container:
+   ```bash
+   # Via Docker CLI
+   docker-compose -f docker-compose.oracle.yml up -d --build
+
+   # Via Portainer
+   # Stacks → your stack → Editor → Check "Pull and redeploy" → Update
+   ```
+
+4. Verify static files exist:
+   ```bash
+   docker exec urlshortener-app ls -la /app/static/
+   # Should show: index.html, _next/ directory, etc.
+   ```
+
+5. Check container logs for build errors:
+   ```bash
+   docker logs urlshortener-app | grep -i "frontend"
+   # Look for: "✅ Frontend build complete!"
+   ```
+
+**Issue: Portainer build fails with "frontend build not found"**
+```bash
+# Check disk space (needs ~2GB for build)
+df -h
+
+# Check container logs for npm errors
+docker logs urlshortener-app | grep -i "error"
+
+# Delete old image and rebuild
+docker rmi $(docker images -q docker-backend)
+# Then rebuild via Portainer
+```
+
+**Issue: Long build time (10+ minutes)**
+- This is **expected behavior** for first build
+- Installing Node.js + Go dependencies takes 8-12 minutes
+- Subsequent builds use cached layers and are faster
+- Monitor logs: Stacks → Container → Logs → Auto-refresh
+
+**Issue: Nginx shows 502 Bad Gateway**
+```bash
+# Check if container is running
+docker ps | grep urlshortener-app
+
+# Check if app is listening on port 8080
+docker exec urlshortener-app netstat -tlnp | grep 8080
+
+# Test local connection
+curl http://localhost:8090/
+
+# Check Nginx configuration
+sudo nginx -t
+sudo systemctl status nginx
+
+# Verify Nginx is proxying to correct port (8090)
+sudo nano /etc/nginx/sites-available/urlshortener
 ```
 
 ## 📈 Performance Tuning
