@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Database Migration Runner
 # Automatically applies pending migrations in order
 
@@ -54,7 +54,7 @@ for migration_file in $MIGRATION_FILES; do
     # Check if migration has already been applied
     if echo "$APPLIED_MIGRATIONS" | grep -q "^[[:space:]]*$version[[:space:]]*$"; then
         echo "⏭️  Migration $version already applied, skipping..."
-        ((MIGRATIONS_SKIPPED++))
+        MIGRATIONS_SKIPPED=$((MIGRATIONS_SKIPPED + 1))
         continue
     fi
 
@@ -65,7 +65,7 @@ for migration_file in $MIGRATION_FILES; do
         # Record the migration
         PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "INSERT INTO schema_migrations (version) VALUES ('$version') ON CONFLICT DO NOTHING;"
         echo "   ✅ Migration $version applied successfully"
-        ((MIGRATIONS_APPLIED++))
+        MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
     else
         echo "   ❌ Migration $version failed!"
         exit 1
