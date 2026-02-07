@@ -38,9 +38,9 @@ func main() {
 	defer db.Close()
 
 	// Initialize GORM database for billing and Polar integration
-	sslMode := "disable"
-	if config.Environment == "production" {
-		sslMode = "require"
+	sslMode := config.DBSSLMode
+	if sslMode == "" {
+		sslMode = "disable" // Default to disable if not specified
 	}
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, sslMode)
