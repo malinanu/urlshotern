@@ -19,10 +19,10 @@ type PostgresStorage struct {
 
 // NewPostgresStorage creates a new PostgreSQL storage instance
 func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
-	// Use SSL in production, disable in development
-	sslMode := "require"
-	if config.Environment == "development" {
-		sslMode = "disable"
+	// Use SSL mode from configuration
+	sslMode := config.DBSSLMode
+	if sslMode == "" {
+		sslMode = "disable" // Default to disable if not specified
 	}
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",

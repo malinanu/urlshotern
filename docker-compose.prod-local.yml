@@ -1,0 +1,122 @@
+version: '3.8'
+
+# Local Production Testing Environment
+# Mimics docker-compose.oracle.yml but runs entirely locally
+# Use this to test production configuration before deploying to Oracle server
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: urlshortener-app-prod
+    ports:
+      - "8083:8080"  # Different port to avoid conflicts
+    environment:
+      # Server Configuration
+      - SERVER_PORT=8080
+      - ENVIRONMENT=production
+      - NODE_ID=1
+      - BASE_URL=http://localhost:8083
+
+      # Frontend Build Configuration
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_API_URL=http://localhost:8083
+
+      # Database Configuration (Local PostgreSQL)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=urlshortener_user
+      - DB_PASSWORD=${DB_PASSWORD:-URLShortenerSecurePassword123!}
+      - DB_NAME=urlshortener_db
+      - DB_MAX_CONNECTIONS=25
+      - DB_MAX_IDLE_CONNECTIONS=10
+      - DB_CONN_MAX_LIFETIME=3600
+      - DB_CONN_MAX_IDLE_TIME=600
+      - DB_SSLMODE=disable
+
+      # Redis Configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+      # Polar Configuration (Optional)
+      - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-}
+      - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID:-}
+      - POLAR_API_URL=${POLAR_API_URL:-https://sandbox-api.polar.sh/v1}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - urlshortener-prod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: urlshortener-postgres-prod
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts with local dev
+    environment:
+      - POSTGRES_DB=urlshortener_db
+      - POSTGRES_USER=urlshortener_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-URLShortenerSecurePassword123!}
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+      - ./configs/database.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./configs/auth_schema.sql:/docker-entrypoint-initdb.d/02-auth-schema.sql
+    networks:
+      - urlshortener-prod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urlshortener_user -d urlshortener_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: urlshortener-redis-prod
+    ports:
+      - "127.0.0.1:6381:6379"  # Different port, localhost only
+    volumes:
+      - redis-prod-data:/data
+    networks:
+      - urlshortener-prod-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  adminer:
+    image: adminer:latest
+    container_name: urlshortener-adminer-prod
+    ports:
+      - "8084:8080"  # Different port to avoid conflicts
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    networks:
+      - urlshortener-prod-network
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+networks:
+  urlshortener-prod-network:
+    driver: bridge
+
+volumes:
+  postgres-prod-data:
+  redis-prod-data:

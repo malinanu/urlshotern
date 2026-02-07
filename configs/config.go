@@ -20,6 +20,7 @@ type Config struct {
 	DBUser              string
 	DBPassword          string
 	DBName              string
+	DBSSLMode           string
 	DBMaxConns          int
 	DBMaxIdleConns      int
 	DBConnMaxLifetime   int // in seconds
@@ -84,6 +85,7 @@ func LoadConfig() (*Config, error) {
 		DBUser:            getEnv("DB_USER", "urlshortener"),
 		DBPassword:        getEnv("DB_PASSWORD", "password"),
 		DBName:            getEnv("DB_NAME", "urlshortener_db"),
+		DBSSLMode:         getEnv("DB_SSLMODE", "disable"),
 		DBMaxConns:        getEnvAsInt("DB_MAX_CONNECTIONS", 25),
 		DBMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 10),
 		DBConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),
