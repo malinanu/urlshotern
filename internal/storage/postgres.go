@@ -45,7 +45,7 @@ func NewPostgresStorage(config *configs.Config) (*PostgresStorage, error) {
 	}
 
 	storage := &PostgresStorage{db: db}
-	
+
 	// Initialize tables if they don't exist
 	if err := storage.initTables(); err != nil {
 		return nil, fmt.Errorf("failed to initialize tables: %w", err)
@@ -63,15 +63,15 @@ func (p *PostgresStorage) Close() error {
 func (p *PostgresStorage) GetPoolStats() map[string]interface{} {
 	stats := p.db.Stats()
 	return map[string]interface{}{
-		"max_open_connections":   stats.MaxOpenConnections,
-		"open_connections":       stats.OpenConnections,
-		"in_use":                 stats.InUse,
-		"idle":                   stats.Idle,
-		"wait_count":             stats.WaitCount,
-		"wait_duration":          stats.WaitDuration.String(),
-		"max_idle_closed":        stats.MaxIdleClosed,
-		"max_idle_time_closed":   stats.MaxIdleTimeClosed,
-		"max_lifetime_closed":    stats.MaxLifetimeClosed,
+		"max_open_connections": stats.MaxOpenConnections,
+		"open_connections":     stats.OpenConnections,
+		"in_use":               stats.InUse,
+		"idle":                 stats.Idle,
+		"wait_count":           stats.WaitCount,
+		"wait_duration":        stats.WaitDuration.String(),
+		"max_idle_closed":      stats.MaxIdleClosed,
+		"max_idle_time_closed": stats.MaxIdleTimeClosed,
+		"max_lifetime_closed":  stats.MaxLifetimeClosed,
 	}
 }
 
@@ -104,6 +104,12 @@ func (p *PostgresStorage) Begin() (*sql.Tx, error) {
 
 // initTables creates the necessary tables if they don't exist
 func (p *PostgresStorage) initTables() error {
+	// Initialize authentication tables first (required by url_mappings and analytics)
+	if err := p.initAuthenticationTables(); err != nil {
+		return fmt.Errorf("failed to initialize authentication tables: %w", err)
+	}
+
+	// Create core URL shortener tables (depends on users table)
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS url_mappings (
 			id BIGINT PRIMARY KEY,
@@ -113,7 +119,9 @@ func (p *PostgresStorage) initTables() error {
 			expires_at TIMESTAMP WITH TIME ZONE,
 			click_count BIGINT DEFAULT 0,
 			is_active BOOLEAN DEFAULT TRUE,
-			created_by_ip INET
+			created_by_ip INET,
+			user_id BIGINT,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_short_code ON url_mappings(short_code)`,
 		`CREATE INDEX IF NOT EXISTS idx_created_at ON url_mappings(created_at)`,
@@ -136,9 +144,130 @@ func (p *PostgresStorage) initTables() error {
 		}
 	}
 
-	// Initialize enhanced analytics tables
+	// Initialize enhanced analytics tables (depends on url_mappings and users)
 	if err := p.initAdvancedAnalyticsTables(); err != nil {
 		return fmt.Errorf("failed to initialize advanced analytics tables: %w", err)
+	}
+
+	return nil
+}
+
+// initAuthenticationTables creates authentication and user management tables
+func (p *PostgresStorage) initAuthenticationTables() error {
+	queries := []string{
+		// Users table - core user information
+		`CREATE TABLE IF NOT EXISTS users (
+			id BIGSERIAL PRIMARY KEY,
+			name VARCHAR(100) NOT NULL,
+			email VARCHAR(255) UNIQUE NOT NULL,
+			phone VARCHAR(20) UNIQUE,
+			password_hash VARCHAR(255),
+			email_verified BOOLEAN DEFAULT FALSE,
+			phone_verified BOOLEAN DEFAULT FALSE,
+			provider VARCHAR(50) DEFAULT 'local', -- local, google, etc.
+			provider_id VARCHAR(255),
+			avatar_url TEXT,
+			account_type VARCHAR(20) DEFAULT 'free', -- free, pro, enterprise
+			is_active BOOLEAN DEFAULT TRUE,
+			is_admin BOOLEAN DEFAULT FALSE,
+			last_login_at TIMESTAMP WITH TIME ZONE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`,
+		`CREATE INDEX IF NOT EXISTS idx_users_provider ON users(provider, provider_id)`,
+
+		// User sessions table
+		`CREATE TABLE IF NOT EXISTS user_sessions (
+			id UUID PRIMARY KEY,
+			user_id BIGINT NOT NULL,
+			device_info TEXT,
+			ip_address INET,
+			user_agent TEXT,
+			refresh_token_hash VARCHAR(255),
+			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at)`,
+
+		// User preferences table
+		`CREATE TABLE IF NOT EXISTS user_preferences (
+			user_id BIGINT PRIMARY KEY,
+			default_expiration INTEGER, -- days
+			analytics_public BOOLEAN DEFAULT FALSE,
+			email_notifications BOOLEAN DEFAULT TRUE,
+			marketing_emails BOOLEAN DEFAULT FALSE,
+			timezone VARCHAR(50) DEFAULT 'UTC',
+			theme VARCHAR(20) DEFAULT 'light',
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+
+		// Email verification table
+		`CREATE TABLE IF NOT EXISTS email_verifications (
+			id UUID PRIMARY KEY,
+			user_id BIGINT NOT NULL,
+			token VARCHAR(255) UNIQUE NOT NULL,
+			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			verified_at TIMESTAMP WITH TIME ZONE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token)`,
+		`CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications(user_id)`,
+
+		// Phone verification table
+		`CREATE TABLE IF NOT EXISTS phone_verifications (
+			id UUID PRIMARY KEY,
+			user_id BIGINT NOT NULL,
+			phone VARCHAR(20) NOT NULL,
+			otp_code VARCHAR(6) NOT NULL,
+			attempts INTEGER DEFAULT 0,
+			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			verified_at TIMESTAMP WITH TIME ZONE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_phone_verifications_user ON phone_verifications(user_id)`,
+
+		// Password reset table
+		`CREATE TABLE IF NOT EXISTS password_resets (
+			id UUID PRIMARY KEY,
+			user_id BIGINT NOT NULL,
+			token VARCHAR(255) UNIQUE NOT NULL,
+			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			used_at TIMESTAMP WITH TIME ZONE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token)`,
+		`CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id)`,
+
+		// Audit log table
+		`CREATE TABLE IF NOT EXISTS audit_logs (
+			id BIGSERIAL PRIMARY KEY,
+			user_id BIGINT,
+			action VARCHAR(100) NOT NULL,
+			resource_type VARCHAR(50),
+			resource_id VARCHAR(100),
+			details TEXT,
+			ip_address INET,
+			user_agent TEXT,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)`,
+	}
+
+	for _, query := range queries {
+		if _, err := p.db.Exec(query); err != nil {
+			return fmt.Errorf("failed to execute query %s: %w", query, err)
+		}
 	}
 
 	return nil
@@ -168,7 +297,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_geographic_short_code ON geographic_analytics(short_code)`,
 		`CREATE INDEX IF NOT EXISTS idx_geographic_country ON geographic_analytics(country_code)`,
 		`CREATE INDEX IF NOT EXISTS idx_geographic_location ON geographic_analytics(country_code, region, city)`,
-		
+
 		// Enhanced device analytics table
 		`CREATE TABLE IF NOT EXISTS device_analytics (
 			id BIGSERIAL PRIMARY KEY,
@@ -195,7 +324,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_device_brand ON device_analytics(device_brand, device_model)`,
 		`CREATE INDEX IF NOT EXISTS idx_device_os ON device_analytics(os_name, os_version)`,
 		`CREATE INDEX IF NOT EXISTS idx_device_browser ON device_analytics(browser_name, browser_version)`,
-		
+
 		// Time-based analytics table
 		`CREATE TABLE IF NOT EXISTS time_analytics (
 			id BIGSERIAL PRIMARY KEY,
@@ -219,7 +348,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_time_hour ON time_analytics(hour_of_day)`,
 		`CREATE INDEX IF NOT EXISTS idx_time_day_week ON time_analytics(day_of_week)`,
 		`CREATE INDEX IF NOT EXISTS idx_time_heatmap ON time_analytics(short_code, click_date, hour_of_day)`,
-		
+
 		// Enhanced referrer analytics table
 		`CREATE TABLE IF NOT EXISTS referrer_analytics (
 			id BIGSERIAL PRIMARY KEY,
@@ -245,7 +374,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_referrer_domain ON referrer_analytics(referrer_domain)`,
 		`CREATE INDEX IF NOT EXISTS idx_referrer_type ON referrer_analytics(referrer_type)`,
 		`CREATE INDEX IF NOT EXISTS idx_referrer_campaign ON referrer_analytics(campaign_source, campaign_medium)`,
-		
+
 		// Conversion tracking tables
 		`CREATE TABLE IF NOT EXISTS conversion_goals (
 			id BIGSERIAL PRIMARY KEY,
@@ -263,7 +392,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_conversion_goals_user ON conversion_goals(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_conversion_goals_active ON conversion_goals(is_active)`,
-		
+
 		// Conversions tracking table
 		`CREATE TABLE IF NOT EXISTS conversions (
 			id BIGSERIAL PRIMARY KEY,
@@ -288,7 +417,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_conversions_goal ON conversions(goal_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_conversions_time ON conversions(conversion_time)`,
 		`CREATE INDEX IF NOT EXISTS idx_conversions_session ON conversions(session_id)`,
-		
+
 		// A/B testing tables
 		`CREATE TABLE IF NOT EXISTS ab_tests (
 			id BIGSERIAL PRIMARY KEY,
@@ -315,7 +444,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_ab_tests_user ON ab_tests(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_ab_tests_status ON ab_tests(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_ab_tests_dates ON ab_tests(start_date, end_date)`,
-		
+
 		// A/B test results tracking
 		`CREATE TABLE IF NOT EXISTS ab_test_results (
 			id BIGSERIAL PRIMARY KEY,
@@ -335,7 +464,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_ab_test_results_test ON ab_test_results(test_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_ab_test_results_date ON ab_test_results(date)`,
-		
+
 		// Attribution tracking for better conversion analysis
 		`CREATE TABLE IF NOT EXISTS attribution_touchpoints (
 			id BIGSERIAL PRIMARY KEY,
@@ -375,7 +504,7 @@ func (p *PostgresStorage) SaveURLMapping(mapping *models.URLMapping) error {
 	`
 	_, err := p.db.Exec(query, mapping.ID, mapping.ShortCode, mapping.OriginalURL,
 		mapping.CreatedAt, mapping.ExpiresAt, mapping.CreatedByIP, mapping.UserID)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to save URL mapping: %w", err)
 	}
@@ -389,18 +518,18 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 		FROM url_mappings
 		WHERE short_code = $1 AND is_active = TRUE
 	`
-	
+
 	mapping := &models.URLMapping{}
 	var expiresAt sql.NullTime
 	var createdByIP sql.NullString
 	var userID sql.NullInt64
-	
+
 	err := p.db.QueryRow(query, shortCode).Scan(
 		&mapping.ID, &mapping.ShortCode, &mapping.OriginalURL,
 		&mapping.CreatedAt, &expiresAt, &mapping.ClickCount,
 		&mapping.IsActive, &createdByIP, &userID,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrURLNotFound
@@ -444,7 +573,7 @@ func (p *PostgresStorage) SaveClickEvent(event *models.ClickEvent) error {
 	`
 	_, err := p.db.Exec(query, event.ID, event.ShortCode, event.ClickedAt,
 		event.IPAddress, event.UserAgent, event.Referrer, event.CountryCode)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to save click event: %w", err)
 	}
@@ -630,7 +759,7 @@ func (p *PostgresStorage) CreateSession(session *models.UserSession) error {
 		                         refresh_token_hash, expires_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err := p.Exec(query, session.ID, session.UserID, session.DeviceInfo, session.IPAddress, 
+	_, err := p.Exec(query, session.ID, session.UserID, session.DeviceInfo, session.IPAddress,
 		session.UserAgent, session.RefreshTokenHash, session.ExpiresAt, session.CreatedAt)
 	return err
 }
