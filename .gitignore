@@ -154,6 +154,7 @@ MANIFEST
 # Environment variables
 .env.*
 !.env.example
+!.env.*.example
 
 # OS specific
 .DS_Store

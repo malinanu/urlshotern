@@ -24,8 +24,17 @@ RUN cd frontend && npm ci
 # Copy source code (both Go and frontend)
 COPY . .
 
-# Build frontend for production
-RUN cd frontend && npm run build
+# Accept build arguments for Next.js public environment variables
+ARG NEXT_PUBLIC_API_URL
+ARG BASE_URL
+ARG NODE_ENV=production
+
+# Build frontend for production with environment variables
+RUN cd frontend && \
+    NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    BASE_URL=${BASE_URL} \
+    NODE_ENV=${NODE_ENV} \
+    npm run build
 
 # Create static directory and copy built frontend
 RUN mkdir -p /app/static
