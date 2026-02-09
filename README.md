@@ -2,6 +2,12 @@
 
 A high-performance URL shortener service built with Go, featuring Redis caching, PostgreSQL persistence, and comprehensive analytics.
 
+> **🚀 Need to Deploy? Having Issues?**
+> - **Oracle Server Deployment:** See [START_HERE.md](START_HERE.md) for quick deployment guide
+> - **Using Portainer?** See [PORTAINER_DEPLOYMENT_GUIDE.md](PORTAINER_DEPLOYMENT_GUIDE.md)
+> - **Troubleshooting 404 errors?** See [DEPLOYMENT_FIX.md](DEPLOYMENT_FIX.md)
+> - **Visual diagrams?** See [DEPLOYMENT_FLOW.md](DEPLOYMENT_FLOW.md)
+
 > **Latest Update (2026-02-07)**: Security vulnerabilities fixed! All Docker and frontend dependencies updated. See [SECURITY_UPDATE.md](SECURITY_UPDATE.md) for details.
 
 ## Features
@@ -177,6 +183,29 @@ See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for the complete migration guide an
 
 ## Deployment
 
+### 🚀 Quick Deployment Guides
+
+**Choose your deployment method:**
+
+1. **Oracle Cloud Server (Portainer)** ⭐ Most Common
+   - Start here: [START_HERE.md](START_HERE.md)
+   - Portainer UI guide: [PORTAINER_DEPLOYMENT_GUIDE.md](PORTAINER_DEPLOYMENT_GUIDE.md)
+   - Visual diagrams: [DEPLOYMENT_FLOW.md](DEPLOYMENT_FLOW.md)
+
+2. **Troubleshooting Deployment Issues**
+   - 404 errors on auth endpoints? → [DEPLOYMENT_FIX.md](DEPLOYMENT_FIX.md)
+   - Quick reference card: [QUICK_FIX_CARD.md](QUICK_FIX_CARD.md)
+   - Complete implementation details: [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
+
+3. **Testing Your Deployment**
+   ```bash
+   # Windows PowerShell
+   .\test-auth-endpoints.ps1 "http://YOUR_SERVER:8082"
+
+   # Linux/macOS
+   ./test-auth-endpoints.sh http://YOUR_SERVER:8082
+   ```
+
 ### Docker Compose (Recommended)
 
 ```bash
@@ -185,6 +214,9 @@ make docker-run
 
 # Or manually
 docker-compose -f docker/docker-compose.yml up -d
+
+# Oracle Cloud deployment
+docker-compose -f docker-compose.oracle.yml up -d
 ```
 
 ### Manual Deployment
