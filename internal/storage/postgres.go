@@ -262,6 +262,45 @@ func (p *PostgresStorage) initAuthenticationTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)`,
 		`CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)`,
+
+		// API Keys table - for programmatic access
+		`CREATE TABLE IF NOT EXISTS api_keys (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id BIGINT NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			description TEXT,
+			key_hash VARCHAR(255) NOT NULL UNIQUE,
+			key_prefix VARCHAR(100) NOT NULL,
+			permissions JSONB DEFAULT '[]'::jsonb,
+			rate_limit INTEGER DEFAULT 1000,
+			is_active BOOLEAN DEFAULT TRUE,
+			last_used_at TIMESTAMP WITH TIME ZONE,
+			last_used_ip VARCHAR(45),
+			expires_at TIMESTAMP WITH TIME ZONE,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON api_keys(key_prefix)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active)`,
+
+		// API Key Usage table - for tracking and analytics
+		`CREATE TABLE IF NOT EXISTS api_key_usage (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			api_key_id UUID NOT NULL,
+			endpoint VARCHAR(255) NOT NULL,
+			method VARCHAR(10) NOT NULL,
+			status_code INTEGER NOT NULL,
+			response_time_ms INTEGER NOT NULL,
+			ip_address VARCHAR(45),
+			user_agent TEXT,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_usage_api_key_id ON api_key_usage(api_key_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage(created_at)`,
 	}
 
 	for _, query := range queries {
