@@ -23,6 +23,27 @@ done
 
 echo "✅ Database is ready!"
 
+# Try to grant necessary permissions (PostgreSQL 15+ requires explicit grants)
+# This is optional and will be skipped if we don't have postgres superuser access
+echo "🔑 Attempting to grant schema permissions..."
+if PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "postgres" -d "$DB_NAME" -c "GRANT USAGE ON SCHEMA public TO $DB_USER;" 2>/dev/null; then
+    echo "   ✅ Granting permissions as postgres superuser..."
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "postgres" -d "$DB_NAME" <<-EOSQL 2>/dev/null
+	GRANT CREATE ON SCHEMA public TO $DB_USER;
+	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB_USER;
+	GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;
+	ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $DB_USER;
+	ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $DB_USER;
+EOSQL
+    echo "   ✅ Permissions granted successfully"
+else
+    echo "   ⚠️  Could not grant permissions as postgres superuser (this is OK if permissions were already set)"
+    echo "   ℹ️  If you get permission errors, run this manually:"
+    echo "      docker exec -it <postgres-container> psql -U postgres -d $DB_NAME"
+    echo "      GRANT USAGE ON SCHEMA public TO $DB_USER;"
+    echo "      GRANT CREATE ON SCHEMA public TO $DB_USER;"
+fi
+
 # Create schema_migrations table if it doesn't exist
 echo "📋 Ensuring schema_migrations table exists..."
 PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<-EOSQL
