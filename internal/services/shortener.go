@@ -377,9 +377,9 @@ func (e *ServiceError) Error() string {
 func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*models.UserURLResponse, int64, error) {
 	query := `
 		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
-		       COALESCE(user_id, 0), COALESCE(is_public, true), COALESCE(custom_alias, ''), 
+		       COALESCE(user_id, 0), COALESCE(is_public, true),
 		       COALESCE(title, ''), COALESCE(description, '')
-		FROM url_mappings 
+		FROM url_mappings
 		WHERE user_id = $1 AND is_active = TRUE
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -396,13 +396,13 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 		var url models.UserURLResponse
 		var userIDDB int64
 		var isPublicDB bool
-		var customAlias, title, description string
+		var title, description string
 		var expiresAt sql.NullTime
-		
+
 		err := rows.Scan(
 			&url.ID, &url.ShortCode, &url.OriginalURL, &url.CreatedAt,
 			&expiresAt, &url.ClickCount, &url.IsActive,
-			&userIDDB, &isPublicDB, &customAlias, &title, &description,
+			&userIDDB, &isPublicDB, &title, &description,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan URL row: %w", err)
