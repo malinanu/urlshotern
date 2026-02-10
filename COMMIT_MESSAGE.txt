@@ -1,0 +1,142 @@
+feat: Add comprehensive database migrations for complete 70-table schema
+
+## Summary
+
+Create migrations 012-020 to add 46 missing database tables, bringing total
+from 24 to 70 tables. This completes the full enterprise-grade URL shortener
+schema including RBAC, teams, billing, CMS, and advanced analytics.
+
+## Problem
+
+- Only 24 of 70 required tables were created on Oracle deployment
+- Table definitions scattered across multiple SQL files (database.sql,
+  billing_schema.sql, cms_schema.sql, enhanced_analytics_schema.sql)
+- SQL files only executed in local development, not production
+- initTables() in postgres.go only creates core 24 tables
+
+## Solution
+
+Consolidated all missing table definitions into version-controlled migrations:
+
+### Migration 012: Authentication Extended (empty placeholder)
+- Reserved for future auth tables
+
+### Migration 013: RBAC Tables (5 tables)
+- oauth_providers, roles, permissions, role_permissions, user_roles
+- Default roles: admin, user, premium, team_admin, team_member
+- Default permissions for URL, user, team, domain, analytics resources
+
+### Migration 014: Team Management (3 tables)
+- teams, team_members, team_invitations
+- Support for team-based URL management
+
+### Migration 015: URL Collaboration (9 tables)
+- url_shares, url_comments, url_bookmarks, url_favorites
+- url_collections, url_collection_items, url_notes, url_activities
+- user_activity_logs
+
+### Migration 016: Custom Domains (2 tables)
+- custom_domains, domain_analytics
+- SSL certificate management, DNS verification
+
+### Migration 017: CMS Tables (8 tables)
+- static_pages, page_revisions, page_visits, media_files
+- global_settings, content_blocks, page_templates, navigation_menus
+- CMS permissions
+
+### Migration 018: Billing Tables (7 tables + functions)
+- subscriptions, billing_events, usage_tracking, payment_methods
+- coupons, coupon_redemptions, billing_analytics (materialized view)
+- Functions: update_usage_tracking, get_current_month_usage,
+  create_default_subscription, refresh_billing_analytics
+- Trigger: Auto-create free subscription for new users
+
+### Migration 019: Advanced Analytics (14 tables + functions)
+- touchpoint_attributions, attribution_model_performance
+- realtime_subscriptions, hourly/daily/weekly/monthly_analytics
+- country/device/referrer summaries, analytics_aggregation_state
+- daily_analytics_summary (materialized view)
+- Functions: refresh_daily_analytics_summary, cleanup_old_analytics_data
+
+### Migration 020: URL Mappings Extensions (13 columns + view)
+- Add: user_id, team_id, title, description, tags, is_public
+- Add: password_hash, custom_domain, utm_* parameters (5 columns)
+- Create: urls view (alias for url_mappings)
+
+## Changes
+
+### New Files (21 files):
+- configs/migrations/012_auth_extended_*.sql (2 files)
+- configs/migrations/013_rbac_tables_*.sql (2 files)
+- configs/migrations/014_team_management_*.sql (2 files)
+- configs/migrations/015_url_collaboration_*.sql (2 files)
+- configs/migrations/016_custom_domains_*.sql (2 files)
+- configs/migrations/017_cms_tables_*.sql (2 files)
+- configs/migrations/018_billing_tables_*.sql (2 files)
+- configs/migrations/019_advanced_analytics_*.sql (2 files)
+- configs/migrations/020_url_mappings_extended_*.sql (2 files)
+- DATABASE_SCHEMA_OVERVIEW.md
+- MIGRATION_SUMMARY.md
+- QUICK_DEPLOYMENT_GUIDE.md
+
+### Total Impact:
+- **Before:** 24 tables
+- **After:** 70 tables
+- **Added:** 46 tables via 9 migrations
+- **Functions:** 6 database functions
+- **Triggers:** 1 trigger
+- **Views:** 2 views (1 standard, 1 materialized)
+- **Indexes:** 150+ indexes for performance
+
+## Safety Features
+
+✅ Idempotent (IF NOT EXISTS)
+✅ Reversible (down migrations)
+✅ Foreign key safe (CASCADE/SET NULL)
+✅ Non-destructive to existing tables
+✅ Comprehensive indexing
+✅ Default data included
+
+## Deployment
+
+### Oracle Server:
+```bash
+git pull origin main
+docker exec urlshortener-app /app/scripts/run-migrations.sh
+docker exec -it postgresql-central psql -U postgres -d urlshortener_db \
+  -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';"
+# Expected: 69-70 tables
+docker-compose -f docker-compose.oracle.yml restart app
+```
+
+## Verification
+
+Run verification commands from QUICK_DEPLOYMENT_GUIDE.md to check:
+- Total table count (69-70)
+- RBAC tables (5)
+- Team tables (3)
+- Billing tables (7)
+- CMS tables (8)
+- Analytics tables (14)
+- No "table does not exist" errors
+
+## Documentation
+
+- DATABASE_SCHEMA_OVERVIEW.md - Complete schema documentation
+- MIGRATION_SUMMARY.md - Detailed migration guide
+- QUICK_DEPLOYMENT_GUIDE.md - Quick reference for deployment
+
+## Testing
+
+- [x] Migration syntax validated
+- [x] Foreign key references verified
+- [x] Index definitions optimized
+- [x] Default data included
+- [x] Rollback scripts created
+- [x] Documentation complete
+
+## Related Issues
+
+Fixes database schema completeness issue where only 24/70 tables were created.
+
+Co-authored-by: Claude Sonnet 4.5 <noreply@anthropic.com>
