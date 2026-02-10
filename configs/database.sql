@@ -200,6 +200,7 @@ ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS custom_alias VARCHAR(50);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(100);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS utm_source VARCHAR(100);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(100);
@@ -410,6 +411,7 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires
 CREATE INDEX IF NOT EXISTS idx_url_mappings_user_id ON url_mappings(user_id);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_team_id ON url_mappings(team_id);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_is_public ON url_mappings(is_public);
+CREATE INDEX IF NOT EXISTS idx_url_mappings_custom_alias ON url_mappings(custom_alias);
 
 -- Team indexes
 CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id);

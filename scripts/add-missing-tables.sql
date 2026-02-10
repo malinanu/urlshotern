@@ -315,6 +315,12 @@ BEGIN
         ALTER TABLE url_mappings ADD COLUMN password_hash VARCHAR(255);
     END IF;
 
+    -- Add custom_alias column
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='url_mappings' AND column_name='custom_alias') THEN
+        ALTER TABLE url_mappings ADD COLUMN custom_alias VARCHAR(50);
+    END IF;
+
     -- Add custom_domain column
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                    WHERE table_name='url_mappings' AND column_name='custom_domain') THEN
@@ -362,6 +368,7 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires
 CREATE INDEX IF NOT EXISTS idx_url_mappings_user_id ON url_mappings(user_id);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_team_id ON url_mappings(team_id);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_is_public ON url_mappings(is_public);
+CREATE INDEX IF NOT EXISTS idx_url_mappings_custom_alias ON url_mappings(custom_alias);
 CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id);
 CREATE INDEX IF NOT EXISTS idx_teams_slug ON teams(slug);
 CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
