@@ -75,7 +75,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   // Check if user is admin
-  const isAdmin = user?.account_type === 'admin';
+  const isAdmin = user?.is_admin === true;
 
   // Redirect if not authenticated or not admin
   useEffect(() => {

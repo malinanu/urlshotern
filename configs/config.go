@@ -68,6 +68,9 @@ type Config struct {
 
 	// Product Sync Configuration
 	ProductSyncIntervalMinutes int // How often to sync products from Polar (in minutes)
+
+	// Admin Panel Control
+	EnableAdminRoutes bool // Enable admin routes at /api/v1/admin/* (default: false for security)
 }
 
 func LoadConfig() (*Config, error) {
@@ -127,6 +130,9 @@ func LoadConfig() (*Config, error) {
 
 		// Product Sync Configuration
 		ProductSyncIntervalMinutes: getEnvAsInt("PRODUCT_SYNC_INTERVAL_MINUTES", 60), // Default: sync every hour
+
+		// Admin Panel Control (default: false for security)
+		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
 	}
 
 	return config, nil
@@ -150,6 +156,14 @@ func getEnvAsInt(key string, defaultValue int) int {
 func getEnvAsInt64(key string, defaultValue int64) int64 {
 	valueStr := getEnv(key, "")
 	if value, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	valueStr := getEnv(key, "")
+	if value, err := strconv.ParseBool(valueStr); err == nil {
 		return value
 	}
 	return defaultValue

@@ -37,6 +37,7 @@ type PublicUser struct {
 	Provider      string     `json:"provider"`
 	AvatarURL     *string    `json:"avatar_url"`
 	AccountType   string     `json:"account_type"`
+	IsAdmin       bool       `json:"is_admin"`
 	IsActive      bool       `json:"is_active"`
 	LastLoginAt   *time.Time `json:"last_login_at"`
 	CreatedAt     time.Time  `json:"created_at"`
@@ -54,6 +55,7 @@ func (u *User) ToPublic() *PublicUser {
 		Provider:      u.Provider,
 		AvatarURL:     u.AvatarURL,
 		AccountType:   u.AccountType,
+		IsAdmin:       u.IsAdmin,
 		IsActive:      u.IsActive,
 		LastLoginAt:   u.LastLoginAt,
 		CreatedAt:     u.CreatedAt,

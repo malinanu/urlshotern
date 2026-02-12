@@ -92,7 +92,7 @@ func main() {
 	router.Use(middleware.MetricsMiddleware()) // Add metrics collection
 
 	// Setup all routes
-	routes.SetupRoutes(router, handler, authMiddleware)
+	routes.SetupRoutes(router, handler, authMiddleware, config)
 
 	// Add profiling endpoints
 	router.GET("/debug/pprof/", gin.WrapF(pprof.Index))
