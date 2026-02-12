@@ -58,17 +58,17 @@ CREATE INDEX IF NOT EXISTS idx_realtime_subscriptions_last_ping ON realtime_subs
 CREATE TABLE IF NOT EXISTS hourly_analytics (
     id BIGSERIAL PRIMARY KEY,
     short_code VARCHAR(50) NOT NULL,
-    hour_timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    hour TIMESTAMP WITH TIME ZONE NOT NULL,
     total_clicks INTEGER DEFAULT 0,
     unique_visitors INTEGER DEFAULT 0,
     unique_countries INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(short_code, hour_timestamp)
+    UNIQUE(short_code, hour)
 );
 
 CREATE INDEX IF NOT EXISTS idx_hourly_analytics_short_code ON hourly_analytics(short_code);
-CREATE INDEX IF NOT EXISTS idx_hourly_analytics_timestamp ON hourly_analytics(hour_timestamp);
+CREATE INDEX IF NOT EXISTS idx_hourly_analytics_timestamp ON hourly_analytics(hour);
 
 -- Daily analytics aggregation table
 CREATE TABLE IF NOT EXISTS daily_analytics (
@@ -215,7 +215,7 @@ BEGIN
     DELETE FROM attribution_touchpoints WHERE touchpoint_time < NOW() - INTERVAL '1 day' * retention_days;
     DELETE FROM touchpoint_attributions WHERE created_at < NOW() - INTERVAL '1 day' * retention_days;
     DELETE FROM realtime_subscriptions WHERE last_ping < NOW() - INTERVAL '1 hour';
-    DELETE FROM hourly_analytics WHERE hour_timestamp < NOW() - INTERVAL '1 day' * retention_days;
+    DELETE FROM hourly_analytics WHERE hour < NOW() - INTERVAL '1 day' * retention_days;
     DELETE FROM daily_analytics WHERE date < CURRENT_DATE - retention_days;
     DELETE FROM weekly_analytics WHERE week_start < CURRENT_DATE - retention_days;
     DELETE FROM monthly_analytics WHERE month_start < CURRENT_DATE - retention_days;
