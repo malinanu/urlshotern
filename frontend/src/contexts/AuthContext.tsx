@@ -23,6 +23,7 @@ interface User {
   provider: string;
   avatar_url?: string;
   account_type: string;
+  is_admin: boolean;
   is_active: boolean;
   last_login_at?: string;
   created_at: string;
