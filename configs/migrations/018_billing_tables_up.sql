@@ -8,7 +8,7 @@
 
 -- Subscriptions table
 CREATE TABLE IF NOT EXISTS subscriptions (
-    id BIGINT PRIMARY KEY DEFAULT (CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_snowflake_id') THEN generate_snowflake_id() ELSE nextval('subscriptions_id_seq'::regclass) END),
+    id BIGINT PRIMARY KEY DEFAULT generate_snowflake_id(),
     user_id BIGINT NOT NULL,
     plan_type VARCHAR(50) NOT NULL DEFAULT 'free',
     status VARCHAR(50) NOT NULL DEFAULT 'active',
@@ -26,9 +26,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Create sequence for subscriptions if snowflake function doesn't exist
-CREATE SEQUENCE IF NOT EXISTS subscriptions_id_seq;
-
 -- Create indexes for subscriptions
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer_id ON subscriptions(stripe_customer_id);
@@ -37,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_type ON subscriptions(plan_typ
 
 -- Billing events table for tracking billing-related events
 CREATE TABLE IF NOT EXISTS billing_events (
-    id BIGINT PRIMARY KEY DEFAULT (CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_snowflake_id') THEN generate_snowflake_id() ELSE nextval('billing_events_id_seq'::regclass) END),
+    id BIGINT PRIMARY KEY DEFAULT generate_snowflake_id(),
     user_id BIGINT NOT NULL,
     subscription_id BIGINT,
     event_type VARCHAR(100) NOT NULL,
@@ -53,8 +50,6 @@ CREATE TABLE IF NOT EXISTS billing_events (
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL
 );
 
-CREATE SEQUENCE IF NOT EXISTS billing_events_id_seq;
-
 -- Create indexes for billing events
 CREATE INDEX IF NOT EXISTS idx_billing_events_user_id ON billing_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_billing_events_subscription_id ON billing_events(subscription_id);
@@ -64,7 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_billing_events_created_at ON billing_events(creat
 
 -- Usage tracking table for monitoring user usage patterns
 CREATE TABLE IF NOT EXISTS usage_tracking (
-    id BIGINT PRIMARY KEY DEFAULT (CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_snowflake_id') THEN generate_snowflake_id() ELSE nextval('usage_tracking_id_seq'::regclass) END),
+    id BIGINT PRIMARY KEY DEFAULT generate_snowflake_id(),
     user_id BIGINT NOT NULL,
     tracking_period DATE NOT NULL,
     urls_created INTEGER DEFAULT 0,
@@ -78,8 +73,6 @@ CREATE TABLE IF NOT EXISTS usage_tracking (
     UNIQUE(user_id, tracking_period)
 );
 
-CREATE SEQUENCE IF NOT EXISTS usage_tracking_id_seq;
-
 -- Create indexes for usage tracking
 CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_id ON usage_tracking(user_id);
 CREATE INDEX IF NOT EXISTS idx_usage_tracking_period ON usage_tracking(tracking_period);
@@ -87,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_usage_tracking_user_period ON usage_tracking(user
 
 -- Payment methods table
 CREATE TABLE IF NOT EXISTS payment_methods (
-    id BIGINT PRIMARY KEY DEFAULT (CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_snowflake_id') THEN generate_snowflake_id() ELSE nextval('payment_methods_id_seq'::regclass) END),
+    id BIGINT PRIMARY KEY DEFAULT generate_snowflake_id(),
     user_id BIGINT NOT NULL,
     stripe_payment_method_id VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
@@ -103,15 +96,13 @@ CREATE TABLE IF NOT EXISTS payment_methods (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE SEQUENCE IF NOT EXISTS payment_methods_id_seq;
-
 -- Create indexes for payment methods
 CREATE INDEX IF NOT EXISTS idx_payment_methods_user_id ON payment_methods(user_id);
 CREATE INDEX IF NOT EXISTS idx_payment_methods_stripe_pm_id ON payment_methods(stripe_payment_method_id);
 
 -- Coupons and discounts table
 CREATE TABLE IF NOT EXISTS coupons (
-    id BIGINT PRIMARY KEY DEFAULT (CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_snowflake_id') THEN generate_snowflake_id() ELSE nextval('coupons_id_seq'::regclass) END),
+    id BIGINT PRIMARY KEY DEFAULT generate_snowflake_id(),
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
     description TEXT,
@@ -128,8 +119,6 @@ CREATE TABLE IF NOT EXISTS coupons (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE SEQUENCE IF NOT EXISTS coupons_id_seq;
-
 -- Create indexes for coupons
 CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
 CREATE INDEX IF NOT EXISTS idx_coupons_is_active ON coupons(is_active);
@@ -137,7 +126,7 @@ CREATE INDEX IF NOT EXISTS idx_coupons_valid_until ON coupons(valid_until);
 
 -- Coupon redemptions table
 CREATE TABLE IF NOT EXISTS coupon_redemptions (
-    id BIGINT PRIMARY KEY DEFAULT (CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_snowflake_id') THEN generate_snowflake_id() ELSE nextval('coupon_redemptions_id_seq'::regclass) END),
+    id BIGINT PRIMARY KEY DEFAULT generate_snowflake_id(),
     coupon_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     subscription_id BIGINT,
@@ -148,8 +137,6 @@ CREATE TABLE IF NOT EXISTS coupon_redemptions (
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL,
     UNIQUE(coupon_id, user_id)
 );
-
-CREATE SEQUENCE IF NOT EXISTS coupon_redemptions_id_seq;
 
 -- Create indexes for coupon redemptions
 CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon_id ON coupon_redemptions(coupon_id);
