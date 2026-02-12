@@ -40,6 +40,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
 
+      # Admin Panel Configuration
+      - ENABLE_ADMIN_ROUTES=${ENABLE_ADMIN_ROUTES:-false}
+
       # Polar Configuration (Optional)
       - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}
       - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-}
