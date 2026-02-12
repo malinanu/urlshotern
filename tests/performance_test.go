@@ -279,7 +279,6 @@ func TestLoadTestAnalyticsProcessing(t *testing.T) {
 	// Simulate 1000 RPS for 10 seconds = 10,000 clicks
 	const rps = 1000
 	const duration = 10 * time.Second
-	const totalRequests = rps * int(duration.Seconds())
 
 	start := time.Now()
 	submitted := 0

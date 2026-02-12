@@ -12,7 +12,6 @@ import (
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
 	"github.com/URLshorter/url-shortener/internal/models"
-	"github.com/URLshorter/url-shortener/internal/routes"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -36,7 +35,7 @@ func TestAPIKeyStatsEndpoint_NewKey(t *testing.T) {
 	defer db.Close()
 
 	// Create services and router
-	router := setupTestRouter(db, config)
+	router := setupAPIKeyStatsTestRouter(db, config)
 
 	// Step 1: Create test user and login
 	token, userID := createUserAndLogin(t, router, db)
@@ -83,7 +82,7 @@ func TestAPIKeyStatsEndpoint_WithUsage(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	router := setupTestRouter(db, config)
+	router := setupAPIKeyStatsTestRouter(db, config)
 	token, _ := createUserAndLogin(t, router, db)
 	apiKeyID, _ := createAPIKey(t, router, token, "Test Key with Usage")
 
@@ -126,7 +125,7 @@ func TestAPIKeyStatsEndpoint_Unauthorized(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	router := setupTestRouter(db, config)
+	router := setupAPIKeyStatsTestRouter(db, config)
 
 	// Create User A with API key
 	tokenA, _ := createUserAndLogin(t, router, db)
@@ -159,7 +158,7 @@ func TestAPIKeyStatsEndpoint_AllFailures(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	router := setupTestRouter(db, config)
+	router := setupAPIKeyStatsTestRouter(db, config)
 	token, _ := createUserAndLogin(t, router, db)
 	apiKeyID, _ := createAPIKey(t, router, token, "Failing API Key")
 
@@ -209,7 +208,7 @@ func getTestConfig() *configs.Config {
 	}
 }
 
-func setupTestRouter(db *storage.PostgresStorage, config *configs.Config) *gin.Engine {
+func setupAPIKeyStatsTestRouter(db *storage.PostgresStorage, config *configs.Config) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 
@@ -278,7 +277,7 @@ func createAPIKey(t *testing.T, router *gin.Engine, token string, name string) (
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	return response.ID, response.Key
+	return response.APIKey.ID, response.PlainKey
 }
 
 func recordAPIKeyUsage(t *testing.T, db *storage.PostgresStorage, apiKeyID uuid.UUID, statusCode int, responseTimeMs int) {
