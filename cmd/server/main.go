@@ -129,7 +129,7 @@ func main() {
 	router := gin.Default()
 
 	// Setup all routes
-	routes.SetupRoutes(router, handler, authMiddleware)
+	routes.SetupRoutes(router, handler, authMiddleware, config)
 
 	// Setup webhook admin routes
 	routes.SetupWebhookAdminRoutes(router, webhookAdminHandler, authMiddleware)

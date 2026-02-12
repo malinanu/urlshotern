@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 )
@@ -17,6 +18,7 @@ func SetupRoutes(
 	router *gin.Engine,
 	handler *handlers.Handler,
 	authMiddleware *middleware.AuthMiddleware,
+	config *configs.Config,
 ) {
 	// Add global middleware
 	router.Use(middleware.CORSMiddleware())
@@ -70,8 +72,10 @@ func SetupRoutes(
 	// Protected routes (authentication required - supports both JWT and API keys)
 	setupProtectedRoutes(router, handler, authMiddleware)
 
-	// Admin routes (admin access required) - temporarily disabled
-	// setupAdminRoutes(router, handler, authService)
+	// Admin routes (admin access required) - controlled by environment variable
+	if config.EnableAdminRoutes {
+		setupAdminRoutes(router, handler, authMiddleware)
+	}
 
 	// Static file serving for frontend (must be last to not interfere with API routes)
 	setupStaticRoutes(router)
@@ -195,14 +199,13 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	setupUserAnalyticsRoutes(api, handler)
 }
 
-// setupAdminRoutes configures routes that require admin access - TEMPORARILY DISABLED
-/*
-func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authService *services.AuthService) {
+// setupAdminRoutes configures routes that require admin access
+func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddleware *middleware.AuthMiddleware) {
 	admin := router.Group("/api/v1/admin")
-	admin.Use(middleware.AuthMiddleware(authService))
-	admin.Use(middleware.AdminMiddleware())
+	admin.Use(authMiddleware.RequireAuth())
+	admin.Use(authMiddleware.RequireAdmin())
 	admin.Use(middleware.RateLimitMiddleware(middleware.DefaultRateLimit))
-	
+
 	// Admin user management
 	admin.GET("/users/:id", handler.AuthHandlers.GetUserByID)
 	admin.GET("/users", func(c *gin.Context) {
@@ -213,20 +216,10 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authService
 	admin.GET("/stats", func(c *gin.Context) {
 		c.JSON(501, gin.H{"error": "Admin stats endpoint not implemented"})
 	})
-	
-	// CMS management routes
-	cms := admin.Group("/cms")
-	{
-		cms.POST("/pages", handler.CMSHandlers.CreateStaticPage)
-		cms.GET("/pages", handler.CMSHandlers.ListStaticPages)
-		cms.GET("/pages/:id", handler.CMSHandlers.GetStaticPageByID)
-		cms.PUT("/pages/:id", handler.CMSHandlers.UpdateStaticPage)
-		cms.DELETE("/pages/:id", handler.CMSHandlers.DeleteStaticPage)
-		cms.GET("/pages/:id/revisions", handler.CMSHandlers.GetPageRevisions)
-		cms.GET("/pages/:id/analytics", handler.CMSHandlers.GetPageAnalytics)
-	}
+
+	// CMS routes REMOVED - handler.CMSHandlers doesn't exist
+	// TODO: Add CMSHandlers to Handler struct if CMS routes are needed
 }
-*/
 
 // setupConversionTrackingRoutes configures conversion tracking routes
 func setupConversionTrackingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
