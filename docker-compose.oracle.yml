@@ -39,6 +39,7 @@ services:
       - DB_CONN_MAX_LIFETIME=3600
       - DB_CONN_MAX_IDLE_TIME=600
       - DB_SSLMODE=disable
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-URLShortenerSecurePassword123!}
 
       # Redis Configuration
       - REDIS_HOST=urlshortener-redis
@@ -57,11 +58,11 @@ services:
       - urlshortener-network # Connect to Redis
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/health" ]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 90s
 
   redis:
     image: redis:7-alpine

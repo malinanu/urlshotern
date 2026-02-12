@@ -55,6 +55,14 @@ make migrate-dry-run DIRECTION=down VERSION=005  # Preview rollback
 # Or use scripts directly (cross-platform)
 ./scripts/migrate.sh status            # Linux/macOS
 .\scripts\migrate.ps1 status           # Windows PowerShell
+
+# Database maintenance (add missing tables, verify schema)
+.\scripts\apply-missing-tables.ps1 -DryRun   # Preview changes (Windows)
+.\scripts\apply-missing-tables.ps1           # Apply missing tables (Windows)
+.\scripts\apply-missing-tables.ps1 -Verify   # Verify database schema (Windows)
+./scripts/apply-missing-tables.sh --dry-run  # Preview changes (Linux/macOS)
+./scripts/apply-missing-tables.sh            # Apply missing tables (Linux/macOS)
+./scripts/apply-missing-tables.sh --verify   # Verify database schema (Linux/macOS)
 ```
 
 ## Architecture Overview

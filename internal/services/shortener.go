@@ -377,9 +377,9 @@ func (e *ServiceError) Error() string {
 func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*models.UserURLResponse, int64, error) {
 	query := `
 		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
-		       COALESCE(user_id, 0), COALESCE(is_public, true), COALESCE(custom_alias, ''), 
+		       COALESCE(user_id, 0), COALESCE(is_public, true), COALESCE(custom_alias, ''),
 		       COALESCE(title, ''), COALESCE(description, '')
-		FROM url_mappings 
+		FROM url_mappings
 		WHERE user_id = $1 AND is_active = TRUE
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -398,7 +398,7 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 		var isPublicDB bool
 		var customAlias, title, description string
 		var expiresAt sql.NullTime
-		
+
 		err := rows.Scan(
 			&url.ID, &url.ShortCode, &url.OriginalURL, &url.CreatedAt,
 			&expiresAt, &url.ClickCount, &url.IsActive,
@@ -417,6 +417,9 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 		}
 		if description != "" {
 			url.Description = &description
+		}
+		if customAlias != "" {
+			url.CustomAlias = &customAlias
 		}
 		url.IsPublic = isPublicDB
 

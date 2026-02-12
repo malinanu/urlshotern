@@ -104,6 +104,7 @@ type UserURLResponse struct {
 	OriginalURL string     `json:"original_url"`
 	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`
+	CustomAlias *string    `json:"custom_alias,omitempty"`
 	ClickCount  int64      `json:"click_count"`
 	IsActive    bool       `json:"is_active"`
 	IsPublic    bool       `json:"is_public"`

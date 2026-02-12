@@ -452,6 +452,9 @@ func (s *OptimizedShortenerService) GetUserURLs(userID int64, offset, limit int)
 		if description != "" {
 			url.Description = &description
 		}
+		if customAlias != "" {
+			url.CustomAlias = &customAlias
+		}
 		url.IsPublic = isPublicDB
 		url.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, url.ShortCode)
 

@@ -1,0 +1,11 @@
+-- Rollback: URL Collaboration Tables
+
+DROP TABLE IF EXISTS user_activity_logs CASCADE;
+DROP TABLE IF EXISTS url_activities CASCADE;
+DROP TABLE IF EXISTS url_notes CASCADE;
+DROP TABLE IF EXISTS url_collection_items CASCADE;
+DROP TABLE IF EXISTS url_collections CASCADE;
+DROP TABLE IF EXISTS url_favorites CASCADE;
+DROP TABLE IF EXISTS url_bookmarks CASCADE;
+DROP TABLE IF EXISTS url_comments CASCADE;
+DROP TABLE IF EXISTS url_shares CASCADE;

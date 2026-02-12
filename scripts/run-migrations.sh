@@ -16,7 +16,7 @@ echo "🗄️  Database: $DB_NAME on $DB_HOST:$DB_PORT"
 
 # Wait for database to be ready
 echo "⏳ Waiting for database to be ready..."
-until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c '\q' 2>/dev/null; do
+until PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -c '\q' 2>/dev/null; do
   echo "   Database is unavailable - sleeping"
   sleep 2
 done
@@ -26,9 +26,9 @@ echo "✅ Database is ready!"
 # Try to grant necessary permissions (PostgreSQL 15+ requires explicit grants)
 # This is optional and will be skipped if we don't have postgres superuser access
 echo "🔑 Attempting to grant schema permissions..."
-if PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "postgres" -d "$DB_NAME" -c "GRANT USAGE ON SCHEMA public TO $DB_USER;" 2>/dev/null; then
+if PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "postgres" -d "$DB_NAME" -v ON_ERROR_STOP=1 -c "GRANT USAGE ON SCHEMA public TO $DB_USER;" 2>/dev/null; then
     echo "   ✅ Granting permissions as postgres superuser..."
-    PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "postgres" -d "$DB_NAME" <<-EOSQL 2>/dev/null
+    PGPASSWORD=$POSTGRES_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "postgres" -d "$DB_NAME" -v ON_ERROR_STOP=1 <<-EOSQL 2>/dev/null
 	GRANT CREATE ON SCHEMA public TO $DB_USER;
 	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB_USER;
 	GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;
@@ -46,7 +46,7 @@ fi
 
 # Create schema_migrations table if it doesn't exist
 echo "📋 Ensuring schema_migrations table exists..."
-PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<-EOSQL
+PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 <<-EOSQL
 	CREATE TABLE IF NOT EXISTS schema_migrations (
 	    version VARCHAR(14) PRIMARY KEY,
 	    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -54,7 +54,7 @@ PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_N
 EOSQL
 
 # Get list of applied migrations
-APPLIED_MIGRATIONS=$(PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT version FROM schema_migrations ORDER BY version;")
+APPLIED_MIGRATIONS=$(PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -t -c "SELECT version FROM schema_migrations ORDER BY version;")
 
 # Find all *_up.sql migration files
 MIGRATION_FILES=$(find "$MIGRATIONS_DIR" -name '*_up.sql' | sort)
@@ -82,9 +82,9 @@ for migration_file in $MIGRATION_FILES; do
     echo "🔧 Applying migration $version: $filename"
 
     # Apply the migration
-    if PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$migration_file"; then
+    if PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -e -f "$migration_file"; then
         # Record the migration
-        PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "INSERT INTO schema_migrations (version) VALUES ('$version') ON CONFLICT DO NOTHING;"
+        PGPASSWORD=$DB_PASSWORD psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations (version) VALUES ('$version') ON CONFLICT DO NOTHING;"
         echo "   ✅ Migration $version applied successfully"
         MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
     else

@@ -200,6 +200,7 @@ ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS custom_alias VARCHAR(50);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(100);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS utm_source VARCHAR(100);
 ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(100);
@@ -410,6 +411,7 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires
 CREATE INDEX IF NOT EXISTS idx_url_mappings_user_id ON url_mappings(user_id);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_team_id ON url_mappings(team_id);
 CREATE INDEX IF NOT EXISTS idx_url_mappings_is_public ON url_mappings(is_public);
+CREATE INDEX IF NOT EXISTS idx_url_mappings_custom_alias ON url_mappings(custom_alias);
 
 -- Team indexes
 CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id);
@@ -440,57 +442,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 
--- Insert default roles and permissions
-INSERT INTO roles (name, display_name, description, is_system) VALUES
-    ('admin', 'Administrator', 'Full system access', true),
-    ('user', 'User', 'Standard user access', true),
-    ('premium', 'Premium User', 'Premium user with additional features', true),
-    ('team_admin', 'Team Administrator', 'Team administration access', true),
-    ('team_member', 'Team Member', 'Team member access', true)
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO permissions (name, display_name, description, resource, action, is_system) VALUES
-    ('user.create', 'Create Users', 'Create new users', 'user', 'create', true),
-    ('user.read', 'Read Users', 'View user information', 'user', 'read', true),
-    ('user.update', 'Update Users', 'Update user information', 'user', 'update', true),
-    ('user.delete', 'Delete Users', 'Delete users', 'user', 'delete', true),
-    ('url.create', 'Create URLs', 'Create new URLs', 'url', 'create', true),
-    ('url.read', 'Read URLs', 'View URLs', 'url', 'read', true),
-    ('url.update', 'Update URLs', 'Update URLs', 'url', 'update', true),
-    ('url.delete', 'Delete URLs', 'Delete URLs', 'url', 'delete', true),
-    ('analytics.read', 'Read Analytics', 'View analytics data', 'analytics', 'read', true),
-    ('team.create', 'Create Teams', 'Create new teams', 'team', 'create', true),
-    ('team.read', 'Read Teams', 'View team information', 'team', 'read', true),
-    ('team.update', 'Update Teams', 'Update team information', 'team', 'update', true),
-    ('team.delete', 'Delete Teams', 'Delete teams', 'team', 'delete', true),
-    ('domain.create', 'Create Custom Domains', 'Add custom domains', 'domain', 'create', true),
-    ('domain.read', 'Read Custom Domains', 'View custom domains', 'domain', 'read', true),
-    ('domain.update', 'Update Custom Domains', 'Update custom domains', 'domain', 'update', true),
-    ('domain.delete', 'Delete Custom Domains', 'Delete custom domains', 'domain', 'delete', true)
-ON CONFLICT (name) DO NOTHING;
-
--- Assign permissions to roles
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'admin'
-ON CONFLICT (role_id, permission_id) DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'user' AND p.name IN ('url.create', 'url.read', 'url.update', 'url.delete', 'analytics.read', 'user.read', 'user.update')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'premium' AND p.name IN ('url.create', 'url.read', 'url.update', 'url.delete', 'analytics.read', 'user.read', 'user.update', 'domain.create', 'domain.read', 'domain.update', 'domain.delete')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'team_admin' AND p.name IN ('team.read', 'team.update', 'team.delete', 'url.create', 'url.read', 'url.update', 'url.delete', 'analytics.read')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
-
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'team_member' AND p.name IN ('team.read', 'url.read', 'analytics.read')
-ON CONFLICT (role_id, permission_id) DO NOTHING;
+-- ============================================================================
+-- NOTE: Initial RBAC data seeding is handled by migrations
+-- ============================================================================
+-- Default roles, permissions, and role_permissions are inserted by:
+--   - configs/migrations/013_rbac_tables_up.sql (RBAC setup)
+--
+-- This ensures data is properly tracked in schema_migrations table
+-- and can be verified/rolled back via migration system.
+-- ============================================================================

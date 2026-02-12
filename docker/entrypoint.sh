@@ -2,8 +2,9 @@
 # Docker entrypoint script
 # Runs database migrations before starting the application
 
-# Removed 'set -e' to allow app to start even if migrations fail
-# set -e
+# Exit on any error - migrations MUST succeed before app starts
+set -e
+set -o pipefail
 
 echo "🚀 Starting URL Shortener Application..."
 
@@ -17,9 +18,15 @@ fi
 echo "🔄 Running database migrations..."
 if [ -f "/app/scripts/run-migrations.sh" ]; then
     chmod +x /app/scripts/run-migrations.sh
-    /app/scripts/run-migrations.sh
+    if ! /app/scripts/run-migrations.sh; then
+        echo "❌ CRITICAL: Database migrations failed!"
+        echo "The application cannot start without a properly migrated database."
+        echo "Please check the migration logs above for details."
+        exit 1
+    fi
 else
-    echo "⚠️  Migration script not found, skipping migrations"
+    echo "⚠️  Migration script not found at /app/scripts/run-migrations.sh"
+    echo "⚠️  Acceptable for fresh deployments using docker-entrypoint-initdb.d"
 fi
 
 echo "✅ Application initialization complete!"
