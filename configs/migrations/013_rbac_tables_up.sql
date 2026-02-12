@@ -116,3 +116,39 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'team_member' AND p.name IN ('team.read', 'url.read', 'analytics.read')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- ============================================================================
+-- VERIFICATION: Ensure RBAC data was inserted successfully
+-- ============================================================================
+
+DO $$
+DECLARE
+    role_count INTEGER;
+    perm_count INTEGER;
+    admin_perm_count INTEGER;
+BEGIN
+    -- Verify roles were created
+    SELECT COUNT(*) INTO role_count FROM roles WHERE is_system = true;
+    IF role_count < 5 THEN
+        RAISE EXCEPTION 'RBAC Migration Failed: Expected 5 system roles, found %', role_count;
+    END IF;
+    RAISE NOTICE 'RBAC Verification: Found % system roles ✓', role_count;
+
+    -- Verify permissions were created
+    SELECT COUNT(*) INTO perm_count FROM permissions WHERE is_system = true;
+    IF perm_count < 17 THEN
+        RAISE EXCEPTION 'RBAC Migration Failed: Expected 17 system permissions, found %', perm_count;
+    END IF;
+    RAISE NOTICE 'RBAC Verification: Found % system permissions ✓', perm_count;
+
+    -- Verify admin role has all permissions
+    SELECT COUNT(*) INTO admin_perm_count
+    FROM role_permissions rp
+    JOIN roles r ON r.id = rp.role_id
+    WHERE r.name = 'admin';
+
+    IF admin_perm_count < 17 THEN
+        RAISE EXCEPTION 'RBAC Migration Failed: Admin role should have all 17 permissions, found %', admin_perm_count;
+    END IF;
+    RAISE NOTICE 'RBAC Verification: Admin role has % permissions ✓', admin_perm_count;
+END $$;

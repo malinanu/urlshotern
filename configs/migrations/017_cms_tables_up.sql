@@ -181,3 +181,53 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'admin' AND p.name IN ('cms.read', 'cms.create', 'cms.update', 'cms.delete', 'cms.publish')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Add API key permissions (missing from migration 017)
+INSERT INTO permissions (name, display_name, description, resource, action, is_system) VALUES
+    ('api_key.read', 'Read API Keys', 'View API keys', 'api_key', 'read', true),
+    ('api_key.create', 'Create API Keys', 'Generate new API keys', 'api_key', 'create', true),
+    ('api_key.delete', 'Delete API Keys', 'Revoke API keys', 'api_key', 'delete', true)
+ON CONFLICT (name) DO NOTHING;
+
+-- Assign API key permissions to users and premium users
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.name IN ('user', 'premium') AND p.name IN ('api_key.read', 'api_key.create', 'api_key.delete')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Insert default global settings
+INSERT INTO global_settings (key, value, type, category, display_name, description, is_public, sort_order) VALUES
+    ('site_name', 'Trunc', 'text', 'general', 'Site Name', 'The name of your website', true, 1),
+    ('site_tagline', 'Smart URL Management Platform', 'text', 'general', 'Site Tagline', 'A short description of your site', true, 2),
+    ('company_email', 'contact@3logiq.com', 'email', 'contact', 'Company Email', 'Main contact email address', true, 3),
+    ('company_phone', '+1-555-0123', 'text', 'contact', 'Company Phone', 'Main contact phone number', true, 4),
+    ('company_address', '123 Innovation Drive, Tech City, TC 12345', 'textarea', 'contact', 'Company Address', 'Physical business address', true, 5),
+    ('social_twitter', 'https://twitter.com/trunc', 'url', 'social', 'Twitter URL', 'Twitter profile URL', true, 6),
+    ('social_linkedin', 'https://linkedin.com/company/trunc', 'url', 'social', 'LinkedIn URL', 'LinkedIn company URL', true, 7),
+    ('social_github', 'https://github.com/trunc', 'url', 'social', 'GitHub URL', 'GitHub organization URL', true, 8),
+    ('google_analytics', '', 'text', 'tracking', 'Google Analytics ID', 'Google Analytics tracking ID', false, 9),
+    ('meta_description', 'Professional URL shortening service with advanced analytics, team collaboration, and custom domains.', 'textarea', 'seo', 'Default Meta Description', 'Default meta description for pages', true, 10),
+    ('footer_copyright', '© 2024 3logiq Technologies, Inc. All rights reserved.', 'text', 'footer', 'Copyright Text', 'Copyright notice in footer', true, 11),
+    ('header_announcement', '', 'html', 'header', 'Announcement Bar', 'HTML content for announcement bar', true, 12),
+    ('maintenance_mode', 'false', 'boolean', 'system', 'Maintenance Mode', 'Enable to show maintenance page', false, 13)
+ON CONFLICT (key) DO NOTHING;
+
+-- Verification for CMS data
+DO $$
+DECLARE
+    cms_perm_count INTEGER;
+    settings_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO cms_perm_count FROM permissions WHERE resource IN ('cms', 'api_key') AND is_system = true;
+    SELECT COUNT(*) INTO settings_count FROM global_settings;
+
+    IF cms_perm_count < 8 THEN
+        RAISE EXCEPTION 'CMS Migration Failed: Expected 8 CMS/API permissions, found %', cms_perm_count;
+    END IF;
+
+    IF settings_count < 13 THEN
+        RAISE EXCEPTION 'CMS Migration Failed: Expected 13 global settings, found %', settings_count;
+    END IF;
+
+    RAISE NOTICE 'CMS Verification: % CMS permissions, % global settings ✓', cms_perm_count, settings_count;
+END $$;
