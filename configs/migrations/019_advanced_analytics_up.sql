@@ -109,18 +109,17 @@ CREATE INDEX IF NOT EXISTS idx_weekly_analytics_week_start ON weekly_analytics(w
 CREATE TABLE IF NOT EXISTS monthly_analytics (
     id BIGSERIAL PRIMARY KEY,
     short_code VARCHAR(50) NOT NULL,
-    month_start DATE NOT NULL,
-    month_end DATE NOT NULL,
+    year_month DATE NOT NULL,
     total_clicks INTEGER DEFAULT 0,
     unique_visitors INTEGER DEFAULT 0,
     unique_countries INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(short_code, month_start)
+    UNIQUE(short_code, year_month)
 );
 
 CREATE INDEX IF NOT EXISTS idx_monthly_analytics_short_code ON monthly_analytics(short_code);
-CREATE INDEX IF NOT EXISTS idx_monthly_analytics_month_start ON monthly_analytics(month_start);
+CREATE INDEX IF NOT EXISTS idx_monthly_analytics_year_month ON monthly_analytics(year_month);
 
 -- Country analytics summary table
 CREATE TABLE IF NOT EXISTS country_analytics_summary (
@@ -218,6 +217,6 @@ BEGIN
     DELETE FROM hourly_analytics WHERE hour < NOW() - INTERVAL '1 day' * retention_days;
     DELETE FROM daily_analytics WHERE date < CURRENT_DATE - retention_days;
     DELETE FROM weekly_analytics WHERE week_start < CURRENT_DATE - retention_days;
-    DELETE FROM monthly_analytics WHERE month_start < CURRENT_DATE - retention_days;
+    DELETE FROM monthly_analytics WHERE year_month < CURRENT_DATE - retention_days;
 END;
 $$ LANGUAGE plpgsql;
