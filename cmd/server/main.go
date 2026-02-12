@@ -73,9 +73,10 @@ func main() {
 	abTestingService := services.NewABTestingService(db, redis)
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
+	adminService := services.NewAdminService(db)
 	// cmsService := services.NewCMSService(db)  // Temporarily disabled
 	// apiKeyService := services.NewAPIKeyService(db)  // Temporarily disabled
-	
+
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
 	
@@ -86,7 +87,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
 
 	// Initialize handlers
-	authHandlers := handlers.NewAuthHandlers(authService, smsService, emailService)
+	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
 

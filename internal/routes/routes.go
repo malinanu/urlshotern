@@ -206,19 +206,31 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	admin.Use(authMiddleware.RequireAdmin())
 	admin.Use(middleware.RateLimitMiddleware(middleware.DefaultRateLimit))
 
-	// Admin user management
-	admin.GET("/users/:id", handler.AuthHandlers.GetUserByID)
-	admin.GET("/users", func(c *gin.Context) {
-		c.JSON(501, gin.H{"error": "User list endpoint not implemented"})
-	})
-
 	// Admin analytics
-	admin.GET("/stats", func(c *gin.Context) {
-		c.JSON(501, gin.H{"error": "Admin stats endpoint not implemented"})
-	})
+	admin.GET("/stats", handler.AuthHandlers.GetAdminStats)
+	admin.GET("/activity", handler.AuthHandlers.GetRecentActivity)
 
-	// CMS routes REMOVED - handler.CMSHandlers doesn't exist
-	// TODO: Add CMSHandlers to Handler struct if CMS routes are needed
+	// Admin user management
+	admin.GET("/users", handler.AuthHandlers.GetUserList)
+	admin.GET("/users/:id", handler.AuthHandlers.GetUserByID)
+	admin.PUT("/users/:id/status", handler.AuthHandlers.ToggleUserStatus)
+	admin.DELETE("/users/:id", handler.AuthHandlers.DeleteUserAdmin)
+
+	// CMS routes
+	cms := admin.Group("/cms")
+	{
+		cms.GET("/pages", handler.AuthHandlers.GetCMSPages)
+		cms.GET("/blocks", handler.AuthHandlers.GetCMSBlocks)
+		cms.GET("/templates", handler.AuthHandlers.GetCMSTemplates)
+	}
+
+	// SEO routes
+	seo := admin.Group("/seo")
+	{
+		seo.GET("/settings", handler.AuthHandlers.GetSEOSettings)
+		seo.GET("/metrics", handler.AuthHandlers.GetSEOMetrics)
+		seo.GET("/recommendations", handler.AuthHandlers.GetSEORecommendations)
+	}
 }
 
 // setupConversionTrackingRoutes configures conversion tracking routes

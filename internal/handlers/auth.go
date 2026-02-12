@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -15,15 +16,17 @@ import (
 
 type AuthHandlers struct {
 	authService  *services.AuthService
+	adminService *services.AdminService
 	smsService   *services.SMSService
 	emailService *services.EmailService
 	validator    *validator.Validate
 }
 
 // NewAuthHandlers creates new auth handlers
-func NewAuthHandlers(authService *services.AuthService, smsService *services.SMSService, emailService *services.EmailService) *AuthHandlers {
+func NewAuthHandlers(authService *services.AuthService, adminService *services.AdminService, smsService *services.SMSService, emailService *services.EmailService) *AuthHandlers {
 	return &AuthHandlers{
 		authService:  authService,
+		adminService: adminService,
 		smsService:   smsService,
 		emailService: emailService,
 		validator:    validator.New(),
@@ -45,17 +48,29 @@ func (h *AuthHandlers) Register(c *gin.Context) {
 	}
 
 	// Register user
-	_, err := h.authService.Register(&req, c.ClientIP(), c.Request.UserAgent())
+	response, err := h.authService.Register(&req, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
 		middleware.LogError(c, err, "User registration failed")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Log new user registration (async)
+	go func() {
+		_ = h.adminService.LogActivity(
+			&response.User.ID,
+			response.User.Name,
+			"user_registered",
+			fmt.Sprintf("New user registered: %s", req.Email),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+		)
+	}()
+
 	middleware.LogInfo(c, "User registered successfully")
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Registration successful",
-		"user_id": 1, // Temporary placeholder
+		"user_id": response.User.ID,
 	})
 }
 
@@ -82,6 +97,18 @@ func (h *AuthHandlers) Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Log successful login (async)
+	go func() {
+		_ = h.adminService.LogActivity(
+			&response.User.ID,
+			response.User.Name,
+			"user_login",
+			fmt.Sprintf("User logged in from %s", c.ClientIP()),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+		)
+	}()
 
 	c.JSON(http.StatusOK, response)
 }
@@ -415,13 +442,14 @@ func (h *AuthHandlers) GetUserByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{
-			"id":    userID,
-			"name":  "Test User",
-			"email": "test@example.com",
-		},
-	})
+	user, err := h.adminService.GetUserByIDWithStats(userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get user")
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
 // SendEmailVerification handles email verification sending
@@ -466,4 +494,283 @@ func (h *AuthHandlers) VerifyEmail(c *gin.Context) {
 		"message":  "Email verified successfully",
 		"verified": true,
 	})
+}
+
+// Admin Panel Handlers
+
+// GetAdminStats returns system-wide statistics
+func (h *AuthHandlers) GetAdminStats(c *gin.Context) {
+	stats, err := h.adminService.GetSystemStats()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get admin stats")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
+		return
+	}
+	c.JSON(http.StatusOK, stats)
+}
+
+// GetUserList returns paginated list of users
+func (h *AuthHandlers) GetUserList(c *gin.Context) {
+	// Parse query params (limit, offset)
+	limit := 20 // default
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	users, err := h.adminService.GetUserList(limit, offset)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get user list")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := h.adminService.GetTotalUsersCount()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get total users count")
+		totalCount = 0 // Fallback to 0 if count fails
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users":  users,
+		"total":  totalCount,
+		"limit":  limit,
+		"offset": offset,
+	})
+}
+
+// ToggleUserStatus activates or deactivates a user
+func (h *AuthHandlers) ToggleUserStatus(c *gin.Context) {
+	userIDParam := c.Param("id")
+	userID, err := strconv.ParseInt(userIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var req struct {
+		IsActive bool `json:"is_active"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	err = h.adminService.ToggleUserStatus(userID, req.IsActive)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to toggle user status")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user status"})
+		return
+	}
+
+	middleware.LogInfo(c, "User status updated successfully")
+	c.JSON(http.StatusOK, gin.H{"message": "User status updated"})
+}
+
+// DeleteUserAdmin deletes a user (admin endpoint)
+func (h *AuthHandlers) DeleteUserAdmin(c *gin.Context) {
+	userIDParam := c.Param("id")
+	userID, err := strconv.ParseInt(userIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	err = h.adminService.DeleteUser(userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to delete user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	middleware.LogInfo(c, "User deleted successfully")
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+}
+
+// GetRecentActivity returns recent system activity
+func (h *AuthHandlers) GetRecentActivity(c *gin.Context) {
+	limit := 50 // default
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 200 {
+			limit = l
+		}
+	}
+
+	activities, err := h.adminService.GetRecentActivity(limit)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get recent activity")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch activity"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"activities": activities})
+}
+
+// CMS Management Handlers
+
+// GetCMSPages returns list of CMS pages
+func (h *AuthHandlers) GetCMSPages(c *gin.Context) {
+	limit := 20 // default
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	pages, err := h.adminService.GetCMSPages(limit, offset)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get CMS pages")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pages"})
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := h.adminService.GetTotalCMSPagesCount()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get total pages count")
+		totalCount = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"pages":  pages,
+		"total":  totalCount,
+		"limit":  limit,
+		"offset": offset,
+	})
+}
+
+// GetCMSBlocks returns list of content blocks
+func (h *AuthHandlers) GetCMSBlocks(c *gin.Context) {
+	limit := 20 // default
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	blocks, err := h.adminService.GetCMSBlocks(limit, offset)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get CMS blocks")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch blocks"})
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := h.adminService.GetTotalCMSBlocksCount()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get total blocks count")
+		totalCount = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"blocks": blocks,
+		"total":  totalCount,
+		"limit":  limit,
+		"offset": offset,
+	})
+}
+
+// GetCMSTemplates returns list of page templates
+func (h *AuthHandlers) GetCMSTemplates(c *gin.Context) {
+	limit := 20 // default
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	templates, err := h.adminService.GetCMSTemplates(limit, offset)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get CMS templates")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch templates"})
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := h.adminService.GetTotalCMSTemplatesCount()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get total templates count")
+		totalCount = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"templates": templates,
+		"total":      totalCount,
+		"limit":      limit,
+		"offset":     offset,
+	})
+}
+
+// SEO Tools Handlers
+
+// GetSEOSettings returns SEO-related settings
+func (h *AuthHandlers) GetSEOSettings(c *gin.Context) {
+	settings, err := h.adminService.GetSEOSettings()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get SEO settings")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch SEO settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+// GetSEOMetrics returns SEO-related metrics
+func (h *AuthHandlers) GetSEOMetrics(c *gin.Context) {
+	metrics, err := h.adminService.GetSEOMetrics()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get SEO metrics")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch SEO metrics"})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}
+
+// GetSEORecommendations returns SEO improvement recommendations
+func (h *AuthHandlers) GetSEORecommendations(c *gin.Context) {
+	recommendations, err := h.adminService.GetSEORecommendations()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get SEO recommendations")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch SEO recommendations"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"recommendations": recommendations})
 }
