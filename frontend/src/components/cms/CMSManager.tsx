@@ -94,7 +94,7 @@ export default function CMSManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setPages(data.data || []);
+        setPages(data.pages || []);
       }
     } catch (error) {
       console.error('Error fetching pages:', error);

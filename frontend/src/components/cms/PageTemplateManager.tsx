@@ -102,7 +102,7 @@ export function PageTemplateManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setTemplates(data);
+        setTemplates(data.templates || []);
       } else {
         toast.error('Failed to fetch page templates');
       }
