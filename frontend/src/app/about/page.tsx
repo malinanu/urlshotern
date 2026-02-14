@@ -16,45 +16,133 @@ import {
   HeartIcon,
   StarIcon
 } from '@heroicons/react/24/outline';
+import { useCMSPage, getContentBlock } from '@/hooks/useCMSPage';
 
-const stats = [
-  { label: 'Links Shortened', value: '10M+', icon: LinkIcon, color: 'text-primary-600' },
-  { label: 'Uptime', value: '99.9%', icon: ShieldCheckIcon, color: 'text-green-500' },
-  { label: 'Countries', value: '150+', icon: GlobeAltIcon, color: 'text-primary-600' },
-  { label: 'Active Users', value: '500K+', icon: UsersIcon, color: 'text-primary-600' }
+// Fallback data (used if CMS fetch fails)
+const fallbackStats = [
+  { label: 'Links Shortened', value: '10M+', icon: 'LinkIcon', color: 'text-primary-600' },
+  { label: 'Uptime', value: '99.9%', icon: 'ShieldCheckIcon', color: 'text-green-500' },
+  { label: 'Countries', value: '150+', icon: 'GlobeAltIcon', color: 'text-primary-600' },
+  { label: 'Active Users', value: '500K+', icon: 'UsersIcon', color: 'text-primary-600' }
 ];
 
-const values = [
+const fallbackValues = [
   {
     title: 'Innovation First',
     description: 'We constantly push the boundaries of what\'s possible in URL management and analytics.',
-    icon: LinkIcon
+    icon: 'LinkIcon'
   },
   {
     title: 'Security & Privacy',
     description: 'Your data and links are protected with enterprise-grade security and privacy measures.',
-    icon: ShieldCheckIcon
+    icon: 'ShieldCheckIcon'
   },
   {
     title: 'Performance',
     description: 'Lightning-fast redirects and real-time analytics ensure optimal user experience.',
-    icon: ChartBarIcon
+    icon: 'ChartBarIcon'
   },
   {
     title: 'Reliability',
     description: '99.9% uptime guarantee ensures your links work when your audience needs them most.',
-    icon: ClockIcon
+    icon: 'ClockIcon'
   }
 ];
 
-const achievements = [
+const fallbackAchievements = [
   { year: '2024', title: 'Reached 10M Links Shortened', description: 'Milestone achievement in our growth journey' },
   { year: '2023', title: 'SOC 2 Type II Compliance', description: 'Enterprise-grade security certification' },
   { year: '2023', title: '99.9% Uptime Achievement', description: 'Consistent reliability and performance' },
   { year: '2022', title: 'Global Expansion', description: 'Serving users in over 150 countries worldwide' }
 ];
 
+const iconMap: Record<string, any> = {
+  LinkIcon,
+  ShieldCheckIcon,
+  GlobeAltIcon,
+  UsersIcon,
+  ChartBarIcon,
+  ClockIcon,
+  BuildingOfficeIcon,
+};
+
 export default function AboutPage() {
+  // Fetch page content from CMS with fallback
+  const { content: page, loading, usedCMS } = useCMSPage('about', {
+    slug: 'about',
+    title: 'We Are Trunc',
+    content: 'Pioneering the next generation of URL management with cutting-edge technology.',
+  });
+
+  // Extract content blocks from CMS or use fallback
+  const hero = getContentBlock(page, 'hero', {
+    badge: 'About Trunc',
+    badge_icon: 'BuildingOfficeIcon',
+    title: 'We Are Trunc',
+    title_highlight: 'Trunc',
+    tagline: 'Pioneering the next generation of URL management with cutting-edge technology, unparalleled performance, and a vision that connects the digital world.',
+  });
+
+  const statsBlock = getContentBlock(page, 'stats', fallbackStats);
+  const mission = getContentBlock(page, 'mission', {
+    badge: 'Our Mission',
+    heading: 'Connecting Every Digital Experience',
+    description: 'We envision a world where every URL is intelligent, every click tells a story, and every connection drives meaningful outcomes. Trunc isn\'t just a tool—it\'s the bridge between intention and impact in the digital ecosystem.',
+    cta_primary: { text: 'Get Started', url: '/register' },
+    cta_secondary: { text: 'Learn More', url: '/features' },
+  });
+
+  const valuesBlock = getContentBlock(page, 'values', {
+    badge: 'Our Values',
+    heading: 'What Drives Us Forward',
+    tagline: 'Our core values shape every decision we make and define how we build products that truly serve our customers.',
+    items: fallbackValues,
+  });
+
+  const team = getContentBlock(page, 'team', {
+    badge: 'Our Team',
+    heading: 'Global Remote Team',
+    description: 'Our diverse team of engineers, designers, and product experts work from around the world to bring you the best URL shortening experience.',
+    cta: { text: 'View Open Positions', url: '/careers' },
+  });
+
+  const achievementsBlock = getContentBlock(page, 'achievements', {
+    badge: 'Achievements',
+    heading: 'Key Milestones',
+    items: fallbackAchievements,
+  });
+
+  const ctaBottom = getContentBlock(page, 'cta_bottom', {
+    badge: '🚀 Ready to Get Started?',
+    heading: 'Join thousands of businesses using Trunc',
+    tagline: 'Start shortening URLs and tracking analytics with our powerful platform. No credit card required to get started.',
+    cta_primary: { text: 'Start Free Trial', url: '/register' },
+    cta_secondary: { text: 'Contact Sales', url: '/contact' },
+    features: ['Free forever plan', 'No credit card required', 'Setup in 2 minutes'],
+  });
+
+  // Map icon names to actual components
+  const stats = (statsBlock || fallbackStats).map((stat: any) => ({
+    ...stat,
+    icon: stat.icon && typeof stat.icon === 'string' ? (iconMap[stat.icon] || LinkIcon) : stat.icon || LinkIcon,
+  }));
+
+  const values = (valuesBlock.items || fallbackValues).map((value: any) => ({
+    ...value,
+    icon: value.icon && typeof value.icon === 'string' ? (iconMap[value.icon] || LinkIcon) : value.icon || LinkIcon,
+  }));
+
+  const achievements = achievementsBlock.items || fallbackAchievements;
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       {/* Hero Section */}
@@ -64,18 +152,22 @@ export default function AboutPage() {
           <div className="text-center space-y-8">
             <div className="space-y-4">
               <Badge variant="secondary" className="text-primary-700 bg-primary-100 hover:bg-primary-200 transition-colors">
-                <BuildingOfficeIcon className="h-4 w-4 mr-2" />
-                About Trunc
+                {hero.badge_icon && iconMap[hero.badge_icon] && (
+                  (() => {
+                    const IconComponent = iconMap[hero.badge_icon];
+                    return <IconComponent className="h-4 w-4 mr-2" />;
+                  })()
+                )}
+                {hero.badge}
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900">
-                We Are{' '}
+                {hero.title.replace(hero.title_highlight, '')}{' '}
                 <span className="text-primary-600 bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
-                  Trunc
+                  {hero.title_highlight}
                 </span>
               </h1>
               <p className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-                Pioneering the next generation of URL management with cutting-edge technology,
-                unparalleled performance, and a vision that connects the digital world.
+                {hero.tagline}
               </p>
             </div>
           </div>
@@ -104,25 +196,25 @@ export default function AboutPage() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <Badge variant="outline" className="text-primary-600 border-primary-200">
-                  Our Mission
+                  {mission.badge}
                 </Badge>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-                  Connecting Every Digital Experience
+                  {mission.heading}
                 </h2>
                 <p className="text-xl text-gray-600 leading-relaxed">
-                  We envision a world where every URL is intelligent, every click tells a story,
-                  and every connection drives meaningful outcomes. Trunc isn't just a tool—it's
-                  the bridge between intention and impact in the digital ecosystem.
+                  {mission.description}
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700">
-                  Get Started
-                  <ArrowRightIcon className="h-5 w-5" />
+                <Button size="lg" className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700" asChild>
+                  <a href={mission.cta_primary.url}>
+                    {mission.cta_primary.text}
+                    <ArrowRightIcon className="h-5 w-5" />
+                  </a>
                 </Button>
-                <Button size="lg" variant="outline" className="border-primary-200 text-primary-700 hover:bg-primary-50">
-                  Learn More
+                <Button size="lg" variant="outline" className="border-primary-200 text-primary-700 hover:bg-primary-50" asChild>
+                  <a href={mission.cta_secondary.url}>{mission.cta_secondary.text}</a>
                 </Button>
               </div>
             </div>
@@ -157,14 +249,13 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              Our Values
+              {valuesBlock.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              What Drives Us Forward
+              {valuesBlock.heading}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our core values shape every decision we make and define how we build
-              products that truly serve our customers.
+              {valuesBlock.tagline}
             </p>
           </div>
 
@@ -204,10 +295,10 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              Our Team
+              {team.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              Global Remote Team
+              {team.heading}
             </h2>
           </div>
 
@@ -219,11 +310,10 @@ export default function AboutPage() {
                 </div>
                 <div className="space-y-4">
                   <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                    Our diverse team of engineers, designers, and product experts work from around
-                    the world to bring you the best URL shortening experience.
+                    {team.description}
                   </p>
-                  <Button variant="outline" size="lg" className="border-primary-200 text-primary-700 hover:bg-primary-50">
-                    View Open Positions
+                  <Button variant="outline" size="lg" className="border-primary-200 text-primary-700 hover:bg-primary-50" asChild>
+                    <a href={team.cta.url}>{team.cta.text}</a>
                   </Button>
                 </div>
               </div>
@@ -237,10 +327,10 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              Achievements
+              {achievementsBlock.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              Key Milestones
+              {achievementsBlock.heading}
             </h2>
           </div>
 
@@ -274,14 +364,13 @@ export default function AboutPage() {
           <div className="space-y-8">
             <div className="space-y-4">
               <Badge className="bg-white/20 text-white hover:bg-white/30 border-0">
-                🚀 Ready to Get Started?
+                {ctaBottom.badge}
               </Badge>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-                Join thousands of businesses using Trunc
+                {ctaBottom.heading}
               </h2>
               <p className="text-xl text-primary-100 max-w-3xl mx-auto leading-relaxed">
-                Start shortening URLs and tracking analytics with our powerful platform.
-                No credit card required to get started.
+                {ctaBottom.tagline}
               </p>
             </div>
 
@@ -291,8 +380,8 @@ export default function AboutPage() {
                 className="bg-white text-primary-700 hover:bg-gray-50 hover:text-primary-800 font-semibold px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
                 asChild
               >
-                <a href="/register">
-                  Start Free Trial
+                <a href={ctaBottom.cta_primary.url}>
+                  {ctaBottom.cta_primary.text}
                   <ArrowRightIcon className="h-5 w-5 ml-2" />
                 </a>
               </Button>
@@ -302,33 +391,30 @@ export default function AboutPage() {
                 className="border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/50 font-semibold px-8 py-6 text-lg backdrop-blur-sm transition-all duration-300"
                 asChild
               >
-                <a href="/contact">Contact Sales</a>
+                <a href={ctaBottom.cta_secondary.url}>{ctaBottom.cta_secondary.text}</a>
               </Button>
             </div>
 
             <div className="pt-8 flex flex-col sm:flex-row justify-center items-center gap-6 text-primary-100">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm">Free forever plan</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm">No credit card required</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm">Setup in 2 minutes</span>
-              </div>
+              {ctaBottom.features.map((feature: string, index: number) => (
+                <div key={index} className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm">{feature}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
+
+      {/* Development Indicator */}
+      {process.env.NODE_ENV === 'development' && usedCMS && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+          ✓ Using CMS
+        </div>
+      )}
     </Layout>
   );
 }

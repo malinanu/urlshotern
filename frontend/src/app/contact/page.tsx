@@ -15,6 +15,7 @@ import {
   ExclamationCircleIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
+import { useCMSPage, getContentBlock, getCustomField } from '@/hooks/useCMSPage';
 
 interface FormData {
   name: string;
@@ -28,9 +29,10 @@ interface FormData {
 
 type FormStatus = 'idle' | 'sending' | 'sent' | 'error';
 
-const contactMethods = [
+// Fallback data (used if CMS fetch fails)
+const fallbackContactMethods = [
   {
-    icon: EnvelopeIcon,
+    icon: 'EnvelopeIcon',
     title: 'Email Support',
     description: 'Get detailed help via email',
     contact: 'hello@urlshorter.com',
@@ -38,7 +40,7 @@ const contactMethods = [
     color: 'text-primary-600'
   },
   {
-    icon: ChatBubbleLeftRightIcon,
+    icon: 'ChatBubbleLeftRightIcon',
     title: 'Live Chat',
     description: 'Instant help when you need it',
     contact: 'Start Chat',
@@ -47,7 +49,7 @@ const contactMethods = [
   }
 ];
 
-const inquiryTypes = [
+const fallbackInquiryTypes = [
   { value: 'general', label: 'General Inquiry' },
   { value: 'technical', label: 'Technical Support' },
   { value: 'billing', label: 'Billing Question' },
@@ -56,14 +58,87 @@ const inquiryTypes = [
   { value: 'feedback', label: 'Feedback' }
 ];
 
-const priorityLevels = [
+const fallbackPriorityLevels = [
   { value: 'low', label: 'Low Priority' },
   { value: 'medium', label: 'Medium Priority' },
   { value: 'high', label: 'High Priority' },
   { value: 'urgent', label: 'Urgent' }
 ];
 
+const iconMap: Record<string, any> = {
+  EnvelopeIcon,
+  ChatBubbleLeftRightIcon,
+  UserIcon,
+};
+
 export default function ContactPage() {
+  // Fetch page content from CMS with fallback
+  const { content: page, loading, usedCMS } = useCMSPage('contact', {
+    slug: 'contact',
+    title: 'Get in Touch',
+    content: 'Ready to transform your link management? Our team of experts is here to answer your questions and help you unlock the full potential of Trunc.',
+  });
+
+  // Extract content blocks from CMS or use fallback
+  const hero = getContentBlock(page, 'hero', {
+    badge: 'Contact Us',
+    badge_icon: 'ChatBubbleLeftRightIcon',
+    title: 'Get in Touch',
+    title_highlight: 'Touch',
+    tagline: 'Ready to transform your link management? Our team of experts is here to answer your questions and help you unlock the full potential of Trunc.',
+  });
+
+  const contactMethodsBlock = getContentBlock(page, 'contact_methods', {
+    badge: 'Contact Options',
+    heading: 'Choose How to Connect',
+    tagline: 'Multiple ways to get the help you need, when you need it.',
+    methods: fallbackContactMethods,
+  });
+
+  const contactFormBlock = getContentBlock(page, 'contact_form', {
+    badge: 'Contact Form',
+    heading: 'Send us a Message',
+    tagline: 'Fill out the form below and we\'ll get back to you as soon as possible.',
+    form_title: 'Let\'s Talk',
+    form_description: 'We\'re here to help you succeed with Trunc.',
+  });
+
+  const supportResourcesBlock = getContentBlock(page, 'support_resources', {
+    badge: 'Additional Resources',
+    heading: 'Alternative Support Channels',
+    items: [
+      {
+        icon: 'UserIcon',
+        title: 'Documentation',
+        description: 'Find answers in our comprehensive guides',
+        cta: { text: 'Browse Documentation', url: '/docs' },
+      },
+    ],
+  });
+
+  const ctaBottom = getContentBlock(page, 'cta_bottom', {
+    badge: '🚀 Ready to Get Started?',
+    heading: 'Start Your Journey with Trunc',
+    tagline: 'Join thousands of businesses using Trunc to power their links. No credit card required to get started.',
+    cta_primary: { text: 'Start Free Trial', url: '/register' },
+    cta_secondary: { text: 'View Pricing', url: '/pricing' },
+  });
+
+  // Extract custom fields
+  const inquiryTypes = getCustomField(page, 'inquiry_types', fallbackInquiryTypes);
+  const priorityLevels = getCustomField(page, 'priority_levels', fallbackPriorityLevels);
+
+  // Map icon names to actual components
+  const contactMethods = (contactMethodsBlock.methods || fallbackContactMethods).map((method: any) => ({
+    ...method,
+    icon: method.icon && typeof method.icon === 'string' ? (iconMap[method.icon] || EnvelopeIcon) : method.icon || EnvelopeIcon,
+  }));
+
+  const supportResources = (supportResourcesBlock.items || []).map((item: any) => ({
+    ...item,
+    icon: item.icon && typeof item.icon === 'string' ? (iconMap[item.icon] || UserIcon) : item.icon || UserIcon,
+  }));
+  // Form state
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -75,6 +150,17 @@ export default function ContactPage() {
   });
   const [formStatus, setFormStatus] = useState<FormStatus>('idle');
   const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
+
+  // Loading state
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
+        </div>
+      </Layout>
+    );
+  }
 
   const validateForm = (): boolean => {
     const errors: Partial<FormData> = {};
@@ -138,18 +224,22 @@ export default function ContactPage() {
           <div className="text-center space-y-8">
             <div className="space-y-4">
               <Badge variant="secondary" className="text-primary-700 bg-primary-100 hover:bg-primary-200 transition-colors">
-                <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
-                Contact Us
+                {hero.badge_icon && iconMap[hero.badge_icon] && (
+                  (() => {
+                    const IconComponent = iconMap[hero.badge_icon];
+                    return <IconComponent className="h-4 w-4 mr-2" />;
+                  })()
+                )}
+                {hero.badge}
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900">
-                Get in{' '}
+                {hero.title.replace(hero.title_highlight, '')}{' '}
                 <span className="text-primary-600 bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
-                  Touch
+                  {hero.title_highlight}
                 </span>
               </h1>
               <p className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-                Ready to transform your link management? Our team of experts is here to answer
-                your questions and help you unlock the full potential of Trunc.
+                {hero.tagline}
               </p>
             </div>
           </div>
@@ -161,13 +251,13 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              Contact Options
+              {contactMethodsBlock.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              Choose How to Connect
+              {contactMethodsBlock.heading}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Multiple ways to get the help you need, when you need it.
+              {contactMethodsBlock.tagline}
             </p>
           </div>
 
@@ -217,22 +307,22 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              Contact Form
+              {contactFormBlock.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              Send us a Message
+              {contactFormBlock.heading}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Fill out the form below and we'll get back to you as soon as possible.
+              {contactFormBlock.tagline}
             </p>
           </div>
 
           <div className="max-w-2xl mx-auto">
             <Card className="bg-white border-0 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-2xl text-center">Let's Talk</CardTitle>
+                <CardTitle className="text-2xl text-center">{contactFormBlock.form_title}</CardTitle>
                 <CardDescription className="text-center">
-                  We're here to help you succeed with Trunc.
+                  {contactFormBlock.form_description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -414,32 +504,39 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              Additional Resources
+              {supportResourcesBlock.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              Alternative Support Channels
+              {supportResourcesBlock.heading}
             </h2>
           </div>
 
           <div className="flex justify-center">
-            <div className="max-w-md">
-              <Card className="bg-gradient-to-br from-primary-50 to-white border-primary-100">
-                <CardHeader className="text-center space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center">
-                    <UserIcon className="h-8 w-8 text-primary-600" />
-                  </div>
-                  <div className="space-y-2">
-                    <CardTitle className="text-xl font-bold text-gray-900">Documentation</CardTitle>
-                    <CardDescription>Find answers in our comprehensive guides</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" size="lg" className="w-full border-primary-200 text-primary-700 hover:bg-primary-50">
-                    Browse Documentation
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+            {supportResources.map((resource: any, index: number) => (
+              <div key={index} className="max-w-md">
+                <Card className="bg-gradient-to-br from-primary-50 to-white border-primary-100">
+                  <CardHeader className="text-center space-y-4">
+                    <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center">
+                      <resource.icon className="h-8 w-8 text-primary-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <CardTitle className="text-xl font-bold text-gray-900">{resource.title}</CardTitle>
+                      <CardDescription>{resource.description}</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full border-primary-200 text-primary-700 hover:bg-primary-50"
+                      asChild
+                    >
+                      <a href={resource.cta.url}>{resource.cta.text}</a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -455,14 +552,13 @@ export default function ContactPage() {
           <div className="space-y-8">
             <div className="space-y-4">
               <Badge className="bg-white/20 text-white hover:bg-white/30 border-0">
-                🚀 Ready to Get Started?
+                {ctaBottom.badge}
               </Badge>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-                Start Your Journey with Trunc
+                {ctaBottom.heading}
               </h2>
               <p className="text-xl text-primary-100 max-w-3xl mx-auto leading-relaxed">
-                Join thousands of businesses using Trunc to power their links.
-                No credit card required to get started.
+                {ctaBottom.tagline}
               </p>
             </div>
 
@@ -472,7 +568,7 @@ export default function ContactPage() {
                 className="bg-white text-primary-700 hover:bg-gray-50 hover:text-primary-800 font-semibold px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
                 asChild
               >
-                <a href="/register">Start Free Trial</a>
+                <a href={ctaBottom.cta_primary.url}>{ctaBottom.cta_primary.text}</a>
               </Button>
               <Button
                 variant="outline"
@@ -480,12 +576,19 @@ export default function ContactPage() {
                 className="border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/50 font-semibold px-8 py-6 text-lg backdrop-blur-sm transition-all duration-300"
                 asChild
               >
-                <a href="/pricing">View Pricing</a>
+                <a href={ctaBottom.cta_secondary.url}>{ctaBottom.cta_secondary.text}</a>
               </Button>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Development Indicator */}
+      {process.env.NODE_ENV === 'development' && usedCMS && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+          ✓ Using CMS
+        </div>
+      )}
     </Layout>
   );
 }
