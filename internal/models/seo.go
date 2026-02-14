@@ -86,3 +86,28 @@ type RobotsTxt struct {
 	UpdatedBy int64     `json:"updated_by" db:"updated_by"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// Request models for SEO endpoints
+
+// AnalyzeSEORequest represents a request to analyze a URL for SEO
+type AnalyzeSEORequest struct {
+	URL string `json:"url" binding:"required"`
+}
+
+// CreateMetaTagRequest represents a request to create a new meta tag
+type CreateMetaTagRequest struct {
+	PageID   *int64  `json:"page_id"`
+	Name     string  `json:"name" binding:"required"`
+	Content  string  `json:"content" binding:"required"`
+	Property *string `json:"property"`
+}
+
+// Response models for SEO endpoints
+
+// SitemapEntry represents a single entry in the sitemap
+type SitemapEntry struct {
+	URL        string  `json:"url"`
+	LastMod    string  `json:"lastmod"`
+	ChangeFreq string  `json:"changefreq"`
+	Priority   float64 `json:"priority"`
+}

@@ -234,9 +234,23 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	// SEO routes
 	seo := admin.Group("/seo")
 	{
+		// Existing SEO monitoring endpoints
 		seo.GET("/settings", handler.AuthHandlers.GetSEOSettings)
 		seo.GET("/metrics", handler.AuthHandlers.GetSEOMetrics)
 		seo.GET("/recommendations", handler.AuthHandlers.GetSEORecommendations)
+
+		// SEO Analysis endpoints
+		seo.GET("/analyses", handler.AuthHandlers.GetSEOAnalyses)
+		seo.POST("/analyze", handler.AuthHandlers.AnalyzeSEOURL)
+
+		// Sitemap endpoints
+		seo.GET("/sitemap", handler.AuthHandlers.GetSitemap)
+		seo.POST("/sitemap/generate", handler.AuthHandlers.GenerateSitemap)
+
+		// Meta tags endpoints
+		seo.GET("/meta-tags", handler.AuthHandlers.GetMetaTags)
+		seo.POST("/meta-tags", handler.AuthHandlers.CreateMetaTag)
+		seo.DELETE("/meta-tags/:id", handler.AuthHandlers.DeleteMetaTag)
 	}
 }
 

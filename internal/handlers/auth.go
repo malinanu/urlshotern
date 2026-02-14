@@ -800,3 +800,234 @@ func (h *AuthHandlers) RenderCMSBlock(c *gin.Context) {
 	// TODO: Implement content block rendering
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "Content block rendering not yet implemented"})
 }
+
+// SEO Analysis Handlers
+
+// GetSEOAnalyses returns list of SEO analysis results
+func (h *AuthHandlers) GetSEOAnalyses(c *gin.Context) {
+	limit := 20 // default
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	analyses, err := h.adminService.GetSEOAnalyses(limit, offset)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get SEO analyses")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: "Failed to fetch SEO analyses",
+		})
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := h.adminService.GetTotalSEOAnalysesCount()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get total SEO analyses count")
+		totalCount = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"analyses": analyses,
+		"total":    totalCount,
+		"limit":    limit,
+		"offset":   offset,
+	})
+}
+
+// AnalyzeSEOURL runs SEO analysis on a URL
+func (h *AuthHandlers) AnalyzeSEOURL(c *gin.Context) {
+	var req models.AnalyzeSEORequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	// Get user ID from context
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	// Run SEO analysis
+	analysis, err := h.adminService.AnalyzeURL(req.URL, userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to analyze URL")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "analysis_failed",
+			Message: "Failed to analyze URL",
+		})
+		return
+	}
+
+	middleware.LogInfo(c, "SEO analysis created successfully")
+	c.JSON(http.StatusCreated, analysis)
+}
+
+// Sitemap Handlers
+
+// GetSitemap returns sitemap entries
+func (h *AuthHandlers) GetSitemap(c *gin.Context) {
+	entries, err := h.adminService.GetSitemapEntries()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get sitemap entries")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: "Failed to fetch sitemap entries",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"entries": entries,
+		"total":   len(entries),
+	})
+}
+
+// GenerateSitemap generates XML sitemap
+func (h *AuthHandlers) GenerateSitemap(c *gin.Context) {
+	xml, err := h.adminService.GenerateSitemap()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to generate sitemap")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "generation_failed",
+			Message: "Failed to generate sitemap",
+		})
+		return
+	}
+
+	middleware.LogInfo(c, "Sitemap generated successfully")
+	c.Data(http.StatusOK, "application/xml; charset=utf-8", []byte(xml))
+}
+
+// Meta Tags Handlers
+
+// GetMetaTags returns list of meta tags
+func (h *AuthHandlers) GetMetaTags(c *gin.Context) {
+	limit := 20 // default
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	metaTags, err := h.adminService.GetMetaTags(limit, offset)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get meta tags")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: "Failed to fetch meta tags",
+		})
+		return
+	}
+
+	// Get total count for pagination
+	totalCount, err := h.adminService.GetTotalMetaTagsCount()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get total meta tags count")
+		totalCount = 0
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"meta_tags": metaTags,
+		"total":     totalCount,
+		"limit":     limit,
+		"offset":    offset,
+	})
+}
+
+// CreateMetaTag creates a new meta tag
+func (h *AuthHandlers) CreateMetaTag(c *gin.Context) {
+	var req models.CreateMetaTagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_request",
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	// Get user ID from context
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "unauthorized",
+			Message: "User not authenticated",
+		})
+		return
+	}
+
+	// Create meta tag
+	metaTag, err := h.adminService.CreateMetaTag(&req, userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to create meta tag")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "creation_failed",
+			Message: "Failed to create meta tag",
+		})
+		return
+	}
+
+	middleware.LogInfo(c, "Meta tag created successfully")
+	c.JSON(http.StatusCreated, metaTag)
+}
+
+// DeleteMetaTag deletes a meta tag
+func (h *AuthHandlers) DeleteMetaTag(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid meta tag ID",
+		})
+		return
+	}
+
+	err = h.adminService.DeleteMetaTag(id)
+	if err != nil {
+		if err.Error() == "meta tag not found" {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error:   "not_found",
+				Message: "Meta tag not found",
+			})
+			return
+		}
+		middleware.LogError(c, err, "Failed to delete meta tag")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "deletion_failed",
+			Message: "Failed to delete meta tag",
+		})
+		return
+	}
+
+	middleware.LogInfo(c, "Meta tag deleted successfully")
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Meta tag deleted successfully",
+	})
+}

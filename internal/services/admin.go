@@ -608,3 +608,350 @@ func (s *AdminService) GetSEORecommendations() ([]map[string]interface{}, error)
 
 	return recommendations, nil
 }
+
+// GetSEOAnalyses returns list of SEO analysis results with pagination
+func (s *AdminService) GetSEOAnalyses(limit, offset int) ([]*models.SEOAnalysisDB, error) {
+	query := `
+		SELECT id, page_id, url, title, meta_description, h1_tags, h2_tags,
+		       image_alt_count, word_count, internal_links, external_links,
+		       mobile_friendly, loading_speed, ssl_enabled, schema_markup,
+		       score, issues, recommendations, created_by, created_at
+		FROM seo_analyses
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := s.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query SEO analyses: %w", err)
+	}
+	defer rows.Close()
+
+	var analyses []*models.SEOAnalysisDB
+	for rows.Next() {
+		analysis := &models.SEOAnalysisDB{}
+		var pageID sql.NullInt64
+
+		err := rows.Scan(
+			&analysis.ID,
+			&pageID,
+			&analysis.URL,
+			&analysis.Title,
+			&analysis.MetaDescription,
+			&analysis.H1Tags,
+			&analysis.H2Tags,
+			&analysis.ImageAltCount,
+			&analysis.WordCount,
+			&analysis.InternalLinks,
+			&analysis.ExternalLinks,
+			&analysis.MobileFriendly,
+			&analysis.LoadingSpeed,
+			&analysis.SSLEnabled,
+			&analysis.SchemaMarkup,
+			&analysis.Score,
+			&analysis.Issues,
+			&analysis.Recommendations,
+			&analysis.CreatedBy,
+			&analysis.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan SEO analysis row: %w", err)
+		}
+
+		if pageID.Valid {
+			analysis.PageID = &pageID.Int64
+		}
+
+		analyses = append(analyses, analysis)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating SEO analysis rows: %w", err)
+	}
+
+	return analyses, nil
+}
+
+// GetTotalSEOAnalysesCount returns total count of SEO analyses
+func (s *AdminService) GetTotalSEOAnalysesCount() (int64, error) {
+	var count int64
+	err := s.db.QueryRow("SELECT COUNT(*) FROM seo_analyses").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get total SEO analyses count: %w", err)
+	}
+	return count, nil
+}
+
+// AnalyzeURL performs a basic SEO analysis on a URL (placeholder implementation)
+func (s *AdminService) AnalyzeURL(url string, userID int64) (*models.SEOAnalysisDB, error) {
+	// Placeholder implementation - creates a basic analysis record
+	// Future enhancement: Fetch URL, parse HTML, analyze meta tags, etc.
+
+	query := `
+		INSERT INTO seo_analyses (
+			url, title, meta_description, h1_tags, h2_tags,
+			image_alt_count, word_count, internal_links, external_links,
+			mobile_friendly, loading_speed, ssl_enabled, schema_markup,
+			score, issues, recommendations, created_by
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+		) RETURNING id, created_at
+	`
+
+	analysis := &models.SEOAnalysisDB{
+		URL:             url,
+		Title:           "Pending Analysis",
+		MetaDescription: "",
+		H1Tags:          "[]",
+		H2Tags:          "[]",
+		ImageAltCount:   0,
+		WordCount:       0,
+		InternalLinks:   0,
+		ExternalLinks:   0,
+		MobileFriendly:  false,
+		LoadingSpeed:    0.0,
+		SSLEnabled:      false,
+		SchemaMarkup:    "{}",
+		Score:           0,
+		Issues:          "[]",
+		Recommendations: `["Full SEO analysis coming soon"]`,
+		CreatedBy:       userID,
+	}
+
+	err := s.db.QueryRow(
+		query,
+		analysis.URL,
+		analysis.Title,
+		analysis.MetaDescription,
+		analysis.H1Tags,
+		analysis.H2Tags,
+		analysis.ImageAltCount,
+		analysis.WordCount,
+		analysis.InternalLinks,
+		analysis.ExternalLinks,
+		analysis.MobileFriendly,
+		analysis.LoadingSpeed,
+		analysis.SSLEnabled,
+		analysis.SchemaMarkup,
+		analysis.Score,
+		analysis.Issues,
+		analysis.Recommendations,
+		analysis.CreatedBy,
+	).Scan(&analysis.ID, &analysis.CreatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SEO analysis: %w", err)
+	}
+
+	return analysis, nil
+}
+
+// GetSitemapEntries returns sitemap entries from published pages and active URLs
+func (s *AdminService) GetSitemapEntries() ([]*models.SitemapEntry, error) {
+	var entries []*models.SitemapEntry
+
+	// Get published static pages
+	pagesQuery := `
+		SELECT slug, updated_at
+		FROM static_pages
+		WHERE is_published = true
+		ORDER BY updated_at DESC
+	`
+
+	rows, err := s.db.Query(pagesQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query static pages: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var slug string
+		var updatedAt sql.NullTime
+
+		if err := rows.Scan(&slug, &updatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan page row: %w", err)
+		}
+
+		lastMod := ""
+		if updatedAt.Valid {
+			lastMod = updatedAt.Time.Format("2006-01-02")
+		}
+
+		entries = append(entries, &models.SitemapEntry{
+			URL:        "/" + slug,
+			LastMod:    lastMod,
+			ChangeFreq: "weekly",
+			Priority:   0.8,
+		})
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating page rows: %w", err)
+	}
+
+	return entries, nil
+}
+
+// GenerateSitemap generates an XML sitemap
+func (s *AdminService) GenerateSitemap() (string, error) {
+	entries, err := s.GetSitemapEntries()
+	if err != nil {
+		return "", fmt.Errorf("failed to get sitemap entries: %w", err)
+	}
+
+	// Build XML sitemap
+	xml := `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+`
+
+	for _, entry := range entries {
+		xml += fmt.Sprintf(`  <url>
+    <loc>%s</loc>
+    <lastmod>%s</lastmod>
+    <changefreq>%s</changefreq>
+    <priority>%.1f</priority>
+  </url>
+`, entry.URL, entry.LastMod, entry.ChangeFreq, entry.Priority)
+	}
+
+	xml += "</urlset>"
+
+	return xml, nil
+}
+
+// GetMetaTags returns list of meta tags with pagination
+func (s *AdminService) GetMetaTags(limit, offset int) ([]*models.MetaTag, error) {
+	query := `
+		SELECT id, page_id, name, content, property, created_by, created_at, updated_by, updated_at
+		FROM meta_tags
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	rows, err := s.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query meta tags: %w", err)
+	}
+	defer rows.Close()
+
+	var metaTags []*models.MetaTag
+	for rows.Next() {
+		tag := &models.MetaTag{}
+		var pageID sql.NullInt64
+		var property sql.NullString
+		var updatedBy sql.NullInt64
+
+		err := rows.Scan(
+			&tag.ID,
+			&pageID,
+			&tag.Name,
+			&tag.Content,
+			&property,
+			&tag.CreatedBy,
+			&tag.CreatedAt,
+			&updatedBy,
+			&tag.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan meta tag row: %w", err)
+		}
+
+		if pageID.Valid {
+			tag.PageID = &pageID.Int64
+		}
+		if property.Valid {
+			propertyStr := property.String
+			tag.Property = &propertyStr
+		}
+		if updatedBy.Valid {
+			tag.UpdatedBy = &updatedBy.Int64
+		}
+
+		metaTags = append(metaTags, tag)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating meta tag rows: %w", err)
+	}
+
+	return metaTags, nil
+}
+
+// GetTotalMetaTagsCount returns total count of meta tags
+func (s *AdminService) GetTotalMetaTagsCount() (int64, error) {
+	var count int64
+	err := s.db.QueryRow("SELECT COUNT(*) FROM meta_tags").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get total meta tags count: %w", err)
+	}
+	return count, nil
+}
+
+// CreateMetaTag creates a new meta tag
+func (s *AdminService) CreateMetaTag(req *models.CreateMetaTagRequest, userID int64) (*models.MetaTag, error) {
+	// Check for duplicates (page_id + name + property combination)
+	var existingID int64
+	checkQuery := `
+		SELECT id FROM meta_tags
+		WHERE (page_id = $1 OR ($1 IS NULL AND page_id IS NULL))
+		  AND name = $2
+		  AND (property = $3 OR ($3 IS NULL AND property IS NULL))
+	`
+	err := s.db.QueryRow(checkQuery, req.PageID, req.Name, req.Property).Scan(&existingID)
+	if err != sql.ErrNoRows {
+		if err == nil {
+			return nil, fmt.Errorf("meta tag already exists with this combination")
+		}
+		return nil, fmt.Errorf("failed to check for duplicate meta tag: %w", err)
+	}
+
+	// Insert new meta tag
+	query := `
+		INSERT INTO meta_tags (page_id, name, content, property, created_by)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, updated_at
+	`
+
+	tag := &models.MetaTag{
+		PageID:    req.PageID,
+		Name:      req.Name,
+		Content:   req.Content,
+		Property:  req.Property,
+		CreatedBy: userID,
+	}
+
+	err = s.db.QueryRow(
+		query,
+		tag.PageID,
+		tag.Name,
+		tag.Content,
+		tag.Property,
+		tag.CreatedBy,
+	).Scan(&tag.ID, &tag.CreatedAt, &tag.UpdatedAt)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create meta tag: %w", err)
+	}
+
+	return tag, nil
+}
+
+// DeleteMetaTag deletes a meta tag by ID
+func (s *AdminService) DeleteMetaTag(id int64) error {
+	query := "DELETE FROM meta_tags WHERE id = $1"
+	result, err := s.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete meta tag: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("meta tag not found")
+	}
+
+	return nil
+}
