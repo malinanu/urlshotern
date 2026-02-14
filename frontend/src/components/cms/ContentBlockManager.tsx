@@ -362,7 +362,7 @@ export function ContentBlockManager() {
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-2">No content blocks found</div>
           <p className="text-gray-400">
-            {searchTerm || filterType !== 'all' || filterCategory !== 'all'
+            {searchTerm || filterType !== 'all'
               ? 'Try adjusting your filters'
               : 'Create your first content block to get started'}
           </p>

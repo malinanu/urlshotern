@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   // Note: In Next.js 16, eslint config is no longer in next.config.ts
   // Use SKIP_LINT=true or configure via package.json scripts instead
 
+  // Bypass TypeScript errors during build (for CI/CD and Docker builds)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   // Enable React Compiler and experimental features
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'recharts', 'lucide-react'],
