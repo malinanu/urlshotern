@@ -103,7 +103,7 @@ export function SEOToolsManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setAnalyses(data);
+        setAnalyses(data.analyses || []);
       }
     } catch (error) {
       console.error('Error fetching SEO analyses:', error);
@@ -120,7 +120,7 @@ export function SEOToolsManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setSitemap(data);
+        setSitemap(data.entries || data.urls || []);
       }
     } catch (error) {
       console.error('Error fetching sitemap:', error);
@@ -137,7 +137,7 @@ export function SEOToolsManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setMetaTags(data);
+        setMetaTags(data.meta_tags || []);
       }
     } catch (error) {
       console.error('Error fetching meta tags:', error);
