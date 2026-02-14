@@ -110,7 +110,7 @@ export function ContentBlockManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setBlocks(data.blocks || []);
+        setBlocks(data.data || data.blocks || []);
       } else {
         toast.error('Failed to fetch content blocks');
       }
