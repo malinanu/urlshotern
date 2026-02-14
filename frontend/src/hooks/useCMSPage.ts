@@ -112,7 +112,7 @@ export function useCMSPage(
     return () => {
       isMounted = false;
     };
-  }, [slug, fallbackContent]);
+  }, [slug]); // Remove fallbackContent from dependencies to prevent infinite loop
 
   return { content, loading, error, usedCMS };
 }
