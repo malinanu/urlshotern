@@ -28,25 +28,21 @@ import {
 interface ContentBlock {
   id: number;
   name: string;
+  identifier: string;
   type: 'text' | 'image' | 'video' | 'form' | 'list' | 'html';
   content: string;
-  variables?: Record<string, string>;
-  is_global: boolean;
-  category: string;
-  description: string;
+  is_active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
-  usage_count?: number;
 }
 
 interface ContentBlockFormData {
   name: string;
   type: 'text' | 'image' | 'video' | 'form' | 'list' | 'html';
   content: string;
-  variables: Record<string, string>;
-  is_global: boolean;
-  category: string;
-  description: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
 const blockTypes = [
@@ -56,18 +52,6 @@ const blockTypes = [
   { value: 'form', label: 'Form Block', icon: DocumentTextIcon },
   { value: 'list', label: 'List Block', icon: ListBulletIcon },
   { value: 'html', label: 'HTML Block', icon: CodeBracketIcon }
-];
-
-const categories = [
-  'general',
-  'header',
-  'footer',
-  'sidebar',
-  'hero',
-  'testimonial',
-  'pricing',
-  'contact',
-  'custom'
 ];
 
 export function ContentBlockManager() {
@@ -81,15 +65,12 @@ export function ContentBlockManager() {
   const [previewBlock, setPreviewBlock] = useState<ContentBlock | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
   const [formData, setFormData] = useState<ContentBlockFormData>({
     name: '',
     type: 'text',
     content: '',
-    variables: {},
-    is_global: true,
-    category: 'general',
-    description: ''
+    is_active: true,
+    sort_order: 0
   });
 
   useEffect(() => {
@@ -98,7 +79,7 @@ export function ContentBlockManager() {
 
   useEffect(() => {
     filterBlocks();
-  }, [blocks, searchTerm, filterType, filterCategory]);
+  }, [blocks, searchTerm, filterType]);
 
   const fetchBlocks = async () => {
     try {
@@ -128,19 +109,13 @@ export function ContentBlockManager() {
     if (searchTerm) {
       filtered = filtered.filter(block =>
         block.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        block.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        block.category.toLowerCase().includes(searchTerm.toLowerCase())
+        block.identifier.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Type filter
     if (filterType !== 'all') {
       filtered = filtered.filter(block => block.type === filterType);
-    }
-
-    // Category filter
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(block => block.category === filterCategory);
     }
 
     setFilteredBlocks(filtered);
@@ -185,11 +160,9 @@ export function ContentBlockManager() {
     setFormData({
       name: block.name,
       type: block.type,
-      content: block.content,
-      variables: block.variables || {},
-      is_global: block.is_global,
-      category: block.category,
-      description: block.description
+      content: block.content || '',
+      is_active: block.is_active ?? true,
+      sort_order: block.sort_order || 0
     });
     setShowForm(true);
   };
@@ -222,11 +195,9 @@ export function ContentBlockManager() {
     setFormData({
       name: `${block.name} (Copy)`,
       type: block.type,
-      content: block.content,
-      variables: block.variables || {},
-      is_global: block.is_global,
-      category: block.category,
-      description: block.description
+      content: block.content || '',
+      is_active: block.is_active ?? true,
+      sort_order: block.sort_order || 0
     });
     setShowForm(true);
   };
@@ -256,46 +227,11 @@ export function ContentBlockManager() {
       name: '',
       type: 'text',
       content: '',
-      variables: {},
-      is_global: true,
-      category: 'general',
-      description: ''
+      is_active: true,
+      sort_order: 0
     });
   };
 
-  const addVariable = () => {
-    const key = prompt('Enter variable name:');
-    if (key) {
-      setFormData(prev => ({
-        ...prev,
-        variables: {
-          ...prev.variables,
-          [key]: ''
-        }
-      }));
-    }
-  };
-
-  const updateVariable = (key: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      variables: {
-        ...prev.variables,
-        [key]: value
-      }
-    }));
-  };
-
-  const removeVariable = (key: string) => {
-    setFormData(prev => {
-      const newVariables = { ...prev.variables };
-      delete newVariables[key];
-      return {
-        ...prev,
-        variables: newVariables
-      };
-    });
-  };
 
   const getBlockIcon = (type: string) => {
     const blockType = blockTypes.find(bt => bt.value === type);
@@ -352,17 +288,6 @@ export function ContentBlockManager() {
               </option>
             ))}
           </Select>
-          <Select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="all">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </option>
-            ))}
-          </Select>
           <div className="text-sm text-gray-500 flex items-center">
             {filteredBlocks.length} block{filteredBlocks.length !== 1 ? 's' : ''}
           </div>
@@ -380,25 +305,19 @@ export function ContentBlockManager() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{block.name}</h3>
-                  <p className="text-sm text-gray-500">{block.category}</p>
+                  <p className="text-sm text-gray-500">{block.identifier}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge variant={block.is_global ? 'default' : 'secondary'}>
-                  {block.is_global ? 'Global' : 'Local'}
+                <Badge variant={block.is_active ? 'default' : 'secondary'}>
+                  {block.is_active ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {block.description}
-            </p>
-
-            {block.usage_count !== undefined && (
-              <div className="text-xs text-gray-500 mb-4">
-                Used {block.usage_count} time{block.usage_count !== 1 ? 's' : ''}
-              </div>
-            )}
+            <div className="text-xs text-gray-500 mb-4">
+              Order: {block.sort_order}
+            </div>
 
             <div className="flex justify-end space-x-2">
               <Button
@@ -496,102 +415,30 @@ export function ContentBlockManager() {
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category *
+              <label htmlFor="sort_order" className="block text-sm font-medium text-gray-700 mb-2">
+                Sort Order
               </label>
-              <Select
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                required
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </Select>
+              <Input
+                type="number"
+                id="sort_order"
+                value={formData.sort_order}
+                onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                placeholder="0"
+                min="0"
+              />
             </div>
 
             <div className="flex items-center">
               <label className="flex items-center">
                 <input
                   type="checkbox"
-                  checked={formData.is_global}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_global: e.target.checked }))}
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
                   className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                 />
-                <span className="ml-2 text-sm text-gray-700">Global Block</span>
+                <span className="ml-2 text-sm text-gray-700">Active</span>
               </label>
             </div>
-          </div>
-
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of this content block"
-              rows={2}
-            />
-          </div>
-
-          {/* Variables */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-medium text-gray-700">
-                Template Variables
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={addVariable}
-              >
-                <PlusIcon className="h-4 w-4 mr-1" />
-                Add Variable
-              </Button>
-            </div>
-            {Object.keys(formData.variables).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(formData.variables).map(([key, value]) => (
-                  <div key={key} className="flex items-center space-x-3">
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        value={key}
-                        disabled
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex-2">
-                      <Input
-                        type="text"
-                        value={value}
-                        onChange={(e) => updateVariable(key, e.target.value)}
-                        placeholder="Default value"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeVariable(key)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 italic">
-                No variables defined. Variables allow you to make content dynamic.
-              </p>
-            )}
           </div>
 
           {/* Content */}
@@ -650,10 +497,10 @@ export function ContentBlockManager() {
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">{previewBlock.type}</Badge>
-              <Badge variant={previewBlock.is_global ? 'default' : 'secondary'}>
-                {previewBlock.is_global ? 'Global' : 'Local'}
+              <Badge variant={previewBlock.is_active ? 'default' : 'secondary'}>
+                {previewBlock.is_active ? 'Active' : 'Inactive'}
               </Badge>
-              <span className="text-sm text-gray-500">{previewBlock.category}</span>
+              <span className="text-sm text-gray-500">{previewBlock.identifier}</span>
             </div>
             <div className="border rounded-lg p-6 bg-white">
               <div

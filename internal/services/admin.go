@@ -332,7 +332,7 @@ func (s *AdminService) GetCMSPages(limit, offset int) ([]*models.CMSPage, error)
 // GetCMSBlocks returns list of content blocks
 func (s *AdminService) GetCMSBlocks(limit, offset int) ([]*models.CMSBlock, error) {
 	query := `
-		SELECT id, name, identifier, type, is_active, created_at, updated_at
+		SELECT id, name, identifier, type, content, is_active, sort_order, created_at, updated_at
 		FROM content_blocks
 		ORDER BY sort_order ASC, created_at DESC
 		LIMIT $1 OFFSET $2
@@ -353,7 +353,9 @@ func (s *AdminService) GetCMSBlocks(limit, offset int) ([]*models.CMSBlock, erro
 			&block.Name,
 			&block.Identifier,
 			&block.Type,
+			&block.Content,
 			&block.IsActive,
+			&block.SortOrder,
 			&block.CreatedAt,
 			&block.UpdatedAt,
 		)

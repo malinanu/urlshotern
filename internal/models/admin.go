@@ -67,7 +67,9 @@ type CMSBlock struct {
 	Name       string    `json:"name"`
 	Identifier string    `json:"identifier"`
 	Type       string    `json:"type"`
+	Content    string    `json:"content"`
 	IsActive   bool      `json:"is_active"`
+	SortOrder  int       `json:"sort_order"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
