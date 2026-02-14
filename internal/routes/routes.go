@@ -106,8 +106,8 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	// Public product listing for pricing page (no auth required)
 	router.GET("/api/v1/products", handler.BillingHandlers.GetProducts)
 
-	// Public CMS pages - temporarily disabled
-	// router.GET("/api/v1/pages/:slug", handler.CMSHandlers.PublicPageHandler)
+	// Public CMS pages
+	router.GET("/api/v1/pages/:slug", handler.CMSHandlers.GetStaticPage)
 }
 
 // setupAuthRoutes configures authentication routes
@@ -219,8 +219,16 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	// CMS routes
 	cms := admin.Group("/cms")
 	{
-		cms.GET("/pages", handler.AuthHandlers.GetCMSPages)
+		// Pages CRUD
+		cms.GET("/pages", handler.CMSHandlers.ListStaticPages)
+		cms.POST("/pages", handler.CMSHandlers.CreateStaticPage)
+		cms.PUT("/pages/:id", handler.CMSHandlers.UpdateStaticPage)
+		cms.DELETE("/pages/:id", handler.CMSHandlers.DeleteStaticPage)
+
+		// Blocks (keeping existing auth handlers)
 		cms.GET("/blocks", handler.AuthHandlers.GetCMSBlocks)
+
+		// Templates (keeping existing auth handlers)
 		cms.GET("/templates", handler.AuthHandlers.GetCMSTemplates)
 	}
 

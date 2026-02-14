@@ -36,12 +36,17 @@ type Handler struct {
 	PolarWebhookHandler    *PolarWebhookHandler
 	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
 	AttributionHandlers    *AttributionHandler
+	CMSHandlers            *CMSHandlers
 }
 
 // NewHandler creates a new handler instance
 func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
+
+	// Create CMS service and handler
+	cmsService := services.NewCMSService(db)
+	cmsHandlers := NewCMSHandlers(cmsService, apiKeyService)
 
 	// Create billing service and handlers
 	billingHandler := NewBillingHandler(gormDB, config)
@@ -66,6 +71,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		PolarWebhookHandler:    NewPolarWebhookHandler(gormDB, billingHandler.billingService),
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
+		CMSHandlers:            cmsHandlers,
 	}
 }
 
