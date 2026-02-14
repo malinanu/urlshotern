@@ -124,13 +124,13 @@ export default function HomePage() {
                 {socialProof.heading}
               </p>
               <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-12">
-                {socialProof.stats.map((stat: any, index: number) => (
+                {(socialProof?.stats || []).map((stat: any, index: number) => (
                   <>
                     <div key={stat.label} className="flex items-center gap-3">
                       <div className="text-3xl font-bold text-gray-800">{stat.value}</div>
                       <div className="text-sm text-gray-500 font-medium">{stat.label}</div>
                     </div>
-                    {index < socialProof.stats.length - 1 && (
+                    {index < (socialProof?.stats || []).length - 1 && (
                       <div key={`divider-${index}`} className="hidden sm:block w-px h-8 bg-gray-300" />
                     )}
                   </>
@@ -156,7 +156,7 @@ export default function HomePage() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {features.map((feature) => (
+              {(features || []).map((feature) => (
                 <Card
                   key={feature.name}
                   className="relative group hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-gradient-to-br from-white to-gray-50/50"
@@ -219,7 +219,7 @@ export default function HomePage() {
               </div>
 
               <div className="pt-8 flex flex-col sm:flex-row justify-center items-center gap-6 text-primary-100">
-                {ctaBottom.features.map((feature: string, index: number) => (
+                {(ctaBottom?.features || []).map((feature: string, index: number) => (
                   <div key={index} className="flex items-center gap-2">
                     <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

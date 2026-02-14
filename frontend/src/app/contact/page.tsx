@@ -262,7 +262,7 @@ export default function ContactPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            {contactMethods.map((method, index) => (
+            {(contactMethods || []).map((method, index) => (
               <Card
                 key={index}
                 className="relative group hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-white text-center"
@@ -512,7 +512,7 @@ export default function ContactPage() {
           </div>
 
           <div className="flex justify-center">
-            {supportResources.map((resource: any, index: number) => (
+            {(supportResources || []).map((resource: any, index: number) => (
               <div key={index} className="max-w-md">
                 <Card className="bg-gradient-to-br from-primary-50 to-white border-primary-100">
                   <CardHeader className="text-center space-y-4">

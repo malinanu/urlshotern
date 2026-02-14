@@ -174,7 +174,7 @@ export default function AboutPage() {
 
           {/* Stats Grid */}
           <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
+            {(stats || []).map((stat, index) => (
               <div key={index} className="text-center space-y-3">
                 <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center">
                   <stat.icon className={`h-8 w-8 ${stat.color}`} />
@@ -260,7 +260,7 @@ export default function AboutPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            {values.map((value, index) => (
+            {(values || []).map((value, index) => (
               <Card
                 key={index}
                 className="relative group hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-white"
@@ -335,7 +335,7 @@ export default function AboutPage() {
           </div>
 
           <div className="grid gap-6">
-            {achievements.map((achievement, index) => (
+            {(achievements || []).map((achievement, index) => (
               <Card key={index} className="border-l-4 border-l-primary-600 bg-white hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -396,7 +396,7 @@ export default function AboutPage() {
             </div>
 
             <div className="pt-8 flex flex-col sm:flex-row justify-center items-center gap-6 text-primary-100">
-              {ctaBottom.features.map((feature: string, index: number) => (
+              {(ctaBottom?.features || []).map((feature: string, index: number) => (
                 <div key={index} className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
