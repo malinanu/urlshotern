@@ -92,9 +92,20 @@ export default function CMSManager() {
         },
       });
 
+      console.log('CMS Pages Response Status:', response.status);
+      console.log('CMS Pages Response OK:', response.ok);
+
       if (response.ok) {
         const data = await response.json();
-        setPages(data.data || data.pages || []);
+        console.log('CMS Pages Raw Response:', data);
+        console.log('CMS Pages data.data:', data.data);
+        console.log('CMS Pages data.pages:', data.pages);
+        const pages = data.data || data.pages || [];
+        console.log('CMS Pages Final Array:', pages);
+        setPages(pages);
+      } else {
+        const errorText = await response.text();
+        console.error('CMS Pages Error Response:', errorText);
       }
     } catch (error) {
       console.error('Error fetching pages:', error);
