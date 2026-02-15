@@ -309,15 +309,19 @@ func (h *AdminRBACHandlers) ListRoles(c *gin.Context) {
 // GetAssignableRoles returns roles that the current user can assign based on role hierarchy
 // GET /api/v1/admin/rbac/assignable-roles
 func (h *AdminRBACHandlers) GetAssignableRoles(c *gin.Context) {
+	middleware.LogInfo(c, "GetAssignableRoles called")
+
 	// Get current user ID from context (set by RequireAuth middleware)
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
+		middleware.LogError(c, nil, "user_id not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
 	userID, ok := userIDInterface.(int64)
 	if !ok {
+		middleware.LogError(c, nil, "invalid user ID format in context")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format"})
 		return
 	}
@@ -327,6 +331,13 @@ func (h *AdminRBACHandlers) GetAssignableRoles(c *gin.Context) {
 	if err != nil {
 		middleware.LogError(c, err, "Failed to fetch user roles")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user roles"})
+		return
+	}
+
+	// Handle case where user has no roles - return empty list
+	if len(userRolesData) == 0 {
+		middleware.LogInfo(c, "User has no roles assigned")
+		c.JSON(http.StatusOK, []*models.Role{})
 		return
 	}
 
@@ -346,6 +357,13 @@ func (h *AdminRBACHandlers) GetAssignableRoles(c *gin.Context) {
 		}
 	}
 
+	// If user has no assignable roles (e.g., only has "user" role), return empty list
+	if len(assignableRoleNames) == 0 {
+		middleware.LogInfo(c, "User has no assignable roles based on hierarchy")
+		c.JSON(http.StatusOK, []*models.Role{})
+		return
+	}
+
 	// Convert map to slice
 	roleNamesList := make([]string, 0, len(assignableRoleNames))
 	for name := range assignableRoleNames {
@@ -360,6 +378,12 @@ func (h *AdminRBACHandlers) GetAssignableRoles(c *gin.Context) {
 		return
 	}
 
+	// Ensure we return empty array instead of nil
+	if assignableRoles == nil {
+		assignableRoles = []*models.Role{}
+	}
+
+	middleware.LogInfo(c, "Successfully retrieved assignable roles")
 	c.JSON(http.StatusOK, assignableRoles)
 }
 
