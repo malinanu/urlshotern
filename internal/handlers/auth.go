@@ -1031,3 +1031,64 @@ func (h *AuthHandlers) DeleteMetaTag(c *gin.Context) {
 		"message": "Meta tag deleted successfully",
 	})
 }
+
+// Password Reset Handlers
+
+// ForgotPassword handles forgot password requests
+func (h *AuthHandlers) ForgotPassword(c *gin.Context) {
+	var req models.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Struct(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.LogInfo(c, "Password reset requested for email")
+
+	// Request password reset (always returns success for security)
+	err := h.authService.RequestPasswordReset(req.Email, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		// Log error but don't expose it to user
+		middleware.LogError(c, err, "Failed to process password reset request")
+	}
+
+	// Always return success to prevent email enumeration
+	c.JSON(http.StatusOK, gin.H{
+		"message": "If an account exists with that email, a password reset link has been sent.",
+	})
+}
+
+// ResetPassword handles password reset with token
+func (h *AuthHandlers) ResetPassword(c *gin.Context) {
+	var req models.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Struct(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.LogInfo(c, "Password reset attempt")
+
+	// Reset password using token
+	err := h.authService.ResetPassword(req.Token, req.Password, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "Password reset failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	middleware.LogInfo(c, "Password reset successful")
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Password has been reset successfully. You can now log in with your new password.",
+	})
+}

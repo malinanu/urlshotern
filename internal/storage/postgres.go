@@ -963,6 +963,13 @@ func (p *PostgresStorage) UpdatePasswordReset(id string, usedAt time.Time) error
 	return err
 }
 
+// MarkPasswordResetAsUsed marks a password reset token as used
+func (p *PostgresStorage) MarkPasswordResetAsUsed(id interface{}, usedAt time.Time) error {
+	query := `UPDATE password_resets SET used_at = $1 WHERE id = $2`
+	_, err := p.Exec(query, usedAt, id)
+	return err
+}
+
 // UpdateUserPassword updates user password
 func (p *PostgresStorage) UpdateUserPassword(userID int64, passwordHash string) error {
 	query := `UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3`

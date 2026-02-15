@@ -222,9 +222,9 @@ func (a *AuthService) VerifyOTP(req *models.OTPRequest, ipAddress, userAgent str
 	return nil
 }
 
-// ForgotPassword initiates password reset process
-func (a *AuthService) ForgotPassword(req *models.ForgotPasswordRequest, ipAddress, userAgent string) error {
-	token, err := a.userService.CreatePasswordResetToken(req.Email)
+// RequestPasswordReset initiates password reset process
+func (a *AuthService) RequestPasswordReset(email, ipAddress, userAgent string) error {
+	token, err := a.createPasswordResetToken(email)
 	if err != nil {
 		// Don't reveal if email exists or not
 		return nil
@@ -232,30 +232,30 @@ func (a *AuthService) ForgotPassword(req *models.ForgotPasswordRequest, ipAddres
 
 	// Send password reset email
 	if a.emailService != nil {
-		err = a.emailService.SendPasswordReset(req.Email, token)
+		err = a.emailService.SendPasswordReset(email, token)
 		if err != nil {
 			fmt.Printf("Failed to send password reset email: %v\n", err)
 		}
 	}
 
 	// Log password reset request (don't log user ID to prevent enumeration)
-	a.logAuditEvent(nil, "password_reset_requested", "authentication", "", 
+	a.logAuditEvent(nil, "password_reset_requested", "authentication", "",
 		map[string]interface{}{
-			"email": req.Email,
+			"email": email,
 		}, ipAddress, userAgent)
 
 	return nil
 }
 
 // ResetPassword resets password using token
-func (a *AuthService) ResetPassword(req *models.ResetPasswordRequest, ipAddress, userAgent string) error {
-	err := a.userService.ResetPassword(req.Token, req.Password)
+func (a *AuthService) ResetPassword(token, newPassword, ipAddress, userAgent string) error {
+	err := a.resetPasswordWithToken(token, newPassword)
 	if err != nil {
 		return err
 	}
 
 	// Log password reset
-	a.logAuditEvent(nil, "password_reset_completed", "authentication", "", 
+	a.logAuditEvent(nil, "password_reset_completed", "authentication", "",
 		map[string]interface{}{
 			"token_used": true,
 		}, ipAddress, userAgent)
@@ -432,4 +432,80 @@ func (a *AuthService) GenerateSecureToken() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
+}
+
+// createPasswordResetToken creates a password reset token for a user
+func (a *AuthService) createPasswordResetToken(email string) (string, error) {
+	// Get user by email
+	user, err := a.db.GetUserByEmail(email)
+	if err != nil {
+		// Return nil error to prevent email enumeration
+		return "", fmt.Errorf("user not found")
+	}
+
+	// Generate secure token
+	token := a.GenerateSecureToken()
+
+	// Create password reset record
+	resetRecord := &models.PasswordReset{
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: time.Now().Add(1 * time.Hour), // 1 hour expiry
+		CreatedAt: time.Now(),
+	}
+
+	// Save to database
+	err = a.db.CreatePasswordReset(resetRecord)
+	if err != nil {
+		return "", fmt.Errorf("failed to create password reset token: %w", err)
+	}
+
+	return token, nil
+}
+
+// resetPasswordWithToken resets a user's password using a reset token
+func (a *AuthService) resetPasswordWithToken(token, newPassword string) error {
+	// Get password reset by token
+	reset, err := a.db.GetPasswordResetByToken(token)
+	if err != nil {
+		return fmt.Errorf("invalid or expired reset token")
+	}
+
+	// Check if token is expired
+	if time.Now().After(reset.ExpiresAt) {
+		return fmt.Errorf("reset token has expired")
+	}
+
+	// Check if token has been used
+	if reset.UsedAt != nil {
+		return fmt.Errorf("reset token has already been used")
+	}
+
+	// Get user
+	user, err := a.db.GetUserByID(reset.UserID)
+	if err != nil {
+		return fmt.Errorf("user not found")
+	}
+
+	// Hash new password
+	hashedPassword, err := a.userService.hashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update user password
+	err = a.db.UpdateUserPassword(user.ID, hashedPassword)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// Mark token as used
+	now := time.Now()
+	err = a.db.MarkPasswordResetAsUsed(reset.ID, now)
+	if err != nil {
+		// Log error but don't fail the operation
+		fmt.Printf("Failed to mark password reset token as used: %v\n", err)
+	}
+
+	return nil
 }

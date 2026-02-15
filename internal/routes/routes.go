@@ -135,7 +135,11 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 	// Email verification routes
 	auth.GET("/verify-email", authHandlers.VerifyEmail)
 	auth.POST("/resend-email", authHandlers.SendEmailVerification)
-	
+
+	// Password reset routes
+	auth.POST("/forgot-password", authHandlers.ForgotPassword)
+	auth.POST("/reset-password", authHandlers.ResetPassword)
+
 	// Protected auth routes (require authentication)
 	protected := auth.Group("/")
 	protected.Use(authMiddleware.RequireAuth())  // Re-enabled authentication middleware

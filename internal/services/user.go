@@ -619,3 +619,12 @@ func (u *UserService) generateOTP() string {
 	return fmt.Sprintf("%06d", otp%1000000)
 }
 
+// hashPassword hashes a password using bcrypt
+func (u *UserService) hashPassword(password string) (string, error) {
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), u.config.BCryptCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashedBytes), nil
+}
+
