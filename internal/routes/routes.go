@@ -255,6 +255,10 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesRead),
 				handler.AdminRBACHandlers.ListRoles)
 
+			rbac.GET("/assignable-roles",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesRead),
+				handler.AdminRBACHandlers.GetAssignableRoles)
+
 			rbac.GET("/roles/:id",
 				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesRead),
 				handler.AdminRBACHandlers.GetRole)
@@ -480,6 +484,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/analytics", "/profile", "/settings",
 		"/bulk", "/conversions", "/api-keys", "/admin",
 		"/billing",
+		"/forgot-password", "/reset-password",  // Password reset pages
 	}
 
 	for _, route := range frontendRoutes {
