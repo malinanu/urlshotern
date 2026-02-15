@@ -519,8 +519,12 @@ func (h *CMSHandlers) PublishStaticPage(c *gin.Context) {
 		req.IsPublished = !page.IsPublished
 	}
 
-	// Update publication status
-	err = h.cmsService.UpdateStaticPageStatus(pageID, req.IsPublished)
+	// Update publication status using existing UpdateStaticPage method
+	updateReq := &models.UpdateStaticPageRequest{
+		IsPublished: &req.IsPublished,
+	}
+
+	updatedPage, err := h.cmsService.UpdateStaticPage(pageID, updateReq, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update page status"})
 		return
@@ -539,8 +543,7 @@ func (h *CMSHandlers) PublishStaticPage(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Page " + action + " successfully",
-		"page_id":      pageID,
-		"is_published": req.IsPublished,
+		"page":         updatedPage,
 		"updated_by":   user.ID,
 	})
 }

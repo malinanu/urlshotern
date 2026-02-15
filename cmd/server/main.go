@@ -68,12 +68,12 @@ func main() {
 	jwtService := services.NewJWTService(config.JWTSecret, config.JWTIssuer, time.Hour*24, time.Hour*24*7)
 	userService := services.NewUserService(db, redis, jwtService, smsService, emailService, nil)
 	authService := services.NewAuthService(userService, jwtService, smsService, emailService, db, redis, config)
-	rbacService := services.NewRBACService(db, redis)
+	rbacService := services.NewRBACServiceImpl(db, redis)
 	conversionTrackingService := services.NewConversionTrackingService(db)
 	abTestingService := services.NewABTestingService(db, redis)
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
-	adminService := services.NewAdminService(db)
+	adminService := services.NewAdminService(db, rbacService)
 	// cmsService := services.NewCMSService(db)  // Temporarily disabled
 	// apiKeyService := services.NewAPIKeyService(db)  // Temporarily disabled
 
@@ -89,7 +89,8 @@ func main() {
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
+	adminRBACHandlers := handlers.NewAdminRBACHandlers(adminService, rbacService)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers)
 
 	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)

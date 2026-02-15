@@ -11,6 +11,7 @@ import (
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/handlers"
 	"github.com/URLshorter/url-shortener/internal/middleware"
+	"github.com/URLshorter/url-shortener/internal/models"
 )
 
 // SetupRoutes configures all application routes

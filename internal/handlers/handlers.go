@@ -41,7 +41,7 @@ type Handler struct {
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
 
@@ -73,6 +73,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 		CMSHandlers:            cmsHandlers,
+		AdminRBACHandlers:      adminRBACHandlers,
 	}
 }
 
