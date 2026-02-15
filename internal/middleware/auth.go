@@ -14,7 +14,7 @@ import (
 type AuthMiddleware struct {
 	jwtService  *services.JWTService
 	userService *services.UserService
-	rbacService *services.RBACService
+	rbacService *services.RBACServiceImpl
 	redis       RedisStorage
 }
 
@@ -23,7 +23,7 @@ type RedisStorage interface {
 	IsTokenBlacklisted(token string) (bool, error)
 }
 
-func NewAuthMiddleware(jwtService *services.JWTService, userService *services.UserService, rbacService *services.RBACService, redis RedisStorage) *AuthMiddleware {
+func NewAuthMiddleware(jwtService *services.JWTService, userService *services.UserService, rbacService *services.RBACServiceImpl, redis RedisStorage) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtService:  jwtService,
 		userService: userService,
@@ -118,6 +118,7 @@ func (a *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 }
 
 // RequireAdmin middleware ensures user is an admin
+// Updated for backward compatibility: checks both is_admin flag AND RBAC roles
 func (a *AuthMiddleware) RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, exists := c.Get("user")
@@ -131,16 +132,39 @@ func (a *AuthMiddleware) RequireAdmin() gin.HandlerFunc {
 		}
 
 		u, ok := user.(*models.User)
-		if !ok || !u.IsAdmin {
+		if !ok {
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
-				Error:   "admin_required",
-				Message: "Admin access required",
+				Error:   "invalid_user",
+				Message: "Invalid user context",
 			})
 			c.Abort()
 			return
 		}
 
-		c.Next()
+		// Check legacy is_admin flag first (backward compatibility)
+		if u.IsAdmin {
+			c.Next()
+			return
+		}
+
+		// Check RBAC roles (admin or super_admin)
+		hasAdminRole, err := a.rbacService.UserHasAnyRole(u.ID, []string{models.RoleAdmin, models.RoleSuperAdmin})
+		if err != nil {
+			// Log error but continue with is_admin check
+			LogError(c, err, "Failed to check RBAC roles")
+		}
+
+		if hasAdminRole {
+			c.Next()
+			return
+		}
+
+		// Neither is_admin nor RBAC admin role
+		c.JSON(http.StatusForbidden, models.ErrorResponse{
+			Error:   "admin_required",
+			Message: "Admin access required",
+		})
+		c.Abort()
 	}
 }
 
@@ -625,4 +649,106 @@ func (a *AuthMiddleware) RequireTeamManagement() gin.HandlerFunc {
 // RequireAnalyticsAccess is a convenience method for analytics permissions
 func (a *AuthMiddleware) RequireAnalyticsAccess() gin.HandlerFunc {
 	return a.RequirePermission(models.PermissionAnalyticsRead)
+}
+
+// ============================================================================
+// RBAC Middleware Wrapper Methods (for easier route usage)
+// ============================================================================
+
+// RequirePermissionMiddleware is a wrapper that returns the middleware function
+// This makes it easier to use in routes: middleware.RequirePermissionMiddleware("permission")
+func (a *AuthMiddleware) RequirePermissionMiddleware(permission string) gin.HandlerFunc {
+	return a.RequirePermission(permission)
+}
+
+// RequireAnyPermissionMiddleware is a wrapper for RequireAnyPermission
+func (a *AuthMiddleware) RequireAnyPermissionMiddleware(permissions ...string) gin.HandlerFunc {
+	return a.RequireAnyPermission(permissions...)
+}
+
+// RequireRoleMiddleware is a wrapper for RequireRole
+func (a *AuthMiddleware) RequireRoleMiddleware(roleName string) gin.HandlerFunc {
+	return a.RequireRole(roleName)
+}
+
+// RequireCanAssignRole checks if the current user can assign a specific role
+// Used for role assignment endpoints to prevent privilege escalation
+func (a *AuthMiddleware) RequireCanAssignRole() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+				Error:   "unauthorized",
+				Message: "Authentication required",
+			})
+			c.Abort()
+			return
+		}
+
+		u, ok := user.(*models.User)
+		if !ok {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "invalid_user",
+				Message: "Invalid user context",
+			})
+			c.Abort()
+			return
+		}
+
+		// Get user's highest privilege role
+		roles, err := a.rbacService.GetUserRoles(u.ID)
+		if err != nil {
+			LogError(c, err, "Failed to get user roles")
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error:   "role_check_failed",
+				Message: "Failed to check user roles",
+			})
+			c.Abort()
+			return
+		}
+
+		if len(roles) == 0 {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "no_roles",
+				Message: "User has no roles",
+			})
+			c.Abort()
+			return
+		}
+
+		// Store user's highest role in context for later validation
+		highestRole := roles[0].Name
+		for _, role := range roles {
+			if role.Name == models.RoleSuperAdmin {
+				highestRole = models.RoleSuperAdmin
+				break
+			} else if role.Name == models.RoleAdmin && highestRole != models.RoleSuperAdmin {
+				highestRole = models.RoleAdmin
+			}
+		}
+
+		c.Set("assigner_role", highestRole)
+		c.Next()
+	}
+}
+
+// CMS Permission Middleware Helpers
+func (a *AuthMiddleware) RequireCMSRead() gin.HandlerFunc {
+	return a.RequirePermission(models.PermissionCMSPagesRead)
+}
+
+func (a *AuthMiddleware) RequireCMSCreate() gin.HandlerFunc {
+	return a.RequirePermission(models.PermissionCMSPagesCreate)
+}
+
+func (a *AuthMiddleware) RequireCMSUpdate() gin.HandlerFunc {
+	return a.RequirePermission(models.PermissionCMSPagesUpdate)
+}
+
+func (a *AuthMiddleware) RequireCMSDelete() gin.HandlerFunc {
+	return a.RequirePermission(models.PermissionCMSPagesDelete)
+}
+
+func (a *AuthMiddleware) RequireCMSPublish() gin.HandlerFunc {
+	return a.RequirePermission(models.PermissionCMSPagesPublish)
 }

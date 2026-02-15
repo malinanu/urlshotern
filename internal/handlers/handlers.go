@@ -37,6 +37,7 @@ type Handler struct {
 	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
 	AttributionHandlers    *AttributionHandler
 	CMSHandlers            *CMSHandlers
+	AdminRBACHandlers      *AdminRBACHandlers  // RBAC user and role management
 }
 
 // NewHandler creates a new handler instance

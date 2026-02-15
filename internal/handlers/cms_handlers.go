@@ -487,3 +487,60 @@ func (h *CMSHandlers) PublicPageHandler(c *gin.Context) {
 		},
 	})
 }
+
+// PublishStaticPage toggles the publication status of a page
+// PUT /api/v1/admin/cms/pages/:id/publish
+func (h *CMSHandlers) PublishStaticPage(c *gin.Context) {
+	pageID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page ID"})
+		return
+	}
+
+	// Get current user
+	currentUser, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	user := currentUser.(*models.User)
+
+	// Get publish status from request body (optional)
+	var req struct {
+		IsPublished bool `json:"is_published"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// If no body provided, toggle the current status
+		page, err := h.cmsService.GetStaticPageByID(pageID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Page not found"})
+			return
+		}
+		req.IsPublished = !page.IsPublished
+	}
+
+	// Update publication status
+	err = h.cmsService.UpdateStaticPageStatus(pageID, req.IsPublished)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update page status"})
+		return
+	}
+
+	// Log action (async) - you can enhance this with admin service if needed
+	action := "unpublished"
+	if req.IsPublished {
+		action = "published"
+	}
+
+	utils.Go("log_publish_action", func() error {
+		// Log to activity log or audit log as needed
+		return nil
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "Page " + action + " successfully",
+		"page_id":      pageID,
+		"is_published": req.IsPublished,
+		"updated_by":   user.ID,
+	})
+}

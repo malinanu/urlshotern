@@ -202,11 +202,13 @@ type AcceptInvitationRequest struct {
 // RBAC Constants
 const (
 	// System Roles
-	RoleSuperAdmin = "super_admin"
-	RoleAdmin      = "admin"
-	RoleUser       = "user"
-	RoleModerator  = "moderator"
-	RoleGuest      = "guest"
+	RoleSuperAdmin     = "super_admin"
+	RoleAdmin          = "admin"
+	RoleContentManager = "content_manager"
+	RoleContentEditor  = "content_editor"
+	RoleModerator      = "moderator"
+	RoleUser           = "user"
+	RoleGuest          = "guest"
 
 	// Team Roles
 	RoleTeamOwner  = "team_owner"
@@ -221,14 +223,18 @@ const (
 	ResourceTeams     = "teams"
 	ResourceSettings  = "settings"
 	ResourceSystem    = "system"
+	ResourceCMS       = "cms"
+	ResourceRBAC      = "rbac"
 
 	// Actions
-	ActionCreate = "create"
-	ActionRead   = "read"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
-	ActionManage = "manage"
-	ActionInvite = "invite"
+	ActionCreate  = "create"
+	ActionRead    = "read"
+	ActionUpdate  = "update"
+	ActionDelete  = "delete"
+	ActionManage  = "manage"
+	ActionInvite  = "invite"
+	ActionPublish = "publish"
+	ActionAssign  = "assign"
 
 	// Team Member Status
 	StatusInvited   = "invited"
@@ -278,4 +284,69 @@ const (
 	PermissionSettingsRead   = "settings.read"
 	PermissionSettingsUpdate = "settings.update"
 	PermissionSettingsManage = "settings.manage"
+
+	// CMS Pages
+	PermissionCMSPagesCreate  = "cms.pages.create"
+	PermissionCMSPagesRead    = "cms.pages.read"
+	PermissionCMSPagesUpdate  = "cms.pages.update"
+	PermissionCMSPagesDelete  = "cms.pages.delete"
+	PermissionCMSPagesPublish = "cms.pages.publish"
+
+	// CMS Blocks
+	PermissionCMSBlocksCreate = "cms.blocks.create"
+	PermissionCMSBlocksRead   = "cms.blocks.read"
+	PermissionCMSBlocksUpdate = "cms.blocks.update"
+	PermissionCMSBlocksDelete = "cms.blocks.delete"
+
+	// CMS Media
+	PermissionCMSMediaUpload = "cms.media.upload"
+	PermissionCMSMediaDelete = "cms.media.delete"
+
+	// CMS Settings
+	PermissionCMSSettingsRead   = "cms.settings.read"
+	PermissionCMSSettingsUpdate = "cms.settings.update"
+
+	// Enhanced Analytics
+	PermissionAnalyticsReadAll = "analytics.read.all"
+	PermissionAnalyticsExport  = "analytics.export"
+
+	// RBAC Management
+	PermissionRBACRolesCreate = "rbac.roles.create"
+	PermissionRBACRolesRead   = "rbac.roles.read"
+	PermissionRBACRolesUpdate = "rbac.roles.update"
+	PermissionRBACRolesDelete = "rbac.roles.delete"
+	PermissionRBACPermRead    = "rbac.permissions.read"
+	PermissionRBACAssign      = "rbac.assign"
+
+	// Enhanced User Management
+	PermissionUsersRolesAssign = "users.roles.assign"
+	PermissionUsersRolesRemove = "users.roles.remove"
+	PermissionUsersStatusToggle = "users.status.toggle"
+
+	// Enhanced System
+	PermissionSystemLogs   = "system.logs"
+	PermissionSystemHealth = "system.health"
 )
+
+// RoleAssignmentHierarchy defines who can assign which roles (privilege escalation prevention)
+// Super Admin can assign any role, Admin can assign content roles and moderator, etc.
+var RoleAssignmentHierarchy = map[string][]string{
+	RoleSuperAdmin:     {RoleSuperAdmin, RoleAdmin, RoleContentManager, RoleContentEditor, RoleModerator, RoleUser},
+	RoleAdmin:          {RoleContentManager, RoleContentEditor, RoleModerator, RoleUser},
+	RoleContentManager: {RoleContentEditor},
+	// Others cannot assign roles
+}
+
+// CanAssignRole checks if a user with assignerRole can assign targetRole
+func CanAssignRole(assignerRole, targetRole string) bool {
+	allowedRoles, exists := RoleAssignmentHierarchy[assignerRole]
+	if !exists {
+		return false
+	}
+	for _, role := range allowedRoles {
+		if role == targetRole {
+			return true
+		}
+	}
+	return false
+}

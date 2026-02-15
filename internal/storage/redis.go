@@ -94,6 +94,21 @@ func (r *RedisStorage) DeleteURLMapping(shortCode string) error {
 	return nil
 }
 
+// Get retrieves a value from Redis by key
+func (r *RedisStorage) Get(key string) (string, error) {
+	return r.client.Get(r.ctx, key).Result()
+}
+
+// Set stores a value in Redis with TTL
+func (r *RedisStorage) Set(key string, value interface{}, ttl time.Duration) error {
+	return r.client.Set(r.ctx, key, value, ttl).Err()
+}
+
+// Del deletes a key from Redis
+func (r *RedisStorage) Del(keys ...string) error {
+	return r.client.Del(r.ctx, keys...).Err()
+}
+
 // IncrementClickCount increments the click count in cache
 func (r *RedisStorage) IncrementClickCount(shortCode string) (int64, error) {
 	key := fmt.Sprintf("clicks:%s", shortCode)

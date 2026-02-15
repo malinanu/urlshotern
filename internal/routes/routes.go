@@ -210,26 +210,110 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	admin.GET("/stats", handler.AuthHandlers.GetAdminStats)
 	admin.GET("/activity", handler.AuthHandlers.GetRecentActivity)
 
-	// Admin user management
+	// Admin user management (existing)
 	admin.GET("/users", handler.AuthHandlers.GetUserList)
 	admin.GET("/users/:id", handler.AuthHandlers.GetUserByID)
 	admin.PUT("/users/:id/status", handler.AuthHandlers.ToggleUserStatus)
 	admin.DELETE("/users/:id", handler.AuthHandlers.DeleteUserAdmin)
 
-	// CMS routes
+	// ============================================================================
+	// RBAC Admin User Management (NEW)
+	// ============================================================================
+	if handler.AdminRBACHandlers != nil {
+		// User creation and role management
+		admin.POST("/users/create",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionUsersCreate),
+			handler.AdminRBACHandlers.CreateUserAdmin)
+
+		admin.POST("/users/:id/roles/assign",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionUsersRolesAssign),
+			authMiddleware.RequireCanAssignRole(),
+			handler.AdminRBACHandlers.AssignUserRole)
+
+		admin.DELETE("/users/:id/roles/:roleId",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionUsersRolesRemove),
+			handler.AdminRBACHandlers.RemoveUserRole)
+
+		admin.GET("/users/:id/roles",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionUsersRead),
+			handler.AdminRBACHandlers.GetUserRoles)
+
+		admin.PUT("/users/:id/account-type",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionUsersUpdate),
+			handler.AdminRBACHandlers.UpdateAccountType)
+
+		// RBAC Management
+		rbac := admin.Group("/rbac")
+		{
+			// Roles
+			rbac.GET("/roles",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesRead),
+				handler.AdminRBACHandlers.ListRoles)
+
+			rbac.GET("/roles/:id",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesRead),
+				handler.AdminRBACHandlers.GetRole)
+
+			rbac.POST("/roles",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesCreate),
+				handler.AdminRBACHandlers.CreateCustomRole)
+
+			rbac.PUT("/roles/:id",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesUpdate),
+				handler.AdminRBACHandlers.UpdateRole)
+
+			rbac.DELETE("/roles/:id",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACRolesDelete),
+				handler.AdminRBACHandlers.DeleteRole)
+
+			// Permissions
+			rbac.GET("/permissions",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACPermRead),
+				handler.AdminRBACHandlers.ListPermissions)
+
+			// Audit Log
+			rbac.GET("/audit",
+				authMiddleware.RequirePermissionMiddleware(models.PermissionRBACPermRead),
+				handler.AdminRBACHandlers.GetRBACAuditLog)
+		}
+	}
+
+	// ============================================================================
+	// CMS Routes (UPDATED with permission-based middleware)
+	// ============================================================================
 	cms := admin.Group("/cms")
 	{
-		// Pages CRUD
-		cms.GET("/pages", handler.CMSHandlers.ListStaticPages)
-		cms.POST("/pages", handler.CMSHandlers.CreateStaticPage)
-		cms.PUT("/pages/:id", handler.CMSHandlers.UpdateStaticPage)
-		cms.DELETE("/pages/:id", handler.CMSHandlers.DeleteStaticPage)
+		// Pages CRUD - permission-based access control
+		cms.GET("/pages",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesRead),
+			handler.CMSHandlers.ListStaticPages)
 
-		// Blocks (keeping existing auth handlers)
-		cms.GET("/blocks", handler.AuthHandlers.GetCMSBlocks)
+		cms.POST("/pages",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesCreate),
+			handler.CMSHandlers.CreateStaticPage)
 
-		// Templates (keeping existing auth handlers)
-		cms.GET("/templates", handler.AuthHandlers.GetCMSTemplates)
+		cms.PUT("/pages/:id",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesUpdate),
+			handler.CMSHandlers.UpdateStaticPage)
+
+		cms.DELETE("/pages/:id",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesDelete),
+			handler.CMSHandlers.DeleteStaticPage)
+
+		// NEW: Publish/Unpublish endpoint
+		cms.PUT("/pages/:id/publish",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesPublish),
+			handler.CMSHandlers.PublishStaticPage)
+
+		// Blocks - permission-based access control
+		cms.GET("/blocks",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSBlocksRead),
+			handler.AuthHandlers.GetCMSBlocks)
+
+		// Templates
+		cms.GET("/templates",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesRead),
+			handler.AuthHandlers.GetCMSTemplates)
 	}
 
 	// Content blocks CRUD endpoints (for admin panel)

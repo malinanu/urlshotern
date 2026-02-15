@@ -1,19 +1,28 @@
 package services
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AdminService struct {
-	db *storage.PostgresStorage
+	db          *storage.PostgresStorage
+	rbacService *RBACServiceImpl
 }
 
-func NewAdminService(db *storage.PostgresStorage) *AdminService {
-	return &AdminService{db: db}
+func NewAdminService(db *storage.PostgresStorage, rbacService *RBACServiceImpl) *AdminService {
+	return &AdminService{
+		db:          db,
+		rbacService: rbacService,
+	}
 }
 
 // GetSystemStats returns system-wide statistics
