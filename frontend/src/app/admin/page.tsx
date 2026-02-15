@@ -79,6 +79,7 @@ export default function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showRolesModal, setShowRolesModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'view' | 'manage'>('view');
   const router = useRouter();
 
   // Check if user is admin
@@ -429,6 +430,7 @@ export default function AdminPage() {
                           <td className="px-6 py-4">
                             <button
                               onClick={() => {
+                                setModalMode('view');
                                 setSelectedUserId(user.id);
                                 setSelectedUserName(user.name);
                                 setShowRolesModal(true);
@@ -452,12 +454,13 @@ export default function AdminPage() {
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => {
+                                  setModalMode('manage');
                                   setSelectedUserId(user.id);
                                   setSelectedUserName(user.name);
                                   setShowRolesModal(true);
                                 }}
                                 aria-label="Manage user roles"
-                                className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                className="p-1 text-green-600 hover:text-green-800 transition-colors"
                                 title="Manage roles"
                               >
                                 <ShieldCheckIcon className="h-4 w-4" />
@@ -624,6 +627,7 @@ export default function AdminPage() {
           }}
           userId={selectedUserId}
           userName={selectedUserName}
+          mode={modalMode}
         />
       )}
     </Layout>

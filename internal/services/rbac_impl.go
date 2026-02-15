@@ -362,6 +362,53 @@ func (s *RBACServiceImpl) ListRoles(activeOnly bool) ([]*models.Role, error) {
 	return roles, nil
 }
 
+// GetRolesByNames retrieves roles by their names
+func (s *RBACServiceImpl) GetRolesByNames(names []string) ([]*models.Role, error) {
+	if len(names) == 0 {
+		return []*models.Role{}, nil
+	}
+
+	query := `
+		SELECT id, name, display_name, description, is_system, is_active,
+		       created_at, updated_at
+		FROM roles
+		WHERE name = ANY($1)
+		ORDER BY display_name
+	`
+
+	// Convert []string to pq.StringArray for PostgreSQL array parameter
+	rows, err := s.db.Query(query, names)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query roles: %w", err)
+	}
+	defer rows.Close()
+
+	var roles []*models.Role
+	for rows.Next() {
+		role := &models.Role{}
+		err := rows.Scan(
+			&role.ID,
+			&role.Name,
+			&role.DisplayName,
+			&role.Description,
+			&role.IsSystem,
+			&role.IsActive,
+			&role.CreatedAt,
+			&role.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan role: %w", err)
+		}
+		roles = append(roles, role)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating roles: %w", err)
+	}
+
+	return roles, nil
+}
+
 // CreateRole creates a new custom role
 func (s *RBACServiceImpl) CreateRole(req *models.CreateRoleRequest, createdBy int64) (*models.RoleWithPermissions, error) {
 	// Check if role name already exists

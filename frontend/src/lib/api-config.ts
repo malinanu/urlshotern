@@ -94,6 +94,7 @@ export const API_ENDPOINTS = {
     // RBAC Management
     rbac: {
       roles: `${API_BASE_URL}/api/v1/admin/rbac/roles`,
+      assignableRoles: `${API_BASE_URL}/api/v1/admin/rbac/assignable-roles`,
       role: (roleId: string) => `${API_BASE_URL}/api/v1/admin/rbac/roles/${roleId}`,
       permissions: `${API_BASE_URL}/api/v1/admin/rbac/permissions`,
       audit: `${API_BASE_URL}/api/v1/admin/rbac/audit`,

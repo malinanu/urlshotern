@@ -19,9 +19,10 @@ interface Props {
   onClose: () => void;
   userId: number;
   userName: string;
+  mode: 'view' | 'manage'; // NEW: specify modal mode
 }
 
-export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
+export function UserRolesModal({ isOpen, onClose, userId, userName, mode }: Props) {
   const { getAccessToken } = useAuth();
   const [userRoles, setUserRoles] = useState<UserRoles | null>(null);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
@@ -35,7 +36,7 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
     if (isOpen && userId) {
       fetchData();
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId, mode]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -77,8 +78,15 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
     const token = getAccessToken();
     if (!token) return;
 
+    // In view mode, don't fetch roles (not needed)
+    if (mode === 'view') {
+      setAvailableRoles([]);
+      return;
+    }
+
     try {
-      const response = await fetch(API_ENDPOINTS.admin.rbac.roles, {
+      // In manage mode, fetch assignable roles based on current user's permissions
+      const response = await fetch(API_ENDPOINTS.admin.rbac.assignableRoles, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -87,10 +95,11 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
 
       if (response.ok) {
         const data = await response.json();
-        setAvailableRoles(data.roles || []);
+        // assignableRoles endpoint returns array directly, not wrapped in {roles: []}
+        setAvailableRoles(Array.isArray(data) ? data : (data.roles || []));
       }
     } catch (err) {
-      console.error('Error fetching available roles:', err);
+      console.error('Error fetching assignable roles:', err);
     }
   };
 
@@ -179,7 +188,11 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Manage Roles: ${userName}`} size="2xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={mode === 'view' ? `View Roles: ${userName}` : `Manage Roles: ${userName}`}
+      size="2xl">
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -219,14 +232,16 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
                         <p className="text-xs text-gray-500 mt-0.5">{role.description}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleRemoveRole(role.id)}
-                      disabled={actionLoading}
-                      className="p-1 text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
-                      title="Remove role"
-                    >
-                      <XMarkIcon className="h-5 w-5" />
-                    </button>
+                    {mode === 'manage' && (
+                      <button
+                        onClick={() => handleRemoveRole(role.id)}
+                        disabled={actionLoading}
+                        className="p-1 text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+                        title="Remove role"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -235,8 +250,8 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
             )}
           </div>
 
-          {/* Add Role Section */}
-          {assignableRoles.length > 0 && (
+          {/* Add Role Section - Only show in manage mode */}
+          {mode === 'manage' && assignableRoles.length > 0 && (
             <div className="border-t pt-6">
               <h3 className="text-sm font-medium text-gray-900 mb-3">Add Role</h3>
               <div className="flex items-end space-x-3">
