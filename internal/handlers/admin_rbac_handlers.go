@@ -309,18 +309,31 @@ func (h *AdminRBACHandlers) ListRoles(c *gin.Context) {
 // GetAssignableRoles returns roles that the current user can assign based on role hierarchy
 // GET /api/v1/admin/rbac/assignable-roles
 func (h *AdminRBACHandlers) GetAssignableRoles(c *gin.Context) {
-	// Get current user's roles from context
-	userRolesInterface, exists := c.Get("user_roles")
+	// Get current user ID from context (set by RequireAuth middleware)
+	userIDInterface, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user roles not found in context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	// userRoles is a slice of role names ([]string)
-	userRoles, ok := userRolesInterface.([]string)
+	userID, ok := userIDInterface.(int64)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user roles format"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format"})
 		return
+	}
+
+	// Fetch user's roles from the database
+	userRolesData, err := h.rbacService.GetUserRoles(userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to fetch user roles")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user roles"})
+		return
+	}
+
+	// Extract role names from the role objects
+	userRoles := make([]string, 0, len(userRolesData))
+	for _, role := range userRolesData {
+		userRoles = append(userRoles, role.Name)
 	}
 
 	// Get assignable role names based on hierarchy
