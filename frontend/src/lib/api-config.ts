@@ -82,6 +82,22 @@ export const API_ENDPOINTS = {
     activity: `${API_BASE_URL}/api/v1/admin/activity`,
     userStatus: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}/status`,
     deleteUser: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}`,
+
+    // RBAC User Management
+    createUser: `${API_BASE_URL}/api/v1/admin/users/create`,
+    getUserRoles: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}/roles`,
+    assignUserRole: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}/roles/assign`,
+    removeUserRole: (userId: string, roleId: string) =>
+      `${API_BASE_URL}/api/v1/admin/users/${userId}/roles/${roleId}`,
+    updateAccountType: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}/account-type`,
+
+    // RBAC Management
+    rbac: {
+      roles: `${API_BASE_URL}/api/v1/admin/rbac/roles`,
+      role: (roleId: string) => `${API_BASE_URL}/api/v1/admin/rbac/roles/${roleId}`,
+      permissions: `${API_BASE_URL}/api/v1/admin/rbac/permissions`,
+      audit: `${API_BASE_URL}/api/v1/admin/rbac/audit`,
+    },
   },
 
   // CMS endpoints (temporarily disabled in backend)

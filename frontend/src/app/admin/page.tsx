@@ -6,7 +6,7 @@ import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS, buildApiUrl } from '@/lib/api-config';
 import { StatsSkeleton, UserTableSkeleton, ActivitySkeleton } from '@/components/skeletons/AdminSkeletons';
-import { 
+import {
   UserGroupIcon,
   LinkIcon,
   ChartBarIcon,
@@ -23,11 +23,14 @@ import {
   KeyIcon,
   MagnifyingGlassIcon,
   CubeIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import CMSManager from '@/components/cms/CMSManager';
 import APIKeyManager from '@/components/api-keys/APIKeyManager';
 import { SEOToolsManager } from '@/components/seo/SEOToolsManager';
 import { VisualPageBuilder } from '@/components/builder/VisualPageBuilder';
+import { CreateUserModal } from '@/components/admin/CreateUserModal';
+import { UserRolesModal } from '@/components/admin/UserRolesModal';
 
 interface SystemStats {
   total_users: number;
@@ -72,6 +75,10 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState<string>('');
+  const [showRolesModal, setShowRolesModal] = useState(false);
   const router = useRouter();
 
   // Check if user is admin
@@ -84,57 +91,57 @@ export default function AdminPage() {
     }
   }, [isAuthenticated, isLoading, isAdmin, router]);
 
-  // Fetch admin data
-  useEffect(() => {
-    if (!isAuthenticated || !isAdmin) return;
+  // Fetch admin data function (can be called from modals)
+  const fetchAdminData = async () => {
+    const token = getAccessToken();
+    if (!token) return;
 
-    const fetchAdminData = async () => {
-      const token = getAccessToken();
-      if (!token) return;
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
-
-      try {
-        // Fetch system stats
-        setLoadingStats(true);
-        const statsResponse = await fetch(API_ENDPOINTS.admin.stats, { headers });
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData);
-        }
-        setLoadingStats(false);
-
-        // Fetch users
-        setLoadingUsers(true);
-        const usersResponse = await fetch(buildApiUrl(API_ENDPOINTS.admin.users, { limit: 100 }), { headers });
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          setUsers(usersData.users || []);
-        }
-        setLoadingUsers(false);
-
-        // Fetch recent activity
-        setLoadingActivity(true);
-        const activityResponse = await fetch(buildApiUrl(API_ENDPOINTS.admin.activity, { limit: 50 }), { headers });
-        if (activityResponse.ok) {
-          const activityData = await activityResponse.json();
-          setRecentActivity(activityData.activities || []);
-        }
-        setLoadingActivity(false);
-
-      } catch (error) {
-        console.error('Error fetching admin data:', error);
-        setLoadingStats(false);
-        setLoadingUsers(false);
-        setLoadingActivity(false);
-      }
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     };
 
+    try {
+      // Fetch system stats
+      setLoadingStats(true);
+      const statsResponse = await fetch(API_ENDPOINTS.admin.stats, { headers });
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(statsData);
+      }
+      setLoadingStats(false);
+
+      // Fetch users
+      setLoadingUsers(true);
+      const usersResponse = await fetch(buildApiUrl(API_ENDPOINTS.admin.users, { limit: 100 }), { headers });
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        setUsers(usersData.users || []);
+      }
+      setLoadingUsers(false);
+
+      // Fetch recent activity
+      setLoadingActivity(true);
+      const activityResponse = await fetch(buildApiUrl(API_ENDPOINTS.admin.activity, { limit: 50 }), { headers });
+      if (activityResponse.ok) {
+        const activityData = await activityResponse.json();
+        setRecentActivity(activityData.activities || []);
+      }
+      setLoadingActivity(false);
+
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      setLoadingStats(false);
+      setLoadingUsers(false);
+      setLoadingActivity(false);
+    }
+  };
+
+  // Fetch admin data on mount
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) return;
     fetchAdminData();
-  }, [isAuthenticated, isAdmin, getAccessToken]);
+  }, [isAuthenticated, isAdmin]);
 
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
     const token = getAccessToken();
@@ -357,8 +364,15 @@ export default function AdminPage() {
 
           {activeTab === 'users' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b">
+              <div className="px-6 py-4 border-b flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-black">User Management</h2>
+                <button
+                  onClick={() => setShowCreateUserModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  <span>Add User</span>
+                </button>
               </div>
               
               {loadingUsers ? (
@@ -375,6 +389,9 @@ export default function AdminPage() {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Account
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Roles
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           URLs/Clicks
@@ -410,6 +427,18 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4">
+                            <button
+                              onClick={() => {
+                                setSelectedUserId(user.id);
+                                setSelectedUserName(user.name);
+                                setShowRolesModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                            >
+                              View Roles
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
                             <div className="text-sm text-black">
                               {user.urls_count} URLs, {user.total_clicks} clicks
                             </div>
@@ -421,6 +450,18 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedUserId(user.id);
+                                  setSelectedUserName(user.name);
+                                  setShowRolesModal(true);
+                                }}
+                                aria-label="Manage user roles"
+                                className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                                title="Manage roles"
+                              >
+                                <ShieldCheckIcon className="h-4 w-4" />
+                              </button>
                               <button
                                 onClick={() => toggleUserStatus(user.id, user.is_active)}
                                 aria-label={user.is_active ? 'Deactivate user' : 'Activate user'}
@@ -561,6 +602,30 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+        onUserCreated={() => {
+          setShowCreateUserModal(false);
+          fetchAdminData();
+        }}
+      />
+
+      {/* User Roles Modal */}
+      {selectedUserId && (
+        <UserRolesModal
+          isOpen={showRolesModal}
+          onClose={() => {
+            setShowRolesModal(false);
+            setSelectedUserId(null);
+            setSelectedUserName('');
+          }}
+          userId={selectedUserId}
+          userName={selectedUserName}
+        />
+      )}
     </Layout>
   );
 }
