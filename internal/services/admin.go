@@ -1,16 +1,11 @@
 package services
 
 import (
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
-	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
-	"github.com/URLshorter/url-shortener/internal/utils"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AdminService struct {
