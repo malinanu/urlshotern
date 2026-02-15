@@ -676,8 +676,18 @@ func (s *RBACServiceImpl) AssignPermissionsToRole(roleID int64, permissionIDs []
 
 // AssignRoleToUser assigns a role to a user
 func (s *RBACServiceImpl) AssignRoleToUser(userID, roleID, assignedBy int64, expiresAt *time.Time) error {
+	// Check if user exists
+	var userExists bool
+	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)", userID).Scan(&userExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if user exists: %w", err)
+	}
+	if !userExists {
+		return fmt.Errorf("user with ID %d not found", userID)
+	}
+
 	// Check if role exists
-	_, err := s.GetRoleByID(roleID)
+	_, err = s.GetRoleByID(roleID)
 	if err != nil {
 		return fmt.Errorf("role not found: %w", err)
 	}

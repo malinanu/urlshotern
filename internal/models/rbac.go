@@ -10,7 +10,7 @@ type Role struct {
 	Name        string    `json:"name" db:"name"`
 	DisplayName string    `json:"display_name" db:"display_name"`
 	Description string    `json:"description" db:"description"`
-	IsSystem    bool      `json:"is_system" db:"is_system"`     // System roles cannot be deleted
+	IsSystem    bool      `json:"is_system" db:"is_system"` // System roles cannot be deleted
 	IsActive    bool      `json:"is_active" db:"is_active"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
@@ -22,9 +22,9 @@ type Permission struct {
 	Name        string    `json:"name" db:"name"`
 	DisplayName string    `json:"display_name" db:"display_name"`
 	Description string    `json:"description" db:"description"`
-	Resource    string    `json:"resource" db:"resource"`       // e.g., "urls", "users", "analytics"
-	Action      string    `json:"action" db:"action"`           // e.g., "create", "read", "update", "delete"
-	IsSystem    bool      `json:"is_system" db:"is_system"`     // System permissions cannot be deleted
+	Resource    string    `json:"resource" db:"resource"`   // e.g., "urls", "users", "analytics"
+	Action      string    `json:"action" db:"action"`       // e.g., "create", "read", "update", "delete"
+	IsSystem    bool      `json:"is_system" db:"is_system"` // System permissions cannot be deleted
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -39,13 +39,13 @@ type RolePermission struct {
 
 // UserRole represents the many-to-many relationship between users and roles
 type UserRole struct {
-	ID        int64      `json:"id" db:"id"`
-	UserID    int64      `json:"user_id" db:"user_id"`
-	RoleID    int64      `json:"role_id" db:"role_id"`
-	AssignedBy *int64    `json:"assigned_by" db:"assigned_by"` // User ID who assigned this role
-	ExpiresAt *time.Time `json:"expires_at" db:"expires_at"`   // Optional expiration
-	CreatedAt time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	ID         int64      `json:"id" db:"id"`
+	UserID     int64      `json:"user_id" db:"user_id"`
+	RoleID     int64      `json:"role_id" db:"role_id"`
+	AssignedBy *int64     `json:"assigned_by" db:"assigned_by"` // User ID who assigned this role
+	ExpiresAt  *time.Time `json:"expires_at" db:"expires_at"`   // Optional expiration
+	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // Team represents a team/organization
@@ -67,7 +67,7 @@ type TeamMember struct {
 	ID        int64      `json:"id" db:"id"`
 	TeamID    int64      `json:"team_id" db:"team_id"`
 	UserID    int64      `json:"user_id" db:"user_id"`
-	RoleID    int64      `json:"role_id" db:"role_id"`     // Role within the team
+	RoleID    int64      `json:"role_id" db:"role_id"` // Role within the team
 	InvitedBy *int64     `json:"invited_by" db:"invited_by"`
 	JoinedAt  *time.Time `json:"joined_at" db:"joined_at"`
 	Status    string     `json:"status" db:"status"` // invited, active, suspended
@@ -77,16 +77,16 @@ type TeamMember struct {
 
 // TeamInvitation represents pending team invitations
 type TeamInvitation struct {
-	ID        int64      `json:"id" db:"id"`
-	TeamID    int64      `json:"team_id" db:"team_id"`
-	Email     string     `json:"email" db:"email"`
-	RoleID    int64      `json:"role_id" db:"role_id"`
-	InvitedBy int64      `json:"invited_by" db:"invited_by"`
-	Token     string     `json:"-" db:"token"` // Hidden from JSON
-	Status    string     `json:"status" db:"status"` // pending, accepted, rejected, expired
-	ExpiresAt time.Time  `json:"expires_at" db:"expires_at"`
-	CreatedAt time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	ID        int64     `json:"id" db:"id"`
+	TeamID    int64     `json:"team_id" db:"team_id"`
+	Email     string    `json:"email" db:"email"`
+	RoleID    int64     `json:"role_id" db:"role_id"`
+	InvitedBy int64     `json:"invited_by" db:"invited_by"`
+	Token     string    `json:"-" db:"token"`       // Hidden from JSON
+	Status    string    `json:"status" db:"status"` // pending, accepted, rejected, expired
+	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Extended models with relationships
@@ -102,7 +102,7 @@ type UserWithRoles struct {
 // TeamInfo represents team information for user context
 type TeamInfo struct {
 	*Team
-	Role   *Role `json:"role"`
+	Role   *Role  `json:"role"`
 	Status string `json:"status"`
 }
 
@@ -115,16 +115,16 @@ type RoleWithPermissions struct {
 // TeamWithMembers represents a team with its members
 type TeamWithMembers struct {
 	*Team
-	Owner   *PublicUser    `json:"owner"`
+	Owner   *PublicUser       `json:"owner"`
 	Members []*TeamMemberInfo `json:"members"`
 }
 
 // TeamMemberInfo represents team member information
 type TeamMemberInfo struct {
 	*PublicUser
-	Role      *Role      `json:"role"`
-	Status    string     `json:"status"`
-	JoinedAt  *time.Time `json:"joined_at"`
+	Role      *Role       `json:"role"`
+	Status    string      `json:"status"`
+	JoinedAt  *time.Time  `json:"joined_at"`
 	InvitedBy *PublicUser `json:"invited_by,omitempty"`
 }
 
@@ -135,21 +135,21 @@ type CreateRoleRequest struct {
 	Name        string  `json:"name" validate:"required,min=2,max=50"`
 	DisplayName string  `json:"display_name" validate:"required,min=2,max=100"`
 	Description string  `json:"description" validate:"max=500"`
-	Permissions []int64 `json:"permissions"`
+	Permissions []int64 `json:"permissions,string"`
 }
 
 // UpdateRoleRequest represents role update request
 type UpdateRoleRequest struct {
 	DisplayName *string  `json:"display_name,omitempty" validate:"omitempty,min=2,max=100"`
 	Description *string  `json:"description,omitempty" validate:"omitempty,max=500"`
-	Permissions *[]int64 `json:"permissions,omitempty"`
+	Permissions *[]int64 `json:"permissions,string,omitempty"`
 	IsActive    *bool    `json:"is_active,omitempty"`
 }
 
 // AssignRoleRequest represents role assignment request
 type AssignRoleRequest struct {
-	UserID    int64      `json:"user_id" validate:"required"`
-	RoleID    int64      `json:"role_id" validate:"required"`
+	UserID    int64      `json:"user_id,string" validate:"required"`
+	RoleID    int64      `json:"role_id,string" validate:"required"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
@@ -319,8 +319,8 @@ const (
 	PermissionRBACAssign      = "rbac.assign"
 
 	// Enhanced User Management
-	PermissionUsersRolesAssign = "users.roles.assign"
-	PermissionUsersRolesRemove = "users.roles.remove"
+	PermissionUsersRolesAssign  = "users.roles.assign"
+	PermissionUsersRolesRemove  = "users.roles.remove"
 	PermissionUsersStatusToggle = "users.status.toggle"
 
 	// Enhanced System

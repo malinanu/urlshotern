@@ -107,7 +107,7 @@ func (h *AdminRBACHandlers) AssignUserRole(c *gin.Context) {
 	middleware.LogInfo(c, "Role assigned successfully")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Role assigned successfully",
-		"user_id": userID,
+		"user_id": strconv.FormatInt(userID, 10),
 		"role_id": req.RoleID,
 	})
 }
@@ -146,7 +146,7 @@ func (h *AdminRBACHandlers) RemoveUserRole(c *gin.Context) {
 	middleware.LogInfo(c, "Role removed successfully")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Role removed successfully",
-		"user_id": userID,
+		"user_id": strconv.FormatInt(userID, 10),
 		"role_id": roleID,
 	})
 }
@@ -210,7 +210,7 @@ func (h *AdminRBACHandlers) UpdateAccountType(c *gin.Context) {
 	middleware.LogInfo(c, "Account type updated successfully")
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Account type updated successfully",
-		"user_id":      userID,
+		"user_id":      strconv.FormatInt(userID, 10),
 		"account_type": req.AccountType,
 	})
 }

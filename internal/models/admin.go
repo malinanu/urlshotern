@@ -8,7 +8,7 @@ type SystemStats struct {
 	ActiveUsers      int64  `json:"active_users"`
 	TotalURLs        int64  `json:"total_urls"`
 	TotalClicks      int64  `json:"total_clicks"`
-	StorageUsed      string `json:"storage_used"`       // e.g., "1.2 GB"
+	StorageUsed      string `json:"storage_used"` // e.g., "1.2 GB"
 	DailySignups     int64  `json:"daily_signups"`
 	DailyURLsCreated int64  `json:"daily_urls_created"`
 	SystemStatus     string `json:"system_status"` // "healthy", "warning", "error"
@@ -16,7 +16,7 @@ type SystemStats struct {
 
 // AdminUser represents user data for admin panel
 type AdminUser struct {
-	ID              int64      `json:"id"`
+	ID              int64      `json:"id,string"`
 	Name            string     `json:"name"`
 	Email           string     `json:"email"`
 	IsActive        bool       `json:"is_active"`
@@ -38,27 +38,27 @@ type UserListResponse struct {
 
 // RecentActivity represents an activity log entry
 type RecentActivity struct {
-	ID           int64      `json:"id"`
-	UserID       *int64     `json:"user_id,omitempty"`
-	UserName     string     `json:"user_name"`
-	ActivityType string     `json:"activity_type"`
-	Description  string     `json:"description"`
-	CreatedAt    time.Time  `json:"created_at"`
-	IPAddress    *string    `json:"ip_address,omitempty"`
+	ID           int64     `json:"id"`
+	UserID       *int64    `json:"user_id,omitempty"`
+	UserName     string    `json:"user_name"`
+	ActivityType string    `json:"activity_type"`
+	Description  string    `json:"description"`
+	CreatedAt    time.Time `json:"created_at"`
+	IPAddress    *string   `json:"ip_address,omitempty"`
 }
 
 // CMS Models
 
 // CMSPage represents a CMS page for admin panel
 type CMSPage struct {
-	ID          int64      `json:"id"`
-	Slug        string     `json:"slug"`
-	Title       string     `json:"title"`
-	IsPublished bool       `json:"is_published"`
-	AuthorID    *int64     `json:"author_id,omitempty"`
-	ViewCount   int64      `json:"view_count"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          int64     `json:"id"`
+	Slug        string    `json:"slug"`
+	Title       string    `json:"title"`
+	IsPublished bool      `json:"is_published"`
+	AuthorID    *int64    `json:"author_id,omitempty"`
+	ViewCount   int64     `json:"view_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // CMSBlock represents a content block for admin panel
@@ -89,16 +89,16 @@ type CMSTemplate struct {
 
 // CreateUserAdminRequest represents admin request to create a new user
 type CreateUserAdminRequest struct {
-	Name               string   `json:"name" validate:"required,min=2,max=100"`
-	Email              string   `json:"email" validate:"required,email"`
-	Password           *string  `json:"password,omitempty" validate:"omitempty,min=8"`
-	Phone              *string  `json:"phone,omitempty"`
-	AccountType        string   `json:"account_type" validate:"required,oneof=free premium enterprise"`
-	RoleIDs            []int64  `json:"role_ids" validate:"required,min=1"`
-	SendInvite         bool     `json:"send_invite"`          // If true, send invitation email
-	EmailVerified      bool     `json:"email_verified"`       // Admin can pre-verify email
-	IsActive           bool     `json:"is_active"`            // User active status
-	ForcePasswordReset bool     `json:"force_password_reset"` // Require password change on first login
+	Name               string  `json:"name" validate:"required,min=2,max=100"`
+	Email              string  `json:"email" validate:"required,email"`
+	Password           *string `json:"password,omitempty" validate:"omitempty,min=8"`
+	Phone              *string `json:"phone,omitempty"`
+	AccountType        string  `json:"account_type" validate:"required,oneof=free premium enterprise"`
+	RoleIDs            []int64 `json:"role_ids,string" validate:"required,min=1"`
+	SendInvite         bool    `json:"send_invite"`          // If true, send invitation email
+	EmailVerified      bool    `json:"email_verified"`       // Admin can pre-verify email
+	IsActive           bool    `json:"is_active"`            // User active status
+	ForcePasswordReset bool    `json:"force_password_reset"` // Require password change on first login
 }
 
 // CreateUserAdminResponse represents response after admin creates a user
@@ -111,7 +111,7 @@ type CreateUserAdminResponse struct {
 
 // AssignUserRoleRequest represents role assignment request
 type AssignUserRoleRequest struct {
-	RoleID    int64      `json:"role_id" validate:"required"`
+	RoleID    int64      `json:"role_id,string" validate:"required"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
@@ -130,19 +130,19 @@ type UpdateAccountTypeRequest struct {
 
 // RBACAuditEntry represents an RBAC audit log entry
 type RBACAuditEntry struct {
-	ID             int64      `json:"id"`
-	UserID         *int64     `json:"user_id,omitempty"`
-	TargetUserID   *int64     `json:"target_user_id,omitempty"`
-	Action         string     `json:"action"`
-	RoleID         *int64     `json:"role_id,omitempty"`
-	RoleName       string     `json:"role_name,omitempty"`
-	PermissionID   *int64     `json:"permission_id,omitempty"`
-	AssignedBy     *int64     `json:"assigned_by,omitempty"`
-	AssignedByName string     `json:"assigned_by_name,omitempty"`
-	Details        *string    `json:"details,omitempty"` // JSON string
-	IPAddress      *string    `json:"ip_address,omitempty"`
-	UserAgent      *string    `json:"user_agent,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
+	ID             int64     `json:"id,string"`
+	UserID         *int64    `json:"user_id,omitempty"`
+	TargetUserID   *int64    `json:"target_user_id,omitempty"`
+	Action         string    `json:"action"`
+	RoleID         *int64    `json:"role_id,omitempty"`
+	RoleName       string    `json:"role_name,omitempty"`
+	PermissionID   *int64    `json:"permission_id,omitempty"`
+	AssignedBy     *int64    `json:"assigned_by,omitempty"`
+	AssignedByName string    `json:"assigned_by_name,omitempty"`
+	Details        *string   `json:"details,omitempty"` // JSON string
+	IPAddress      *string   `json:"ip_address,omitempty"`
+	UserAgent      *string   `json:"user_agent,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // RBACAuditFilters represents filters for audit log queries
