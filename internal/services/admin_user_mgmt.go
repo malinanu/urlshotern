@@ -108,10 +108,10 @@ func (s *AdminService) CreateUserAsAdmin(req *models.CreateUserAdminRequest, cre
 	// 5. Create user record
 	query := `
 		INSERT INTO users (
-			id, name, email, password, phone, account_type,
-			is_active, is_email_verified, force_password_reset,
+			id, name, email, password_hash, phone, account_type,
+			is_active, email_verified,
 			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 		RETURNING created_at
 	`
 
@@ -126,7 +126,6 @@ func (s *AdminService) CreateUserAsAdmin(req *models.CreateUserAdminRequest, cre
 		req.AccountType,
 		req.IsActive,
 		req.EmailVerified,
-		req.ForcePasswordReset,
 	).Scan(&createdAt)
 
 	if err != nil {
