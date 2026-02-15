@@ -199,7 +199,7 @@ GOOGLE_REDIRECT_URL=https://yourdomain.com/auth/google/callback
 | `SMTP_PASSWORD` | string | Conditional | `""` | SMTP authentication password |
 | `FROM_EMAIL` | string | Yes | `noreply@urlshortener.com` | Sender email address |
 | `FROM_NAME` | string | Yes | `URL Shortener` | Sender name |
-| `FRONTEND_URL` | string | Yes | `http://localhost:3000` | Frontend URL for email links |
+| `BASE_URL` | string | Yes | `http://localhost:3000` | Base URL (already configured above, used for email links) |
 
 **Email Providers:**
 
@@ -211,7 +211,7 @@ SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=${GMAIL_APP_PASSWORD}
 FROM_EMAIL=your-email@gmail.com
 FROM_NAME=URL Shortener
-FRONTEND_URL=https://yourdomain.com
+BASE_URL=https://yourdomain.com
 ```
 
 **AWS SES:**
@@ -222,7 +222,7 @@ SMTP_USERNAME=${SES_SMTP_USERNAME}
 SMTP_PASSWORD=${SES_SMTP_PASSWORD}
 FROM_EMAIL=noreply@yourdomain.com
 FROM_NAME=URL Shortener
-FRONTEND_URL=https://yourdomain.com
+BASE_URL=https://yourdomain.com
 ```
 
 **SendGrid (future implementation):**
@@ -230,7 +230,7 @@ FRONTEND_URL=https://yourdomain.com
 SENDGRID_API_KEY=${SENDGRID_API_KEY}
 FROM_EMAIL=noreply@yourdomain.com
 FROM_NAME=URL Shortener
-FRONTEND_URL=https://yourdomain.com
+BASE_URL=https://yourdomain.com
 ```
 
 **Development (Console Output):**
@@ -238,7 +238,7 @@ FRONTEND_URL=https://yourdomain.com
 # Leave SMTP variables empty to use console provider
 FROM_EMAIL=dev@localhost
 FROM_NAME=URL Shortener Dev
-FRONTEND_URL=http://localhost:3000
+BASE_URL=http://localhost:3000
 ```
 
 ---
@@ -428,7 +428,7 @@ REFRESH_TOKEN_EXPIRY=7d
 # Email (console output)
 FROM_EMAIL=dev@localhost
 FROM_NAME=URL Shortener Dev
-FRONTEND_URL=http://localhost:3000
+BASE_URL=http://localhost:3000
 
 # Logging
 LOG_LEVEL=debug
@@ -481,7 +481,7 @@ SMTP_USERNAME=apikey
 SMTP_PASSWORD=${SENDGRID_API_KEY}
 FROM_EMAIL=staging@yourdomain.com
 FROM_NAME=URL Shortener Staging
-FRONTEND_URL=https://staging.yourdomain.com
+BASE_URL=https://staging.yourdomain.com
 
 # Logging
 LOG_LEVEL=info
@@ -544,7 +544,7 @@ SMTP_USERNAME=${SES_SMTP_USERNAME}
 SMTP_PASSWORD=${SES_SMTP_PASSWORD}
 FROM_EMAIL=noreply@yourdomain.com
 FROM_NAME=URL Shortener
-FRONTEND_URL=https://yourdomain.com
+BASE_URL=https://yourdomain.com
 
 # CDN (CloudFront)
 CDN_PROVIDER=cloudfront

@@ -163,7 +163,8 @@ SMTP_USERNAME=apikey
 SMTP_PASSWORD=<SENDGRID_API_KEY>
 FROM_EMAIL=noreply@yourdomain.com
 FROM_NAME=URL Shortener
-FRONTEND_URL=https://yourdomain.com
+
+# Note: Email links use BASE_URL configured above
 
 # Google OAuth
 GOOGLE_CLIENT_ID=<YOUR_GOOGLE_CLIENT_ID>

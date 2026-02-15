@@ -61,7 +61,6 @@ type Config struct {
 	SMTPPassword string
 	FromEmail    string
 	FromName     string
-	FrontendURL  string
 
 	// Webhook Alert Configuration
 	WebhookAlertEmails string
@@ -123,7 +122,6 @@ func LoadConfig() (*Config, error) {
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
 		FromEmail:    getEnv("FROM_EMAIL", "noreply@urlshortener.com"),
 		FromName:     getEnv("FROM_NAME", "URL Shortener"),
-		FrontendURL:  getEnv("FRONTEND_URL", "http://localhost:3000"),
 
 		// Webhook Alert Configuration
 		WebhookAlertEmails: getEnv("WEBHOOK_ALERT_EMAILS", ""),

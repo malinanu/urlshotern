@@ -149,7 +149,7 @@ func (e *EmailService) ResendVerificationEmail(userID int64) (*models.EmailVerif
 // SendEmailVerification sends email verification with token (updated interface)
 func (e *EmailService) SendEmailVerification(emailAddr, token string) error {
 	// Build verification URL
-	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", e.config.FrontendURL, token)
+	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", e.config.BaseURL, token)
 
 	// Generate email template
 	template := email.VerificationEmailTemplate(verificationURL, emailAddr)
@@ -161,7 +161,7 @@ func (e *EmailService) SendEmailVerification(emailAddr, token string) error {
 // SendPasswordReset sends password reset email
 func (e *EmailService) SendPasswordReset(emailAddr, token string) error {
 	// Build reset URL
-	resetURL := fmt.Sprintf("%s/reset-password?token=%s", e.config.FrontendURL, token)
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", e.config.BaseURL, token)
 
 	// Generate email template
 	template := email.PasswordResetEmailTemplate(resetURL, emailAddr)
@@ -173,7 +173,7 @@ func (e *EmailService) SendPasswordReset(emailAddr, token string) error {
 // SendTeamInvitation sends team invitation email
 func (e *EmailService) SendTeamInvitation(emailAddr, teamName, inviterName, token string) error {
 	// Build invitation URL
-	inviteURL := fmt.Sprintf("%s/team-invite?token=%s", e.config.FrontendURL, token)
+	inviteURL := fmt.Sprintf("%s/team-invite?token=%s", e.config.BaseURL, token)
 
 	// Generate email template
 	template := email.TeamInvitationEmailTemplate(inviteURL, teamName, inviterName, emailAddr)
@@ -191,6 +191,35 @@ func (e *EmailService) sendEmail(emailAddr, token string) error {
 // SendEmail sends a generic email (for alerts, notifications, etc.)
 func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 	return e.provider.SendEmail(to, subject, htmlBody, textBody)
+}
+
+// SendContactFormEmail sends contact form submission email
+func (e *EmailService) SendContactFormEmail(name, emailAddr, message string) error {
+	// Generate email template
+	template := email.ContactFormEmailTemplate(name, emailAddr, message)
+
+	// Send to contact email
+	contactEmail := "contact@trunc.site"
+	return e.provider.SendEmail(contactEmail, template.Subject, template.HTMLBody, template.TextBody)
+}
+
+// SendSupportInquiryEmail sends support inquiry email
+func (e *EmailService) SendSupportInquiryEmail(name, emailAddr, subject, issue string) error {
+	// Generate email template
+	template := email.SupportInquiryEmailTemplate(name, emailAddr, subject, issue)
+
+	// Send to support email
+	supportEmail := "support@trunc.site"
+	return e.provider.SendEmail(supportEmail, template.Subject, template.HTMLBody, template.TextBody)
+}
+
+// SendOTPEmail sends one-time password email
+func (e *EmailService) SendOTPEmail(emailAddr, otp string, expiryMinutes int) error {
+	// Generate email template
+	template := email.OTPEmailTemplate(otp, emailAddr, expiryMinutes)
+
+	// Send email using provider
+	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
 }
 
 // generateVerificationToken generates a random verification token
