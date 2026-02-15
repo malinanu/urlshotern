@@ -135,21 +135,21 @@ type CreateRoleRequest struct {
 	Name        string  `json:"name" validate:"required,min=2,max=50"`
 	DisplayName string  `json:"display_name" validate:"required,min=2,max=100"`
 	Description string  `json:"description" validate:"max=500"`
-	Permissions []int64 `json:"permissions,string"`
+	Permissions []int64 `json:"permissions"`
 }
 
 // UpdateRoleRequest represents role update request
 type UpdateRoleRequest struct {
 	DisplayName *string  `json:"display_name,omitempty" validate:"omitempty,min=2,max=100"`
 	Description *string  `json:"description,omitempty" validate:"omitempty,max=500"`
-	Permissions *[]int64 `json:"permissions,string,omitempty"`
+	Permissions *[]int64 `json:"permissions,omitempty"`
 	IsActive    *bool    `json:"is_active,omitempty"`
 }
 
 // AssignRoleRequest represents role assignment request
 type AssignRoleRequest struct {
 	UserID    int64      `json:"user_id,string" validate:"required"`
-	RoleID    int64      `json:"role_id,string" validate:"required"`
+	RoleID    int64      `json:"role_id" validate:"required"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 

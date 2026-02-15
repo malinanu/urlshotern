@@ -94,7 +94,7 @@ type CreateUserAdminRequest struct {
 	Password           *string `json:"password,omitempty" validate:"omitempty,min=8"`
 	Phone              *string `json:"phone,omitempty"`
 	AccountType        string  `json:"account_type" validate:"required,oneof=free premium enterprise"`
-	RoleIDs            []int64 `json:"role_ids,string" validate:"required,min=1"`
+	RoleIDs            []int64 `json:"role_ids" validate:"required,min=1"`
 	SendInvite         bool    `json:"send_invite"`          // If true, send invitation email
 	EmailVerified      bool    `json:"email_verified"`       // Admin can pre-verify email
 	IsActive           bool    `json:"is_active"`            // User active status
@@ -111,7 +111,7 @@ type CreateUserAdminResponse struct {
 
 // AssignUserRoleRequest represents role assignment request
 type AssignUserRoleRequest struct {
-	RoleID    int64      `json:"role_id,string" validate:"required"`
+	RoleID    int64      `json:"role_id" validate:"required"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
