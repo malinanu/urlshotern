@@ -117,23 +117,46 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: Props) {
     }
 
     try {
+      // Prepare request data - convert empty strings to null for optional fields
+      const requestData = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password?.trim() || null,
+        phone: formData.phone?.trim() || null,
+        account_type: formData.account_type,
+        role_ids: formData.role_ids,
+        send_invite: formData.send_invite,
+        email_verified: formData.email_verified,
+        is_active: formData.is_active,
+        force_password_reset: formData.force_password_reset,
+      };
+
+      // Remove null values for cleaner request
+      const cleanedData = Object.fromEntries(
+        Object.entries(requestData).filter(([_, v]) => v !== null && v !== '')
+      );
+
+      console.log('Creating user with data:', cleanedData);
+
       const response = await fetch(API_ENDPOINTS.admin.createUser, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(cleanedData),
       });
 
       if (response.ok) {
         const data: CreateUserResponse = await response.json();
+        console.log('User created successfully:', data);
         setCreatedUserInfo(data);
         // Call the callback to refresh user list
         onUserCreated();
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Failed to create user' }));
-        setError(errorData.error || 'Failed to create user');
+        console.error('Error response:', errorData);
+        setError(errorData.error || errorData.message || 'Failed to create user');
       }
     } catch (err) {
       setError('Network error. Please try again.');
