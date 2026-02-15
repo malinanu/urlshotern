@@ -8,6 +8,7 @@ import (
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/lib/pq"
 )
 
 // RBACServiceImpl implements RBAC with real database operations
@@ -80,7 +81,7 @@ func (s *RBACServiceImpl) UserHasAnyPermission(userID int64, permissions []strin
 	`
 
 	var exists bool
-	err := s.db.QueryRow(query, userID, permissions).Scan(&exists)
+	err := s.db.QueryRow(query, userID, pq.Array(permissions)).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check user permissions: %w", err)
 	}
@@ -149,7 +150,7 @@ func (s *RBACServiceImpl) UserHasAnyRole(userID int64, roleNames []string) (bool
 	`
 
 	var exists bool
-	err := s.db.QueryRow(query, userID, roleNames).Scan(&exists)
+	err := s.db.QueryRow(query, userID, pq.Array(roleNames)).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check user roles: %w", err)
 	}
@@ -376,8 +377,8 @@ func (s *RBACServiceImpl) GetRolesByNames(names []string) ([]*models.Role, error
 		ORDER BY display_name
 	`
 
-	// Convert []string to pq.StringArray for PostgreSQL array parameter
-	rows, err := s.db.Query(query, names)
+	// Convert []string to PostgreSQL array type using pq.Array
+	rows, err := s.db.Query(query, pq.Array(names))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query roles: %w", err)
 	}
