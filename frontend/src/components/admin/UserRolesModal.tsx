@@ -58,7 +58,11 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
 
       if (response.ok) {
         const data: UserRoles = await response.json();
-        setUserRoles(data);
+        // Ensure data has valid structure
+        setUserRoles({
+          roles: data.roles || [],
+          permissions: data.permissions || [],
+        });
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Failed to fetch user roles' }));
         setError(errorData.error || 'Failed to fetch user roles');
@@ -171,7 +175,7 @@ export function UserRolesModal({ isOpen, onClose, userId, userName }: Props) {
 
   // Get roles that can be added (not already assigned)
   const assignableRoles = availableRoles.filter(
-    (role) => !userRoles?.roles.some((ur) => ur.id === role.id)
+    (role) => !(userRoles?.roles || []).some((ur) => ur.id === role.id)
   );
 
   return (
