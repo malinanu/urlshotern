@@ -81,7 +81,7 @@ func (s *CMSService) CreateStaticPage(req *models.CreateStaticPageRequest, autho
 
 func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error) {
 	query := `
-		SELECT p.id, p.slug, p.title, p.content, p.meta_description, p.meta_keywords,
+		SELECT p.id, p.slug, p.title, p.content, p.content_blocks, p.meta_description, p.meta_keywords,
 			p.is_published, p.sort_order, p.template, p.author_id, p.published_at,
 			p.created_at, p.updated_at, COALESCE(u.name, u.email) as author_name
 		FROM static_pages p
@@ -92,7 +92,7 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 	var authorName sql.NullString
 
 	err := s.db.QueryRow(query, slug).Scan(
-		&page.ID, &page.Slug, &page.Title, &page.Content, &page.MetaDescription,
+		&page.ID, &page.Slug, &page.Title, &page.Content, &page.ContentBlocks, &page.MetaDescription,
 		&page.MetaKeywords, &page.IsPublished, &page.SortOrder, &page.Template,
 		&page.AuthorID, &page.PublishedAt, &page.CreatedAt, &page.UpdatedAt, &authorName,
 	)
@@ -113,7 +113,7 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 
 func (s *CMSService) GetStaticPageByID(id int64) (*models.StaticPage, error) {
 	query := `
-		SELECT p.id, p.slug, p.title, p.content, p.meta_description, p.meta_keywords,
+		SELECT p.id, p.slug, p.title, p.content, p.content_blocks, p.meta_description, p.meta_keywords,
 			p.is_published, p.sort_order, p.template, p.author_id, p.published_at,
 			p.created_at, p.updated_at, COALESCE(u.name, u.email) as author_name
 		FROM static_pages p
@@ -124,7 +124,7 @@ func (s *CMSService) GetStaticPageByID(id int64) (*models.StaticPage, error) {
 	var authorName sql.NullString
 
 	err := s.db.QueryRow(query, id).Scan(
-		&page.ID, &page.Slug, &page.Title, &page.Content, &page.MetaDescription,
+		&page.ID, &page.Slug, &page.Title, &page.Content, &page.ContentBlocks, &page.MetaDescription,
 		&page.MetaKeywords, &page.IsPublished, &page.SortOrder, &page.Template,
 		&page.AuthorID, &page.PublishedAt, &page.CreatedAt, &page.UpdatedAt, &authorName,
 	)
@@ -279,7 +279,7 @@ func (s *CMSService) DeleteStaticPage(id int64) error {
 
 func (s *CMSService) ListStaticPages(query *models.ListPagesQuery) (*models.PaginatedResponse, error) {
 	baseQuery := `
-		SELECT p.id, p.slug, p.title, p.content, p.meta_description, p.meta_keywords,
+		SELECT p.id, p.slug, p.title, p.content, p.content_blocks, p.meta_description, p.meta_keywords,
 			p.is_published, p.sort_order, p.template, p.author_id, p.published_at,
 			p.created_at, p.updated_at, COALESCE(u.name, u.email) as author_name
 		FROM static_pages p
@@ -356,7 +356,7 @@ func (s *CMSService) ListStaticPages(query *models.ListPagesQuery) (*models.Pagi
 		var authorName sql.NullString
 
 		err := rows.Scan(
-			&page.ID, &page.Slug, &page.Title, &page.Content, &page.MetaDescription,
+			&page.ID, &page.Slug, &page.Title, &page.Content, &page.ContentBlocks, &page.MetaDescription,
 			&page.MetaKeywords, &page.IsPublished, &page.SortOrder, &page.Template,
 			&page.AuthorID, &page.PublishedAt, &page.CreatedAt, &page.UpdatedAt, &authorName,
 		)

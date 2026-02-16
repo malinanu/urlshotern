@@ -76,6 +76,14 @@ export function useCMSPage(
         const pageData = data.page || data;
 
         if (isMounted && pageData) {
+          // Parse content_blocks if it's a JSON string (backend returns *string)
+          if (pageData.content_blocks && typeof pageData.content_blocks === 'string') {
+            try {
+              pageData.content_blocks = JSON.parse(pageData.content_blocks);
+            } catch (e) {
+              console.warn('[useCMSPage] Failed to parse content_blocks JSON:', e);
+            }
+          }
           setContent(pageData);
           setUsedCMS(true);
         } else {
