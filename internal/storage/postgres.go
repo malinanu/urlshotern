@@ -832,11 +832,12 @@ func (p *PostgresStorage) DeleteUserSessions(userID int64) error {
 // CreateEmailVerification creates an email verification record
 func (p *PostgresStorage) CreateEmailVerification(verification *models.EmailVerification) error {
 	query := `
-		INSERT INTO email_verifications (id, user_id, token, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO email_verifications (user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
 	`
-	_, err := p.Exec(query, verification.ID, verification.UserID, verification.Token,
-		verification.ExpiresAt, verification.CreatedAt)
+	err := p.QueryRow(query, verification.UserID, verification.Token,
+		verification.ExpiresAt, verification.CreatedAt).Scan(&verification.ID)
 	return err
 }
 
@@ -875,11 +876,13 @@ func (p *PostgresStorage) UpdateUserEmailVerified(userID int64, verified bool) e
 // CreatePhoneVerification creates a phone verification record
 func (p *PostgresStorage) CreatePhoneVerification(verification *models.PhoneVerification) error {
 	query := `
-		INSERT INTO phone_verifications (id, user_id, phone, otp_code, attempts, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO phone_verifications (user_id, phone, otp_code, attempts, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
 	`
-	_, err := p.Exec(query, verification.ID, verification.UserID, verification.Phone,
-		verification.OTPCode, verification.Attempts, verification.ExpiresAt, verification.CreatedAt)
+	err := p.QueryRow(query, verification.UserID, verification.Phone,
+		verification.OTPCode, verification.Attempts, verification.ExpiresAt,
+		verification.CreatedAt).Scan(&verification.ID)
 	return err
 }
 
@@ -932,11 +935,12 @@ func (p *PostgresStorage) UpdateUserPhoneVerified(userID int64, verified bool) e
 // CreatePasswordReset creates a password reset record
 func (p *PostgresStorage) CreatePasswordReset(reset *models.PasswordReset) error {
 	query := `
-		INSERT INTO password_resets (id, user_id, token, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO password_resets (user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
 	`
-	_, err := p.Exec(query, reset.ID, reset.UserID, reset.Token,
-		reset.ExpiresAt, reset.CreatedAt)
+	err := p.QueryRow(query, reset.UserID, reset.Token,
+		reset.ExpiresAt, reset.CreatedAt).Scan(&reset.ID)
 	return err
 }
 
