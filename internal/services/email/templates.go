@@ -45,7 +45,7 @@ trunc.site Team
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 40px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
                         </td>
                     </tr>
@@ -61,7 +61,7 @@ trunc.site Team
 
                             <table cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                                 <tr>
-                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%);">
+                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%);">
                                         <a href="%s" style="display: inline-block; padding: 14px 40px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">
                                             Verify Email Address
                                         </a>
@@ -73,7 +73,7 @@ trunc.site Team
                                 Or copy and paste this link into your browser:
                             </p>
 
-                            <p style="color: #667eea; line-height: 1.6; margin: 0 0 20px; font-size: 14px; word-break: break-all;">
+                            <p style="color: #1e9df1; line-height: 1.6; margin: 0 0 20px; font-size: 14px; word-break: break-all;">
                                 %s
                             </p>
 
@@ -139,7 +139,7 @@ trunc.site Team
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #f093fb 0%%, #f5576c 100%%); padding: 40px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
                         </td>
                     </tr>
@@ -155,7 +155,7 @@ trunc.site Team
 
                             <table cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                                 <tr>
-                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #f093fb 0%%, #f5576c 100%%);">
+                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%);">
                                         <a href="%s" style="display: inline-block; padding: 14px 40px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">
                                             Reset Password
                                         </a>
@@ -167,7 +167,7 @@ trunc.site Team
                                 Or copy and paste this link into your browser:
                             </p>
 
-                            <p style="color: #f5576c; line-height: 1.6; margin: 0 0 20px; font-size: 14px; word-break: break-all;">
+                            <p style="color: #1e9df1; line-height: 1.6; margin: 0 0 20px; font-size: 14px; word-break: break-all;">
                                 %s
                             </p>
 
@@ -235,7 +235,7 @@ trunc.site Team
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #4facfe 0%%, #00f2fe 100%%); padding: 40px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
                         </td>
                     </tr>
@@ -251,7 +251,7 @@ trunc.site Team
 
                             <table cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                                 <tr>
-                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #4facfe 0%%, #00f2fe 100%%);">
+                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%);">
                                         <a href="%s" style="display: inline-block; padding: 14px 40px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">
                                             Accept Invitation
                                         </a>
@@ -263,7 +263,7 @@ trunc.site Team
                                 Or copy and paste this link into your browser:
                             </p>
 
-                            <p style="color: #4facfe; line-height: 1.6; margin: 0 0 20px; font-size: 14px; word-break: break-all;">
+                            <p style="color: #1e9df1; line-height: 1.6; margin: 0 0 20px; font-size: 14px; word-break: break-all;">
                                 %s
                             </p>
 
@@ -325,7 +325,7 @@ This email was sent from the trunc.site contact form.
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #43cea2 0%%, #185a9d 100%%); padding: 40px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
                         </td>
                     </tr>
@@ -335,12 +335,12 @@ This email was sent from the trunc.site contact form.
                         <td style="padding: 40px 30px;">
                             <h2 style="color: #333333; margin: 0 0 20px; font-size: 24px;">New Contact Form Submission</h2>
 
-                            <div style="background-color: #f8f9fa; border-left: 4px solid #43cea2; padding: 20px; margin: 20px 0;">
+                            <div style="background-color: #f8f9fa; border-left: 4px solid #1e9df1; padding: 20px; margin: 20px 0;">
                                 <p style="color: #333333; margin: 0 0 10px; font-size: 16px;">
                                     <strong>Name:</strong> %s
                                 </p>
                                 <p style="color: #333333; margin: 0 0 10px; font-size: 16px;">
-                                    <strong>Email:</strong> <a href="mailto:%s" style="color: #43cea2; text-decoration: none;">%s</a>
+                                    <strong>Email:</strong> <a href="mailto:%s" style="color: #1e9df1; text-decoration: none;">%s</a>
                                 </p>
                             </div>
 
@@ -409,7 +409,7 @@ Please respond to the user at: %s
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #fa709a 0%%, #fee140 100%%); padding: 40px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
                         </td>
                     </tr>
@@ -430,7 +430,7 @@ Please respond to the user at: %s
                                     <strong>Name:</strong> %s
                                 </p>
                                 <p style="color: #333333; margin: 0 0 10px; font-size: 16px;">
-                                    <strong>Email:</strong> <a href="mailto:%s" style="color: #fa709a; text-decoration: none;">%s</a>
+                                    <strong>Email:</strong> <a href="mailto:%s" style="color: #1e9df1; text-decoration: none;">%s</a>
                                 </p>
                                 <p style="color: #333333; margin: 0; font-size: 16px;">
                                     <strong>Subject:</strong> %s
@@ -444,7 +444,7 @@ Please respond to the user at: %s
 
                             <table cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                                 <tr>
-                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #fa709a 0%%, #fee140 100%%);">
+                                    <td align="center" style="border-radius: 4px; background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%);">
                                         <a href="mailto:%s?subject=Re: %s" style="display: inline-block; padding: 14px 40px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">
                                             Reply to User
                                         </a>
@@ -512,7 +512,7 @@ trunc.site Team
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); padding: 40px 20px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
                         </td>
                     </tr>
@@ -526,7 +526,7 @@ trunc.site Team
                                 Use the code below to complete your authentication:
                             </p>
 
-                            <div style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); border-radius: 8px; padding: 30px; margin: 30px 0; text-align: center;">
+                            <div style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); border-radius: 8px; padding: 30px; margin: 30px 0; text-align: center;">
                                 <p style="color: #ffffff; font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 0; font-family: 'Courier New', monospace;">
                                     %s
                                 </p>
