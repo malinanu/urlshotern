@@ -38,6 +38,7 @@ type Handler struct {
 	AttributionHandlers    *AttributionHandler
 	CMSHandlers            *CMSHandlers
 	AdminRBACHandlers      *AdminRBACHandlers  // RBAC user and role management
+	ContactHandlers        *ContactHandlers
 }
 
 // NewHandler creates a new handler instance
@@ -74,6 +75,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 		CMSHandlers:            cmsHandlers,
 		AdminRBACHandlers:      adminRBACHandlers,
+		ContactHandlers:        NewContactHandlers(authHandlers.GetEmailService()),
 	}
 }
 

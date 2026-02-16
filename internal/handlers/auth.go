@@ -22,6 +22,11 @@ type AuthHandlers struct {
 	validator    *validator.Validate
 }
 
+// GetEmailService returns the email service for use by other handlers
+func (h *AuthHandlers) GetEmailService() *services.EmailService {
+	return h.emailService
+}
+
 // NewAuthHandlers creates new auth handlers
 func NewAuthHandlers(authService *services.AuthService, adminService *services.AdminService, smsService *services.SMSService, emailService *services.EmailService) *AuthHandlers {
 	return &AuthHandlers{

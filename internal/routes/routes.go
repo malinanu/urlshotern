@@ -112,6 +112,12 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 
 	// Public CMS pages
 	router.GET("/api/v1/pages/:slug", handler.CMSHandlers.GetStaticPage)
+
+	// Contact form
+	router.POST("/api/v1/contact",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		handler.ContactHandlers.SubmitContactForm,
+	)
 }
 
 // setupAuthRoutes configures authentication routes
