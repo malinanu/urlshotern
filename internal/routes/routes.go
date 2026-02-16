@@ -47,6 +47,9 @@ func SetupRoutes(
 	// Goroutine error statistics (for monitoring)
 	router.GET("/health/goroutines", handler.GoroutineStats)
 
+	// Email service health check (for monitoring)
+	router.GET("/health/email", handler.AuthHandlers.EmailHealthCheck)
+
 	// Serve common static files BEFORE /:shortCode route to prevent them from being treated as short codes
 	commonStaticFiles := []string{
 		"/manifest.json", "/robots.txt", "/sitemap.xml",

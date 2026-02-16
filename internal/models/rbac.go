@@ -40,10 +40,10 @@ type RolePermission struct {
 // UserRole represents the many-to-many relationship between users and roles
 type UserRole struct {
 	ID         int64      `json:"id" db:"id"`
-	UserID     int64      `json:"user_id" db:"user_id"`
+	UserID     int64      `json:"user_id,string" db:"user_id"`
 	RoleID     int64      `json:"role_id" db:"role_id"`
-	AssignedBy *int64     `json:"assigned_by" db:"assigned_by"` // User ID who assigned this role
-	ExpiresAt  *time.Time `json:"expires_at" db:"expires_at"`   // Optional expiration
+	AssignedBy *int64     `json:"assigned_by,string" db:"assigned_by"` // User ID who assigned this role
+	ExpiresAt  *time.Time `json:"expires_at" db:"expires_at"`          // Optional expiration
 	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at" db:"updated_at"`
 }
@@ -54,7 +54,7 @@ type Team struct {
 	Name        string     `json:"name" db:"name"`
 	DisplayName string     `json:"display_name" db:"display_name"`
 	Description *string    `json:"description" db:"description"`
-	OwnerID     int64      `json:"owner_id" db:"owner_id"`
+	OwnerID     int64      `json:"owner_id,string" db:"owner_id"`
 	IsActive    bool       `json:"is_active" db:"is_active"`
 	Settings    *string    `json:"settings" db:"settings"` // JSON string for team settings
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
@@ -66,9 +66,9 @@ type Team struct {
 type TeamMember struct {
 	ID        int64      `json:"id" db:"id"`
 	TeamID    int64      `json:"team_id" db:"team_id"`
-	UserID    int64      `json:"user_id" db:"user_id"`
+	UserID    int64      `json:"user_id,string" db:"user_id"`
 	RoleID    int64      `json:"role_id" db:"role_id"` // Role within the team
-	InvitedBy *int64     `json:"invited_by" db:"invited_by"`
+	InvitedBy *int64     `json:"invited_by,string" db:"invited_by"`
 	JoinedAt  *time.Time `json:"joined_at" db:"joined_at"`
 	Status    string     `json:"status" db:"status"` // invited, active, suspended
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
@@ -81,7 +81,7 @@ type TeamInvitation struct {
 	TeamID    int64     `json:"team_id" db:"team_id"`
 	Email     string    `json:"email" db:"email"`
 	RoleID    int64     `json:"role_id" db:"role_id"`
-	InvitedBy int64     `json:"invited_by" db:"invited_by"`
+	InvitedBy int64     `json:"invited_by,string" db:"invited_by"`
 	Token     string    `json:"-" db:"token"`       // Hidden from JSON
 	Status    string    `json:"status" db:"status"` // pending, accepted, rejected, expired
 	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`

@@ -1092,3 +1092,12 @@ func (h *AuthHandlers) ResetPassword(c *gin.Context) {
 		"message": "Password has been reset successfully. You can now log in with your new password.",
 	})
 }
+
+// EmailHealthCheck checks email service configuration and status
+func (h *AuthHandlers) EmailHealthCheck(c *gin.Context) {
+	// Get email service health info
+	healthInfo := h.emailService.GetHealthInfo()
+
+	// Return health information
+	c.JSON(http.StatusOK, healthInfo)
+}

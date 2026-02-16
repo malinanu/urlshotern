@@ -1,0 +1,207 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../.env
+    environment:
+      # Server Configuration
+      - SERVER_PORT=8080
+      - BASE_URL=https://trunc.site
+      - ENVIRONMENT=production
+
+      # Database Configuration
+      - DB_HOST=pgbouncer
+      - DB_PORT=5432
+      - DB_USER=urlshortener
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=urlshortener_db
+      - DB_MAX_CONNECTIONS=${DB_MAX_CONNECTIONS:-25}
+      - DB_MAX_IDLE_CONNECTIONS=${DB_MAX_IDLE_CONNECTIONS:-10}
+      - DB_CONN_MAX_LIFETIME=${DB_CONN_MAX_LIFETIME:-3600}
+      - DB_CONN_MAX_IDLE_TIME=${DB_CONN_MAX_IDLE_TIME:-600}
+      - DB_SSLMODE=disable
+
+      # Redis Configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+      # Snowflake Configuration
+      - NODE_ID=1
+
+      # Admin Panel
+      - ENABLE_ADMIN_ROUTES=${ENABLE_ADMIN_ROUTES:-false}
+
+      # OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL}
+
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=trunc.site
+
+      # Polar Configuration
+      - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET}
+      - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID}
+      - POLAR_API_URL=${POLAR_API_URL}
+
+      # ⚠️ SMTP Email Configuration (REQUIRED FOR PASSWORD RESET EMAILS)
+      # These variables MUST be set for email delivery to work
+      # For Gmail, use an app-specific password (requires 2FA)
+      # Generate at: https://myaccount.google.com/apppasswords
+      - SMTP_HOST=${SMTP_HOST}                    # e.g., smtp.gmail.com
+      - SMTP_PORT=${SMTP_PORT:-587}               # 587 for STARTTLS, 465 for TLS
+      - SMTP_USERNAME=${SMTP_USERNAME}            # Your full Gmail address
+      - SMTP_PASSWORD=${SMTP_PASSWORD}            # Gmail app password (16 chars)
+      - FROM_EMAIL=${FROM_EMAIL:-noreply@trunc.site}
+      - FROM_NAME=${FROM_NAME:-trunc.site}
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+    networks:
+      - urlshortener
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: urlshortener_db
+      POSTGRES_USER: urlshortener
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../configs/database.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urlshortener -d urlshortener_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+    networks:
+      - urlshortener
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    environment:
+      - DATABASE_URL=postgres://urlshortener:${DB_PASSWORD}@postgres:5432/urlshortener_db
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=25
+      - MIN_POOL_SIZE=10
+      - RESERVE_POOL_SIZE=5
+      - RESERVE_POOL_TIMEOUT=3
+      - MAX_DB_CONNECTIONS=100
+      - MAX_USER_CONNECTIONS=100
+      - SERVER_IDLE_TIMEOUT=600
+      - SERVER_LIFETIME=3600
+      - SERVER_CONNECT_TIMEOUT=15
+      - QUERY_TIMEOUT=0
+      - QUERY_WAIT_TIMEOUT=120
+      - CLIENT_IDLE_TIMEOUT=0
+      - IDLE_TRANSACTION_TIMEOUT=0
+      - LOG_CONNECTIONS=1
+      - LOG_DISCONNECTIONS=1
+      - LOG_POOLER_ERRORS=1
+      - STATS_PERIOD=60
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=${DB_PASSWORD} psql -h localhost -U urlshortener -d urlshortener_db -c 'SELECT 1;' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    restart: unless-stopped
+    networks:
+      - urlshortener
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    restart: unless-stopped
+    networks:
+      - urlshortener
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    restart: unless-stopped
+    networks:
+      - urlshortener
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  urlshortener:
+    driver: bridge

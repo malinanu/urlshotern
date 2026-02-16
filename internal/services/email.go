@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,9 +24,16 @@ type EmailService struct {
 
 // NewEmailService creates a new email service
 func NewEmailService(db *storage.PostgresStorage, config *configs.Config) *EmailService {
+	// Determine email provider based on environment
+	providerType := getEmailProvider(config)
+
+	// Log email service initialization
+	log.Printf("INFO [EMAIL] Initializing email service (environment=%s, provider=%s)",
+		config.Environment, providerType)
+
 	// Create email provider based on environment
 	emailConfig := email.EmailConfig{
-		Provider:     getEmailProvider(config),
+		Provider:     providerType,
 		SMTPHost:     config.SMTPHost,
 		SMTPPort:     config.SMTPPort,
 		SMTPUsername: config.SMTPUsername,
@@ -33,11 +42,26 @@ func NewEmailService(db *storage.PostgresStorage, config *configs.Config) *Email
 		FromName:     config.FromName,
 	}
 
+	// Log SMTP configuration if using SMTP provider (mask password)
+	if providerType == "smtp" {
+		maskedPassword := maskPassword(config.SMTPPassword)
+		log.Printf("INFO [EMAIL] SMTP configuration: host=%s, port=%d, username=%s, password=%s, from_email=%s, from_name=%s",
+			config.SMTPHost, config.SMTPPort, config.SMTPUsername, maskedPassword,
+			config.FromEmail, config.FromName)
+
+		// Validate SMTP configuration
+		validateSMTPConfig(config)
+	}
+
 	provider, err := email.NewProvider(emailConfig)
 	if err != nil {
-		fmt.Printf("Warning: failed to create email provider: %v, using console provider\n", err)
+		log.Printf("ERROR [EMAIL] Failed to create %s email provider: %v - falling back to console provider",
+			providerType, err)
 		provider = email.NewConsoleProvider(emailConfig)
+		providerType = "console" // Update provider type for logging
 	}
+
+	log.Printf("INFO [EMAIL] Email service initialized successfully using %s provider", providerType)
 
 	return &EmailService{
 		db:       db,
@@ -55,6 +79,58 @@ func getEmailProvider(config *configs.Config) string {
 		return "smtp"
 	}
 	return "console"
+}
+
+// maskPassword masks the password for logging
+func maskPassword(password string) string {
+	if password == "" {
+		return "<empty>"
+	}
+	if len(password) <= 4 {
+		return "****"
+	}
+	return password[:2] + "****" + password[len(password)-2:]
+}
+
+// validateSMTPConfig validates SMTP configuration and logs warnings
+func validateSMTPConfig(config *configs.Config) {
+	warnings := []string{}
+
+	// Check if required fields are set
+	if config.SMTPHost == "" {
+		warnings = append(warnings, "SMTP_HOST is empty")
+	}
+	if config.SMTPPort == 0 {
+		warnings = append(warnings, "SMTP_PORT is 0 (should be 587, 465, or 25)")
+	}
+	if config.SMTPUsername == "" {
+		warnings = append(warnings, "SMTP_USERNAME is empty")
+	}
+	if config.SMTPPassword == "" {
+		warnings = append(warnings, "SMTP_PASSWORD is empty")
+	}
+	if config.FromEmail == "" {
+		warnings = append(warnings, "FROM_EMAIL is empty")
+	}
+
+	// Gmail-specific validation
+	if strings.Contains(strings.ToLower(config.SMTPHost), "gmail.com") {
+		// Check if FROM_EMAIL matches SMTP_USERNAME
+		if config.FromEmail != "" && config.SMTPUsername != "" &&
+			config.FromEmail != config.SMTPUsername {
+			log.Printf("WARN [EMAIL] Gmail SMTP detected: FROM_EMAIL (%s) differs from SMTP_USERNAME (%s)",
+				config.FromEmail, config.SMTPUsername)
+			log.Printf("WARN [EMAIL] Gmail requires FROM address to match authenticated account OR be configured as a 'Send mail as' alias in Gmail settings")
+			log.Printf("WARN [EMAIL] If emails are not being sent, verify that '%s' is configured as a verified alias in Gmail", config.FromEmail)
+		}
+	}
+
+	// Log all warnings
+	if len(warnings) > 0 {
+		for _, warning := range warnings {
+			log.Printf("WARN [EMAIL] SMTP configuration issue: %s", warning)
+		}
+	}
 }
 
 // SendVerificationEmail creates and sends email verification
@@ -166,8 +242,18 @@ func (e *EmailService) SendPasswordReset(emailAddr, token string) error {
 	// Generate email template
 	template := email.PasswordResetEmailTemplate(resetURL, emailAddr)
 
+	// Log email sending attempt
+	log.Printf("INFO [EMAIL] Sending password reset email to %s", emailAddr)
+
 	// Send email using provider
-	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	err := e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	if err != nil {
+		log.Printf("ERROR [EMAIL] Failed to send password reset email to %s: %v", emailAddr, err)
+		return fmt.Errorf("failed to send password reset email: %w", err)
+	}
+
+	log.Printf("INFO [EMAIL] Password reset email sent successfully to %s", emailAddr)
+	return nil
 }
 
 // SendTeamInvitation sends team invitation email
@@ -312,7 +398,76 @@ func (e *EmailService) InvalidateEmailVerifications(userID int64) error {
 func (e *EmailService) GetUserByID(userID int64) (*models.User, error) {
 	user := &models.User{}
 	query := "SELECT id, email, email_verified FROM users WHERE id = $1"
-	
+
 	err := e.db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.EmailVerified)
 	return user, err
+}
+
+// GetHealthInfo returns email service health information
+func (e *EmailService) GetHealthInfo() map[string]interface{} {
+	// Determine provider type
+	providerType := "unknown"
+	switch e.provider.(type) {
+	case *email.SMTPProvider:
+		providerType = "smtp"
+	case *email.ConsoleProvider:
+		providerType = "console"
+	}
+
+	healthInfo := map[string]interface{}{
+		"status":      "ok",
+		"provider":    providerType,
+		"environment": e.config.Environment,
+	}
+
+	// Add SMTP configuration if using SMTP provider
+	if providerType == "smtp" {
+		healthInfo["smtp_config"] = map[string]interface{}{
+			"host":       e.config.SMTPHost,
+			"port":       e.config.SMTPPort,
+			"username":   e.config.SMTPUsername,
+			"password":   maskPassword(e.config.SMTPPassword),
+			"from_email": e.config.FromEmail,
+			"from_name":  e.config.FromName,
+		}
+
+		// Add warnings if any
+		warnings := []string{}
+
+		// Check if required fields are set
+		if e.config.SMTPHost == "" {
+			warnings = append(warnings, "SMTP_HOST is empty")
+		}
+		if e.config.SMTPPort == 0 {
+			warnings = append(warnings, "SMTP_PORT is 0")
+		}
+		if e.config.SMTPUsername == "" {
+			warnings = append(warnings, "SMTP_USERNAME is empty")
+		}
+		if e.config.SMTPPassword == "" {
+			warnings = append(warnings, "SMTP_PASSWORD is empty")
+		}
+		if e.config.FromEmail == "" {
+			warnings = append(warnings, "FROM_EMAIL is empty")
+		}
+
+		// Gmail-specific warnings
+		if strings.Contains(strings.ToLower(e.config.SMTPHost), "gmail.com") {
+			if e.config.FromEmail != "" && e.config.SMTPUsername != "" &&
+				e.config.FromEmail != e.config.SMTPUsername {
+				warnings = append(warnings, fmt.Sprintf("Gmail SMTP: FROM_EMAIL (%s) differs from SMTP_USERNAME (%s). Ensure '%s' is configured as a verified 'Send mail as' alias in Gmail settings.",
+					e.config.FromEmail, e.config.SMTPUsername, e.config.FromEmail))
+			}
+		}
+
+		if len(warnings) > 0 {
+			healthInfo["warnings"] = warnings
+			healthInfo["status"] = "warning"
+		}
+	} else if providerType == "console" {
+		healthInfo["warnings"] = []string{"Using console provider - emails will be logged to stdout instead of being sent"}
+		healthInfo["status"] = "warning"
+	}
+
+	return healthInfo
 }

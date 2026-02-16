@@ -99,7 +99,7 @@ type PhoneVerification struct {
 // PasswordReset represents password reset tokens
 type PasswordReset struct {
 	ID        uuid.UUID  `json:"id" db:"id"`
-	UserID    int64      `json:"user_id" db:"user_id"`
+	UserID    int64      `json:"user_id,string" db:"user_id"`
 	Token     string     `json:"token" db:"token"`
 	ExpiresAt time.Time  `json:"expires_at" db:"expires_at"`
 	UsedAt    *time.Time `json:"used_at" db:"used_at"`
@@ -159,13 +159,13 @@ type AuthResponse struct {
 
 // OTPRequest represents OTP verification request
 type OTPRequest struct {
-	UserID int64  `json:"user_id" validate:"required"`
+	UserID int64  `json:"user_id,string" validate:"required"`
 	OTP    string `json:"otp" validate:"required,len=6"`
 }
 
 // ResendOTPRequest represents resend OTP request
 type ResendOTPRequest struct {
-	UserID int64 `json:"user_id" validate:"required"`
+	UserID int64 `json:"user_id,string" validate:"required"`
 }
 
 // ForgotPasswordRequest represents forgot password request

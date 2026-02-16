@@ -289,20 +289,82 @@ func (h *AdminRBACHandlers) GetRBACAuditLog(c *gin.Context) {
 // RBAC Management Handlers
 // ============================================================================
 
-// ListRoles lists all roles
+// ListRoles lists all roles (filtered by user's role hierarchy)
 // GET /api/v1/admin/rbac/roles
 func (h *AdminRBACHandlers) ListRoles(c *gin.Context) {
 	activeOnly := c.Query("active_only") == "true"
 
-	roles, err := h.rbacService.ListRoles(activeOnly)
+	// Get current user ID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		middleware.LogError(c, nil, "user_id not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+	userID := userIDInterface.(int64)
+
+	// Fetch all roles
+	allRoles, err := h.rbacService.ListRoles(activeOnly)
 	if err != nil {
 		middleware.LogError(c, err, "Failed to list roles")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list roles"})
 		return
 	}
 
+	// Get current user's roles to determine what they can see
+	userRolesData, err := h.rbacService.GetUserRoles(userID)
+	if err != nil {
+		middleware.LogError(c, err, "Failed to fetch user roles")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user roles"})
+		return
+	}
+
+	// If user has no roles, they can't see any roles (unless public/guest logic applies, but for admin panel usually restricted)
+	if len(userRolesData) == 0 {
+		c.JSON(http.StatusOK, gin.H{"roles": []*models.Role{}})
+		return
+	}
+
+	// detailed filtering logic:
+	// 1. Identify the user's highest role
+	var highestRole string
+	var isSuperAdmin bool
+
+	for _, r := range userRolesData {
+		if r.Name == models.RoleSuperAdmin {
+			isSuperAdmin = true
+			highestRole = models.RoleSuperAdmin
+			break
+		}
+		// Assuming simple hierarchy for now, or just taking the first one if not super admin
+		if highestRole == "" {
+			highestRole = r.Name
+		}
+	}
+
+	// 2. If Super Admin, return everything
+	if isSuperAdmin {
+		c.JSON(http.StatusOK, gin.H{"roles": allRoles})
+		return
+	}
+
+	// 3. Otherwise, filter based on what they can assign
+	visibleRoles := make([]*models.Role, 0)
+	for _, role := range allRoles {
+		// Users can see roles they can assign
+		if models.CanAssignRole(highestRole, role.Name) {
+			visibleRoles = append(visibleRoles, role)
+		} else if role.Name == highestRole {
+			// Users can usually see their own role too (optional, but good for UI context)
+			visibleRoles = append(visibleRoles, role)
+		} else if role.Name == models.RoleUser || role.Name == models.RoleGuest {
+			// Everyone can see basic User/Guest roles
+			visibleRoles = append(visibleRoles, role)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"roles": roles,
+		"roles": visibleRoles,
 	})
 }
 

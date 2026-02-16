@@ -3,8 +3,10 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net/smtp"
 	"strings"
+	"time"
 )
 
 // SMTPProvider implements email sending via SMTP
@@ -19,8 +21,36 @@ func NewSMTPProvider(config EmailConfig) *SMTPProvider {
 	}
 }
 
-// SendEmail sends an email via SMTP
+// SendEmail sends an email via SMTP with retry logic
 func (s *SMTPProvider) SendEmail(to, subject, htmlBody, textBody string) error {
+	maxRetries := 3
+	retryDelay := 1 * time.Second
+
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err := s.sendEmailAttempt(to, subject, htmlBody, textBody)
+		if err == nil {
+			if attempt > 1 {
+				log.Printf("INFO [SMTP] Email sent successfully to %s on attempt %d/%d", to, attempt, maxRetries)
+			}
+			return nil
+		}
+
+		lastErr = err
+		if attempt < maxRetries {
+			log.Printf("WARN [SMTP] Failed to send email to %s (attempt %d/%d): %v - retrying in %v",
+				to, attempt, maxRetries, err, retryDelay)
+			time.Sleep(retryDelay)
+			retryDelay *= 2 // Exponential backoff
+		}
+	}
+
+	log.Printf("ERROR [SMTP] Failed to send email to %s after %d attempts: %v", to, maxRetries, lastErr)
+	return fmt.Errorf("failed to send email after %d attempts: %w", maxRetries, lastErr)
+}
+
+// sendEmailAttempt performs a single attempt to send an email
+func (s *SMTPProvider) sendEmailAttempt(to, subject, htmlBody, textBody string) error {
 	// Build email message
 	msg := s.buildMessage(to, subject, htmlBody, textBody)
 

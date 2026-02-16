@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -226,7 +227,8 @@ func (a *AuthService) VerifyOTP(req *models.OTPRequest, ipAddress, userAgent str
 func (a *AuthService) RequestPasswordReset(email, ipAddress, userAgent string) error {
 	token, err := a.createPasswordResetToken(email)
 	if err != nil {
-		// Don't reveal if email exists or not
+		// Don't reveal if email exists or not - log error but return nil
+		log.Printf("ERROR [AUTH] Failed to create password reset token for email: %v", err)
 		return nil
 	}
 
@@ -234,8 +236,20 @@ func (a *AuthService) RequestPasswordReset(email, ipAddress, userAgent string) e
 	if a.emailService != nil {
 		err = a.emailService.SendPasswordReset(email, token)
 		if err != nil {
-			fmt.Printf("Failed to send password reset email: %v\n", err)
+			// Log the error with details for debugging
+			log.Printf("ERROR [AUTH] Failed to send password reset email to %s: %v", email, err)
+			// Don't reveal if email exists - return nil for security
+			// But audit the failure for monitoring
+			a.logAuditEvent(nil, "password_reset_email_failed", "authentication", "",
+				map[string]interface{}{
+					"email": email,
+					"error": err.Error(),
+				}, ipAddress, userAgent)
+		} else {
+			log.Printf("INFO [AUTH] Password reset email sent successfully to %s", email)
 		}
+	} else {
+		log.Printf("WARN [AUTH] Email service not available, cannot send password reset email")
 	}
 
 	// Log password reset request (don't log user ID to prevent enumeration)

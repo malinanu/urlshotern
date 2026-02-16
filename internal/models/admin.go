@@ -131,13 +131,13 @@ type UpdateAccountTypeRequest struct {
 // RBACAuditEntry represents an RBAC audit log entry
 type RBACAuditEntry struct {
 	ID             int64     `json:"id,string"`
-	UserID         *int64    `json:"user_id,omitempty"`
-	TargetUserID   *int64    `json:"target_user_id,omitempty"`
+	UserID         *int64    `json:"user_id,string,omitempty"`
+	TargetUserID   *int64    `json:"target_user_id,string,omitempty"`
 	Action         string    `json:"action"`
 	RoleID         *int64    `json:"role_id,omitempty"`
 	RoleName       string    `json:"role_name,omitempty"`
 	PermissionID   *int64    `json:"permission_id,omitempty"`
-	AssignedBy     *int64    `json:"assigned_by,omitempty"`
+	AssignedBy     *int64    `json:"assigned_by,string,omitempty"`
 	AssignedByName string    `json:"assigned_by_name,omitempty"`
 	Details        *string   `json:"details,omitempty"` // JSON string
 	IPAddress      *string   `json:"ip_address,omitempty"`
@@ -147,11 +147,11 @@ type RBACAuditEntry struct {
 
 // RBACAuditFilters represents filters for audit log queries
 type RBACAuditFilters struct {
-	UserID       *int64     `json:"user_id,omitempty"`
-	TargetUserID *int64     `json:"target_user_id,omitempty"`
+	UserID       *int64     `json:"user_id,string,omitempty"`
+	TargetUserID *int64     `json:"target_user_id,string,omitempty"`
 	Action       *string    `json:"action,omitempty"`
 	RoleID       *int64     `json:"role_id,omitempty"`
-	AssignedBy   *int64     `json:"assigned_by,omitempty"`
+	AssignedBy   *int64     `json:"assigned_by,string,omitempty"`
 	StartDate    *time.Time `json:"start_date,omitempty"`
 	EndDate      *time.Time `json:"end_date,omitempty"`
 	Limit        int        `json:"limit"`
