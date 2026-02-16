@@ -120,8 +120,8 @@ func LoadConfig() (*Config, error) {
 		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
 		SMTPUsername: getEnv("SMTP_USERNAME", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		FromEmail:    getEnv("FROM_EMAIL", "noreply@urlshortener.com"),
-		FromName:     getEnv("FROM_NAME", "URL Shortener"),
+		FromEmail:    getEnv("FROM_EMAIL", "noreply@trunc.site"),
+		FromName:     getEnv("FROM_NAME", "trunc.site"),
 
 		// Webhook Alert Configuration
 		WebhookAlertEmails: getEnv("WEBHOOK_ALERT_EMAILS", ""),
