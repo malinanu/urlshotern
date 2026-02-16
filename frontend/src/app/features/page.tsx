@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { 
   LinkIcon, 
@@ -13,22 +12,29 @@ import {
   UserGroupIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { useCMSPage, getContentBlock } from '@/hooks/useCMSPage';
 
-interface Page {
-  id: number;
-  slug: string;
-  title: string;
-  content: string;
-  meta_description: string;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Icon mapping for CMS string values
+const iconMap: Record<string, any> = {
+  LinkIcon,
+  ChartBarIcon,
+  ShieldCheckIcon,
+  CursorArrowRaysIcon,
+  GlobeAltIcon,
+  ClockIcon,
+  DevicePhoneMobileIcon,
+  UserGroupIcon,
+  CheckCircleIcon,
+};
 
 export default function FeaturesPage() {
-  const [pageData, setPageData] = useState<Page | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Fetch page content from CMS with fallback
+  const { content: page, loading, usedCMS } = useCMSPage('features', {
+    slug: 'features',
+    title: 'Features',
+    content: 'Powerful Features for Smart URL Management',
+  });
+
   const fallbackMainFeatures = [
     {
       name: 'Lightning Fast Shortening',
@@ -113,24 +119,45 @@ export default function FeaturesPage() {
     { name: 'SSO Integration', icon: CheckCircleIcon }
   ];
 
-  useEffect(() => {
-    const fetchPageData = async () => {
-      try {
-        const response = await fetch('/api/v1/pages/features');
-        if (!response.ok) {
-          throw new Error('Failed to fetch page data');
-        }
-        const data = await response.json();
-        setPageData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load page');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Extract content blocks
+  const hero = getContentBlock(page, 'hero', {
+    title: 'Powerful Features for Smart URL Management',
+    title_highlight: 'Smart URL Management',
+    tagline: 'Everything you need to create, track, and optimize your short links. From basic URL shortening to advanced analytics and enterprise features.'
+  });
 
-    fetchPageData();
-  }, []);
+  const mainFeaturesBlock = getContentBlock(page, 'main_features', {
+    badge: 'Core Features',
+    heading: 'Core Features',
+    tagline: 'Built for performance, designed for insights, trusted by thousands.',
+    items: fallbackMainFeatures
+  });
+
+  const additionalFeaturesBlock = getContentBlock(page, 'additional_features', {
+    badge: 'Additional Features',
+    heading: 'Additional Features',
+    tagline: 'Even more tools and capabilities to enhance your URL management experience.',
+    items: fallbackAdditionalFeatures
+  });
+
+  const ctaBottom = getContentBlock(page, 'cta_bottom', {
+    heading: 'Ready to Experience These Features?',
+    tagline: 'Start using Trunc today and unlock the full potential of your links.',
+    cta_primary: { text: 'Try It Now', url: '/' },
+    cta_secondary: { text: 'View Pricing', url: '/pricing' }
+  });
+
+  // Map CMS data to components
+  const mainFeatures = (mainFeaturesBlock.items || fallbackMainFeatures).map((feature: any) => ({
+    ...feature,
+    // Handle icon mapping if it's a string from CMS
+    icon: feature.icon && typeof feature.icon === 'string' ? (iconMap[feature.icon] || LinkIcon) : feature.icon || LinkIcon
+  }));
+
+  const additionalFeatures = (additionalFeaturesBlock.items || fallbackAdditionalFeatures).map((feature: any) => ({
+    ...feature,
+    icon: feature.icon && typeof feature.icon === 'string' ? (iconMap[feature.icon] || CheckCircleIcon) : feature.icon || CheckCircleIcon
+  }));
 
   if (loading) {
     return (
@@ -142,123 +169,126 @@ export default function FeaturesPage() {
     );
   }
 
-  if (error || !pageData) {
-    return (
-      <Layout>
-        {/* Fallback content when CMS is unavailable */}
-        <section className="bg-gradient-to-br from-primary-50 to-white py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
-                Powerful Features for{' '}
-                <span className="text-primary-600">Smart URL Management</span>
-              </h1>
-              <p className="text-xl text-black mb-12 max-w-3xl mx-auto">
-                Everything you need to create, track, and optimize your short links. 
-                From basic URL shortening to advanced analytics and enterprise features.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-black mb-4">
-                Core Features
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Built for performance, designed for insights, trusted by thousands.
-              </p>
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-12">
-              {fallbackMainFeatures.map((feature) => (
-                <div key={feature.name} className="bg-gray-50 rounded-xl p-8">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="p-3 bg-primary-100 rounded-lg">
-                        <feature.icon className="h-8 w-8 text-primary-600" />
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-black mb-3">
-                        {feature.name}
-                      </h3>
-                      <p className="text-gray-600 mb-4 leading-relaxed">
-                        {feature.description}
-                      </p>
-                      <ul className="space-y-2">
-                        {feature.details.map((detail) => (
-                          <li key={detail} className="flex items-center space-x-2">
-                            <CheckCircleIcon className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                            <span className="text-black text-sm">{detail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-black mb-4">
-                Additional Features
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Even more tools and capabilities to enhance your URL management experience.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {fallbackAdditionalFeatures.map((feature) => (
-                <div key={feature.name} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                  <div className="flex items-center space-x-3">
-                    <feature.icon className="h-6 w-6 text-primary-600 flex-shrink-0" />
-                    <span className="text-black font-medium">{feature.name}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 bg-primary-600">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Ready to Experience These Features?
-            </h2>
-            <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-              Start using Trunc today and unlock the full potential of your links.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="/"
-                className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-              >
-                Try It Now
-              </a>
-              <a
-                href="/pricing"
-                className="border border-primary-400 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-              >
-                View Pricing
-              </a>
-            </div>
-          </div>
-        </section>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
-      <div dangerouslySetInnerHTML={{ __html: pageData.content }} />
+      {/* Hero Section - Using CMS Content */}
+      <section className="bg-gradient-to-br from-primary-50 to-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
+              {hero.title.replace(hero.title_highlight || '', '')}
+              {hero.title_highlight && (
+                <span className="text-primary-600">{hero.title_highlight}</span>
+              )}
+            </h1>
+            <p className="text-xl text-black mb-12 max-w-3xl mx-auto">
+              {hero.tagline}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Features Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-black mb-4">
+              {mainFeaturesBlock.heading}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {mainFeaturesBlock.tagline}
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12">
+            {mainFeatures.map((feature: any) => (
+              <div key={feature.name} className="bg-gray-50 rounded-xl p-8">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="p-3 bg-primary-100 rounded-lg">
+                      <feature.icon className="h-8 w-8 text-primary-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-black mb-3">
+                      {feature.name}
+                    </h3>
+                    <p className="text-gray-600 mb-4 leading-relaxed">
+                      {feature.description}
+                    </p>
+                    <ul className="space-y-2">
+                      {feature.details && feature.details.map((detail: string) => (
+                        <li key={detail} className="flex items-center space-x-2">
+                          <CheckCircleIcon className="h-5 w-5 text-primary-600 flex-shrink-0" />
+                          <span className="text-black text-sm">{detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Additional Features Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-black mb-4">
+              {additionalFeaturesBlock.heading}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {additionalFeaturesBlock.tagline}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {additionalFeatures.map((feature: any) => (
+              <div key={feature.name} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <feature.icon className="h-6 w-6 text-primary-600 flex-shrink-0" />
+                  <span className="text-black font-medium">{feature.name}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-primary-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            {ctaBottom.heading}
+          </h2>
+          <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+            {ctaBottom.tagline}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href={ctaBottom.cta_primary?.url || '/'}
+              className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+            >
+              {ctaBottom.cta_primary?.text || 'Try It Now'}
+            </a>
+            <a
+              href={ctaBottom.cta_secondary?.url || '/pricing'}
+              className="border border-primary-400 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+            >
+              {ctaBottom.cta_secondary?.text || 'View Pricing'}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Development Indicator */}
+      {process.env.NODE_ENV === 'development' && usedCMS && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+          ✓ Using CMS
+        </div>
+      )}
     </Layout>
   );
 }
