@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ func (s *CMSService) CreateStaticPage(req *models.CreateStaticPageRequest, autho
 		req.Slug, req.Title, req.Content, req.MetaDescription, req.MetaKeywords,
 		req.IsPublished, req.SortOrder, req.Template, authorID, publishedAt, now, now,
 	).Scan(&page.ID, &page.CreatedAt, &page.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create static page: %w", err)
 	}
@@ -89,13 +90,13 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 
 	var page models.StaticPage
 	var authorName sql.NullString
-	
+
 	err := s.db.QueryRow(query, slug).Scan(
 		&page.ID, &page.Slug, &page.Title, &page.Content, &page.MetaDescription,
 		&page.MetaKeywords, &page.IsPublished, &page.SortOrder, &page.Template,
 		&page.AuthorID, &page.PublishedAt, &page.CreatedAt, &page.UpdatedAt, &authorName,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("page with slug '%s' not found", slug)
@@ -121,13 +122,13 @@ func (s *CMSService) GetStaticPageByID(id int64) (*models.StaticPage, error) {
 
 	var page models.StaticPage
 	var authorName sql.NullString
-	
+
 	err := s.db.QueryRow(query, id).Scan(
 		&page.ID, &page.Slug, &page.Title, &page.Content, &page.MetaDescription,
 		&page.MetaKeywords, &page.IsPublished, &page.SortOrder, &page.Template,
 		&page.AuthorID, &page.PublishedAt, &page.CreatedAt, &page.UpdatedAt, &authorName,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("page with ID %d not found", id)
@@ -154,14 +155,23 @@ func (s *CMSService) UpdateStaticPage(id int64, req *models.UpdateStaticPageRequ
 	args := []interface{}{time.Now()}
 	argIndex := 2
 
+	// Track if title changed so we can sync to content_blocks
+	var newTitle *string
+
 	if req.Title != nil {
 		setParts = append(setParts, fmt.Sprintf("title = $%d", argIndex))
 		args = append(args, *req.Title)
 		argIndex++
+		newTitle = req.Title
 	}
 	if req.Content != nil {
 		setParts = append(setParts, fmt.Sprintf("content = $%d", argIndex))
 		args = append(args, *req.Content)
+		argIndex++
+	}
+	if req.ContentBlocks != nil {
+		setParts = append(setParts, fmt.Sprintf("content_blocks = $%d", argIndex))
+		args = append(args, *req.ContentBlocks)
 		argIndex++
 	}
 	if req.MetaDescription != nil {
@@ -178,7 +188,7 @@ func (s *CMSService) UpdateStaticPage(id int64, req *models.UpdateStaticPageRequ
 		setParts = append(setParts, fmt.Sprintf("is_published = $%d", argIndex))
 		args = append(args, *req.IsPublished)
 		argIndex++
-		
+
 		// Update published_at if publishing status changes
 		if *req.IsPublished && !currentPage.IsPublished {
 			setParts = append(setParts, fmt.Sprintf("published_at = $%d", argIndex))
@@ -199,6 +209,27 @@ func (s *CMSService) UpdateStaticPage(id int64, req *models.UpdateStaticPageRequ
 		setParts = append(setParts, fmt.Sprintf("template = $%d", argIndex))
 		args = append(args, *req.Template)
 		argIndex++
+	}
+
+	// Auto-sync title changes into content_blocks.hero.title
+	// This ensures that editing the page title in the CMS admin panel
+	// also updates what the frontend actually renders
+	if newTitle != nil && req.ContentBlocks == nil {
+		// Only auto-sync if content_blocks wasn't explicitly provided
+		var blocks map[string]interface{}
+		if currentPage.ContentBlocks != nil {
+			if err := json.Unmarshal([]byte(*currentPage.ContentBlocks), &blocks); err == nil {
+				if hero, ok := blocks["hero"].(map[string]interface{}); ok {
+					hero["title"] = *newTitle
+					blocks["hero"] = hero
+					if updatedBlocks, err := json.Marshal(blocks); err == nil {
+						setParts = append(setParts, fmt.Sprintf("content_blocks = $%d", argIndex))
+						args = append(args, string(updatedBlocks))
+						argIndex++
+					}
+				}
+			}
+		}
 	}
 
 	// Add WHERE clause
@@ -377,7 +408,7 @@ func (s *CMSService) CreatePageRevision(pageID int64, page *models.StaticPage, a
 		pageID, page.Title, page.Content, page.MetaDescription, page.MetaKeywords,
 		revisionNumber, authorID, time.Now(),
 	)
-	
+
 	return err
 }
 
@@ -472,10 +503,10 @@ func generateAPIKey() (string, string, error) {
 
 	// Create key with prefix
 	plainKey := "us_" + hex.EncodeToString(bytes)
-	
+
 	// Create hash for storage
 	hash := sha256.Sum256([]byte(plainKey))
 	keyHash := hex.EncodeToString(hash[:])
-	
+
 	return plainKey, keyHash, nil
 }
