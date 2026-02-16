@@ -72,11 +72,14 @@ func NewEmailService(db *storage.PostgresStorage, config *configs.Config) *Email
 
 // getEmailProvider determines which email provider to use based on environment
 func getEmailProvider(config *configs.Config) string {
-	if config.Environment == "development" {
-		return "console"
-	}
+	// Prioritize SMTP if explicitly configured
 	if config.SMTPHost != "" {
 		return "smtp"
+	}
+
+	// Fallback to environment-based defaults
+	if config.Environment == "development" {
+		return "console"
 	}
 	return "console"
 }
@@ -324,7 +327,7 @@ func (e *EmailService) CreateEmailVerification(verification *models.EmailVerific
 	query := `
 		INSERT INTO email_verifications (id, user_id, token, expires_at, created_at)
 		VALUES ($1, $2, $3, $4, $5)`
-	
+
 	_, err := e.db.Exec(query, verification.ID, verification.UserID, verification.Token,
 		verification.ExpiresAt, verification.CreatedAt)
 	return err
@@ -337,12 +340,12 @@ func (e *EmailService) GetEmailVerificationByToken(token string) (*models.EmailV
 		SELECT id, user_id, token, expires_at, verified_at, created_at
 		FROM email_verifications
 		WHERE token = $1`
-	
+
 	err := e.db.QueryRow(query, token).Scan(
 		&verification.ID, &verification.UserID, &verification.Token,
 		&verification.ExpiresAt, &verification.VerifiedAt, &verification.CreatedAt,
 	)
-	
+
 	return verification, err
 }
 
@@ -355,12 +358,12 @@ func (e *EmailService) GetLatestEmailVerification(userID int64) (*models.EmailVe
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 		LIMIT 1`
-	
+
 	err := e.db.QueryRow(query, userID).Scan(
 		&verification.ID, &verification.UserID, &verification.Token,
 		&verification.ExpiresAt, &verification.VerifiedAt, &verification.CreatedAt,
 	)
-	
+
 	return verification, err
 }
 
