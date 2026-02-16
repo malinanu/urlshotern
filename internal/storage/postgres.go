@@ -935,12 +935,11 @@ func (p *PostgresStorage) UpdateUserPhoneVerified(userID int64, verified bool) e
 // CreatePasswordReset creates a password reset record
 func (p *PostgresStorage) CreatePasswordReset(reset *models.PasswordReset) error {
 	query := `
-		INSERT INTO password_resets (user_id, token, expires_at, created_at)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id
+		INSERT INTO password_resets (id, user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 	`
-	err := p.QueryRow(query, reset.UserID, reset.Token,
-		reset.ExpiresAt, reset.CreatedAt).Scan(&reset.ID)
+	_, err := p.Exec(query, reset.ID, reset.UserID, reset.Token,
+		reset.ExpiresAt, reset.CreatedAt)
 	return err
 }
 

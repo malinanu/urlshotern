@@ -13,6 +13,7 @@ import (
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/google/uuid"
 )
 
 type AuthService struct {
@@ -36,7 +37,7 @@ func NewAuthService(
 	redis *storage.RedisStorage,
 	config *configs.Config,
 ) *AuthService {
-	
+
 	// Setup Google OAuth config
 	googleConfig := &oauth2.Config{
 		ClientID:     config.GoogleClientID,
@@ -81,9 +82,9 @@ func (a *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 	}
 
 	// Log registration event
-	a.logAuditEvent(&registrationData.User.ID, "user_registered", "user", fmt.Sprintf("%d", registrationData.User.ID), 
+	a.logAuditEvent(&registrationData.User.ID, "user_registered", "user", fmt.Sprintf("%d", registrationData.User.ID),
 		map[string]interface{}{
-			"email": registrationData.User.Email,
+			"email":    registrationData.User.Email,
 			"provider": "email",
 		}, ipAddress, userAgent)
 
@@ -96,9 +97,9 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	user, sessionID, err := a.userService.AuthenticateUser(req)
 	if err != nil {
 		// Log failed login attempt
-		a.logAuditEvent(nil, "login_failed", "authentication", "", 
+		a.logAuditEvent(nil, "login_failed", "authentication", "",
 			map[string]interface{}{
-				"email": req.Email,
+				"email":  req.Email,
 				"reason": err.Error(),
 			}, ipAddress, userAgent)
 		return nil, err
@@ -111,9 +112,9 @@ func (a *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	}
 
 	// Log successful login
-	a.logAuditEvent(&user.ID, "login_success", "authentication", fmt.Sprintf("%d", user.ID), 
+	a.logAuditEvent(&user.ID, "login_success", "authentication", fmt.Sprintf("%d", user.ID),
 		map[string]interface{}{
-			"email": user.Email,
+			"email":      user.Email,
 			"session_id": sessionID,
 		}, ipAddress, userAgent)
 
@@ -158,7 +159,7 @@ func (a *AuthService) RefreshTokens(req *models.RefreshTokenRequest, ipAddress, 
 	// Log token refresh
 	a.logAuditEvent(&user.ID, "token_refreshed", "authentication", fmt.Sprintf("%d", user.ID),
 		map[string]interface{}{
-			"email": user.Email,
+			"email":      user.Email,
 			"session_id": claims.SessionID,
 		}, ipAddress, userAgent)
 
@@ -178,7 +179,7 @@ func (a *AuthService) VerifyEmail(token string, ipAddress, userAgent string) (*m
 	}
 
 	// Log email verification
-	a.logAuditEvent(&user.ID, "email_verified", "user", fmt.Sprintf("%d", user.ID), 
+	a.logAuditEvent(&user.ID, "email_verified", "user", fmt.Sprintf("%d", user.ID),
 		map[string]interface{}{
 			"email": user.Email,
 		}, ipAddress, userAgent)
@@ -194,7 +195,7 @@ func (a *AuthService) SendOTP(req *models.ResendOTPRequest, ipAddress, userAgent
 	}
 
 	// Log OTP sent
-	a.logAuditEvent(&req.UserID, "otp_sent", "verification", fmt.Sprintf("%d", req.UserID), 
+	a.logAuditEvent(&req.UserID, "otp_sent", "verification", fmt.Sprintf("%d", req.UserID),
 		map[string]interface{}{
 			"type": "phone",
 		}, ipAddress, userAgent)
@@ -207,7 +208,7 @@ func (a *AuthService) VerifyOTP(req *models.OTPRequest, ipAddress, userAgent str
 	err := a.userService.VerifyOTP(req.UserID, req.OTP)
 	if err != nil {
 		// Log failed OTP verification
-		a.logAuditEvent(&req.UserID, "otp_verification_failed", "verification", fmt.Sprintf("%d", req.UserID), 
+		a.logAuditEvent(&req.UserID, "otp_verification_failed", "verification", fmt.Sprintf("%d", req.UserID),
 			map[string]interface{}{
 				"reason": err.Error(),
 			}, ipAddress, userAgent)
@@ -215,7 +216,7 @@ func (a *AuthService) VerifyOTP(req *models.OTPRequest, ipAddress, userAgent str
 	}
 
 	// Log successful OTP verification
-	a.logAuditEvent(&req.UserID, "otp_verified", "verification", fmt.Sprintf("%d", req.UserID), 
+	a.logAuditEvent(&req.UserID, "otp_verified", "verification", fmt.Sprintf("%d", req.UserID),
 		map[string]interface{}{
 			"type": "phone",
 		}, ipAddress, userAgent)
@@ -462,6 +463,7 @@ func (a *AuthService) createPasswordResetToken(email string) (string, error) {
 
 	// Create password reset record
 	resetRecord := &models.PasswordReset{
+		ID:        uuid.New(),
 		UserID:    user.ID,
 		Token:     token,
 		ExpiresAt: time.Now().Add(1 * time.Hour), // 1 hour expiry
