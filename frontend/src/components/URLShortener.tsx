@@ -98,6 +98,9 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.error === 'anonymous_limit_reached') {
+          throw new Error('You\'ve used all 5 free URLs. Sign up for a free account to create unlimited short URLs!');
+        }
         throw new Error(errorData.message || 'Failed to shorten URL');
       }
 

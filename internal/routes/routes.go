@@ -90,9 +90,9 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	// Get API key service from handler
 	apiKeyService := handler.APIKeyHandlers.GetAPIKeyService()
 
-	// URL shortening (supports both JWT and API key authentication)
+	// URL shortening (anonymous users get 5 free URLs, authenticated users use billing limits)
 	router.POST("/api/v1/shorten",
-		middleware.FlexibleAuthMiddleware(authMiddleware, apiKeyService),
+		authMiddleware.OptionalAuth(),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
 		handler.ShortenURL,
 	)

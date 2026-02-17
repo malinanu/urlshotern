@@ -550,6 +550,14 @@ func (p *PostgresStorage) SaveURLMapping(mapping *models.URLMapping) error {
 	return nil
 }
 
+// CountURLsByIP counts anonymous URLs created by a specific IP address
+func (p *PostgresStorage) CountURLsByIP(ip string) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM url_mappings WHERE created_by_ip = $1 AND user_id IS NULL`
+	err := p.db.QueryRow(query, ip).Scan(&count)
+	return count, err
+}
+
 // GetURLMappingByShortCode retrieves a URL mapping by its short code
 func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.URLMapping, error) {
 	query := `
@@ -832,12 +840,11 @@ func (p *PostgresStorage) DeleteUserSessions(userID int64) error {
 // CreateEmailVerification creates an email verification record
 func (p *PostgresStorage) CreateEmailVerification(verification *models.EmailVerification) error {
 	query := `
-		INSERT INTO email_verifications (user_id, token, expires_at, created_at)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id
+		INSERT INTO email_verifications (id, user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 	`
-	err := p.QueryRow(query, verification.UserID, verification.Token,
-		verification.ExpiresAt, verification.CreatedAt).Scan(&verification.ID)
+	_, err := p.Exec(query, verification.ID, verification.UserID, verification.Token,
+		verification.ExpiresAt, verification.CreatedAt)
 	return err
 }
 

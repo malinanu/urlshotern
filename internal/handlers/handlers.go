@@ -167,6 +167,23 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 			})
 			return
 		}
+	} else {
+		// Anonymous user: enforce 5 free URLs per IP
+		count, err := h.db.CountURLsByIP(clientIP)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error:   "internal_error",
+				Message: "Failed to check URL limit",
+			})
+			return
+		}
+		if count >= 5 {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "anonymous_limit_reached",
+				Message: "You've reached the free limit of 5 URLs. Please create an account to shorten more URLs.",
+			})
+			return
+		}
 	}
 
 	// Shorten the URL
