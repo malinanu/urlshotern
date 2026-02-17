@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrInvalidToken = errors.New("invalid token")
-	ErrExpiredToken = errors.New("token has expired")
-	ErrInvalidClaims = errors.New("invalid token claims")
+	ErrInvalidToken  = errors.New("Your session is invalid. Please log in again.")
+	ErrExpiredToken  = errors.New("Your session has expired. Please log in again.")
+	ErrInvalidClaims = errors.New("Your session is invalid. Please log in again.")
 )
 
 type JWTService struct {
@@ -138,12 +138,12 @@ func (j *JWTService) RefreshToken(refreshToken string, user *models.User, sessio
 
 	// Verify this is a refresh token
 	if claims.TokenType != "refresh" {
-		return nil, errors.New("invalid token type for refresh")
+		return nil, errors.New("Unable to refresh your session. Please log in again.")
 	}
 
 	// Verify user and session match
 	if claims.UserID != user.ID || claims.SessionID != sessionID {
-		return nil, errors.New("token validation failed")
+		return nil, errors.New("Session validation failed. Please log in again.")
 	}
 
 	// Generate new token pair
@@ -277,7 +277,7 @@ func (j *JWTService) ValidatePasswordResetToken(tokenString string) (*Claims, er
 	}
 
 	if claims.TokenType != "password_reset" {
-		return nil, errors.New("invalid token type for password reset")
+		return nil, errors.New("This password reset link is invalid. Please request a new one.")
 	}
 
 	return claims, nil
@@ -315,7 +315,7 @@ func (j *JWTService) ValidateEmailVerificationToken(tokenString string) (*Claims
 	}
 
 	if claims.TokenType != "email_verification" {
-		return nil, errors.New("invalid token type for email verification")
+		return nil, errors.New("This email verification link is invalid. Please request a new one.")
 	}
 
 	return claims, nil

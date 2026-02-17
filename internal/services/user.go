@@ -16,17 +16,18 @@ import (
 )
 
 var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrEmailAlreadyExists = errors.New("email already exists")
-	ErrPhoneAlreadyExists = errors.New("phone already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrAccountNotActive   = errors.New("account not active")
-	ErrEmailNotVerified   = errors.New("email not verified")
-	ErrPhoneNotVerified   = errors.New("phone not verified")
-	ErrInvalidOTP         = errors.New("invalid or expired OTP")
-	ErrOTPExpired         = errors.New("OTP has expired")
-	ErrTooManyOTPAttempts = errors.New("too many OTP attempts")
-	ErrTokenUsed          = errors.New("token already used")
+	ErrUserNotFound       = errors.New("We couldn't find that user. They may have been removed.")
+	ErrEmailAlreadyExists = errors.New("An account with this email already exists. Try logging in instead.")
+	ErrPhoneAlreadyExists = errors.New("This phone number is already linked to another account.")
+	ErrInvalidCredentials = errors.New("Incorrect email or password. Please try again.")
+	ErrAccountNotFound    = errors.New("No account found with that email. Please sign up to get started.")
+	ErrAccountNotActive   = errors.New("Your account has been deactivated. Please contact support for help.")
+	ErrEmailNotVerified   = errors.New("Please verify your email address before logging in. Check your inbox for the verification link.")
+	ErrPhoneNotVerified   = errors.New("Please verify your phone number to continue.")
+	ErrInvalidOTP         = errors.New("The verification code is incorrect or has expired. Please request a new one.")
+	ErrOTPExpired         = errors.New("Your verification code has expired. Please request a new one.")
+	ErrTooManyOTPAttempts = errors.New("Too many incorrect attempts. Please wait a few minutes and try again.")
+	ErrTokenUsed          = errors.New("This link has already been used. Please request a new one if needed.")
 )
 
 type UserService struct {
@@ -163,7 +164,7 @@ func (u *UserService) AuthenticateUser(req *models.LoginRequest) (*models.User, 
 	// Get user by email
 	user, err := u.GetUserByEmail(req.Email)
 	if err != nil {
-		return nil, "", ErrInvalidCredentials
+		return nil, "", ErrAccountNotFound
 	}
 
 	// Check if account is active
@@ -173,7 +174,7 @@ func (u *UserService) AuthenticateUser(req *models.LoginRequest) (*models.User, 
 
 	// Check if user has password (for OAuth-only users)
 	if user.PasswordHash == nil {
-		return nil, "", errors.New("please use social login for this account")
+		return nil, "", errors.New("This account uses social login. Please sign in with your Google or social account.")
 	}
 
 	// Verify password
@@ -344,7 +345,7 @@ func (u *UserService) GenerateAndSendOTP(userID int64) error {
 	}
 
 	if user.Phone == nil || *user.Phone == "" {
-		return errors.New("user has no phone number")
+		return errors.New("No phone number is linked to your account. Please add one in your profile settings.")
 	}
 
 	// Generate 6-digit OTP
@@ -501,7 +502,7 @@ func (u *UserService) ChangePassword(userID int64, currentPassword, newPassword 
 	}
 
 	if user.PasswordHash == nil {
-		return errors.New("user has no password set")
+		return errors.New("No password is set for this account. Please use social login or reset your password.")
 	}
 
 	// Verify current password
@@ -517,7 +518,7 @@ func (u *UserService) ChangePassword(userID int64, currentPassword, newPassword 
 
 	// Check that new password is different from current password
 	if currentPassword == newPassword {
-		return errors.New("new password must be different from current password")
+		return errors.New("Your new password must be different from your current one.")
 	}
 
 	// Hash new password
