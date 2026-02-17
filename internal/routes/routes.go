@@ -127,6 +127,10 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 	// Apply auth-specific rate limiting
 	auth.Use(middleware.RateLimitMiddleware(middleware.AuthRateLimit))
 	
+	// Google OAuth (before rate limit since these are redirects)
+	auth.GET("/google", authHandlers.GoogleLogin)
+	auth.GET("/google/callback", authHandlers.GoogleCallback)
+
 	// Registration and login
 	auth.POST("/register", authHandlers.Register)
 	auth.POST("/login", authHandlers.Login)

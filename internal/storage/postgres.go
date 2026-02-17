@@ -780,6 +780,26 @@ func (p *PostgresStorage) GetUserByPhone(phone string) (*models.User, error) {
 	return user, nil
 }
 
+// GetUserByProviderID retrieves a user by provider and provider_id
+func (p *PostgresStorage) GetUserByProviderID(provider, providerID string) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT id, name, email, phone, password_hash, email_verified, phone_verified,
+		       provider, provider_id, avatar_url, account_type, is_active, is_admin,
+		       created_at, updated_at, last_login_at
+		FROM users WHERE provider = $1 AND provider_id = $2
+	`
+	err := p.QueryRow(query, provider, providerID).Scan(
+		&user.ID, &user.Name, &user.Email, &user.Phone, &user.PasswordHash,
+		&user.EmailVerified, &user.PhoneVerified, &user.Provider, &user.ProviderID,
+		&user.AvatarURL, &user.AccountType, &user.IsActive, &user.IsAdmin,
+		&user.CreatedAt, &user.UpdatedAt, &user.LastLoginAt)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 // UpdateUserLastLogin updates user's last login time
 func (p *PostgresStorage) UpdateUserLastLogin(userID int64, loginTime time.Time) error {
 	query := `UPDATE users SET last_login_at = $1, updated_at = $2 WHERE id = $3`

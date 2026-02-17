@@ -225,6 +225,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return refreshPromise;
   }, [logout]);
 
+  // Handle OAuth callback tokens from URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('access_token');
+    const refreshTokenValue = params.get('refresh_token');
+    const expiresIn = params.get('expires_in');
+
+    if (accessToken && refreshTokenValue && expiresIn) {
+      logger.info('OAuth tokens detected in URL, storing...');
+      try {
+        storeAuthTokens(accessToken, refreshTokenValue, parseInt(expiresIn, 10));
+
+        // Fetch user profile with the new token
+        fetch(API_ENDPOINTS.auth.profile, {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.user) {
+              localStorage.setItem('user_data', JSON.stringify(data.user));
+              setUser(data.user);
+            }
+          })
+          .catch(err => logger.error('Failed to fetch user profile after OAuth:', err));
+      } catch (err) {
+        logger.error('Failed to store OAuth tokens:', err);
+      }
+
+      // Clean URL by removing token params
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, []);
+
   // Initialize auth state from localStorage
   useEffect(() => {
     const initAuth = async () => {

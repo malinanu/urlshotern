@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_ENDPOINTS } from '@/lib/api-config';
 import { EyeIcon, EyeSlashIcon, LinkIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -30,6 +31,20 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const { login, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Show error from OAuth redirect
+  useEffect(() => {
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      const errorMessages: Record<string, string> = {
+        google_auth_failed: 'Google sign-in failed. Please try again.',
+        invalid_state: 'Authentication session expired. Please try again.',
+        missing_params: 'Invalid authentication response. Please try again.',
+      };
+      setError(errorMessages[oauthError] || 'Authentication failed. Please try again.');
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -198,7 +213,11 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
-                <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = API_ENDPOINTS.auth.google; }}
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
                   <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"

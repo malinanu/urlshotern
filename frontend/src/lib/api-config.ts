@@ -23,6 +23,8 @@ export const API_ENDPOINTS = {
     changePassword: `${API_BASE_URL}/api/v1/auth/change-password`,
     verifyEmail: `${API_BASE_URL}/api/v1/auth/verify-email`,
     resendEmail: `${API_BASE_URL}/api/v1/auth/resend-email`,
+    google: `${API_BASE_URL}/api/v1/auth/google`,
+    googleCallback: `${API_BASE_URL}/api/v1/auth/google/callback`,
     otp: {
       send: `${API_BASE_URL}/api/v1/auth/otp/send`,
       verify: `${API_BASE_URL}/api/v1/auth/otp/verify`,

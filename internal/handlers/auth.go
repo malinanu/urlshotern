@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/middleware"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
@@ -19,6 +21,7 @@ type AuthHandlers struct {
 	adminService *services.AdminService
 	smsService   *services.SMSService
 	emailService *services.EmailService
+	config       *configs.Config
 	validator    *validator.Validate
 }
 
@@ -28,12 +31,13 @@ func (h *AuthHandlers) GetEmailService() *services.EmailService {
 }
 
 // NewAuthHandlers creates new auth handlers
-func NewAuthHandlers(authService *services.AuthService, adminService *services.AdminService, smsService *services.SMSService, emailService *services.EmailService) *AuthHandlers {
+func NewAuthHandlers(authService *services.AuthService, adminService *services.AdminService, smsService *services.SMSService, emailService *services.EmailService, config *configs.Config) *AuthHandlers {
 	return &AuthHandlers{
 		authService:  authService,
 		adminService: adminService,
 		smsService:   smsService,
 		emailService: emailService,
+		config:       config,
 		validator:    validator.New(),
 	}
 }
@@ -1096,6 +1100,66 @@ func (h *AuthHandlers) ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Password has been reset successfully. You can now log in with your new password.",
 	})
+}
+
+// GoogleLogin initiates Google OAuth flow
+func (h *AuthHandlers) GoogleLogin(c *gin.Context) {
+	state, err := h.authService.GenerateOAuthState()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to generate OAuth state")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate Google login"})
+		return
+	}
+
+	authURL := h.authService.GetGoogleAuthURL(state)
+	c.Redirect(http.StatusFound, authURL)
+}
+
+// GoogleCallback handles the callback from Google OAuth
+func (h *AuthHandlers) GoogleCallback(c *gin.Context) {
+	code := c.Query("code")
+	state := c.Query("state")
+	frontendURL := h.config.BaseURL
+
+	if code == "" || state == "" {
+		c.Redirect(http.StatusFound, frontendURL+"/login?error=missing_params")
+		return
+	}
+
+	// Validate state (CSRF protection)
+	if !h.authService.ValidateOAuthState(state) {
+		c.Redirect(http.StatusFound, frontendURL+"/login?error=invalid_state")
+		return
+	}
+
+	// Exchange code for user info and create/find user
+	response, err := h.authService.HandleGoogleCallback(code, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "Google OAuth callback failed")
+		c.Redirect(http.StatusFound, frontendURL+"/login?error=google_auth_failed")
+		return
+	}
+
+	// Log successful Google login (async)
+	go func() {
+		_ = h.adminService.LogActivity(
+			&response.User.ID,
+			response.User.Name,
+			"user_google_login",
+			fmt.Sprintf("User logged in via Google from %s", c.ClientIP()),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+		)
+	}()
+
+	// Redirect to frontend with tokens as query params
+	redirectURL := fmt.Sprintf("%s/?access_token=%s&refresh_token=%s&expires_in=%d",
+		frontendURL,
+		url.QueryEscape(response.AccessToken),
+		url.QueryEscape(response.RefreshToken),
+		response.ExpiresIn,
+	)
+	c.Redirect(http.StatusFound, redirectURL)
 }
 
 // EmailHealthCheck checks email service configuration and status

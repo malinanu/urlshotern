@@ -1,10 +1,15 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -13,6 +18,7 @@ import (
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/URLshorter/url-shortener/internal/utils"
 	"github.com/google/uuid"
 )
 
@@ -351,17 +357,198 @@ func (a *AuthService) UpdateUserPreferences(userID int64, preferences *models.Us
 	return a.userService.UpdateUserPreferences(userID, preferences)
 }
 
-// GoogleAuth handles Google OAuth authentication
-func (a *AuthService) GoogleAuth(req *models.GoogleAuthRequest, ipAddress, userAgent string) (*models.AuthResponse, error) {
-	// Implement Google OAuth verification
-	// This would verify the ID token with Google and extract user information
-	// For now, return an error indicating it's not implemented
-	return nil, fmt.Errorf("Google OAuth not yet implemented")
+// googleUserInfo represents the response from Google's userinfo endpoint
+type googleUserInfo struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	VerifiedEmail bool   `json:"verified_email"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+}
+
+// GenerateOAuthState generates a random state for CSRF protection and stores it in Redis
+func (a *AuthService) GenerateOAuthState() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("failed to generate state: %w", err)
+	}
+	state := hex.EncodeToString(bytes)
+
+	// Store state in Redis with 10 minute TTL
+	key := fmt.Sprintf("oauth_state:%s", state)
+	err := a.redis.Set(key, "1", 10*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("failed to store state: %w", err)
+	}
+
+	return state, nil
+}
+
+// ValidateOAuthState checks if the state exists in Redis and deletes it
+func (a *AuthService) ValidateOAuthState(state string) bool {
+	key := fmt.Sprintf("oauth_state:%s", state)
+	_, err := a.redis.Get(key)
+	if err != nil {
+		return false
+	}
+	// Delete state after validation (one-time use)
+	_ = a.redis.Del(key)
+	return true
 }
 
 // GetGoogleAuthURL returns Google OAuth authorization URL
 func (a *AuthService) GetGoogleAuthURL(state string) string {
 	return a.googleConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+}
+
+// HandleGoogleCallback exchanges the authorization code for tokens, fetches user info,
+// and finds or creates the user in the database
+func (a *AuthService) HandleGoogleCallback(code string, ipAddress, userAgent string) (*models.AuthResponse, error) {
+	// Exchange authorization code for token
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	token, err := a.googleConfig.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+
+	// Fetch user info from Google
+	client := a.googleConfig.Client(ctx, token)
+	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("google userinfo returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read user info response: %w", err)
+	}
+
+	var gUser googleUserInfo
+	if err := json.Unmarshal(body, &gUser); err != nil {
+		return nil, fmt.Errorf("failed to parse user info: %w", err)
+	}
+
+	if gUser.Email == "" {
+		return nil, fmt.Errorf("no email received from Google")
+	}
+
+	// Try to find existing user by email
+	user, err := a.db.GetUserByEmail(gUser.Email)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, fmt.Errorf("failed to look up user: %w", err)
+	}
+
+	if user != nil {
+		// Existing user: update provider info if they were a local user
+		if user.Provider == "local" || user.Provider == "email" {
+			user.Provider = "google"
+			user.ProviderID = &gUser.ID
+			if gUser.Picture != "" {
+				user.AvatarURL = &gUser.Picture
+			}
+			user.EmailVerified = true
+			if err := a.db.UpdateUser(user); err != nil {
+				log.Printf("WARN [AUTH] Failed to update user provider info: %v", err)
+			}
+		}
+	} else {
+		// New user: create account
+		userID, err := utils.GenerateSnowflakeID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate user ID: %w", err)
+		}
+
+		user = &models.User{
+			ID:            userID,
+			Name:          gUser.Name,
+			Email:         gUser.Email,
+			PasswordHash:  nil, // No password for OAuth users
+			EmailVerified: true,
+			Provider:      "google",
+			ProviderID:    &gUser.ID,
+			AvatarURL:     &gUser.Picture,
+			AccountType:   "free",
+			IsActive:      true,
+			IsAdmin:       false,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+
+		if err := a.db.CreateUser(user); err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+
+		// Create default preferences
+		preferences := &models.UserPreferences{
+			UserID:             user.ID,
+			AnalyticsPublic:    false,
+			EmailNotifications: true,
+			MarketingEmails:    false,
+			Timezone:           "UTC",
+			Theme:              "light",
+		}
+		if err := a.db.CreateUserPreferences(preferences); err != nil {
+			log.Printf("WARN [AUTH] Failed to create user preferences: %v", err)
+		}
+
+		// Log registration
+		a.logAuditEvent(&user.ID, "user_registered", "user", fmt.Sprintf("%d", user.ID),
+			map[string]interface{}{
+				"email":    user.Email,
+				"provider": "google",
+			}, ipAddress, userAgent)
+	}
+
+	// Create session
+	sessionID := uuid.New()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days for OAuth
+	session := &models.UserSession{
+		ID:        sessionID,
+		UserID:    user.ID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+	if ipAddress != "" {
+		session.IPAddress = &ipAddress
+	}
+	if userAgent != "" {
+		session.UserAgent = &userAgent
+	}
+
+	if err := a.db.CreateSession(session); err != nil {
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	// Update last login
+	_ = a.db.UpdateUserLastLogin(user.ID, time.Now())
+
+	// Generate JWT tokens
+	tokenPair, err := a.jwtService.GenerateTokenPair(user, sessionID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate tokens: %w", err)
+	}
+
+	// Log successful login
+	a.logAuditEvent(&user.ID, "login_success", "authentication", fmt.Sprintf("%d", user.ID),
+		map[string]interface{}{
+			"email":      user.Email,
+			"provider":   "google",
+			"session_id": sessionID.String(),
+		}, ipAddress, userAgent)
+
+	return &models.AuthResponse{
+		User:         user.ToPublic(),
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresIn:    int64(tokenPair.ExpiresAt.Sub(time.Now()).Seconds()),
+	}, nil
 }
 
 // Logout invalidates user session
