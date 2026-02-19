@@ -111,6 +111,36 @@ func (s *CMSService) GetStaticPageBySlug(slug string) (*models.StaticPage, error
 	return &page, nil
 }
 
+func (s *CMSService) GetStaticPageWithBlocks(slug string) (*models.StaticPage, []map[string]interface{}, error) {
+	page, err := s.GetStaticPageBySlug(slug)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var blocks []map[string]interface{}
+	if err := json.Unmarshal([]byte(page.Content), &blocks); err != nil {
+		return page, nil, nil // not builder JSON
+	}
+
+	for i, block := range blocks {
+		if t, _ := block["type"].(string); t == "content-block" {
+			if content, ok := block["content"].(map[string]interface{}); ok {
+				if idFloat, ok := content["blockId"].(float64); ok {
+					var html string
+					err := s.db.QueryRow(
+						`SELECT content FROM content_blocks WHERE id = $1 AND is_active = true`,
+						int64(idFloat),
+					).Scan(&html)
+					if err == nil {
+						blocks[i]["resolved_html"] = html
+					}
+				}
+			}
+		}
+	}
+	return page, blocks, nil
+}
+
 func (s *CMSService) GetStaticPageByID(id int64) (*models.StaticPage, error) {
 	query := `
 		SELECT p.id, p.slug, p.title, p.content, p.content_blocks, p.meta_description, p.meta_keywords,

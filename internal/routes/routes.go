@@ -504,7 +504,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/dashboard", "/login", "/register",
 		"/analytics", "/profile", "/settings",
 		"/bulk", "/conversions", "/api-keys", "/admin",
-		"/billing",
+		"/billing", "/pages",
 		"/forgot-password", "/reset-password",  // Password reset pages
 	}
 

@@ -59,7 +59,7 @@ func (h *CMSHandlers) CreateStaticPage(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"page": page})
 }
 
-// GetStaticPage gets a static page by slug
+// GetStaticPage gets a static page by slug, resolving content-block references
 func (h *CMSHandlers) GetStaticPage(c *gin.Context) {
 	slug := c.Param("slug")
 	if slug == "" {
@@ -67,13 +67,12 @@ func (h *CMSHandlers) GetStaticPage(c *gin.Context) {
 		return
 	}
 
-	page, err := h.cmsService.GetStaticPageBySlug(slug)
+	page, blocks, err := h.cmsService.GetStaticPageWithBlocks(slug)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Page not found"})
 		return
 	}
 
-	// Record page visit (for public pages)
 	userAgent := c.GetHeader("User-Agent")
 	referrer := c.GetHeader("Referer")
 	ipAddress := c.ClientIP()
@@ -82,7 +81,11 @@ func (h *CMSHandlers) GetStaticPage(c *gin.Context) {
 		return h.cmsService.RecordPageVisit(page.ID, ipAddress, userAgent, referrer)
 	})
 
-	c.JSON(http.StatusOK, gin.H{"page": page})
+	if blocks != nil {
+		c.JSON(http.StatusOK, gin.H{"page": page, "blocks": blocks})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"page": page})
+	}
 }
 
 // GetStaticPageByID gets a static page by ID (admin only)

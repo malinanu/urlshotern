@@ -107,6 +107,7 @@ const blockTypes = [
 export function VisualPageBuilder() {
   const { user, getAccessToken } = useAuth();
   const [blocks, setBlocks] = useState<BuilderBlock[]>([]);
+  const [pageId, setPageId] = useState<number | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [devicePreview, setDevicePreview] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
@@ -270,20 +271,22 @@ export function VisualPageBuilder() {
 
   const savePage = async () => {
     try {
+      const isUpdate = pageId !== null;
+      const url = isUpdate
+        ? `/api/v1/admin/cms/pages/${pageId}`
+        : '/api/v1/admin/cms/pages';
+      const method = isUpdate ? 'PUT' : 'POST';
+
       const pageData = {
         title: pageSettings.title,
         slug: pageSettings.slug,
         content: JSON.stringify(blocks),
         template: pageSettings.template,
         is_published: pageSettings.isPublished,
-        builder_data: {
-          version: '1.0',
-          blocks: blocks
-        }
       };
 
-      const response = await fetch('/api/v1/admin/cms/pages', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getAccessToken()}`,
@@ -292,7 +295,9 @@ export function VisualPageBuilder() {
       });
 
       if (response.ok) {
-        toast.success('Page saved successfully');
+        const data = await response.json();
+        if (!isUpdate && data.page?.id) setPageId(data.page.id);
+        toast.success(`Saved! View at /pages/${pageSettings.slug}`);
       } else {
         try {
           const contentType = response.headers.get('content-type');
