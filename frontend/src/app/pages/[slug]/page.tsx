@@ -1,9 +1,10 @@
 import PublicBuilderPageClient from './_client';
 
 export function generateStaticParams() {
-  return [];
+  return [{ slug: '_placeholder' }];
 }
 
-export default function Page({ params }: { params: { slug: string } }) {
-  return <PublicBuilderPageClient slug={params.slug} />;
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <PublicBuilderPageClient slug={slug} />;
 }
