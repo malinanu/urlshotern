@@ -37,6 +37,10 @@ func main() {
 	}
 	defer db.Close()
 
+	if err := db.SeedDefaultStaticPages(); err != nil {
+		log.Printf("Warning: failed to seed default static pages: %v", err)
+	}
+
 	// Initialize GORM database for billing and Polar integration
 	sslMode := config.DBSSLMode
 	if sslMode == "" {

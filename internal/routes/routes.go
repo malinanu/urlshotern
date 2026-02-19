@@ -318,6 +318,10 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesUpdate),
 			handler.CMSHandlers.UpdateStaticPage)
 
+		cms.GET("/pages/:id",
+			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesRead),
+			handler.CMSHandlers.GetStaticPageByID)
+
 		cms.DELETE("/pages/:id",
 			authMiddleware.RequirePermissionMiddleware(models.PermissionCMSPagesDelete),
 			handler.CMSHandlers.DeleteStaticPage)

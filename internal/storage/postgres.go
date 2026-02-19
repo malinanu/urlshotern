@@ -1284,3 +1284,26 @@ func (p *PostgresStorage) UpdateUserPreferences(prefs *models.UserPreferences) e
 	)
 	return err
 }
+
+func (s *PostgresStorage) SeedDefaultStaticPages() error {
+	pages := []struct{ slug, title, content string }{
+		{"about", "About Us", `[{"id":"block-about","type":"text","content":{"html":"<h1>About Us</h1><p>Tell your story here.</p>"},"styles":{"padding":"32px","margin":"0px","backgroundColor":"transparent","textColor":"#000000","borderRadius":"0px","border":"none","textAlign":"left","fontSize":"16px","fontWeight":"normal"},"settings":{"visible":true}}]`},
+		{"contact", "Contact", `[{"id":"block-contact","type":"text","content":{"html":"<h1>Contact</h1><p>Get in touch.</p>"},"styles":{"padding":"32px","margin":"0px","backgroundColor":"transparent","textColor":"#000000","borderRadius":"0px","border":"none","textAlign":"left","fontSize":"16px","fontWeight":"normal"},"settings":{"visible":true}}]`},
+		{"terms", "Terms of Service", `[{"id":"block-terms","type":"text","content":{"html":"<h1>Terms of Service</h1><p>Your terms go here.</p>"},"styles":{"padding":"32px","margin":"0px","backgroundColor":"transparent","textColor":"#000000","borderRadius":"0px","border":"none","textAlign":"left","fontSize":"16px","fontWeight":"normal"},"settings":{"visible":true}}]`},
+		{"privacy", "Privacy Policy", `[{"id":"block-privacy","type":"text","content":{"html":"<h1>Privacy Policy</h1><p>Your privacy policy goes here.</p>"},"styles":{"padding":"32px","margin":"0px","backgroundColor":"transparent","textColor":"#000000","borderRadius":"0px","border":"none","textAlign":"left","fontSize":"16px","fontWeight":"normal"},"settings":{"visible":true}}]`},
+		{"features", "Features", `[{"id":"block-features","type":"text","content":{"html":"<h1>Features</h1><p>Highlight your features here.</p>"},"styles":{"padding":"32px","margin":"0px","backgroundColor":"transparent","textColor":"#000000","borderRadius":"0px","border":"none","textAlign":"left","fontSize":"16px","fontWeight":"normal"},"settings":{"visible":true}}]`},
+		{"pricing", "Pricing", `[{"id":"block-pricing","type":"text","content":{"html":"<h1>Pricing</h1><p>Show your pricing plans here.</p>"},"styles":{"padding":"32px","margin":"0px","backgroundColor":"transparent","textColor":"#000000","borderRadius":"0px","border":"none","textAlign":"left","fontSize":"16px","fontWeight":"normal"},"settings":{"visible":true}}]`},
+	}
+	for _, p := range pages {
+		_, err := s.db.Exec(`
+			INSERT INTO static_pages (slug, title, content, template, is_published, sort_order, language, created_at, updated_at)
+			VALUES ($1, $2, $3, 'default', false, 0, 'en', NOW(), NOW())
+			ON CONFLICT (slug) DO NOTHING`,
+			p.slug, p.title, p.content,
+		)
+		if err != nil {
+			return fmt.Errorf("seed static page %s: %w", p.slug, err)
+		}
+	}
+	return nil
+}

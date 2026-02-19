@@ -80,6 +80,7 @@ export default function AdminPage() {
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showRolesModal, setShowRolesModal] = useState(false);
   const [modalMode, setModalMode] = useState<'view' | 'manage'>('view');
+  const [builderPageId, setBuilderPageId] = useState<number | null>(null);
   const router = useRouter();
 
   // Check if user is admin
@@ -543,11 +544,11 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'cms' && (
-            <CMSManager />
+            <CMSManager onEditInBuilder={(id) => { setBuilderPageId(id); setActiveTab('builder'); }} />
           )}
 
           {activeTab === 'builder' && (
-            <VisualPageBuilder />
+            <VisualPageBuilder key={builderPageId ?? 'empty'} initialPageId={builderPageId} />
           )}
 
           {activeTab === 'seo' && (

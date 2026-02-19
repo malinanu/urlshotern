@@ -69,6 +69,9 @@ interface ContentBlock {
   identifier: string;
 }
 
+interface PageSummary { id: number; slug: string; title: string; }
+interface PageTemplate { id: number; name: string; slug: string; content: string; }
+
 const defaultBlockStyles: BlockStyles = {
   padding: '16px',
   margin: '0px',
@@ -104,7 +107,7 @@ const blockTypes = [
   { type: 'content-block', label: 'Content Block', icon: CubeIcon }
 ];
 
-export function VisualPageBuilder() {
+export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | null } = {}) {
   const { user, getAccessToken } = useAuth();
   const [blocks, setBlocks] = useState<BuilderBlock[]>([]);
   const [pageId, setPageId] = useState<number | null>(null);
@@ -123,12 +126,20 @@ export function VisualPageBuilder() {
     isPublished: false
   });
 
+  const [showPagePicker, setShowPagePicker] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [allPages, setAllPages] = useState<PageSummary[]>([]);
+  const [pageTemplates, setPageTemplates] = useState<PageTemplate[]>([]);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchContentBlocks();
-  }, []);
+    fetchAllPages();
+    fetchPageTemplates();
+    if (initialPageId) loadPageById(initialPageId);
+  }, [initialPageId]);
 
   const fetchContentBlocks = async () => {
     try {
@@ -154,6 +165,61 @@ export function VisualPageBuilder() {
     } catch (error) {
       console.error('Error fetching content blocks:', error);
     }
+  };
+
+  const parsePageContent = (content: string): BuilderBlock[] => {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type) {
+        return parsed.map((b: BuilderBlock) => ({ ...b, id: generateBlockId() }));
+      }
+    } catch {}
+    return [{
+      id: generateBlockId(), type: 'text' as const,
+      content: { html: content || '<p>Click to edit</p>' },
+      styles: { ...defaultBlockStyles }, settings: { ...defaultBlockSettings },
+    }];
+  };
+
+  const loadPageById = async (id: number) => {
+    try {
+      const res = await fetch(`/api/v1/admin/cms/pages/${id}`, {
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+      });
+      if (!res.ok) { toast.error('Failed to load page'); return; }
+      const data = await res.json();
+      const p = data.page;
+      setPageId(p.id);
+      setPageSettings({ title: p.title, slug: p.slug, template: p.template || 'default', isPublished: p.is_published });
+      setBlocks(parsePageContent(p.content));
+      setSelectedBlockId(null);
+      toast.success(`Loaded: ${p.title}`);
+    } catch { toast.error('Error loading page'); }
+  };
+
+  const fetchAllPages = async () => {
+    try {
+      const res = await fetch('/api/v1/admin/cms/pages?limit=100', {
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+      });
+      if (res.ok) { const d = await res.json(); setAllPages(d.data || d.pages || []); }
+    } catch {}
+  };
+
+  const fetchPageTemplates = async () => {
+    try {
+      const res = await fetch('/api/v1/admin/cms/templates?limit=50', {
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
+      });
+      if (res.ok) { const d = await res.json(); setPageTemplates(d.templates || []); }
+    } catch {}
+  };
+
+  const applyTemplate = (t: PageTemplate) => {
+    setBlocks(parsePageContent(t.content));
+    setSelectedBlockId(null);
+    setShowTemplatePicker(false);
+    toast.success(`Template "${t.name}" applied`);
   };
 
   const generateBlockId = () => {
@@ -752,8 +818,18 @@ export function VisualPageBuilder() {
             </div>
           </div>
 
-          <div className="text-sm text-gray-500">
-            {blocks.length} block{blocks.length !== 1 ? 's' : ''}
+          <div className="flex items-center space-x-2">
+            <button onClick={() => { fetchAllPages(); setShowPagePicker(true); }}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center space-x-1">
+              <DocumentTextIcon className="h-4 w-4" /><span>Load Page</span>
+            </button>
+            <button onClick={() => { fetchPageTemplates(); setShowTemplatePicker(true); }}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm flex items-center space-x-1">
+              <CubeIcon className="h-4 w-4" /><span>Templates</span>
+            </button>
+            <div className="text-sm text-gray-500">
+              {blocks.length} block{blocks.length !== 1 ? 's' : ''}
+            </div>
           </div>
         </div>
 
@@ -827,6 +903,52 @@ export function VisualPageBuilder() {
           </div>
         )}
       </Modal>
+
+      {/* Page Picker Modal */}
+      {showPagePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl w-96 max-h-[70vh] flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold">Load Page</h3>
+              <button onClick={() => setShowPagePicker(false)}><XMarkIcon className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-2">
+              {allPages.length === 0
+                ? <p className="text-gray-500 text-sm p-4 text-center">No pages found</p>
+                : allPages.map(p => (
+                    <button key={p.id} onClick={() => { loadPageById(p.id); setShowPagePicker(false); }}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                      <div className="font-medium">{p.title}</div>
+                      <div className="text-xs text-gray-500">/pages/{p.slug}</div>
+                    </button>
+                  ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Picker Modal */}
+      {showTemplatePicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl w-96 max-h-[70vh] flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold">Apply Template</h3>
+              <button onClick={() => setShowTemplatePicker(false)}><XMarkIcon className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-2">
+              {pageTemplates.length === 0
+                ? <p className="text-gray-500 text-sm p-4 text-center">No templates found</p>
+                : pageTemplates.map(t => (
+                    <button key={t.id} onClick={() => applyTemplate(t)}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                      <div className="font-medium">{t.name}</div>
+                      <div className="text-xs text-gray-500">{t.slug}</div>
+                    </button>
+                  ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Page Settings Modal */}
       <Modal

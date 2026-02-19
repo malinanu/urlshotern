@@ -51,7 +51,7 @@ interface CreatePageRequest {
   template: string;
 }
 
-export default function CMSManager() {
+export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pageId: number) => void } = {}) {
   const { getAccessToken } = useAuth();
   const [pages, setPages] = useState<StaticPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -424,6 +424,15 @@ export default function CMSManager() {
                                 <EyeIcon className="h-4 w-4" />
                               )}
                             </button>
+                            {onEditInBuilder && (
+                              <button
+                                onClick={() => onEditInBuilder(page.id)}
+                                className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+                                title="Edit in Page Builder"
+                              >
+                                <CubeIcon className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleEdit(page)}
                               className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
