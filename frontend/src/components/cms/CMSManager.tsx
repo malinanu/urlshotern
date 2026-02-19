@@ -25,6 +25,7 @@ interface StaticPage {
   slug: string;
   title: string;
   content: string;
+  content_blocks?: string;
   meta_description?: string;
   meta_keywords?: string;
   is_published: boolean;
@@ -41,6 +42,7 @@ interface CreatePageRequest {
   slug: string;
   title: string;
   content: string;
+  content_blocks?: string;
   meta_description?: string;
   meta_keywords?: string;
   is_published: boolean;
@@ -59,6 +61,7 @@ export default function CMSManager() {
     slug: '',
     title: '',
     content: '',
+    content_blocks: '',
     meta_description: '',
     meta_keywords: '',
     is_published: false,
@@ -122,9 +125,14 @@ export default function CMSManager() {
     try {
       const url = editingPage
         ? `${API_BASE_URL}/api/v1/admin/cms/pages/${editingPage.id}`
-        : '${API_BASE_URL}/api/v1/admin/cms/pages';
-      
+        : `${API_BASE_URL}/api/v1/admin/cms/pages`;
+
       const method = editingPage ? 'PUT' : 'POST';
+
+      const body: Record<string, unknown> = { ...formData };
+      if (!body.content_blocks || !(body.content_blocks as string).trim()) {
+        delete body.content_blocks;
+      }
 
       const response = await fetch(url, {
         method,
@@ -132,7 +140,7 @@ export default function CMSManager() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
@@ -143,6 +151,7 @@ export default function CMSManager() {
           slug: '',
           title: '',
           content: '',
+          content_blocks: '',
           meta_description: '',
           meta_keywords: '',
           is_published: false,
@@ -164,6 +173,9 @@ export default function CMSManager() {
       slug: page.slug,
       title: page.title,
       content: page.content,
+      content_blocks: page.content_blocks
+        ? JSON.stringify(JSON.parse(page.content_blocks), null, 2)
+        : '',
       meta_description: page.meta_description || '',
       meta_keywords: page.meta_keywords || '',
       is_published: page.is_published,
@@ -247,6 +259,7 @@ export default function CMSManager() {
                 slug: '',
                 title: '',
                 content: '',
+                content_blocks: '',
                 meta_description: '',
                 meta_keywords: '',
                 is_published: false,
@@ -501,6 +514,20 @@ export default function CMSManager() {
                   allowImages={true}
                   showPreview={true}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Content Blocks (JSON)
+                </label>
+                <textarea
+                  rows={12}
+                  value={formData.content_blocks || ''}
+                  onChange={(e) => setFormData({ ...formData, content_blocks: e.target.value })}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm font-mono text-xs focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder='{"hero": {"title": "...", ...}}'
+                />
+                <p className="text-xs text-gray-500 mt-1">Edit structured page sections as JSON. Leave empty to keep existing value.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
