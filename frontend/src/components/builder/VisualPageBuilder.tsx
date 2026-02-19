@@ -66,7 +66,7 @@ interface ContentBlock {
   name: string;
   type: string;
   content: string;
-  category: string;
+  identifier: string;
 }
 
 const defaultBlockStyles: BlockStyles = {
@@ -141,7 +141,7 @@ export function VisualPageBuilder() {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await response.json();
-          setContentBlocks(data);
+          setContentBlocks(data.blocks || []);
         } else {
           console.error('Expected JSON response but got:', contentType);
           toast.error('Invalid response format from server');
@@ -815,7 +815,7 @@ export function VisualPageBuilder() {
                   className="p-3 text-left border border-gray-200 hover:bg-gray-50 rounded-lg"
                 >
                   <div className="font-medium">{contentBlock.name}</div>
-                  <div className="text-sm text-gray-500">{contentBlock.category}</div>
+                  <div className="text-sm text-gray-500">{contentBlock.identifier}</div>
                 </button>
               ))}
             </div>
