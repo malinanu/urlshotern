@@ -6,7 +6,6 @@ import RichTextEditor from '../editor/RichTextEditor';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
@@ -17,11 +16,8 @@ import {
   TrashIcon,
   DocumentDuplicateIcon,
   EyeIcon,
-  CodeBracketIcon,
   DocumentTextIcon,
   MagnifyingGlassIcon,
-  CubeIcon,
-  SparklesIcon
 } from '@heroicons/react/24/outline';
 
 interface PageTemplate {
@@ -29,38 +25,37 @@ interface PageTemplate {
   name: string;
   slug: string;
   content: string;
-  variables?: Record<string, string>;
-  is_default: boolean;
-  category: string;
-  description: string;
-  thumbnail?: string;
+  description?: string;
+  fields?: string;
+  preview_url?: string;
+  is_active: boolean;
+  sort_order: number;
   created_at: string;
   updated_at: string;
-  usage_count?: number;
 }
 
 interface PageTemplateFormData {
   name: string;
   slug: string;
   content: string;
-  variables: Record<string, string>;
-  is_default: boolean;
-  category: string;
   description: string;
-  thumbnail?: string;
+  fields: string;
+  preview_url: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
-const templateCategories = [
-  'general',
-  'landing',
-  'blog',
-  'product',
-  'about',
-  'contact',
-  'portfolio',
-  'documentation',
-  'custom'
-];
+// Parse fields JSON string into key-value pairs for display
+function parseFields(fields?: string): Record<string, string> {
+  if (!fields) return {};
+  try {
+    const parsed = JSON.parse(fields);
+    if (typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch {
+    // ignore
+  }
+  return {};
+}
 
 export function PageTemplateManager() {
   const { user, getAccessToken } = useAuth();
@@ -72,16 +67,17 @@ export function PageTemplateManager() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<PageTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  // Local variable pairs for the fields editor
+  const [variablePairs, setVariablePairs] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<PageTemplateFormData>({
     name: '',
     slug: '',
     content: '',
-    variables: {},
-    is_default: false,
-    category: 'general',
     description: '',
-    thumbnail: ''
+    fields: '',
+    preview_url: '',
+    is_active: true,
+    sort_order: 0,
   });
 
   useEffect(() => {
@@ -90,7 +86,7 @@ export function PageTemplateManager() {
 
   useEffect(() => {
     filterTemplates();
-  }, [templates, searchTerm, filterCategory]);
+  }, [templates, searchTerm]);
 
   const fetchTemplates = async () => {
     try {
@@ -114,49 +110,50 @@ export function PageTemplateManager() {
   };
 
   const filterTemplates = () => {
-    let filtered = [...templates];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(template =>
-        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.slug.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (!searchTerm) {
+      setFilteredTemplates(templates);
+      return;
     }
-
-    // Category filter
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter(template => template.category === filterCategory);
-    }
-
-    setFilteredTemplates(filtered);
+    const lower = searchTerm.toLowerCase();
+    setFilteredTemplates(templates.filter(t =>
+      t.name.toLowerCase().includes(lower) ||
+      (t.description || '').toLowerCase().includes(lower) ||
+      t.slug.toLowerCase().includes(lower)
+    ));
   };
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-  };
+  const generateSlug = (name: string) =>
+    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   const handleNameChange = (name: string) => {
     setFormData(prev => ({
       ...prev,
       name,
-      slug: editingTemplate ? prev.slug : generateSlug(name)
+      slug: editingTemplate ? prev.slug : generateSlug(name),
+    }));
+  };
+
+  const syncFieldsFromPairs = (pairs: Record<string, string>) => {
+    setFormData(prev => ({
+      ...prev,
+      fields: Object.keys(pairs).length > 0 ? JSON.stringify(pairs) : '',
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const payload = {
+      ...formData,
+      description: formData.description || undefined,
+      fields: formData.fields || undefined,
+      preview_url: formData.preview_url || undefined,
+    };
+
     try {
-      const url = editingTemplate 
+      const url = editingTemplate
         ? `/api/v1/admin/page-templates/${editingTemplate.id}`
         : '/api/v1/admin/page-templates';
-      
       const method = editingTemplate ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -165,7 +162,7 @@ export function PageTemplateManager() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getAccessToken()}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -185,30 +182,28 @@ export function PageTemplateManager() {
 
   const handleEdit = (template: PageTemplate) => {
     setEditingTemplate(template);
+    const pairs = parseFields(template.fields);
+    setVariablePairs(pairs);
     setFormData({
       name: template.name,
       slug: template.slug,
       content: template.content,
-      variables: template.variables || {},
-      is_default: template.is_default,
-      category: template.category,
-      description: template.description,
-      thumbnail: template.thumbnail || ''
+      description: template.description || '',
+      fields: template.fields || '',
+      preview_url: template.preview_url || '',
+      is_active: template.is_active,
+      sort_order: template.sort_order,
     });
     setShowForm(true);
   };
 
   const handleDelete = async (template: PageTemplate) => {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this template?')) return;
 
     try {
       const response = await fetch(`/api/v1/admin/page-templates/${template.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
-        },
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
       });
 
       if (response.ok) {
@@ -222,16 +217,18 @@ export function PageTemplateManager() {
     }
   };
 
-  const handleDuplicate = async (template: PageTemplate) => {
+  const handleDuplicate = (template: PageTemplate) => {
+    const pairs = parseFields(template.fields);
+    setVariablePairs(pairs);
     setFormData({
       name: `${template.name} (Copy)`,
       slug: generateSlug(`${template.name}-copy`),
       content: template.content,
-      variables: template.variables || {},
-      is_default: false,
-      category: template.category,
-      description: template.description,
-      thumbnail: template.thumbnail || ''
+      description: template.description || '',
+      fields: template.fields || '',
+      preview_url: template.preview_url || '',
+      is_active: true,
+      sort_order: 0,
     });
     setShowForm(true);
   };
@@ -239,9 +236,7 @@ export function PageTemplateManager() {
   const handlePreview = async (template: PageTemplate) => {
     try {
       const response = await fetch(`/api/v1/admin/page-templates/${template.id}/render`, {
-        headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
-        },
+        headers: { 'Authorization': `Bearer ${getAccessToken()}` },
       });
 
       if (response.ok) {
@@ -256,71 +251,40 @@ export function PageTemplateManager() {
     }
   };
 
-  const handleSetDefault = async (template: PageTemplate) => {
-    try {
-      const response = await fetch(`/api/v1/admin/page-templates/${template.id}/set-default`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getAccessToken()}`,
-        },
-      });
-
-      if (response.ok) {
-        toast.success('Default template updated');
-        fetchTemplates();
-      } else {
-        toast.error('Failed to set default template');
-      }
-    } catch (error) {
-      toast.error('Error setting default template');
-    }
-  };
-
   const resetForm = () => {
+    setVariablePairs({});
     setFormData({
       name: '',
       slug: '',
       content: '',
-      variables: {},
-      is_default: false,
-      category: 'general',
       description: '',
-      thumbnail: ''
+      fields: '',
+      preview_url: '',
+      is_active: true,
+      sort_order: 0,
     });
   };
 
   const addVariable = () => {
     const key = prompt('Enter variable name:');
     if (key) {
-      setFormData(prev => ({
-        ...prev,
-        variables: {
-          ...prev.variables,
-          [key]: ''
-        }
-      }));
+      const newPairs = { ...variablePairs, [key]: '' };
+      setVariablePairs(newPairs);
+      syncFieldsFromPairs(newPairs);
     }
   };
 
   const updateVariable = (key: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      variables: {
-        ...prev.variables,
-        [key]: value
-      }
-    }));
+    const newPairs = { ...variablePairs, [key]: value };
+    setVariablePairs(newPairs);
+    syncFieldsFromPairs(newPairs);
   };
 
   const removeVariable = (key: string) => {
-    setFormData(prev => {
-      const newVariables = { ...prev.variables };
-      delete newVariables[key];
-      return {
-        ...prev,
-        variables: newVariables
-      };
-    });
+    const newPairs = { ...variablePairs };
+    delete newPairs[key];
+    setVariablePairs(newPairs);
+    syncFieldsFromPairs(newPairs);
   };
 
   if (loading) {
@@ -339,19 +303,16 @@ export function PageTemplateManager() {
           <h2 className="text-2xl font-bold text-gray-900">Page Templates</h2>
           <p className="text-gray-600">Create and manage page templates with dynamic content</p>
         </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2"
-        >
+        <Button onClick={() => setShowForm(true)} className="flex items-center space-x-2">
           <PlusIcon className="h-5 w-5" />
           <span>New Template</span>
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
+      {/* Search */}
+      <Card className="p-4">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
             <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
             <Input
               type="text"
@@ -361,18 +322,7 @@ export function PageTemplateManager() {
               className="pl-10"
             />
           </div>
-          <Select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="all">All Categories</option>
-            {templateCategories.map(category => (
-              <option key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </option>
-            ))}
-          </Select>
-          <div className="text-sm text-gray-500 flex items-center">
+          <div className="text-sm text-gray-500">
             {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -382,16 +332,16 @@ export function PageTemplateManager() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
           <Card key={template.id} className="p-6">
-            {template.thumbnail && (
+            {template.preview_url && (
               <div className="mb-4">
                 <img
-                  src={template.thumbnail}
+                  src={template.preview_url}
                   alt={template.name}
                   className="w-full h-32 object-cover rounded-lg"
                 />
               </div>
             )}
-            
+
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0 p-2 bg-purple-100 rounded-lg">
@@ -402,78 +352,36 @@ export function PageTemplateManager() {
                   <p className="text-sm text-gray-500">{template.slug}</p>
                 </div>
               </div>
-              <div className="flex flex-col items-end space-y-2">
-                {template.is_default && (
-                  <Badge variant="outline" className="flex items-center">
-                    <SparklesIcon className="h-3 w-3 mr-1" />
-                    Default
-                  </Badge>
-                )}
-                <Badge variant="secondary">
-                  {template.category}
-                </Badge>
-              </div>
+              <Badge variant={template.is_active ? 'default' : 'secondary'}>
+                {template.is_active ? 'Active' : 'Inactive'}
+              </Badge>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-              {template.description}
-            </p>
-
-            {template.usage_count !== undefined && (
-              <div className="text-xs text-gray-500 mb-4">
-                Used {template.usage_count} time{template.usage_count !== 1 ? 's' : ''}
-              </div>
+            {template.description && (
+              <p className="text-sm text-gray-600 mb-4 line-clamp-2">{template.description}</p>
             )}
 
             <div className="flex justify-between items-center">
               <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handlePreview(template)}
-                  title="Preview template"
-                >
+                <Button variant="ghost" size="sm" onClick={() => handlePreview(template)} title="Preview">
                   <EyeIcon className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDuplicate(template)}
-                  title="Duplicate template"
-                >
+                <Button variant="ghost" size="sm" onClick={() => handleDuplicate(template)} title="Duplicate">
                   <DocumentDuplicateIcon className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(template)}
-                  title="Edit template"
-                >
+                <Button variant="ghost" size="sm" onClick={() => handleEdit(template)} title="Edit">
                   <PencilIcon className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex space-x-2">
-                {!template.is_default && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSetDefault(template)}
-                    title="Set as default"
-                    className="text-yellow-600 hover:text-yellow-700"
-                  >
-                    <SparklesIcon className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(template)}
-                  title="Delete template"
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDelete(template)}
+                title="Delete"
+                className="text-red-600 hover:text-red-700"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </Button>
             </div>
           </Card>
         ))}
@@ -483,9 +391,7 @@ export function PageTemplateManager() {
         <div className="text-center py-12">
           <div className="text-gray-500 text-lg mb-2">No templates found</div>
           <p className="text-gray-400">
-            {searchTerm || filterCategory !== 'all'
-              ? 'Try adjusting your filters'
-              : 'Create your first template to get started'}
+            {searchTerm ? 'Try adjusting your search' : 'Create your first template to get started'}
           </p>
         </div>
       )}
@@ -493,11 +399,7 @@ export function PageTemplateManager() {
       {/* Create/Edit Form Modal */}
       <Modal
         isOpen={showForm}
-        onClose={() => {
-          setShowForm(false);
-          setEditingTemplate(null);
-          resetForm();
-        }}
+        onClose={() => { setShowForm(false); setEditingTemplate(null); resetForm(); }}
         title={editingTemplate ? 'Edit Page Template' : 'Create New Page Template'}
         size="xl"
       >
@@ -532,33 +434,27 @@ export function PageTemplateManager() {
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category *
+              <label htmlFor="preview_url" className="block text-sm font-medium text-gray-700 mb-2">
+                Preview URL
               </label>
-              <Select
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                required
-              >
-                {templateCategories.map(category => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </Select>
+              <Input
+                id="preview_url"
+                type="url"
+                value={formData.preview_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, preview_url: e.target.value }))}
+                placeholder="https://example.com/preview.jpg"
+              />
             </div>
 
             <div>
-              <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-2">
-                Thumbnail URL
+              <label htmlFor="sort_order" className="block text-sm font-medium text-gray-700 mb-2">
+                Sort Order
               </label>
               <Input
-                id="thumbnail"
-                type="url"
-                value={formData.thumbnail}
-                onChange={(e) => setFormData(prev => ({ ...prev, thumbnail: e.target.value }))}
-                placeholder="https://example.com/thumbnail.jpg"
+                id="sort_order"
+                type="number"
+                value={formData.sort_order}
+                onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
               />
             </div>
           </div>
@@ -567,11 +463,11 @@ export function PageTemplateManager() {
             <label className="flex items-center">
               <input
                 type="checkbox"
-                checked={formData.is_default}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_default: e.target.checked }))}
+                checked={formData.is_active}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
                 className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               />
-              <span className="ml-2 text-sm text-gray-700">Set as Default Template</span>
+              <span className="ml-2 text-sm text-gray-700">Active</span>
             </label>
           </div>
 
@@ -588,35 +484,25 @@ export function PageTemplateManager() {
             />
           </div>
 
-          {/* Variables */}
+          {/* Variables (stored as JSON in fields) */}
           <div>
             <div className="flex justify-between items-center mb-3">
               <label className="block text-sm font-medium text-gray-700">
                 Template Variables
               </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={addVariable}
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={addVariable}>
                 <PlusIcon className="h-4 w-4 mr-1" />
                 Add Variable
               </Button>
             </div>
-            {Object.keys(formData.variables).length > 0 ? (
+            {Object.keys(variablePairs).length > 0 ? (
               <div className="space-y-3">
-                {Object.entries(formData.variables).map(([key, value]) => (
+                {Object.entries(variablePairs).map(([key, value]) => (
                   <div key={key} className="flex items-center space-x-3">
                     <div className="flex-1">
-                      <Input
-                        type="text"
-                        value={key}
-                        disabled
-                        className="font-mono text-sm"
-                      />
+                      <Input type="text" value={key} disabled className="font-mono text-sm" />
                     </div>
-                    <div className="flex-2">
+                    <div className="flex-1">
                       <Input
                         type="text"
                         value={value}
@@ -651,10 +537,10 @@ export function PageTemplateManager() {
             <RichTextEditor
               content={formData.content}
               onChange={(content) => setFormData(prev => ({ ...prev, content }))}
-              placeholder="Enter your template content here. Use variables with ${variable_name} syntax."
+              placeholder="Enter your template content here. Use {{variable_name}} syntax for variables."
             />
             <p className="mt-2 text-sm text-gray-500">
-              Use <code className="bg-gray-100 px-1 rounded">$&#123;variable_name&#125;</code> to insert variables in your content.
+              Use <code className="bg-gray-100 px-1 rounded">&#123;&#123;variable_name&#125;&#125;</code> to insert variables.
             </p>
           </div>
 
@@ -662,11 +548,7 @@ export function PageTemplateManager() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => {
-                setShowForm(false);
-                setEditingTemplate(null);
-                resetForm();
-              }}
+              onClick={() => { setShowForm(false); setEditingTemplate(null); resetForm(); }}
             >
               Cancel
             </Button>
@@ -680,20 +562,16 @@ export function PageTemplateManager() {
       {/* Preview Modal */}
       <Modal
         isOpen={showPreview}
-        onClose={() => {
-          setShowPreview(false);
-          setPreviewTemplate(null);
-        }}
+        onClose={() => { setShowPreview(false); setPreviewTemplate(null); }}
         title={`Preview: ${previewTemplate?.name}`}
         size="xl"
       >
         {previewTemplate && (
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
-              <Badge variant="secondary">{previewTemplate.category}</Badge>
-              {previewTemplate.is_default && (
-                <Badge variant="outline">Default</Badge>
-              )}
+              <Badge variant={previewTemplate.is_active ? 'default' : 'secondary'}>
+                {previewTemplate.is_active ? 'Active' : 'Inactive'}
+              </Badge>
               <span className="text-sm text-gray-500">{previewTemplate.slug}</span>
             </div>
             <div className="border rounded-lg p-6 bg-white">

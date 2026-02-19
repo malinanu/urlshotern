@@ -82,7 +82,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
 
 	// Initialize handlers
-	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config)
+	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config, nil, nil)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
 

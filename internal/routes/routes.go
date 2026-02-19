@@ -345,6 +345,14 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	admin.DELETE("/content-blocks/:id", handler.AuthHandlers.DeleteCMSBlock)
 	admin.GET("/content-blocks/:id/render", handler.AuthHandlers.RenderCMSBlock)
 
+	// Page templates CRUD endpoints (for admin panel)
+	admin.GET("/page-templates", handler.AuthHandlers.ListAdminPageTemplates)
+	admin.POST("/page-templates", handler.AuthHandlers.CreateAdminPageTemplate)
+	admin.GET("/page-templates/:id", handler.AuthHandlers.GetAdminPageTemplate)
+	admin.PUT("/page-templates/:id", handler.AuthHandlers.UpdateAdminPageTemplate)
+	admin.DELETE("/page-templates/:id", handler.AuthHandlers.DeleteAdminPageTemplate)
+	admin.GET("/page-templates/:id/render", handler.AuthHandlers.RenderAdminPageTemplate)
+
 	// SEO routes
 	seo := admin.Group("/seo")
 	{

@@ -74,6 +74,9 @@ func main() {
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
 	adminService := services.NewAdminService(db, rbacService)
+	globalSettingsService := services.NewGlobalSettingsService(db)
+	contentBlockService := services.NewContentBlockService(db, globalSettingsService)
+	pageTemplateService := services.NewPageTemplateService(db, contentBlockService, globalSettingsService)
 	// cmsService := services.NewCMSService(db)  // Temporarily disabled
 	// apiKeyService := services.NewAPIKeyService(db)  // Temporarily disabled
 
@@ -87,7 +90,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, userService, rbacService, redis)
 
 	// Initialize handlers
-	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config)
+	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config, contentBlockService, pageTemplateService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	adminRBACHandlers := handlers.NewAdminRBACHandlers(adminService, rbacService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers)

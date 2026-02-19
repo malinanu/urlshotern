@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -17,12 +19,14 @@ import (
 )
 
 type AuthHandlers struct {
-	authService  *services.AuthService
-	adminService *services.AdminService
-	smsService   *services.SMSService
-	emailService *services.EmailService
-	config       *configs.Config
-	validator    *validator.Validate
+	authService         *services.AuthService
+	adminService        *services.AdminService
+	smsService          *services.SMSService
+	emailService        *services.EmailService
+	config              *configs.Config
+	validator           *validator.Validate
+	contentBlockService *services.ContentBlockService
+	pageTemplateService *services.PageTemplateService
 }
 
 // GetEmailService returns the email service for use by other handlers
@@ -31,14 +35,16 @@ func (h *AuthHandlers) GetEmailService() *services.EmailService {
 }
 
 // NewAuthHandlers creates new auth handlers
-func NewAuthHandlers(authService *services.AuthService, adminService *services.AdminService, smsService *services.SMSService, emailService *services.EmailService, config *configs.Config) *AuthHandlers {
+func NewAuthHandlers(authService *services.AuthService, adminService *services.AdminService, smsService *services.SMSService, emailService *services.EmailService, config *configs.Config, contentBlockService *services.ContentBlockService, pageTemplateService *services.PageTemplateService) *AuthHandlers {
 	return &AuthHandlers{
-		authService:  authService,
-		adminService: adminService,
-		smsService:   smsService,
-		emailService: emailService,
-		config:       config,
-		validator:    validator.New(),
+		authService:         authService,
+		adminService:        adminService,
+		smsService:          smsService,
+		emailService:        emailService,
+		config:              config,
+		validator:           validator.New(),
+		contentBlockService: contentBlockService,
+		pageTemplateService: pageTemplateService,
 	}
 }
 
@@ -788,26 +794,220 @@ func (h *AuthHandlers) GetSEORecommendations(c *gin.Context) {
 
 // CreateCMSBlock creates a new content block
 func (h *AuthHandlers) CreateCMSBlock(c *gin.Context) {
-	// TODO: Implement content block creation
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Content block creation not yet implemented"})
+	var req models.ContentBlockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// Auto-generate identifier from name if not provided
+	if req.Identifier == "" {
+		slug := strings.ToLower(strings.ReplaceAll(req.Name, " ", "-"))
+		re := regexp.MustCompile(`[^a-z0-9-]`)
+		req.Identifier = re.ReplaceAllString(slug, "")
+	}
+
+	block, err := h.contentBlockService.CreateContentBlock(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"block": block})
 }
 
 // UpdateCMSBlock updates an existing content block
 func (h *AuthHandlers) UpdateCMSBlock(c *gin.Context) {
-	// TODO: Implement content block update
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Content block update not yet implemented"})
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid block ID"})
+		return
+	}
+
+	var req models.ContentBlockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	block, err := h.contentBlockService.UpdateContentBlock(id, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"block": block})
 }
 
 // DeleteCMSBlock deletes a content block
 func (h *AuthHandlers) DeleteCMSBlock(c *gin.Context) {
-	// TODO: Implement content block deletion
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Content block deletion not yet implemented"})
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid block ID"})
+		return
+	}
+
+	if err := h.contentBlockService.DeleteContentBlock(id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Content block deleted successfully"})
 }
 
 // RenderCMSBlock renders a content block preview
 func (h *AuthHandlers) RenderCMSBlock(c *gin.Context) {
-	// TODO: Implement content block rendering
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "Content block rendering not yet implemented"})
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid block ID"})
+		return
+	}
+
+	block, err := h.contentBlockService.GetContentBlockByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	content, err := h.contentBlockService.RenderContentBlock(block.Identifier)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"content": content})
+}
+
+// ListAdminPageTemplates returns all page templates
+func (h *AuthHandlers) ListAdminPageTemplates(c *gin.Context) {
+	templates, err := h.pageTemplateService.ListPageTemplates(false)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch page templates"})
+		return
+	}
+	if templates == nil {
+		templates = []*models.PageTemplate{}
+	}
+	c.JSON(http.StatusOK, gin.H{"templates": templates})
+}
+
+// GetAdminPageTemplate returns a single page template by ID
+func (h *AuthHandlers) GetAdminPageTemplate(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	template, err := h.pageTemplateService.GetPageTemplateByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"template": template})
+}
+
+// CreateAdminPageTemplate creates a new page template
+func (h *AuthHandlers) CreateAdminPageTemplate(c *gin.Context) {
+	var req struct {
+		Name        string  `json:"name" binding:"required"`
+		Slug        string  `json:"slug" binding:"required"`
+		Content     string  `json:"content"`
+		Description *string `json:"description"`
+		Fields      *string `json:"fields"`
+		PreviewURL  *string `json:"preview_url"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	template, err := h.pageTemplateService.CreatePageTemplate(req.Name, req.Slug, req.Content, req.Description, req.Fields, req.PreviewURL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"template": template})
+}
+
+// UpdateAdminPageTemplate updates an existing page template
+func (h *AuthHandlers) UpdateAdminPageTemplate(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	var req struct {
+		Name        string  `json:"name" binding:"required"`
+		Slug        string  `json:"slug" binding:"required"`
+		Content     string  `json:"content"`
+		Description *string `json:"description"`
+		Fields      *string `json:"fields"`
+		PreviewURL  *string `json:"preview_url"`
+		IsActive    bool    `json:"is_active"`
+		SortOrder   int     `json:"sort_order"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	template, err := h.pageTemplateService.UpdatePageTemplate(id, req.Name, req.Slug, req.Content, req.Description, req.Fields, req.PreviewURL, req.IsActive, req.SortOrder)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"template": template})
+}
+
+// DeleteAdminPageTemplate deletes a page template
+func (h *AuthHandlers) DeleteAdminPageTemplate(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	if err := h.pageTemplateService.DeletePageTemplate(id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Page template deleted successfully"})
+}
+
+// RenderAdminPageTemplate renders a page template preview
+func (h *AuthHandlers) RenderAdminPageTemplate(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	tmpl, err := h.pageTemplateService.GetPageTemplateByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	content, err := h.pageTemplateService.RenderPageTemplate(tmpl.Slug, "", map[string]interface{}{})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"content": content})
 }
 
 // SEO Analysis Handlers
