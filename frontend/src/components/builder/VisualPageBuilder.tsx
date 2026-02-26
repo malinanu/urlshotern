@@ -173,7 +173,7 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type) {
         return parsed.map((b: BuilderBlock) => ({ ...b, id: generateBlockId() }));
       }
-    } catch {}
+    } catch { }
     return [{
       id: generateBlockId(), type: 'text' as const,
       content: { html: content || '<p>Click to edit</p>' },
@@ -203,16 +203,16 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
         headers: { 'Authorization': `Bearer ${getAccessToken()}` },
       });
       if (res.ok) { const d = await res.json(); setAllPages(d.data || d.pages || []); }
-    } catch {}
+    } catch { }
   };
 
   const fetchPageTemplates = async () => {
     try {
-      const res = await fetch('/api/v1/admin/cms/templates?limit=50', {
+      const res = await fetch('/api/v1/admin/page-templates', {
         headers: { 'Authorization': `Bearer ${getAccessToken()}` },
       });
       if (res.ok) { const d = await res.json(); setPageTemplates(d.templates || []); }
-    } catch {}
+    } catch { }
   };
 
   const applyTemplate = (t: PageTemplate) => {
@@ -266,7 +266,7 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
   };
 
   const updateBlock = (blockId: string, updates: Partial<BuilderBlock>) => {
-    setBlocks(prev => prev.map(block => 
+    setBlocks(prev => prev.map(block =>
       block.id === blockId ? { ...block, ...updates } : block
     ));
   };
@@ -287,7 +287,7 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
 
     const newBlocks = [...blocks];
     [newBlocks[currentIndex], newBlocks[newIndex]] = [newBlocks[newIndex], newBlocks[currentIndex]];
-    
+
     setBlocks(newBlocks);
   };
 
@@ -320,7 +320,7 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
-    
+
     if (!draggedBlock) return;
 
     const dragIndex = blocks.findIndex(block => block.id === draggedBlock);
@@ -613,9 +613,8 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
       {/* Sidebar */}
       <div
         ref={sidebarRef}
-        className={`bg-white shadow-lg transition-all duration-300 ${
-          previewMode ? 'w-0 overflow-hidden' : 'w-80'
-        }`}
+        className={`bg-white shadow-lg transition-all duration-300 ${previewMode ? 'w-0 overflow-hidden' : 'w-80'
+          }`}
       >
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -764,7 +763,7 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
                   <Select
                     value={selectedBlock.content.blockId || ''}
                     onChange={(e) => updateBlock(selectedBlockId!, {
-                      content: { ...selectedBlock.content, blockId: parseInt(e.target.value) }
+                      content: { ...selectedBlock.content, blockId: e.target.value ? parseInt(e.target.value) : null }
                     })}
                   >
                     <option value="">Select a block...</option>
@@ -916,12 +915,12 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
               {allPages.length === 0
                 ? <p className="text-gray-500 text-sm p-4 text-center">No pages found</p>
                 : allPages.map(p => (
-                    <button key={p.id} onClick={() => { loadPageById(p.id); setShowPagePicker(false); }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
-                      <div className="font-medium">{p.title}</div>
-                      <div className="text-xs text-gray-500">/pages/{p.slug}</div>
-                    </button>
-                  ))}
+                  <button key={p.id} onClick={() => { loadPageById(p.id); setShowPagePicker(false); }}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                    <div className="font-medium">{p.title}</div>
+                    <div className="text-xs text-gray-500">/pages/{p.slug}</div>
+                  </button>
+                ))}
             </div>
           </div>
         </div>
@@ -939,12 +938,12 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
               {pageTemplates.length === 0
                 ? <p className="text-gray-500 text-sm p-4 text-center">No templates found</p>
                 : pageTemplates.map(t => (
-                    <button key={t.id} onClick={() => applyTemplate(t)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
-                      <div className="font-medium">{t.name}</div>
-                      <div className="text-xs text-gray-500">{t.slug}</div>
-                    </button>
-                  ))}
+                  <button key={t.id} onClick={() => applyTemplate(t)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                    <div className="font-medium">{t.name}</div>
+                    <div className="text-xs text-gray-500">{t.slug}</div>
+                  </button>
+                ))}
             </div>
           </div>
         </div>
