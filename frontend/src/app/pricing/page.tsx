@@ -203,21 +203,21 @@ export default function PricingPage() {
       };
     }
 
-    // Fall back to monthly price if requested interval (like yearly) isn't explicitly found
+    // Hardcoded production overrides for missing Polar syncs MUST be checked for YEARLY explicitly here
+    // before we fallback to monthly
+    if (billingInterval === 'year') {
+      if (planType === 'enterprise') {
+        return { price: '$499.90', period: '/year', priceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf' };
+      }
+      if (planType === 'premium') {
+        return { price: '$99.90', period: '/year', priceId: '007b1039-40e1-4861-81ba-da61ea34fdd7' };
+      }
+      return { price: 'Unavailable', period: '', priceId: null };
+    }
+
+    // Fall back to monthly price if requested interval isn't explicitly found
     const firstActivePrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month') || product.prices.find(p => !p.is_archived);
     if (firstActivePrice) {
-      const isMonthlyButWantedYearly = firstActivePrice.recurring_interval === 'month' && billingInterval === 'year';
-      if (isMonthlyButWantedYearly) {
-        // Hardcoded production overrides for missing Polar syncs
-        if (planType === 'enterprise') {
-          return { price: '$499.90', period: '/year', priceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf' };
-        }
-        if (planType === 'premium') {
-          return { price: '$99.90', period: '/year', priceId: '007b1039-40e1-4861-81ba-da61ea34fdd7' };
-        }
-        return { price: 'Unavailable', period: '', priceId: null };
-      }
-
       const interval = firstActivePrice.recurring_interval || 'month';
       return {
         price: formatPrice(firstActivePrice.price_amount, firstActivePrice.price_currency),
