@@ -8,14 +8,16 @@ import (
 	"gorm.io/gorm"
 	
 	"github.com/URLshorter/url-shortener/internal/models"
+	"github.com/URLshorter/url-shortener/internal/services"
 )
 
 type AdminCouponHandlers struct {
-	db *gorm.DB
+	db           *gorm.DB
+	polarService *services.PolarService
 }
 
-func NewAdminCouponHandlers(db *gorm.DB) *AdminCouponHandlers {
-	return &AdminCouponHandlers{db: db}
+func NewAdminCouponHandlers(db *gorm.DB, polarService *services.PolarService) *AdminCouponHandlers {
+	return &AdminCouponHandlers{db: db, polarService: polarService}
 }
 
 func (h *AdminCouponHandlers) ListCoupons(c *gin.Context) {
@@ -32,6 +34,40 @@ func (h *AdminCouponHandlers) CreateCoupon(c *gin.Context) {
 	if err := c.ShouldBindJSON(&coupon); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload", "details": err.Error()})
 		return
+	}
+
+	// Sync with Polar if it's a monetary discount
+	if coupon.DiscountType == "percentage" || coupon.DiscountType == "fixed" {
+		codeStr := coupon.Code
+		payload := services.CreateDiscountPayload{
+			Name:     coupon.Name,
+			Code:     &codeStr,
+			Type:     coupon.DiscountType, // "percentage" or "fixed"
+			Duration: "once",
+		}
+
+		if coupon.DiscountType == "percentage" {
+			bp := int(coupon.DiscountValue * 100)
+			payload.BasisPoints = &bp
+		} else if coupon.DiscountType == "fixed" {
+			amt := int(coupon.DiscountValue * 100) // Assumes USD dollars -> cents
+			usd := "usd"
+			payload.Amount = &amt
+			payload.Currency = &usd
+		}
+
+		if coupon.MaxRedemptions > 0 {
+			payload.MaxRedemptions = &coupon.MaxRedemptions
+		}
+
+		polarDiscount, err := h.polarService.CreateDiscount(payload)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create discount in Polar dashboard", "details": err.Error()})
+			return
+		}
+
+		// Save the Polar discount ID locally so we can reference it
+		coupon.PolarDiscountID = polarDiscount.ID
 	}
 
 	if err := h.db.Create(&coupon).Error; err != nil {

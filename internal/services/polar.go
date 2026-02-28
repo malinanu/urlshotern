@@ -250,6 +250,55 @@ func (ps *PolarService) GetProduct(productID string) (*PolarProduct, error) {
 	return &product, nil
 }
 
+// PolarDiscount represents a created discount in Polar
+type PolarDiscount struct {
+	ID                 string    `json:"id"`
+	OrganizationID     string    `json:"organization_id"`
+	Name               string    `json:"name"`
+	Code               *string   `json:"code,omitempty"`
+	Type               string    `json:"type"`                 // "percentage" or "fixed"
+	Amount             *int      `json:"amount,omitempty"`     // for fixed type
+	Currency           *string   `json:"currency,omitempty"`  // for fixed type
+	BasisPoints        *int      `json:"basis_points,omitempty"` // for percentage type
+	Duration           string    `json:"duration"`             // "once", "forever", "repeating"
+	DurationInMonths   *int      `json:"duration_in_months,omitempty"`
+	MaxRedemptions     *int      `json:"max_redemptions,omitempty"`
+	StartsAt           *time.Time `json:"starts_at,omitempty"`
+	EndsAt             *time.Time `json:"ends_at,omitempty"`
+}
+
+// CreateDiscountPayload represents the required fields to create a discount in Polar
+type CreateDiscountPayload struct {
+	Name             string    `json:"name"`
+	Code             *string   `json:"code,omitempty"`
+	Type             string    `json:"type"`                       // "percentage" or "fixed"
+	BasisPoints      *int      `json:"basis_points,omitempty"`     // 1000 = 10%
+	Amount           *int      `json:"amount,omitempty"`           // 1000 = $10.00
+	Currency         *string   `json:"currency,omitempty"`
+	Duration         string    `json:"duration"`                   // "once", "forever", "repeating"
+	DurationInMonths *int      `json:"duration_in_months,omitempty"`
+	MaxRedemptions   *int      `json:"max_redemptions,omitempty"`
+	Products         []string  `json:"products,omitempty"`         // Make sure this is an array of IDs
+	StartsAt         *time.Time `json:"starts_at,omitempty"`
+	EndsAt           *time.Time `json:"ends_at,omitempty"`
+}
+
+// CreateDiscount creates a new discount code in Polar Organization
+func (ps *PolarService) CreateDiscount(payload CreateDiscountPayload) (*PolarDiscount, error) {
+	// For API requests to /v1/discounts/, the payload shape must match exactly.
+	endpoint := "/discounts/"
+
+	log.Printf("[Polar] Creating discount: %+v", payload)
+
+	var discount PolarDiscount
+	err := ps.makeRequest("POST", endpoint, payload, &discount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create discount in polar: %w", err)
+	}
+
+	return &discount, nil
+}
+
 // PolarOrder represents an order/invoice from Polar
 type PolarOrder struct {
 	ID             string    `json:"id"`

@@ -76,7 +76,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 		CMSHandlers:            cmsHandlers,
 		AdminRBACHandlers:      adminRBACHandlers,
-		AdminCouponHandlers:    NewAdminCouponHandlers(gormDB),
+		AdminCouponHandlers:    NewAdminCouponHandlers(gormDB, billingHandler.billingService.GetPolarService()),
 		ContactHandlers:        NewContactHandlers(authHandlers.GetEmailService()),
 	}
 }
