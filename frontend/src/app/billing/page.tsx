@@ -207,7 +207,11 @@ function BillingContent() {
       if (isYearly) {
         const yearlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'year');
         if (yearlyPrice) priceId = yearlyPrice.id;
-        else {
+        else if (basePlanType === 'enterprise') {
+          priceId = 'e5e3b4b7-e572-42db-b271-b4ba637e83bf';
+        } else if (basePlanType === 'premium') {
+          priceId = '007b1039-40e1-4861-81ba-da61ea34fdd7';
+        } else {
           alert('A Yearly price has not been configured in Polar yet for this plan.');
           setUpgrading(null);
           return;
