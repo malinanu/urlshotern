@@ -153,22 +153,18 @@ func (ps *PolarService) CreateCheckoutSession(productID string, productPriceID *
 	var endpoint string
 	var payload map[string]interface{}
 
+	endpoint = "/checkouts"
+	payload = map[string]interface{}{
+		"customer_email": customerEmail,
+		"success_url":    successURL,
+	}
+
 	if productPriceID != nil && *productPriceID != "" {
-		// Use /checkouts/custom endpoint for specific price ID
-		endpoint = "/checkouts/custom"
-		payload = map[string]interface{}{
-			"product_price_id": *productPriceID,
-			"customer_email":   customerEmail,
-			"success_url":      successURL,
-		}
+		// Pass specific price ID, Polar API v1 allows product_price_id at the root 
+		payload["product_price_id"] = *productPriceID
 	} else {
-		// Use /checkouts endpoint with product ID array
-		endpoint = "/checkouts"
-		payload = map[string]interface{}{
-			"products":       []string{productID}, // Polar expects array of product ID strings
-			"customer_email": customerEmail,
-			"success_url":    successURL,
-		}
+		// Use product ID
+		payload["product_id"] = productID
 	}
 
 	if discountID != nil && *discountID != "" {
