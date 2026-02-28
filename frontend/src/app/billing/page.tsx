@@ -14,6 +14,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
+import { getProducts, PolarProduct, formatPrice } from '@/lib/polar';
 
 interface Plan {
   id: string;
@@ -92,6 +93,8 @@ function BillingContent() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
+
   const fetchBillingData = async () => {
     if (!isAuthenticated || !user) return;
 
@@ -101,8 +104,8 @@ function BillingContent() {
     try {
       setLoading(true);
 
-      // Fetch subscription and usage data
-      const [usageResponse, plansResponse] = await Promise.all([
+      // Fetch subscription, usage data, plans, and polar products concurrently
+      const [usageResponse, plansResponse, products] = await Promise.all([
         fetch(API_ENDPOINTS.billing.usage, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -114,7 +117,8 @@ function BillingContent() {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-        })
+        }),
+        getProducts()
       ]);
 
       if (usageResponse.ok) {
@@ -126,6 +130,8 @@ function BillingContent() {
         const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
       }
+
+      setPolarProducts(products);
     } catch (error) {
       console.error('Error fetching billing data:', error);
     } finally {
@@ -146,7 +152,11 @@ function BillingContent() {
     setValidatingDiscount(true);
     setDiscountError(null);
     try {
-      const response = await fetch(`${API_ENDPOINTS.billing.validateCoupon}?code=${discountCode}`, {
+      // Find the currently selected plan to validate against
+      const selectedPlan = plans.find(p => p.interval === billingInterval && p.id !== 'free');
+      const planId = selectedPlan ? selectedPlan.id : '';
+
+      const response = await fetch(`${API_ENDPOINTS.billing.validateCoupon}?code=${discountCode}&plan_id=${planId}`, {
         headers: {
           'Authorization': `Bearer ${getAccessToken()}`,
         }
@@ -168,10 +178,10 @@ function BillingContent() {
 
   // If discountCode from param exists on mount, validate it
   useEffect(() => {
-    if (searchParams?.get('discount')) {
+    if (searchParams?.get('discount') && plans.length > 0) {
       handleValidateDiscount();
     }
-  }, [searchParams]);
+  }, [searchParams, plans.length]);
 
   const handleUpgrade = async (planId: string) => {
     const token = getAccessToken();
@@ -180,6 +190,36 @@ function BillingContent() {
     setUpgrading(planId);
 
     try {
+      // Find corresponding Polar product
+      const basePlanType = planId.replace('_yearly', '');
+      const product = polarProducts.find(p => p.plan_type === basePlanType);
+
+      if (!product) {
+        console.error('Polar product not found for plan:', basePlanType);
+        alert('Plan configuration error. Please contact support.');
+        setUpgrading(null);
+        return;
+      }
+
+      let priceId: string | undefined = undefined;
+      const isYearly = planId.endsWith('_yearly') || billingInterval === 'year';
+
+      if (isYearly) {
+        const yearlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'year');
+        if (yearlyPrice) priceId = yearlyPrice.id;
+        else {
+          const fallbackPrice = product.prices.find(p => !p.is_archived);
+          if (fallbackPrice) priceId = fallbackPrice.id;
+        }
+      } else {
+        const monthlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month');
+        if (monthlyPrice) priceId = monthlyPrice.id;
+        else {
+          const fallbackPrice = product.prices.find(p => !p.is_archived);
+          if (fallbackPrice) priceId = fallbackPrice.id;
+        }
+      }
+
       const response = await fetch(API_ENDPOINTS.billing.checkout, {
         method: 'POST',
         headers: {
@@ -187,7 +227,8 @@ function BillingContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          plan_id: planId,
+          product_id: product.id,
+          price_id: priceId,
           discount_code: discountData ? discountCode : undefined,
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/billing`,
@@ -196,12 +237,23 @@ function BillingContent() {
 
       if (response.ok) {
         const data = await response.json();
-        window.location.href = data.checkout_url;
+        // Check if bypass was successful
+        if (data.is_free_bypass) {
+          window.location.href = data.checkout_url; // which maps to successURL
+        } else if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          console.error('Failed to create checkout session, no URL returned');
+          alert('Failed to obtain a checkout session. Please try again later.');
+        }
       } else {
-        console.error('Failed to create checkout session');
+        const errorData = await response.json();
+        console.error('Failed to create checkout session:', errorData);
+        alert(errorData.error || 'Failed to create checkout session');
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
+      alert('An error occurred. Please try again.');
     } finally {
       setUpgrading(null);
     }

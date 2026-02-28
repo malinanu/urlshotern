@@ -194,7 +194,16 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	// Handle coupons
 	var polarDiscountID *string
 	if req.DiscountCode != nil && *req.DiscountCode != "" {
-		coupon, err := bh.billingService.ValidateCoupon(*req.DiscountCode, req.ProductID)
+		// Look up the base PlanType for the product
+		var polarProd models.PolarProduct
+		bh.billingService.GetDB().Where("id = ?", req.ProductID).First(&polarProd)
+		planType := polarProd.PlanType
+		if planType == "" {
+			// fallback in case of db desync
+			planType = req.ProductID
+		}
+		
+		coupon, err := bh.billingService.ValidateCoupon(*req.DiscountCode, planType)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "Invalid or expired discount code",
@@ -205,7 +214,7 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 
 		if coupon.DiscountType == "free_months" {
 			// Bypass Polar checkout
-			err := bh.billingService.RedeemFreeMonths(userID, req.ProductID, coupon)
+			err := bh.billingService.RedeemFreeMonths(userID, planType, coupon)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error":   "Failed to redeem discount code",

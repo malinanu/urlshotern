@@ -74,7 +74,7 @@ export default function PricingPage() {
   }, []);
 
   // Handler for plan selection
-  const handlePlanClick = async (planName: string, productId: string | null, planType: string) => {
+  const handlePlanClick = async (planName: string, productId: string | null, planType: string, priceId: string | null = null) => {
     // Free plan - redirect to home
     if (planType === 'free') {
       router.push('/');
@@ -109,8 +109,8 @@ export default function PricingPage() {
     try {
       setIsLoading(true);
       setLoadingPlan(planName);
-      console.log(`[Pricing] Creating checkout for product: ${productId}`);
-      await redirectToCheckout(productId, accessToken);
+      console.log(`[Pricing] Creating checkout for product: ${productId} with price: ${priceId}`);
+      await redirectToCheckout(productId, accessToken, priceId || undefined);
     } catch (error) {
       console.error('[Pricing] Failed to create checkout session:', error);
 
@@ -156,30 +156,36 @@ export default function PricingPage() {
 
   /**
    * Extract the primary price for display from a Polar product
-   * Returns formatted price string and billing period
+   * Returns formatted price string, billing period, and the specific Price ID
    */
-  const getPriceDisplay = (planType: string): { price: string; period: string } => {
+  const getPriceDisplay = (planType: string): { price: string; period: string; priceId: string | null } => {
     // Free plan always shows $0
     if (planType === 'free') {
-      return { price: '$0', period: '/month' };
+      return { price: '$0', period: '/month', priceId: null };
     }
 
     // Find the product for this plan type
     const product = polarProducts.find(p => p.plan_type === planType);
 
     // Fallback during loading or if product not found
-    if (!product || productsLoading) {
-      const fallbacks: Record<string, { price: string; period: string }> = {
-        premium: { price: '$5', period: '/month' },
-        enterprise: { price: '$29.99', period: '/month' },
+    if (!product || productsLoading || !product.prices || product.prices.length === 0) {
+      const fallbacks: Record<string, { price: number; period: string }> = {
+        premium: { price: 9.99, period: '/month' },
+        enterprise: { price: 49.99, period: '/month' },
       };
-      return fallbacks[planType] || { price: '—', period: '' };
-    }
 
-    // No prices available
-    if (!product.prices || product.prices.length === 0) {
-      console.warn(`[Pricing] No prices found for ${planType} plan`);
-      return { price: 'Contact Us', period: '' };
+      const fallback = fallbacks[planType];
+      if (!fallback) return { price: '—', period: '', priceId: null };
+
+      const displayPrice = billingInterval === 'year'
+        ? `$${(fallback.price * 10).toFixed(2)}`
+        : `$${fallback.price}`;
+
+      return {
+        price: displayPrice,
+        period: billingInterval === 'year' ? '/year' : '/month',
+        priceId: null
+      };
     }
 
     // Attempt to find the price matching the current billing interval
@@ -190,22 +196,33 @@ export default function PricingPage() {
     if (activePrice) {
       return {
         price: formatPrice(activePrice.price_amount, activePrice.price_currency),
-        period: billingInterval === 'year' ? '/year' : '/month'
+        period: billingInterval === 'year' ? '/year' : '/month',
+        priceId: activePrice.id
       };
     }
 
-    // Fall back to first active price if the requested interval isn't found
-    const firstActivePrice = product.prices.find(p => !p.is_archived);
+    // Fall back to monthly price if requested interval (like yearly) isn't explicitly found
+    const firstActivePrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month') || product.prices.find(p => !p.is_archived);
     if (firstActivePrice) {
+      const isMonthlyButWantedYearly = firstActivePrice.recurring_interval === 'month' && billingInterval === 'year';
+      if (isMonthlyButWantedYearly) {
+        return {
+          price: formatPrice(firstActivePrice.price_amount * 10, firstActivePrice.price_currency),
+          period: '/year',
+          priceId: firstActivePrice.id // Warning: This falls back to charging Monthly because Polar doesn't have a Yearly price configured!
+        };
+      }
+
       const interval = firstActivePrice.recurring_interval || 'month';
       return {
         price: formatPrice(firstActivePrice.price_amount, firstActivePrice.price_currency),
-        period: interval === 'year' ? '/year' : '/month'
+        period: interval === 'year' ? '/year' : '/month',
+        priceId: firstActivePrice.id
       };
     }
 
     // All prices archived
-    return { price: 'Unavailable', period: '' };
+    return { price: 'Unavailable', period: '', priceId: null };
   };
 
   const plans = [
@@ -403,7 +420,7 @@ export default function PricingPage() {
                   </div>
 
                   <button
-                    onClick={() => handlePlanClick(plan.name, plan.productId, plan.planType)}
+                    onClick={() => handlePlanClick(plan.name, plan.productId, plan.planType, plan.priceId)}
                     disabled={isLoading || (plan.planType !== 'free' && productsLoading)}
                     className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${plan.popular
                       ? 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50'
