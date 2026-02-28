@@ -149,7 +149,7 @@ func (ps *PolarService) GetCustomer(customerID string) (*PolarCustomer, error) {
 }
 
 // CreateCheckoutSession creates a new checkout session
-func (ps *PolarService) CreateCheckoutSession(productID string, productPriceID *string, customerEmail string, successURL string, metadata map[string]interface{}) (*PolarCheckoutSession, error) {
+func (ps *PolarService) CreateCheckoutSession(productID string, productPriceID *string, discountID *string, customerEmail string, successURL string, metadata map[string]interface{}) (*PolarCheckoutSession, error) {
 	var endpoint string
 	var payload map[string]interface{}
 
@@ -169,6 +169,10 @@ func (ps *PolarService) CreateCheckoutSession(productID string, productPriceID *
 			"customer_email": customerEmail,
 			"success_url":    successURL,
 		}
+	}
+
+	if discountID != nil && *discountID != "" {
+		payload["discount_id"] = *discountID
 	}
 
 	if metadata != nil {

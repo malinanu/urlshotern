@@ -58,10 +58,10 @@ interface RealTimeAnalyticsProps {
   className?: string;
 }
 
-export default function RealTimeAnalytics({ 
-  shortCode, 
+export default function RealTimeAnalytics({
+  shortCode,
   refreshInterval = 30000, // 30 seconds default
-  className = '' 
+  className = ''
 }: RealTimeAnalyticsProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,13 +117,13 @@ export default function RealTimeAnalytics({
     if (num == null || isNaN(num)) {
       return '0';
     }
-    
+
     // Ensure we have a valid number
     const validNum = Number(num);
     if (isNaN(validNum)) {
       return '0';
     }
-    
+
     if (validNum >= 1000000) {
       return (validNum / 1000000).toFixed(1) + 'M';
     }
@@ -162,15 +162,15 @@ export default function RealTimeAnalytics({
 
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
         <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-4 bg-muted rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+              <div key={i} className="h-20 bg-muted rounded"></div>
             ))}
           </div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -178,17 +178,17 @@ export default function RealTimeAnalytics({
 
   if (error) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
         <div className="text-center py-8">
-          <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">{error}</p>
+          <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">{error}</p>
           <button
             onClick={() => {
               setError(null);
               setIsLoading(true);
               fetchAnalytics();
             }}
-            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Retry
           </button>
@@ -199,28 +199,28 @@ export default function RealTimeAnalytics({
 
   if (!analytics) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
         <div className="text-center py-8">
-          <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No analytics data available</p>
+          <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No analytics data available</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <ArrowTrendingUpIcon className="h-6 w-6 text-primary-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Real-time Analytics</h2>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Real-time Analytics</h2>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-500 border border-green-500/20">
             Live
           </span>
         </div>
         {lastUpdated && (
-          <div className="flex items-center gap-1 text-sm text-gray-500">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <ClockIcon className="h-4 w-4" />
             Updated {lastUpdated.toLocaleTimeString()}
           </div>
@@ -229,32 +229,32 @@ export default function RealTimeAnalytics({
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
+        <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
           <div className="flex items-center gap-3">
-            <EyeIcon className="h-8 w-8 text-blue-600" />
+            <EyeIcon className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-sm font-medium text-blue-800">Total Clicks</p>
-              <p className="text-2xl font-bold text-blue-900">{formatNumber(analytics?.total_clicks)}</p>
+              <p className="text-sm font-medium text-primary">Total Clicks</p>
+              <p className="text-2xl font-bold text-foreground">{formatNumber(analytics?.total_clicks)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
+        <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
           <div className="flex items-center gap-3">
-            <ClockIcon className="h-8 w-8 text-green-600" />
+            <ClockIcon className="h-8 w-8 text-green-600 dark:text-green-500" />
             <div>
-              <p className="text-sm font-medium text-green-800">Today</p>
-              <p className="text-2xl font-bold text-green-900">{formatNumber(analytics?.today_clicks)}</p>
+              <p className="text-sm font-medium text-green-600 dark:text-green-500">Today</p>
+              <p className="text-2xl font-bold text-foreground">{formatNumber(analytics?.today_clicks)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
+        <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-lg">
           <div className="flex items-center gap-3">
-            <CalendarDaysIcon className="h-8 w-8 text-purple-600" />
+            <CalendarDaysIcon className="h-8 w-8 text-purple-600 dark:text-purple-500" />
             <div>
-              <p className="text-sm font-medium text-purple-800">This Month</p>
-              <p className="text-2xl font-bold text-purple-900">{formatNumber(analytics?.month_clicks)}</p>
+              <p className="text-sm font-medium text-purple-600 dark:text-purple-500">This Month</p>
+              <p className="text-2xl font-bold text-foreground">{formatNumber(analytics?.month_clicks)}</p>
             </div>
           </div>
         </div>
@@ -263,30 +263,30 @@ export default function RealTimeAnalytics({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Clicks Chart */}
         {analytics?.daily_clicks && analytics.daily_clicks.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Clicks (Last 30 Days)</h3>
+          <div className="bg-muted/30 border border-border p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-foreground mb-4">Daily Clicks (Last 30 Days)</h3>
             <div className="space-y-2">
               {analytics.daily_clicks.slice(-7).map((day) => {
                 const maxClicks = Math.max(...analytics.daily_clicks.map(d => d?.clicks || 0), 1);
                 const dayClicks = day?.clicks || 0;
                 return (
                   <div key={day?.date || Math.random()} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
-                      {day?.date ? new Date(day.date).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
+                    <span className="text-sm text-muted-foreground">
+                      {day?.date ? new Date(day.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
                       }) : 'N/A'}
                     </span>
                     <div className="flex items-center gap-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                          style={{ 
-                            width: `${Math.max(5, (dayClicks / maxClicks) * 100)}%` 
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.max(5, (dayClicks / maxClicks) * 100)}%`
                           }}
                         ></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900 w-8 text-right">
+                      <span className="text-sm font-medium text-foreground w-8 text-right">
                         {dayClicks}
                       </span>
                     </div>
@@ -299,8 +299,8 @@ export default function RealTimeAnalytics({
 
         {/* Geographic Stats */}
         {analytics?.country_stats && analytics.country_stats.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-muted/30 border border-border p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
               <GlobeAltIcon className="h-5 w-5" />
               Top Countries
             </h3>
@@ -310,19 +310,19 @@ export default function RealTimeAnalytics({
                 const countryClicks = country?.clicks || 0;
                 return (
                   <div key={country?.country_code || Math.random()} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-muted-foreground">
                       {getCountryName(country?.country_code || 'Unknown')}
                     </span>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-1.5">
-                        <div 
+                      <div className="w-20 bg-muted rounded-full h-1.5">
+                        <div
                           className="bg-green-500 h-1.5 rounded-full"
-                          style={{ 
-                            width: `${Math.max(10, (countryClicks / topClicks) * 100)}%` 
+                          style={{
+                            width: `${Math.max(10, (countryClicks / topClicks) * 100)}%`
                           }}
                         ></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900 w-6 text-right">
+                      <span className="text-sm font-medium text-foreground w-6 text-right">
                         {countryClicks}
                       </span>
                     </div>
@@ -335,8 +335,8 @@ export default function RealTimeAnalytics({
 
         {/* Device Stats */}
         {analytics?.device_stats && analytics.device_stats.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-muted/30 border border-border p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
               <DevicePhoneMobileIcon className="h-5 w-5" />
               Device Types
             </h3>
@@ -349,24 +349,24 @@ export default function RealTimeAnalytics({
                   <div key={deviceName} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {deviceName.toLowerCase().includes('mobile') ? (
-                        <DevicePhoneMobileIcon className="h-4 w-4 text-gray-500" />
+                        <DevicePhoneMobileIcon className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ComputerDesktopIcon className="h-4 w-4 text-gray-500" />
+                        <ComputerDesktopIcon className="h-4 w-4 text-muted-foreground" />
                       )}
-                      <span className="text-sm text-gray-700 capitalize">
+                      <span className="text-sm text-muted-foreground capitalize">
                         {deviceName}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                        <div 
+                      <div className="w-16 bg-muted rounded-full h-1.5">
+                        <div
                           className="bg-purple-500 h-1.5 rounded-full"
-                          style={{ 
-                            width: `${Math.max(15, (deviceClicks / topDeviceClicks) * 100)}%` 
+                          style={{
+                            width: `${Math.max(15, (deviceClicks / topDeviceClicks) * 100)}%`
                           }}
                         ></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900 w-6 text-right">
+                      <span className="text-sm font-medium text-foreground w-6 text-right">
                         {deviceClicks}
                       </span>
                     </div>
@@ -379,8 +379,8 @@ export default function RealTimeAnalytics({
 
         {/* Browser Stats */}
         {analytics?.browser_stats && analytics.browser_stats.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Browsers</h3>
+          <div className="bg-muted/30 border border-border p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-foreground mb-4">Top Browsers</h3>
             <div className="space-y-3">
               {analytics.browser_stats.slice(0, 4).map((browser) => {
                 const topBrowserClicks = analytics.browser_stats[0]?.clicks || 1;
@@ -388,19 +388,19 @@ export default function RealTimeAnalytics({
                 const browserName = browser?.browser || 'Unknown';
                 return (
                   <div key={browserName} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-muted-foreground">
                       {browserName}
                     </span>
                     <div className="flex items-center gap-2">
-                      <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                        <div 
+                      <div className="w-16 bg-muted rounded-full h-1.5">
+                        <div
                           className="bg-orange-500 h-1.5 rounded-full"
-                          style={{ 
-                            width: `${Math.max(15, (browserClicks / topBrowserClicks) * 100)}%` 
+                          style={{
+                            width: `${Math.max(15, (browserClicks / topBrowserClicks) * 100)}%`
                           }}
                         ></div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900 w-6 text-right">
+                      <span className="text-sm font-medium text-foreground w-6 text-right">
                         {browserClicks}
                       </span>
                     </div>
@@ -414,7 +414,7 @@ export default function RealTimeAnalytics({
 
       {/* Refresh Indicator */}
       <div className="mt-6 text-center">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           Auto-refreshes every {refreshInterval / 1000} seconds
         </p>
       </div>

@@ -38,6 +38,7 @@ type Handler struct {
 	AttributionHandlers    *AttributionHandler
 	CMSHandlers            *CMSHandlers
 	AdminRBACHandlers      *AdminRBACHandlers  // RBAC user and role management
+	AdminCouponHandlers    *AdminCouponHandlers
 	ContactHandlers        *ContactHandlers
 }
 
@@ -75,6 +76,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 		CMSHandlers:            cmsHandlers,
 		AdminRBACHandlers:      adminRBACHandlers,
+		AdminCouponHandlers:    NewAdminCouponHandlers(gormDB),
 		ContactHandlers:        NewContactHandlers(authHandlers.GetEmailService()),
 	}
 }

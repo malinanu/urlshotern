@@ -42,14 +42,14 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-card border-b border-border shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <LinkIcon className="h-8 w-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">
+              <LinkIcon className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold text-foreground">
                 Trunc
               </span>
             </Link>
@@ -61,7 +61,7 @@ export default function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
+                className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium transition-colors"
               >
                 {item.name}
               </Link>
@@ -72,61 +72,61 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
             {isLoading ? (
-              <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
             ) : isAuthenticated && user ? (
               <div className="relative" ref={profileMenuRef}>
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium rounded-lg hover:bg-muted transition-colors"
                 >
                   <UserCircleIcon className="h-5 w-5" />
                   <span>{user.name}</span>
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
-                
+
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
-                    <div className="px-4 py-2 text-xs text-gray-500 border-b">
+                  <div className="absolute right-0 mt-2 w-48 bg-card rounded-md shadow-lg py-1 z-50 border border-border">
+                    <div className="px-4 py-2 text-xs text-muted-foreground border-b border-border">
                       {user.email}
                     </div>
                     <Link
                       href="/dashboard"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       Dashboard
                     </Link>
                     <Link
                       href="/analytics"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       Analytics
                     </Link>
                     <Link
                       href="/bulk"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       Bulk Operations
                     </Link>
                     <Link
                       href="/api-keys"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       API Keys
                     </Link>
                     <Link
                       href="/settings"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       Settings
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
                     >
                       Sign out
                     </button>
@@ -137,13 +137,13 @@ export default function Header() {
               <>
                 <Link
                   href="/login"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+                  className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/register"
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
                 >
                   Get Started
                 </Link>
@@ -156,7 +156,7 @@ export default function Header() {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-muted-foreground hover:text-foreground"
             >
               {isMenuOpen ? (
                 <XMarkIcon className="h-6 w-6" />
@@ -169,59 +169,59 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <div className="flex flex-col space-y-2">
+          <div className="md:hidden py-4 border-t border-border">
+            <div className="flex flex-col space-y-2 bg-card">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+                  className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
                 </Link>
               ))}
-              <div className="border-t border-gray-200 pt-2 mt-2">
+              <div className="border-t border-border pt-2 mt-2">
                 <div className="px-3 py-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Theme</span>
+                  <span className="text-sm font-medium text-foreground">Theme</span>
                   <ThemeToggle />
                 </div>
                 {isAuthenticated && user ? (
                   <>
-                    <div className="px-3 py-2 text-xs text-gray-500">
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
                       {user.name} ({user.email})
                     </div>
                     <Link
                       href="/dashboard"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Dashboard
                     </Link>
                     <Link
                       href="/analytics"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Analytics
                     </Link>
                     <Link
                       href="/bulk"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Bulk Operations
                     </Link>
                     <Link
                       href="/api-keys"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       API Keys
                     </Link>
                     <Link
                       href="/settings"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Settings
@@ -231,7 +231,7 @@ export default function Header() {
                         setIsMenuOpen(false);
                         handleLogout();
                       }}
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block w-full text-left"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block w-full text-left"
                     >
                       Sign out
                     </button>
@@ -240,14 +240,14 @@ export default function Header() {
                   <>
                     <Link
                       href="/login"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium block"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Sign in
                     </Link>
                     <Link
                       href="/register"
-                      className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors block text-center mx-3 mt-2"
+                      className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors block text-center mx-3 mt-2"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Get Started

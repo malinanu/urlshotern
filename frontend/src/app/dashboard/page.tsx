@@ -103,7 +103,7 @@ export default function DashboardPage() {
 
       // Fetch user's URLs from backend
       const urlsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/my-urls`);
-      
+
       if (urlsResponse && urlsResponse.ok) {
         const urlsData = await urlsResponse.json();
         setUrls(urlsData.urls || []);
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
       // Fetch dashboard stats from backend
       const statsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/dashboard/stats`);
-      
+
       if (statsResponse && statsResponse.ok) {
         const statsData = await statsResponse.json();
         setStats(statsData);
@@ -146,7 +146,7 @@ export default function DashboardPage() {
   const handleUrlCreated = async (newUrl: any) => {
     // Add the new URL to the existing list immediately for instant feedback
     setUrls(prevUrls => [newUrl, ...prevUrls]);
-    
+
     // Update stats optimistically
     if (stats) {
       setStats(prevStats => prevStats ? {
@@ -155,7 +155,7 @@ export default function DashboardPage() {
         active_urls: prevStats.active_urls + 1,
       } : null);
     }
-    
+
     // Refresh all data from server to ensure accuracy
     // This happens in the background without disrupting the UI
     setTimeout(async () => {
@@ -205,7 +205,7 @@ export default function DashboardPage() {
       if (response.ok) {
         // Remove the URL from the local state
         setUrls(urls.filter(url => url.short_code !== shortCode));
-        
+
         // Update stats
         if (stats) {
           setStats({
@@ -240,14 +240,14 @@ export default function DashboardPage() {
 
       if (response.ok) {
         const updatedUrl = await response.json();
-        
+
         // Update the URL in the local state
-        setUrls(urls.map(url => 
-          url.short_code === shortCode 
-            ? { ...url, ...updatedUrl } 
+        setUrls(urls.map(url =>
+          url.short_code === shortCode
+            ? { ...url, ...updatedUrl }
             : url
         ));
-        
+
         setEditingUrl(null);
       } else {
         console.error('Failed to update URL:', response.status);
@@ -262,8 +262,8 @@ export default function DashboardPage() {
   if (isLoading || !isAuthenticated) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -271,12 +271,12 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-background py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-black">Dashboard</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="mt-2 text-muted-foreground">
               Welcome back, {user?.name}! Manage your shortened URLs and view analytics.
             </p>
           </div>
@@ -285,40 +285,40 @@ export default function DashboardPage() {
           {loadingStats ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white p-6 rounded-lg shadow-sm border animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-16"></div>
+                <div key={i} className="bg-card p-6 rounded-lg shadow-sm border border-border animate-pulse">
+                  <div className="h-4 bg-muted rounded w-24 mb-2"></div>
+                  <div className="h-8 bg-muted rounded w-16"></div>
                 </div>
               ))}
             </div>
           ) : stats && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                 <div className="flex items-center">
-                  <LinkIcon className="h-8 w-8 text-primary-600" />
+                  <LinkIcon className="h-8 w-8 text-primary" />
                   <div className="ml-4">
-                    <p className="text-sm text-gray-600">Total URLs</p>
-                    <p className="text-2xl font-bold text-black">{stats.total_urls}</p>
+                    <p className="text-sm text-muted-foreground">Total URLs</p>
+                    <p className="text-2xl font-bold text-foreground">{stats.total_urls}</p>
                   </div>
                 </div>
               </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+
+              <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                 <div className="flex items-center">
-                  <ChartBarIcon className="h-8 w-8 text-green-600" />
+                  <ChartBarIcon className="h-8 w-8 text-primary" />
                   <div className="ml-4">
-                    <p className="text-sm text-gray-600">Total Clicks</p>
-                    <p className="text-2xl font-bold text-black">{stats.total_clicks}</p>
+                    <p className="text-sm text-muted-foreground">Total Clicks</p>
+                    <p className="text-2xl font-bold text-foreground">{stats.total_clicks}</p>
                   </div>
                 </div>
               </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
+
+              <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                 <div className="flex items-center">
-                  <GlobeAltIcon className="h-8 w-8 text-blue-600" />
+                  <GlobeAltIcon className="h-8 w-8 text-primary" />
                   <div className="ml-4">
-                    <p className="text-sm text-gray-600">Active URLs</p>
-                    <p className="text-2xl font-bold text-black">{stats.active_urls}</p>
+                    <p className="text-sm text-muted-foreground">Active URLs</p>
+                    <p className="text-2xl font-bold text-foreground">{stats.active_urls}</p>
                   </div>
                 </div>
               </div>
@@ -327,67 +327,67 @@ export default function DashboardPage() {
 
           {/* Trunc */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-black mb-4">Create New Short URL</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-4">Create New Short URL</h2>
             <URLShortener onUrlCreated={handleUrlCreated} />
           </div>
 
           {/* URLs List */}
-          <div className="bg-white rounded-lg shadow-sm border">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-xl font-semibold text-black">Your URLs</h2>
+          <div className="bg-card rounded-lg shadow-sm border border-border">
+            <div className="px-6 py-4 border-b border-border">
+              <h2 className="text-xl font-semibold text-foreground">Your URLs</h2>
             </div>
-            
+
             {loadingUrls ? (
               <div className="p-6">
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-4 bg-muted rounded w-full mb-2"></div>
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : urls.length === 0 ? (
               <div className="p-6 text-center">
-                <LinkIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-4 text-lg font-medium text-black">No URLs yet</h3>
-                <p className="mt-2 text-gray-600">
+                <LinkIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-medium text-foreground">No URLs yet</h3>
+                <p className="mt-2 text-muted-foreground">
                   Create your first short URL using the form above.
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-muted">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Original URL
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Short URL
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Clicks
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Created
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {urls.map((url) => (
-                      <tr key={url.id} className="hover:bg-gray-50">
+                      <tr key={url.id} className="hover:bg-muted/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="max-w-xs truncate">
                             <a
                               href={url.original_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary-600 hover:text-primary-800 text-sm"
+                              className="text-primary hover:text-primary/80 text-sm"
                             >
                               {url.original_url}
                             </a>
@@ -395,16 +395,16 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm text-black font-mono">
+                            <span className="text-sm text-foreground font-mono">
                               {url.short_url}
                             </span>
                             <button
                               onClick={() => copyToClipboard(url.short_url, url.id)}
                               aria-label={copiedId === url.id ? "Copied" : "Copy short URL"}
-                              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
                             >
                               {copiedId === url.id ? (
-                                <CheckIcon className="h-4 w-4 text-green-600" />
+                                <CheckIcon className="h-4 w-4 text-green-500" />
                               ) : (
                                 <ClipboardDocumentIcon className="h-4 w-4" />
                               )}
@@ -413,28 +413,28 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-1">
-                            <EyeIcon className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-black">{url.click_count}</span>
+                            <EyeIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-foreground">{url.click_count}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-1">
-                            <CalendarIcon className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{formatDate(url.created_at)}</span>
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">{formatDate(url.created_at)}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
-                            <button 
+                            <button
                               onClick={() => router.push(`/analytics?shortCode=${url.short_code}`)}
-                              className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                              className="text-primary hover:text-primary/80 text-sm font-medium"
                             >
                               Analytics
                             </button>
                             <button
                               onClick={() => setQrModalUrl(url)}
                               aria-label="Show QR code"
-                              className="p-1 text-purple-600 hover:text-purple-800 transition-colors"
+                              className="p-1 text-primary hover:text-primary/80 transition-colors"
                               title="Show QR Code"
                             >
                               <QrCodeIcon className="h-4 w-4" />
@@ -442,7 +442,7 @@ export default function DashboardPage() {
                             <button
                               onClick={() => setEditingUrl(url)}
                               aria-label="Edit URL"
-                              className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                              className="p-1 text-primary hover:text-primary/80 transition-colors"
                               title="Edit URL"
                             >
                               <PencilIcon className="h-4 w-4" />
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                                 }
                               }}
                               aria-label="Delete URL"
-                              className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                              className="p-1 text-destructive hover:text-destructive/80 transition-colors"
                               title="Delete URL"
                             >
                               <TrashIcon className="h-4 w-4" />
@@ -473,9 +473,9 @@ export default function DashboardPage() {
 
       {/* Edit URL Modal */}
       {editingUrl && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Edit URL</h3>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Edit URL</h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -490,55 +490,55 @@ export default function DashboardPage() {
             >
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Title (optional)
                   </label>
                   <input
                     type="text"
                     name="title"
                     defaultValue={editingUrl.title || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter a title for your URL"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Description (optional)
                   </label>
                   <textarea
                     name="description"
                     defaultValue={editingUrl.description || ''}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter a description for your URL"
                   />
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     name="is_public"
                     defaultChecked={editingUrl.is_public}
-                    className="mr-2"
+                    className="mr-2 border-input text-primary bg-background focus:ring-primary"
                   />
-                  <label className="text-sm text-gray-700">
+                  <label className="text-sm text-foreground">
                     Make this URL publicly visible
                   </label>
                 </div>
               </div>
-              
+
               <div className="flex space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setEditingUrl(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-input text-foreground rounded-md hover:bg-muted"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                 >
                   Update
                 </button>

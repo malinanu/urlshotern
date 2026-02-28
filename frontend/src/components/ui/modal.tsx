@@ -64,22 +64,22 @@ export function Modal({
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div
         className={cn(
-          'relative z-10 w-full mx-4 bg-white rounded-lg shadow-xl',
+          'relative z-10 w-full mx-4 bg-card rounded-lg shadow-xl text-foreground',
           modalSizes[size],
           className
         )}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <div className="flex items-center justify-between p-6 border-b border-border">
+            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>

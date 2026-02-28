@@ -37,7 +37,7 @@ const fallbackContactMethods = [
     description: 'Get detailed help via email',
     contact: 'hello@urlshorter.com',
     responseTime: 'Within 24 hours',
-    color: 'text-primary-600'
+    color: 'text-primary'
   },
   {
     icon: 'ChatBubbleLeftRightIcon',
@@ -156,7 +156,7 @@ export default function ContactPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
         </div>
       </Layout>
     );
@@ -228,12 +228,12 @@ export default function ContactPage() {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary-50 via-white to-primary-50/30 py-20 lg:py-28">
-        <div className="absolute inset-0 bg-grid-gray-100 opacity-30" />
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 py-20 lg:py-28">
+        <div className="absolute inset-0 bg-grid-gray-100 opacity-30 dark:opacity-5" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-8">
             <div className="space-y-4">
-              <Badge variant="secondary" className="text-primary-700 bg-primary-100 hover:bg-primary-200 transition-colors">
+              <Badge variant="secondary" className="text-primary bg-primary/10 hover:bg-primary/20 transition-colors">
                 {hero.badge_icon && iconMap[hero.badge_icon] && (
                   (() => {
                     const IconComponent = iconMap[hero.badge_icon];
@@ -242,13 +242,13 @@ export default function ContactPage() {
                 )}
                 {hero.badge}
               </Badge>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-gray-900">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground">
                 {hero.title.replace(hero.title_highlight, '')}{' '}
-                <span className="text-primary-600 bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+                <span className="text-primary bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                   {hero.title_highlight}
                 </span>
               </h1>
-              <p className="text-xl sm:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              <p className="text-xl sm:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
                 {hero.tagline}
               </p>
             </div>
@@ -257,16 +257,16 @@ export default function ContactPage() {
       </section>
 
       {/* Contact Methods Section */}
-      <section className="py-20 lg:py-28 bg-white">
+      <section className="py-20 lg:py-28 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <Badge variant="outline" className="text-primary-600 border-primary-200">
+            <Badge variant="outline" className="text-primary border-primary/20">
               {contactMethodsBlock.badge}
             </Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
               {contactMethodsBlock.heading}
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               {contactMethodsBlock.tagline}
             </p>
           </div>
@@ -275,32 +275,32 @@ export default function ContactPage() {
             {(contactMethods || []).map((method, index) => (
               <Card
                 key={index}
-                className="relative group hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-white text-center"
+                className="relative group hover:shadow-xl transition-all duration-300 border-border shadow-sm bg-card text-center"
               >
                 <CardHeader className="space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <method.icon className={`h-8 w-8 ${method.color}`} />
                   </div>
                   <div className="space-y-2">
-                    <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                    <CardTitle className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                       {method.title}
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-muted-foreground">
                       {method.description}
                     </CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <div className="font-medium text-gray-900">{method.contact}</div>
-                    <Badge variant="secondary" className="text-xs bg-primary-100 text-primary-700">
+                    <div className="font-medium text-foreground">{method.contact}</div>
+                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
                       {method.responseTime}
                     </Badge>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full border-primary-200 text-primary-700 hover:bg-primary-50"
+                    className="w-full border-primary/20 text-primary hover:bg-primary/10"
                   >
                     <method.icon className="h-4 w-4 mr-2" />
                     Connect Now
@@ -313,39 +313,39 @@ export default function ContactPage() {
       </section>
 
       {/* Contact Form Section */}
-      <section className="py-20 lg:py-28 bg-gray-50">
+      <section className="py-20 lg:py-28 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <Badge variant="outline" className="text-primary-600 border-primary-200">
+            <Badge variant="outline" className="text-primary border-primary/20">
               {contactFormBlock.badge}
             </Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
               {contactFormBlock.heading}
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               {contactFormBlock.tagline}
             </p>
           </div>
 
           <div className="max-w-2xl mx-auto">
-            <Card className="bg-white border-0 shadow-xl">
+            <Card className="bg-card border-border shadow-md">
               <CardHeader>
-                <CardTitle className="text-2xl text-center">{contactFormBlock.form_title}</CardTitle>
-                <CardDescription className="text-center">
+                <CardTitle className="text-2xl text-center text-foreground">{contactFormBlock.form_title}</CardTitle>
+                <CardDescription className="text-center text-muted-foreground">
                   {contactFormBlock.form_description}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {formStatus === 'sent' && (
-                    <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
+                    <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600 dark:text-green-500">
                       <CheckCircleIcon className="h-5 w-5" />
                       <span>Message sent successfully! We'll get back to you soon.</span>
                     </div>
                   )}
 
                   {formStatus === 'error' && (
-                    <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                    <div className="flex items-center gap-2 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
                       <ExclamationCircleIcon className="h-5 w-5" />
                       <span>Failed to send message. Please try again.</span>
                     </div>
@@ -353,7 +353,7 @@ export default function ContactPage() {
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label htmlFor="name" className="text-sm font-semibold text-gray-900">
+                      <label htmlFor="name" className="text-sm font-semibold text-foreground">
                         Name *
                       </label>
                       <Input
@@ -363,15 +363,15 @@ export default function ContactPage() {
                         onChange={handleInputChange}
                         placeholder="Your full name"
                         disabled={formStatus === 'sending'}
-                        className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.name ? 'border-red-500' : ''}`}
+                        className={`border-input focus:border-primary focus:ring-primary ${formErrors.name ? 'border-destructive' : ''}`}
                       />
                       {formErrors.name && (
-                        <p className="text-xs text-red-600">{formErrors.name}</p>
+                        <p className="text-xs text-destructive">{formErrors.name}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <label htmlFor="email" className="text-sm font-semibold text-gray-900">
+                      <label htmlFor="email" className="text-sm font-semibold text-foreground">
                         Email *
                       </label>
                       <Input
@@ -382,7 +382,7 @@ export default function ContactPage() {
                         onChange={handleInputChange}
                         placeholder="your@email.com"
                         disabled={formStatus === 'sending'}
-                        className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.email ? 'border-red-500' : ''}`}
+                        className={`border-input focus:border-primary focus:ring-primary ${formErrors.email ? 'border-destructive' : ''}`}
                       />
                       {formErrors.email && (
                         <p className="text-xs text-red-600">{formErrors.email}</p>
@@ -391,7 +391,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="company" className="text-sm font-semibold text-gray-900">
+                    <label htmlFor="company" className="text-sm font-semibold text-foreground">
                       Company
                     </label>
                     <Input
@@ -401,13 +401,13 @@ export default function ContactPage() {
                       onChange={handleInputChange}
                       placeholder="Your company name (optional)"
                       disabled={formStatus === 'sending'}
-                      className="border-gray-200 focus:border-primary-600 focus:ring-primary-600"
+                      className="border-input focus:border-primary focus:ring-primary"
                     />
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label htmlFor="inquiryType" className="text-sm font-semibold text-gray-900">
+                      <label htmlFor="inquiryType" className="text-sm font-semibold text-foreground">
                         Inquiry Type
                       </label>
                       <select
@@ -416,7 +416,7 @@ export default function ContactPage() {
                         value={formData.inquiryType}
                         onChange={handleInputChange}
                         disabled={formStatus === 'sending'}
-                        className="w-full px-3 py-2 border border-gray-200 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
+                        className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                       >
                         {inquiryTypes.map(type => (
                           <option key={type.value} value={type.value}>
@@ -427,7 +427,7 @@ export default function ContactPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label htmlFor="priority" className="text-sm font-semibold text-gray-900">
+                      <label htmlFor="priority" className="text-sm font-semibold text-foreground">
                         Priority
                       </label>
                       <select
@@ -436,7 +436,7 @@ export default function ContactPage() {
                         value={formData.priority}
                         onChange={handleInputChange}
                         disabled={formStatus === 'sending'}
-                        className="w-full px-3 py-2 border border-gray-200 bg-white rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
+                        className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                       >
                         {priorityLevels.map(level => (
                           <option key={level.value} value={level.value}>
@@ -448,7 +448,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="subject" className="text-sm font-semibold text-gray-900">
+                    <label htmlFor="subject" className="text-sm font-semibold text-foreground">
                       Subject *
                     </label>
                     <Input
@@ -458,15 +458,15 @@ export default function ContactPage() {
                       onChange={handleInputChange}
                       placeholder="Brief description of your inquiry"
                       disabled={formStatus === 'sending'}
-                      className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.subject ? 'border-red-500' : ''}`}
+                      className={`border-input focus:border-primary focus:ring-primary ${formErrors.subject ? 'border-destructive' : ''}`}
                     />
                     {formErrors.subject && (
-                      <p className="text-xs text-red-600">{formErrors.subject}</p>
+                      <p className="text-xs text-destructive">{formErrors.subject}</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="message" className="text-sm font-semibold text-gray-900">
+                    <label htmlFor="message" className="text-sm font-semibold text-foreground">
                       Message *
                     </label>
                     <Textarea
@@ -477,10 +477,10 @@ export default function ContactPage() {
                       onChange={handleInputChange}
                       placeholder="Please provide details about your inquiry..."
                       disabled={formStatus === 'sending'}
-                      className={`border-gray-200 focus:border-primary-600 focus:ring-primary-600 ${formErrors.message ? 'border-red-500' : ''}`}
+                      className={`border-input focus:border-primary focus:ring-primary ${formErrors.message ? 'border-destructive' : ''}`}
                     />
                     {formErrors.message && (
-                      <p className="text-xs text-red-600">{formErrors.message}</p>
+                      <p className="text-xs text-destructive">{formErrors.message}</p>
                     )}
                   </div>
 
@@ -488,7 +488,7 @@ export default function ContactPage() {
                     type="submit"
                     disabled={formStatus === 'sending'}
                     size="lg"
-                    className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-6"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6"
                   >
                     {formStatus === 'sending' ? (
                       <>
@@ -510,13 +510,13 @@ export default function ContactPage() {
       </section>
 
       {/* Support Resources Section */}
-      <section className="py-20 lg:py-28 bg-white">
+      <section className="py-20 lg:py-28 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
-            <Badge variant="outline" className="text-primary-600 border-primary-200">
+            <Badge variant="outline" className="text-primary border-primary/20">
               {supportResourcesBlock.badge}
             </Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
               {supportResourcesBlock.heading}
             </h2>
           </div>
@@ -524,21 +524,21 @@ export default function ContactPage() {
           <div className="flex justify-center">
             {(supportResources || []).map((resource: any, index: number) => (
               <div key={index} className="max-w-md">
-                <Card className="bg-gradient-to-br from-primary-50 to-white border-primary-100">
+                <Card className="bg-gradient-to-br from-primary/5 to-background border-primary/10">
                   <CardHeader className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center">
-                      <resource.icon className="h-8 w-8 text-primary-600" />
+                    <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center">
+                      <resource.icon className="h-8 w-8 text-primary" />
                     </div>
                     <div className="space-y-2">
-                      <CardTitle className="text-xl font-bold text-gray-900">{resource.title}</CardTitle>
-                      <CardDescription>{resource.description}</CardDescription>
+                      <CardTitle className="text-xl font-bold text-foreground">{resource.title}</CardTitle>
+                      <CardDescription className="text-muted-foreground">{resource.description}</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <Button
                       variant="outline"
                       size="lg"
-                      className="w-full border-primary-200 text-primary-700 hover:bg-primary-50"
+                      className="w-full border-primary/20 text-primary hover:bg-primary/10"
                       asChild
                     >
                       <a href={resource.cta.url}>{resource.cta.text}</a>
@@ -553,21 +553,21 @@ export default function ContactPage() {
 
 
       {/* CTA Section */}
-      <section className="relative py-20 lg:py-28 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-600/20 to-primary-800/20" />
+      <section className="relative py-20 lg:py-28 bg-primary overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent" />
         <div className="absolute top-0 right-0 -mt-40 -mr-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 -mb-40 -ml-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="space-y-8">
             <div className="space-y-4">
-              <Badge className="bg-white/20 text-white hover:bg-white/30 border-0">
+              <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30 border-0">
                 {ctaBottom.badge}
               </Badge>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-foreground">
                 {ctaBottom.heading}
               </h2>
-              <p className="text-xl text-primary-100 max-w-3xl mx-auto leading-relaxed">
+              <p className="text-xl text-primary-foreground/80 max-w-3xl mx-auto leading-relaxed">
                 {ctaBottom.tagline}
               </p>
             </div>
@@ -575,7 +575,7 @@ export default function ContactPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
               <Button
                 size="lg"
-                className="bg-white text-primary-700 hover:bg-gray-50 hover:text-primary-800 font-semibold px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
+                className="bg-background text-primary hover:bg-muted font-semibold px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
                 asChild
               >
                 <a href={ctaBottom.cta_primary.url}>{ctaBottom.cta_primary.text}</a>
@@ -583,7 +583,7 @@ export default function ContactPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/50 font-semibold px-8 py-6 text-lg backdrop-blur-sm transition-all duration-300"
+                className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground/50 font-semibold px-8 py-6 text-lg backdrop-blur-sm transition-all duration-300"
                 asChild
               >
                 <a href={ctaBottom.cta_secondary.url}>{ctaBottom.cta_secondary.text}</a>

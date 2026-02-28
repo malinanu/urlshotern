@@ -301,6 +301,19 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	}
 
 	// ============================================================================
+	// Admin Coupons (NEW)
+	// ============================================================================
+	if handler.AdminCouponHandlers != nil {
+		coupons := admin.Group("/coupons")
+		{
+			coupons.GET("", handler.AdminCouponHandlers.ListCoupons)
+			coupons.POST("", handler.AdminCouponHandlers.CreateCoupon)
+			coupons.DELETE("/:id", handler.AdminCouponHandlers.DeleteCoupon)
+			coupons.PUT("/:id/toggle", handler.AdminCouponHandlers.ToggleCoupon)
+		}
+	}
+
+	// ============================================================================
 	// CMS Routes (UPDATED with permission-based middleware)
 	// ============================================================================
 	cms := admin.Group("/cms")
@@ -445,6 +458,9 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	billing.GET("/subscription", handler.BillingHandlers.GetSubscription)
 	billing.GET("/plans", handler.BillingHandlers.GetPlans)
 	billing.GET("/usage", handler.BillingHandlers.GetUsage)
+	
+	// Discount Validation
+	billing.GET("/coupons/validate", handler.BillingHandlers.ValidateCouponHandler)
 	
 	// Checkout and payment
 	billing.POST("/checkout", handler.BillingHandlers.CreateCheckoutSession)

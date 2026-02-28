@@ -24,6 +24,7 @@ import {
   MagnifyingGlassIcon,
   CubeIcon,
   PlusIcon,
+  TicketIcon,
 } from '@heroicons/react/24/outline';
 import CMSManager from '@/components/cms/CMSManager';
 import APIKeyManager from '@/components/api-keys/APIKeyManager';
@@ -161,7 +162,7 @@ export default function AdminPage() {
 
       if (response.ok) {
         // Update local state
-        setUsers(users.map(user => 
+        setUsers(users.map(user =>
           user.id === userId ? { ...user, is_active: !isActive } : user
         ));
       }
@@ -208,10 +209,10 @@ export default function AdminPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'healthy': return 'text-green-600 bg-green-100';
-      case 'warning': return 'text-yellow-600 bg-yellow-100';
-      case 'error': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'healthy': return 'text-green-600 dark:text-green-500 bg-green-500/10';
+      case 'warning': return 'text-amber-600 dark:text-amber-500 bg-amber-500/10';
+      case 'error': return 'text-destructive bg-destructive/10';
+      default: return 'text-muted-foreground bg-secondary';
     }
   };
 
@@ -227,8 +228,8 @@ export default function AdminPage() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="min-h-[80vh] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -245,28 +246,29 @@ export default function AdminPage() {
     { id: 'builder', name: 'Page Builder', icon: CubeIcon },
     { id: 'seo', name: 'SEO Tools', icon: MagnifyingGlassIcon },
     { id: 'api-keys', name: 'API Keys', icon: KeyIcon },
+    { id: 'coupons', name: 'Coupons', icon: TicketIcon },
     { id: 'activity', name: 'Activity', icon: ClockIcon },
     { id: 'system', name: 'System', icon: ServerIcon },
   ];
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-[80vh] bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <ShieldCheckIcon className="h-8 w-8 text-red-600" />
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <ShieldCheckIcon className="h-8 w-8 text-destructive" />
+              <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
             </div>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Manage system users, monitor activity, and view system statistics.
             </p>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-            <div className="border-b border-gray-200">
+          <div className="bg-card rounded-lg shadow-sm border border-border mb-6">
+            <div className="border-b border-border">
               <nav className="flex space-x-8 px-6" aria-label="Tabs">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -274,11 +276,10 @@ export default function AdminPage() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                        activeTab === tab.id
-                          ? 'border-primary-500 text-primary-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
+                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                        }`}
                     >
                       <Icon className="h-5 w-5" />
                       <span>{tab.name}</span>
@@ -297,41 +298,41 @@ export default function AdminPage() {
                 <StatsSkeleton />
               ) : stats && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                     <div className="flex items-center">
-                      <UserGroupIcon className="h-8 w-8 text-blue-600" />
+                      <UserGroupIcon className="h-8 w-8 text-blue-600 dark:text-blue-500" />
                       <div className="ml-4">
-                        <p className="text-sm text-gray-600">Total Users</p>
-                        <p className="text-2xl font-bold text-black">{stats.total_users}</p>
+                        <p className="text-sm text-muted-foreground">Total Users</p>
+                        <p className="text-2xl font-bold text-foreground">{stats.total_users}</p>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+
+                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                     <div className="flex items-center">
-                      <LinkIcon className="h-8 w-8 text-green-600" />
+                      <LinkIcon className="h-8 w-8 text-green-600 dark:text-green-500" />
                       <div className="ml-4">
-                        <p className="text-sm text-gray-600">Total URLs</p>
-                        <p className="text-2xl font-bold text-black">{stats.total_urls}</p>
+                        <p className="text-sm text-muted-foreground">Total URLs</p>
+                        <p className="text-2xl font-bold text-foreground">{stats.total_urls}</p>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+
+                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                     <div className="flex items-center">
-                      <ChartBarIcon className="h-8 w-8 text-purple-600" />
+                      <ChartBarIcon className="h-8 w-8 text-purple-600 dark:text-purple-500" />
                       <div className="ml-4">
-                        <p className="text-sm text-gray-600">Total Clicks</p>
-                        <p className="text-2xl font-bold text-black">{stats.total_clicks}</p>
+                        <p className="text-sm text-muted-foreground">Total Clicks</p>
+                        <p className="text-2xl font-bold text-foreground">{stats.total_clicks}</p>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+
+                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
                     <div className="flex items-center">
-                      <ServerIcon className="h-8 w-8 text-orange-600" />
+                      <ServerIcon className="h-8 w-8 text-amber-600 dark:text-amber-500" />
                       <div className="ml-4">
-                        <p className="text-sm text-gray-600">System Status</p>
+                        <p className="text-sm text-muted-foreground">System Status</p>
                         <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(stats.system_status)}`}>
                           {stats.system_status}
                         </div>
@@ -343,20 +344,20 @@ export default function AdminPage() {
 
               {/* Quick Stats */}
               {stats && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Today's Activity</h3>
+                <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                  <h3 className="text-lg font-medium text-foreground mb-4">Today's Activity</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">{stats.daily_signups}</p>
-                      <p className="text-sm text-gray-600">New Signups</p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-500">{stats.daily_signups}</p>
+                      <p className="text-sm text-muted-foreground">New Signups</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">{stats.daily_urls_created}</p>
-                      <p className="text-sm text-gray-600">URLs Created</p>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-500">{stats.daily_urls_created}</p>
+                      <p className="text-sm text-muted-foreground">URLs Created</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-orange-600">{stats.active_users}</p>
-                      <p className="text-sm text-gray-600">Active Users</p>
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-500">{stats.active_users}</p>
+                      <p className="text-sm text-muted-foreground">Active Users</p>
                     </div>
                   </div>
                 </div>
@@ -365,18 +366,18 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'users' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-black">User Management</h2>
+            <div className="bg-card rounded-lg shadow-sm border border-border">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-foreground">User Management</h2>
                 <button
                   onClick={() => setShowCreateUserModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                 >
                   <PlusIcon className="h-5 w-5" />
                   <span>Add User</span>
                 </button>
               </div>
-              
+
               {loadingUsers ? (
                 <div className="p-6">
                   <UserTableSkeleton />
@@ -384,48 +385,47 @@ export default function AdminPage() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-muted">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           User
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Account
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Roles
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           URLs/Clicks
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Last Login
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {users.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
+                        <tr key={user.id} className="hover:bg-muted">
                           <td className="px-6 py-4">
                             <div>
-                              <div className="text-sm font-medium text-black">{user.name}</div>
-                              <div className="text-sm text-gray-600">{user.email}</div>
+                              <div className="text-sm font-medium text-foreground">{user.name}</div>
+                              <div className="text-sm text-muted-foreground">{user.email}</div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center space-x-2">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.is_active ? 'bg-green-500/10 text-green-600 dark:text-green-500' : 'bg-destructive/10 text-destructive'
+                                }`}>
                                 {user.is_active ? 'Active' : 'Inactive'}
                               </span>
                               {user.is_email_verified && (
-                                <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                                <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-500" />
                               )}
-                              <span className="text-xs text-gray-500 capitalize">{user.account_type}</span>
+                              <span className="text-xs text-muted-foreground capitalize">{user.account_type}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -436,18 +436,18 @@ export default function AdminPage() {
                                 setSelectedUserName(user.name);
                                 setShowRolesModal(true);
                               }}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                              className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
                             >
                               View Roles
                             </button>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-black">
+                            <div className="text-sm text-foreground">
                               {user.urls_count} URLs, {user.total_clicks} clicks
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-muted-foreground">
                               {user.last_login_at ? formatDate(user.last_login_at) : 'Never'}
                             </div>
                           </td>
@@ -461,7 +461,7 @@ export default function AdminPage() {
                                   setShowRolesModal(true);
                                 }}
                                 aria-label="Manage user roles"
-                                className="p-1 text-green-600 hover:text-green-800 transition-colors"
+                                className="p-1 text-primary hover:text-primary/80 transition-colors"
                                 title="Manage roles"
                               >
                                 <ShieldCheckIcon className="h-4 w-4" />
@@ -469,11 +469,10 @@ export default function AdminPage() {
                               <button
                                 onClick={() => toggleUserStatus(user.id, user.is_active)}
                                 aria-label={user.is_active ? 'Deactivate user' : 'Activate user'}
-                                className={`p-1 rounded transition-colors ${
-                                  user.is_active
-                                    ? 'text-red-600 hover:text-red-800'
-                                    : 'text-green-600 hover:text-green-800'
-                                }`}
+                                className={`p-1 rounded transition-colors ${user.is_active
+                                  ? 'text-destructive hover:text-destructive/80'
+                                  : 'text-green-600 dark:text-green-500 hover:text-green-700 dark:hover:text-green-400'
+                                  }`}
                                 title={user.is_active ? 'Deactivate user' : 'Activate user'}
                               >
                                 {user.is_active ? (
@@ -485,7 +484,7 @@ export default function AdminPage() {
                               <button
                                 onClick={() => deleteUser(user.id)}
                                 aria-label="Delete user"
-                                className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                                className="p-1 text-destructive hover:text-destructive/80 transition-colors"
                                 title="Delete user"
                               >
                                 <TrashIcon className="h-4 w-4" />
@@ -502,11 +501,11 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'activity' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b">
-                <h2 className="text-xl font-semibold text-black">Recent Activity</h2>
+            <div className="bg-card rounded-lg shadow-sm border border-border">
+              <div className="px-6 py-4 border-b border-border">
+                <h2 className="text-xl font-semibold text-foreground">Recent Activity</h2>
               </div>
-              
+
               {loadingActivity ? (
                 <div className="p-6">
                   <ActivitySkeleton />
@@ -515,21 +514,21 @@ export default function AdminPage() {
                 <div className="p-6">
                   <div className="space-y-4">
                     {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-shrink-0 p-1 bg-white rounded-full">
+                      <div key={activity.id} className="flex items-start space-x-3 p-3 bg-muted rounded-lg">
+                        <div className="flex-shrink-0 p-1 bg-card rounded-full">
                           {getActivityIcon(activity.activity_type)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-black">
+                          <p className="text-sm text-foreground">
                             <span className="font-medium">{activity.user_name}</span>{' '}
                             {activity.description}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               {formatDate(activity.created_at)}
                             </p>
                             {activity.ip_address && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-muted-foreground/50">
                                 IP: {activity.ip_address}
                               </span>
                             )}
@@ -559,42 +558,55 @@ export default function AdminPage() {
             <APIKeyManager />
           )}
 
+          {activeTab === 'coupons' && (
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6 flex flex-col items-center justify-center min-h-[300px]">
+              <TicketIcon className="w-16 h-16 text-muted-foreground/30 mb-4" />
+              <h2 className="text-xl font-semibold mb-2 text-foreground">Discount Coupons</h2>
+              <p className="text-muted-foreground text-center mb-6 max-w-md">Manage promotional discount codes like free-passes or automated billing integrations.</p>
+              <button
+                onClick={() => router.push('/admin/coupons')}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium transition-colors"
+              >
+                Go to Coupons Manager
+              </button>
+            </div>
+          )}
+
           {activeTab === 'system' && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-black mb-4">System Information</h2>
-              
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">System Information</h2>
+
               {stats && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <h3 className="text-md font-medium text-black mb-3">System Status</h3>
+                      <h3 className="text-md font-medium text-foreground mb-3">System Status</h3>
                       <div className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Overall Status</span>
-                          <span className={`text-sm font-medium capitalize ${
-                            stats.system_status === 'healthy' ? 'text-green-600' :
-                            stats.system_status === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
+                          <span className="text-sm text-muted-foreground">Overall Status</span>
+                          <span className={`text-sm font-medium capitalize ${stats.system_status === 'healthy' ? 'text-green-600 dark:text-green-500' :
+                            stats.system_status === 'warning' ? 'text-amber-600 dark:text-amber-500' : 'text-destructive'
+                            }`}>
                             {stats.system_status}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Storage Used</span>
-                          <span className="text-sm font-medium text-black">{stats.storage_used}</span>
+                          <span className="text-sm text-muted-foreground">Storage Used</span>
+                          <span className="text-sm font-medium text-foreground">{stats.storage_used}</span>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <h3 className="text-md font-medium text-black mb-3">Quick Actions</h3>
+                      <h3 className="text-md font-medium text-foreground mb-3">Quick Actions</h3>
                       <div className="space-y-2">
-                        <button className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                        <button className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-primary/5 rounded border border-transparent hover:border-primary/20 transition-colors">
                           Clear System Cache
                         </button>
-                        <button className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 rounded">
+                        <button className="w-full text-left px-3 py-2 text-sm text-green-600 dark:text-green-500 hover:bg-green-500/5 rounded border border-transparent hover:border-green-500/20 transition-colors">
                           Export System Logs
                         </button>
-                        <button className="w-full text-left px-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded">
+                        <button className="w-full text-left px-3 py-2 text-sm text-amber-600 dark:text-amber-500 hover:bg-amber-500/5 rounded border border-transparent hover:border-amber-500/20 transition-colors">
                           Run System Diagnostics
                         </button>
                       </div>

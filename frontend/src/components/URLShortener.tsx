@@ -57,7 +57,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       // Include Authorization header if user is authenticated
       if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -80,18 +80,18 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
           const headersWithoutAuth: Record<string, string> = {
             'Content-Type': 'application/json',
           };
-          
+
           const retryResponse = await fetch(API_ENDPOINTS.urls.shorten, {
             method: 'POST',
             headers: headersWithoutAuth,
             body: JSON.stringify(data),
           });
-          
+
           if (!retryResponse.ok) {
             const errorData = await retryResponse.json();
             throw new Error(errorData.message || 'Failed to shorten URL');
           }
-          
+
           return retryResponse.json();
         }
       }
@@ -110,10 +110,10 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
     try {
       const result = await attemptRequest();
       setShortenedURL(result);
-      
+
       // Trigger callback to refresh dashboard if provided
       onUrlCreated?.(result);
-      
+
       reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -137,12 +137,12 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
   return (
     <div className="max-w-2xl mx-auto">
       {/* URL Shortening Form */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label
               htmlFor="url"
-              className="block text-sm font-medium text-black mb-2"
+              className="block text-sm font-medium text-foreground mb-2"
             >
               Enter your long URL
             </label>
@@ -154,10 +154,10 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                   id="url"
                   placeholder="https://example.com/very-long-url"
                   className={clsx(
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-black placeholder-gray-500',
+                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-background text-foreground placeholder-muted-foreground',
                     errors.url
-                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                      : 'border-gray-300'
+                      ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                      : 'border-input hover:border-border'
                   )}
                 />
                 {errors.url && (
@@ -167,7 +167,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isLoading ? 'Shortening...' : 'Shorten URL'}
               </button>
@@ -177,8 +177,8 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
 
         {/* Error Display */}
         {error && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
@@ -198,12 +198,12 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                     type="text"
                     value={shortenedURL.short_url}
                     readOnly
-                    className="flex-1 px-3 py-2 text-sm bg-white border border-green-300 rounded focus:ring-2 focus:ring-green-500 text-black"
+                    className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded focus:ring-2 focus:ring-primary text-foreground"
                   />
                   <button
                     onClick={copyToClipboard}
                     aria-label={copied ? "Copied to clipboard" : "Copy short URL to clipboard"}
-                    className="flex items-center gap-1 px-3 py-2 text-sm text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary/80 hover:bg-primary/10 rounded transition-colors"
                   >
                     {copied ? (
                       <>
@@ -220,7 +220,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                   <button
                     onClick={() => setShowQRModal(true)}
                     aria-label="Show QR code for this short URL"
-                    className="flex items-center gap-1 px-3 py-2 text-sm text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm text-primary hover:text-primary/80 hover:bg-primary/10 rounded transition-colors"
                   >
                     <QrCodeIcon className="h-4 w-4" />
                     QR Code
@@ -231,7 +231,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                 <label className="block text-xs font-medium text-green-700 mb-1">
                   Original URL
                 </label>
-                <p className="text-sm text-black break-all">
+                <p className="text-sm text-foreground break-all">
                   {shortenedURL.original_url}
                 </p>
               </div>

@@ -41,8 +41,8 @@ export default function PricingPage() {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
         if (errorMessage.includes('fetch') ||
-            errorMessage.includes('network') ||
-            errorMessage.includes('Failed to fetch')) {
+          errorMessage.includes('network') ||
+          errorMessage.includes('Failed to fetch')) {
           // Network/CORS error
           setProductsFetchError({
             type: 'network',
@@ -304,16 +304,16 @@ export default function PricingPage() {
     <Layout>
       {/* Error Banner */}
       {productsFetchError && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-amber-600 dark:text-amber-500">
                   {productsFetchError.type === 'network' ? (
                     <>
                       <strong>Connection Issue:</strong> Unable to load pricing information.
@@ -333,15 +333,15 @@ export default function PricingPage() {
       )}
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-50 to-white py-20">
+      <section className="bg-gradient-to-br from-primary/10 to-background py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
               Simple, Transparent{' '}
-              <span className="text-primary-600">Pricing</span>
+              <span className="text-primary">Pricing</span>
             </h1>
-            <p className="text-xl text-black mb-12 max-w-3xl mx-auto">
-              Choose the perfect plan for your needs. All plans include our core features 
+            <p className="text-xl text-foreground mb-12 max-w-3xl mx-auto">
+              Choose the perfect plan for your needs. All plans include our core features
               with no hidden fees or surprise charges.
             </p>
           </div>
@@ -349,21 +349,20 @@ export default function PricingPage() {
       </section>
 
       {/* Pricing Cards */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-3 gap-8">
             {plans.map((plan) => (
-              <div 
-                key={plan.name} 
-                className={`relative bg-white rounded-2xl border-2 p-8 ${
-                  plan.popular 
-                    ? 'border-primary-600 shadow-xl transform scale-105' 
-                    : 'border-gray-200 shadow-lg'
-                }`}
+              <div
+                key={plan.name}
+                className={`relative bg-card rounded-2xl border-2 p-8 transition-transform ${plan.popular
+                  ? 'border-primary shadow-xl scale-105'
+                  : 'border-border shadow-md hover:border-primary/50'
+                  }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-primary-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-1">
+                    <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-1">
                       <StarIcon className="h-4 w-4" />
                       <span>Most Popular</span>
                     </div>
@@ -371,38 +370,37 @@ export default function PricingPage() {
                 )}
 
                 <div className="text-center">
-                  <h3 className="text-2xl font-bold text-black mb-2">{plan.name}</h3>
-                  <p className="text-gray-600 mb-6">{plan.description}</p>
-                  
+                  <h3 className="text-2xl font-bold text-foreground mb-2">{plan.name}</h3>
+                  <p className="text-muted-foreground mb-6">{plan.description}</p>
+
                   <div className="mb-6">
-                    <span className="text-5xl font-bold text-black">{plan.price}</span>
-                    <span className="text-xl text-gray-600">{plan.period}</span>
+                    <span className="text-5xl font-bold text-foreground">{plan.price}</span>
+                    <span className="text-xl text-muted-foreground">{plan.period}</span>
                   </div>
 
                   <button
                     onClick={() => handlePlanClick(plan.name, plan.productId, plan.planType)}
                     disabled={isLoading || (plan.planType !== 'free' && productsLoading)}
-                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
-                      plan.popular
-                        ? 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-primary-400'
-                        : 'bg-gray-100 text-black hover:bg-gray-200 disabled:bg-gray-300'
-                    } disabled:cursor-not-allowed`}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${plan.popular
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50'
+                      : 'bg-muted text-foreground hover:bg-muted/80 disabled:opacity-50'
+                      } disabled:cursor-not-allowed`}
                   >
                     {loadingPlan === plan.name ? 'Loading...' : productsLoading && plan.planType !== 'free' ? 'Loading products...' : plan.cta}
                   </button>
                 </div>
 
                 <div className="mt-8">
-                  <h4 className="font-semibold text-black mb-4">What's included:</h4>
+                  <h4 className="font-semibold text-foreground mb-4">What's included:</h4>
                   <ul className="space-y-3">
                     {plan.features.map((feature) => (
                       <li key={feature.name} className="flex items-center space-x-3">
                         {feature.included ? (
-                          <CheckIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+                          <CheckIcon className="h-5 w-5 text-primary flex-shrink-0" />
                         ) : (
-                          <XMarkIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                          <XMarkIcon className="h-5 w-5 text-muted-foreground opacity-50 flex-shrink-0" />
                         )}
-                        <span className={`text-sm ${feature.included ? 'text-black' : 'text-gray-400'}`}>
+                        <span className={`text-sm ${feature.included ? 'text-foreground' : 'text-muted-foreground opacity-50'}`}>
                           {feature.name}
                         </span>
                       </li>
@@ -416,52 +414,52 @@ export default function PricingPage() {
       </section>
 
       {/* Feature Comparison Table */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-black mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
               Compare Plans
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               See exactly what's included in each plan to make the right choice for your needs.
             </p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-black">Feature</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-black">Free</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-black">Pro</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-black">Ultra</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Feature</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Free</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Pro</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Ultra</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-border">
                   <tr>
-                    <td className="px-6 py-4 text-sm text-black">Short Links</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">10</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">1,000</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Unlimited</td>
+                    <td className="px-6 py-4 text-sm text-foreground">Short Links</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">10</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">1,000</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">Unlimited</td>
                   </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-black">Team Members</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">1</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">5</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Unlimited</td>
+                  <tr className="bg-muted/20">
+                    <td className="px-6 py-4 text-sm text-foreground">Team Members</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">1</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">5</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">Unlimited</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-sm text-black">API Access</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">-</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">✓</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Unlimited</td>
+                    <td className="px-6 py-4 text-sm text-foreground">API Access</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">-</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">✓</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">Unlimited</td>
                   </tr>
-                  <tr className="bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-black">Support</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Standard</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">Priority</td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600">24/7 Premium</td>
+                  <tr className="bg-muted/20">
+                    <td className="px-6 py-4 text-sm text-foreground">Support</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">Standard</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">Priority</td>
+                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">24/7 Premium</td>
                   </tr>
                 </tbody>
               </table>
@@ -471,24 +469,24 @@ export default function PricingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-background">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-black mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
               Frequently Asked Questions
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-muted-foreground">
               Get answers to common questions about our pricing and plans.
             </p>
           </div>
 
           <div className="space-y-8">
             {faqs.map((faq, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-black mb-3">
+              <div key={index} className="bg-muted/30 rounded-lg p-6 border border-border">
+                <h3 className="text-lg font-semibold text-foreground mb-3">
                   {faq.question}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed">
                   {faq.answer}
                 </p>
               </div>
@@ -498,24 +496,24 @@ export default function PricingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 bg-primary-600">
+      <section className="py-20 bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className="text-3xl font-bold text-primary-foreground mb-4">
             Ready to Get Started?
           </h2>
-          <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
             Join thousands of users who trust Trunc for their link management needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="/"
-              className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              className="bg-background text-primary px-8 py-3 rounded-lg font-semibold hover:bg-muted transition-colors"
             >
               Start Free Trial
             </a>
             <a
               href="/contact"
-              className="border border-primary-400 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+              className="border border-primary-foreground/30 text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-primary/80 transition-colors"
             >
               Contact Sales
             </a>

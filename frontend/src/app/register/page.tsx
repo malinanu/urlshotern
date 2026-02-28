@@ -70,7 +70,7 @@ export default function RegisterPage() {
 
   const getPasswordStrength = (pass: string) => {
     if (!pass) return { strength: 0, text: '', color: '' };
-    
+
     let strength = 0;
     if (pass.length >= 8) strength++;
     if (/[A-Z]/.test(pass)) strength++;
@@ -105,7 +105,7 @@ export default function RegisterPage() {
       };
 
       const result = await registerUser(registrationData);
-      
+
       // Check if we got immediate auth tokens or need verification
       if (result.access_token) {
         // User was automatically logged in, redirect to home
@@ -122,27 +122,27 @@ export default function RegisterPage() {
   if (success) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
-            <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 text-center">
-              <CheckCircleIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-black mb-4">
+            <div className="bg-card py-8 px-4 border border-border sm:rounded-lg sm:px-10 text-center">
+              <CheckCircleIcon className="h-16 w-16 text-green-600 dark:text-green-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-foreground mb-4">
                 Registration Successful!
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 Thank you for registering! We've sent a confirmation email to your inbox.
                 Please check your email and click the verification link to activate your account.
               </p>
               <div className="space-y-3">
                 <Link
                   href="/login"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Go to Login
                 </Link>
                 <Link
                   href="/"
-                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="w-full flex justify-center py-2 px-4 border border-border rounded-md shadow-sm text-sm font-medium text-foreground bg-card hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Back to Home
                 </Link>
@@ -156,22 +156,22 @@ export default function RegisterPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
             <div className="flex items-center space-x-2">
-              <LinkIcon className="h-10 w-10 text-primary-600" />
-              <span className="text-2xl font-bold text-black">Trunc</span>
+              <LinkIcon className="h-10 w-10 text-primary" />
+              <span className="text-2xl font-bold text-foreground">Trunc</span>
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-black">
+          <h2 className="mt-6 text-center text-3xl font-bold text-foreground">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link
               href="/login"
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-primary hover:text-primary/80"
             >
               Sign in here
             </Link>
@@ -179,11 +179,11 @@ export default function RegisterPage() {
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <div className="bg-card py-8 px-4 border border-border sm:rounded-lg sm:px-10">
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               {/* Name Field */}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-black">
+                <label htmlFor="name" className="block text-sm font-medium text-foreground">
                   Full name
                 </label>
                 <div className="mt-1">
@@ -193,22 +193,22 @@ export default function RegisterPage() {
                     type="text"
                     autoComplete="name"
                     className={clsx(
-                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black',
+                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
                       errors.name
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                        : 'border-border'
                     )}
                     placeholder="John Doe"
                   />
                   {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>
                   )}
                 </div>
               </div>
 
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-black">
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
                   Email address
                 </label>
                 <div className="mt-1">
@@ -218,22 +218,22 @@ export default function RegisterPage() {
                     type="email"
                     autoComplete="email"
                     className={clsx(
-                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black',
+                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
                       errors.email
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                        : 'border-border'
                     )}
                     placeholder="john.doe@example.com"
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>
                   )}
                 </div>
               </div>
 
               {/* Phone Field */}
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-black">
+                <label htmlFor="phone" className="block text-sm font-medium text-foreground">
                   Phone number
                 </label>
                 <div className="mt-1">
@@ -243,22 +243,22 @@ export default function RegisterPage() {
                     type="tel"
                     autoComplete="tel"
                     className={clsx(
-                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black',
+                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
                       errors.phone
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                        : 'border-border'
                     )}
                     placeholder="+1 (555) 123-4567"
                   />
                   {errors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.phone.message}</p>
                   )}
                 </div>
               </div>
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-black">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <div className="mt-1 relative">
@@ -268,10 +268,10 @@ export default function RegisterPage() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     className={clsx(
-                      'w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black',
+                      'w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
                       errors.password
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                        : 'border-border'
                     )}
                     placeholder="Create a strong password"
                   />
@@ -281,39 +281,38 @@ export default function RegisterPage() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                     ) : (
-                      <EyeIcon className="h-5 w-5 text-gray-400" />
+                      <EyeIcon className="h-5 w-5 text-muted-foreground" />
                     )}
                   </button>
                 </div>
-                
+
                 {/* Password Strength Indicator */}
                 {password && (
                   <div className="mt-2">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs text-gray-600">Password strength:</span>
+                      <span className="text-xs text-muted-foreground">Password strength:</span>
                       <span className={`text-xs ${passwordStrength.color}`}>
                         {passwordStrength.text}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1">
+                    <div className="w-full bg-muted rounded-full h-1">
                       <div
-                        className={`h-1 rounded-full transition-all duration-300 ${
-                          passwordStrength.strength === 0 ? 'bg-gray-200' :
-                          passwordStrength.strength === 1 ? 'bg-red-500 w-1/5' :
-                          passwordStrength.strength === 2 ? 'bg-red-400 w-2/5' :
-                          passwordStrength.strength === 3 ? 'bg-yellow-500 w-3/5' :
-                          passwordStrength.strength === 4 ? 'bg-blue-500 w-4/5' :
-                          'bg-green-600 w-full'
-                        }`}
+                        className={`h-1 rounded-full transition-all duration-300 ${passwordStrength.strength === 0 ? 'bg-muted' :
+                            passwordStrength.strength === 1 ? 'bg-destructive w-1/5' :
+                              passwordStrength.strength === 2 ? 'bg-destructive/80 w-2/5' :
+                                passwordStrength.strength === 3 ? 'bg-yellow-500 w-3/5' :
+                                  passwordStrength.strength === 4 ? 'bg-primary w-4/5' :
+                                    'bg-green-600 dark:bg-green-500 w-full'
+                          }`}
                       />
                     </div>
                   </div>
                 )}
-                
+
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
                 )}
               </div>
 

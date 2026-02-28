@@ -22,7 +22,7 @@ export default function APIKeysPage() {
     return (
       <Layout>
         <div className="flex justify-center items-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -38,25 +38,25 @@ export default function APIKeysPage() {
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <KeyIcon className="h-8 w-8 text-primary-600" />
-            <h1 className="text-3xl font-bold text-gray-900">API Keys</h1>
+            <KeyIcon className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold text-foreground">API Keys</h1>
           </div>
-          <p className="text-gray-600 mt-2">
+          <p className="text-muted-foreground mt-2">
             Create and manage API keys to integrate Trunc URL shortener into your applications.
             Use these keys to programmatically shorten URLs, track analytics, and more.
           </p>
         </div>
 
         {/* Integration Guide */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-semibold text-primary mb-2">
             How to use API Keys
           </h3>
-          <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+          <ol className="text-sm text-foreground/80 space-y-1 list-decimal list-inside">
             <li>Click "Create New API Key" below to generate a new key</li>
             <li>Copy the key (it will only be shown once!)</li>
-            <li>Use it in your application's Authorization header: <code className="bg-blue-100 px-1 rounded">Bearer YOUR_API_KEY</code></li>
-            <li>Check our <a href="/api-docs" className="underline font-medium">API Documentation</a> for integration examples</li>
+            <li>Use it in your application's Authorization header: <code className="bg-primary/20 px-1 rounded text-primary">Bearer YOUR_API_KEY</code></li>
+            <li>Check our <a href="/api-docs" className="underline font-medium hover:text-primary transition-colors">API Documentation</a> for integration examples</li>
           </ol>
         </div>
 

@@ -324,7 +324,7 @@ export default function SettingsPage() {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -340,34 +340,34 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-background py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-black">Settings</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+            <p className="mt-2 text-muted-foreground">
               Manage your account settings and preferences.
             </p>
           </div>
 
           {/* Success/Error Messages */}
           {updateSuccess && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
-              <CheckCircleIcon className="h-5 w-5 text-green-600" />
-              <span className="text-green-700">{updateSuccess}</span>
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center space-x-2">
+              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-500" />
+              <span className="text-green-700 dark:text-green-400">{updateSuccess}</span>
             </div>
           )}
 
           {updateError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
-              <span className="text-red-700">{updateError}</span>
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center space-x-2">
+              <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
+              <span className="text-destructive font-medium">{updateError}</span>
             </div>
           )}
 
-          <div className="bg-white shadow rounded-lg">
+          <div className="bg-card shadow-sm border border-border rounded-lg">
             {/* Tab Navigation */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-border">
               <nav className="flex space-x-8 px-6" aria-label="Tabs">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -394,45 +394,45 @@ export default function SettingsPage() {
             <div className="p-6">
               {activeTab === 'profile' && (
                 <div>
-                  <h2 className="text-lg font-medium text-black mb-4">Profile Information</h2>
+                  <h2 className="text-lg font-medium text-foreground mb-4">Profile Information</h2>
                   <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-black">
+                        <label htmlFor="name" className="block text-sm font-medium text-foreground">
                           Full Name
                         </label>
                         <input
                           {...profileForm.register('name')}
                           type="text"
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         {profileForm.formState.errors.name && (
-                          <p className="mt-1 text-sm text-red-600">{profileForm.formState.errors.name.message}</p>
+                          <p className="mt-1 text-sm text-destructive">{profileForm.formState.errors.name.message}</p>
                         )}
                       </div>
 
                       <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-black">
+                        <label htmlFor="email" className="block text-sm font-medium text-foreground">
                           Email Address
                         </label>
                         <input
                           {...profileForm.register('email')}
                           type="email"
                           disabled
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                          className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm bg-muted text-muted-foreground cursor-not-allowed"
                         />
-                        <p className="mt-1 text-sm text-gray-500">Email address cannot be changed</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Email address cannot be changed</p>
                       </div>
                     </div>
 
                     <div>
-                      <label htmlFor="phone" className="block text-sm font-medium text-black">
+                      <label htmlFor="phone" className="block text-sm font-medium text-foreground">
                         Phone Number (Optional)
                       </label>
                       <input
                         {...profileForm.register('phone')}
                         type="tel"
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                        className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         placeholder="+1 (555) 123-4567"
                       />
                     </div>
@@ -441,7 +441,7 @@ export default function SettingsPage() {
                       <button
                         type="submit"
                         disabled={isUpdating}
-                        className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isUpdating ? 'Updating...' : 'Update Profile'}
                       </button>
@@ -452,17 +452,17 @@ export default function SettingsPage() {
 
               {activeTab === 'password' && (
                 <div>
-                  <h2 className="text-lg font-medium text-black mb-4">Change Password</h2>
+                  <h2 className="text-lg font-medium text-foreground mb-4">Change Password</h2>
                   <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
                     <div>
-                      <label htmlFor="currentPassword" className="block text-sm font-medium text-black">
+                      <label htmlFor="currentPassword" className="block text-sm font-medium text-foreground">
                         Current Password
                       </label>
                       <div className="mt-1 relative">
                         <input
                           {...passwordForm.register('currentPassword')}
                           type={showCurrentPassword ? 'text' : 'password'}
-                          className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          className="block w-full px-3 py-2 pr-10 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         <button
                           type="button"
@@ -470,26 +470,26 @@ export default function SettingsPage() {
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                         >
                           {showCurrentPassword ? (
-                            <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                            <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <EyeIcon className="h-5 w-5 text-gray-400" />
+                            <EyeIcon className="h-5 w-5 text-muted-foreground" />
                           )}
                         </button>
                       </div>
                       {passwordForm.formState.errors.currentPassword && (
-                        <p className="mt-1 text-sm text-red-600">{passwordForm.formState.errors.currentPassword.message}</p>
+                        <p className="mt-1 text-sm text-destructive">{passwordForm.formState.errors.currentPassword.message}</p>
                       )}
                     </div>
 
                     <div>
-                      <label htmlFor="newPassword" className="block text-sm font-medium text-black">
+                      <label htmlFor="newPassword" className="block text-sm font-medium text-foreground">
                         New Password
                       </label>
                       <div className="mt-1 relative">
                         <input
                           {...passwordForm.register('newPassword')}
                           type={showNewPassword ? 'text' : 'password'}
-                          className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          className="block w-full px-3 py-2 pr-10 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         <button
                           type="button"
@@ -497,26 +497,26 @@ export default function SettingsPage() {
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
                           {showNewPassword ? (
-                            <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                            <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <EyeIcon className="h-5 w-5 text-gray-400" />
+                            <EyeIcon className="h-5 w-5 text-muted-foreground" />
                           )}
                         </button>
                       </div>
                       {passwordForm.formState.errors.newPassword && (
-                        <p className="mt-1 text-sm text-red-600">{passwordForm.formState.errors.newPassword.message}</p>
+                        <p className="mt-1 text-sm text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
                       )}
                     </div>
 
                     <div>
-                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-black">
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
                         Confirm New Password
                       </label>
                       <div className="mt-1 relative">
                         <input
                           {...passwordForm.register('confirmPassword')}
                           type={showConfirmPassword ? 'text' : 'password'}
-                          className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          className="block w-full px-3 py-2 pr-10 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         <button
                           type="button"
@@ -524,14 +524,14 @@ export default function SettingsPage() {
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
-                            <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                            <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <EyeIcon className="h-5 w-5 text-gray-400" />
+                            <EyeIcon className="h-5 w-5 text-muted-foreground" />
                           )}
                         </button>
                       </div>
                       {passwordForm.formState.errors.confirmPassword && (
-                        <p className="mt-1 text-sm text-red-600">{passwordForm.formState.errors.confirmPassword.message}</p>
+                        <p className="mt-1 text-sm text-destructive">{passwordForm.formState.errors.confirmPassword.message}</p>
                       )}
                     </div>
 
@@ -539,7 +539,7 @@ export default function SettingsPage() {
                       <button
                         type="submit"
                         disabled={isUpdating}
-                        className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isUpdating ? 'Changing...' : 'Change Password'}
                       </button>
@@ -550,16 +550,16 @@ export default function SettingsPage() {
 
               {activeTab === 'preferences' && (
                 <div>
-                  <h2 className="text-lg font-medium text-black mb-4">Preferences</h2>
+                  <h2 className="text-lg font-medium text-foreground mb-4">Preferences</h2>
                   <form onSubmit={preferencesForm.handleSubmit(onPreferencesSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       <div>
-                        <label htmlFor="defaultExpiration" className="block text-sm font-medium text-black">
+                        <label htmlFor="defaultExpiration" className="block text-sm font-medium text-foreground">
                           Default URL Expiration
                         </label>
                         <select
                           {...preferencesForm.register('defaultExpiration')}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         >
                           <option value="">Never expire</option>
                           <option value="1">1 day</option>
@@ -571,12 +571,12 @@ export default function SettingsPage() {
                       </div>
 
                       <div>
-                        <label htmlFor="timezone" className="block text-sm font-medium text-black">
+                        <label htmlFor="timezone" className="block text-sm font-medium text-foreground">
                           Timezone
                         </label>
                         <select
                           {...preferencesForm.register('timezone')}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                          className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         >
                           <option value="UTC">UTC</option>
                           <option value="America/New_York">Eastern Time</option>
@@ -591,12 +591,12 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label htmlFor="theme" className="block text-sm font-medium text-black">
+                      <label htmlFor="theme" className="block text-sm font-medium text-foreground">
                         Theme
                       </label>
                       <select
                         {...preferencesForm.register('theme')}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-black"
+                        className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                       >
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
@@ -605,47 +605,47 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="text-md font-medium text-black">Notifications</h3>
-                      
+                      <h3 className="text-md font-medium text-foreground">Notifications</h3>
+
                       <div className="flex items-center justify-between">
                         <div>
-                          <label htmlFor="emailNotifications" className="text-sm font-medium text-black">
+                          <label htmlFor="emailNotifications" className="text-sm font-medium text-foreground">
                             Email Notifications
                           </label>
-                          <p className="text-sm text-gray-600">Receive important updates about your account</p>
+                          <p className="text-sm text-muted-foreground">Receive important updates about your account</p>
                         </div>
                         <input
                           {...preferencesForm.register('emailNotifications')}
                           type="checkbox"
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
                         />
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <label htmlFor="marketingEmails" className="text-sm font-medium text-black">
+                          <label htmlFor="marketingEmails" className="text-sm font-medium text-foreground">
                             Marketing Emails
                           </label>
-                          <p className="text-sm text-gray-600">Receive product updates and promotional content</p>
+                          <p className="text-sm text-muted-foreground">Receive product updates and promotional content</p>
                         </div>
                         <input
                           {...preferencesForm.register('marketingEmails')}
                           type="checkbox"
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
                         />
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <label htmlFor="analyticsPublic" className="text-sm font-medium text-black">
+                          <label htmlFor="analyticsPublic" className="text-sm font-medium text-foreground">
                             Public Analytics
                           </label>
-                          <p className="text-sm text-gray-600">Allow others to view click statistics for your URLs</p>
+                          <p className="text-sm text-muted-foreground">Allow others to view click statistics for your URLs</p>
                         </div>
                         <input
                           {...preferencesForm.register('analyticsPublic')}
                           type="checkbox"
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
                         />
                       </div>
                     </div>
@@ -665,13 +665,13 @@ export default function SettingsPage() {
 
               {activeTab === 'security' && (
                 <div>
-                  <h2 className="text-lg font-medium text-black mb-4">Security & Privacy</h2>
+                  <h2 className="text-lg font-medium text-foreground mb-4">Security & Privacy</h2>
                   <div className="space-y-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="text-md font-medium text-black mb-2">Account Status</h3>
+                    <div className="bg-muted p-4 rounded-lg">
+                      <h3 className="text-md font-medium text-foreground mb-2">Account Status</h3>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Email Verified</span>
+                          <span className="text-sm text-muted-foreground">Email Verified</span>
                           <div className="flex items-center space-x-1">
                             {user?.email_verified ? (
                               <>
@@ -687,7 +687,7 @@ export default function SettingsPage() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Phone Verified</span>
+                          <span className="text-sm text-muted-foreground">Phone Verified</span>
                           <div className="flex items-center space-x-1">
                             {user?.phone_verified ? (
                               <>
@@ -703,35 +703,35 @@ export default function SettingsPage() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Account Type</span>
-                          <span className="text-sm text-black font-medium capitalize">{user?.account_type}</span>
+                          <span className="text-sm text-muted-foreground">Account Type</span>
+                          <span className="text-sm text-foreground font-medium capitalize">{user?.account_type}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <h3 className="text-md font-medium text-black">Security Actions</h3>
-                      
+                      <h3 className="text-md font-medium text-foreground">Security Actions</h3>
+
                       {!user?.email_verified && (
-                        <button className="w-full text-left p-4 border border-yellow-200 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
+                        <button className="w-full text-left p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg hover:bg-yellow-500/20 transition-colors">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="text-sm font-medium text-yellow-800">Verify Email Address</h4>
-                              <p className="text-sm text-yellow-600">Complete email verification to secure your account</p>
+                              <h4 className="text-sm font-medium dark:text-yellow-500 text-yellow-600">Verify Email Address</h4>
+                              <p className="text-sm dark:text-yellow-500/80 text-yellow-600/80">Complete email verification to secure your account</p>
                             </div>
-                            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600" />
+                            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
                           </div>
                         </button>
                       )}
 
                       {user?.phone && !user?.phone_verified && (
-                        <button className="w-full text-left p-4 border border-yellow-200 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
+                        <button className="w-full text-left p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg hover:bg-yellow-500/20 transition-colors">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="text-sm font-medium text-yellow-800">Verify Phone Number</h4>
-                              <p className="text-sm text-yellow-600">Add extra security with phone verification</p>
+                              <h4 className="text-sm font-medium dark:text-yellow-500 text-yellow-600">Verify Phone Number</h4>
+                              <p className="text-sm dark:text-yellow-500/80 text-yellow-600/80">Add extra security with phone verification</p>
                             </div>
-                            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600" />
+                            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
                           </div>
                         </button>
                       )}
@@ -742,14 +742,14 @@ export default function SettingsPage() {
 
               {activeTab === 'danger' && (
                 <div>
-                  <h2 className="text-lg font-medium text-red-600 mb-4">Danger Zone</h2>
+                  <h2 className="text-lg font-medium text-destructive mb-4">Danger Zone</h2>
                   <div className="space-y-4">
-                    <div className="border border-red-200 bg-red-50 p-4 rounded-lg">
-                      <h3 className="text-md font-medium text-red-800 mb-2">Delete Account</h3>
-                      <p className="text-sm text-red-600 mb-4">
+                    <div className="border border-destructive/20 bg-destructive/5 p-4 rounded-lg">
+                      <h3 className="text-md font-medium text-destructive mb-2">Delete Account</h3>
+                      <p className="text-sm text-destructive/80 mb-4">
                         Permanently delete your account and all associated data. This action cannot be undone.
                       </p>
-                      <div className="space-y-2 text-sm text-red-600">
+                      <div className="space-y-2 text-sm text-destructive/80">
                         <p>• All your shortened URLs will be deleted</p>
                         <p>• All analytics data will be permanently removed</p>
                         <p>• Your account cannot be recovered</p>
@@ -757,7 +757,7 @@ export default function SettingsPage() {
                       <button
                         onClick={handleDeleteAccount}
                         disabled={isUpdating}
-                        className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                        className="mt-4 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-destructive disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                       >
                         <TrashIcon className="h-4 w-4" />
                         <span>{isUpdating ? 'Deleting...' : 'Delete Account'}</span>

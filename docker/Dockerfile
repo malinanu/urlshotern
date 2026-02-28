@@ -33,6 +33,9 @@ COPY --from=builder /app/url-shortener .
 
 # Copy configuration files if needed
 COPY --from=builder /app/configs ./configs
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/docker/entrypoint-prod.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh ./scripts/run-migrations.sh
 
 # Change ownership to appuser
 RUN chown -R appuser:appuser /home/appuser
@@ -48,4 +51,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Run the binary
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["./url-shortener"]

@@ -55,7 +55,7 @@ function AnalyticsContent() {
         if (response.ok) {
           const data = await response.json();
           setUserUrls(data.urls || []);
-          
+
           // If no shortCode selected and we have URLs, select the first one
           if (!selectedShortCode && data.urls && data.urls.length > 0) {
             setSelectedShortCode(data.urls[0].short_code);
@@ -72,8 +72,8 @@ function AnalyticsContent() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -85,34 +85,34 @@ function AnalyticsContent() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <ChartBarIcon className="h-8 w-8 text-primary-600" />
-              <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+              <ChartBarIcon className="h-8 w-8 text-primary" />
+              <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
             </div>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Monitor your URL performance with real-time analytics and insights.
             </p>
           </div>
 
           {/* URL Selection */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <label htmlFor="url-select" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
+            <label htmlFor="url-select" className="block text-sm font-medium text-foreground mb-2">
               Select URL to analyze
             </label>
             <select
               id="url-select"
               value={selectedShortCode}
               onChange={(e) => setSelectedShortCode(e.target.value)}
-              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full max-w-md px-3 py-2 border border-input rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background text-foreground"
             >
               <option value="">Select a URL...</option>
               {userUrls.map((url) => (
                 <option key={url.short_code} value={url.short_code}>
-                  {url.short_url} - {url.original_url.length > 50 
-                    ? url.original_url.substring(0, 50) + '...' 
+                  {url.short_url} - {url.original_url.length > 50
+                    ? url.original_url.substring(0, 50) + '...'
                     : url.original_url}
                 </option>
               ))}
@@ -121,16 +121,15 @@ function AnalyticsContent() {
 
           {/* Analytics Navigation */}
           {selectedShortCode && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-              <div className="border-b border-gray-200">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
+              <div className="border-b border-border">
                 <nav className="flex space-x-8">
                   <button
                     onClick={() => setActiveView('realtime')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeView === 'realtime'
-                        ? 'border-primary-500 text-primary-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${activeView === 'realtime'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <PresentationChartLineIcon className="h-4 w-4" />
@@ -139,11 +138,10 @@ function AnalyticsContent() {
                   </button>
                   <button
                     onClick={() => setActiveView('advanced')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeView === 'advanced'
-                        ? 'border-primary-500 text-primary-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${activeView === 'advanced'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <ChartPieIcon className="h-4 w-4" />
@@ -159,36 +157,36 @@ function AnalyticsContent() {
           {selectedShortCode ? (
             <>
               {activeView === 'realtime' && (
-                <RealTimeAnalytics 
-                  shortCode={selectedShortCode} 
+                <RealTimeAnalytics
+                  shortCode={selectedShortCode}
                   refreshInterval={30000} // 30 seconds
                 />
               )}
               {activeView === 'advanced' && (
-                <AdvancedAnalytics 
-                  shortCode={selectedShortCode} 
+                <AdvancedAnalytics
+                  shortCode={selectedShortCode}
                   days={30}
                 />
               )}
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-12">
               <div className="text-center">
-                <ChartBarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <ChartBarIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   Select a URL to View Analytics
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Choose one of your shortened URLs from the dropdown above to see detailed analytics.
                 </p>
                 {userUrls.length === 0 && (
                   <div className="mt-6">
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       You don't have any URLs yet. Create your first shortened URL to get started.
                     </p>
                     <button
                       onClick={() => router.push('/dashboard')}
-                      className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                     >
                       Go to Dashboard
                     </button>

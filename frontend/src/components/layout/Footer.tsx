@@ -24,16 +24,16 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-gray-900">
+    <footer className="bg-muted border-t border-border">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           {/* Logo and description */}
           <div className="xl:col-span-1">
             <Link href="/" className="flex items-center space-x-2">
-              <LinkIcon className="h-8 w-8 text-primary-400" />
-              <span className="text-xl font-bold text-white">Trunc</span>
+              <LinkIcon className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold text-foreground">Trunc</span>
             </Link>
-            <p className="mt-4 text-gray-400 text-sm max-w-md">
+            <p className="mt-4 text-muted-foreground text-sm max-w-md">
               The most reliable URL shortener with advanced analytics, custom
               domains, and enterprise-grade security. Shorten, track, and
               optimize your links.
@@ -44,7 +44,7 @@ export default function Footer() {
           <div className="mt-12 grid grid-cols-2 gap-8 xl:mt-0 xl:col-span-2">
             <div className="md:grid md:grid-cols-2 md:gap-8">
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+                <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase">
                   Product
                 </h3>
                 <ul className="mt-4 space-y-4">
@@ -52,7 +52,7 @@ export default function Footer() {
                     <li key={item.name}>
                       <Link
                         href={item.href}
-                        className="text-base text-gray-300 hover:text-white transition-colors"
+                        className="text-base text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {item.name}
                       </Link>
@@ -61,7 +61,7 @@ export default function Footer() {
                 </ul>
               </div>
               <div className="mt-12 md:mt-0">
-                <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+                <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase">
                   Company
                 </h3>
                 <ul className="mt-4 space-y-4">
@@ -69,7 +69,7 @@ export default function Footer() {
                     <li key={item.name}>
                       <Link
                         href={item.href}
-                        className="text-base text-gray-300 hover:text-white transition-colors"
+                        className="text-base text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {item.name}
                       </Link>
@@ -80,7 +80,7 @@ export default function Footer() {
             </div>
             <div className="md:grid md:grid-cols-1">
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+                <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase">
                   Resources
                 </h3>
                 <ul className="mt-4 space-y-4">
@@ -88,7 +88,7 @@ export default function Footer() {
                     <li key={item.name}>
                       <Link
                         href={item.href}
-                        className="text-base text-gray-300 hover:text-white transition-colors"
+                        className="text-base text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {item.name}
                       </Link>
@@ -101,12 +101,12 @@ export default function Footer() {
         </div>
 
         {/* Bottom border */}
-        <div className="mt-12 border-t border-gray-700 pt-8">
+        <div className="mt-12 border-t border-border pt-8">
           <div className="md:flex md:items-center md:justify-between">
             <div className="flex space-x-6 md:order-2">
               {/* Social links would go here */}
             </div>
-            <p className="mt-8 text-base text-gray-400 md:mt-0 md:order-1">
+            <p className="mt-8 text-base text-muted-foreground md:mt-0 md:order-1">
               &copy; {currentYear} Trunc. All rights reserved.
             </p>
           </div>

@@ -62,7 +62,7 @@ function LoginForm() {
 
     try {
       await login(data.email, data.password, data.rememberMe);
-      
+
       // Redirect to dashboard (for now, redirect to home)
       router.push('/');
     } catch (err) {
@@ -72,22 +72,22 @@ function LoginForm() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
             <div className="flex items-center space-x-2">
-              <LinkIcon className="h-10 w-10 text-primary-600" />
-              <span className="text-2xl font-bold text-black">Trunc</span>
+              <LinkIcon className="h-10 w-10 text-primary" />
+              <span className="text-2xl font-bold text-foreground">Trunc</span>
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-black">
+          <h2 className="mt-6 text-center text-3xl font-bold text-foreground">
             Sign in to your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-muted-foreground">
             Or{' '}
             <Link
               href="/register"
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-primary hover:text-primary/80"
             >
               create a new account
             </Link>
@@ -95,11 +95,11 @@ function LoginForm() {
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <div className="bg-card py-8 px-4 border border-border sm:rounded-lg sm:px-10">
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-black">
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
                   Email address
                 </label>
                 <div className="mt-1">
@@ -109,22 +109,22 @@ function LoginForm() {
                     type="email"
                     autoComplete="email"
                     className={clsx(
-                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black',
+                      'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
                       errors.email
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                        : 'border-border'
                     )}
                     placeholder="Enter your email"
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>
                   )}
                 </div>
               </div>
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-black">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <div className="mt-1 relative">
@@ -134,10 +134,10 @@ function LoginForm() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     className={clsx(
-                      'w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black',
+                      'w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
                       errors.password
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        ? 'border-destructive focus:ring-destructive focus:border-destructive'
+                        : 'border-border'
                     )}
                     placeholder="Enter your password"
                   />
@@ -147,13 +147,13 @@ function LoginForm() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                      <EyeSlashIcon className="h-5 w-5 text-muted-foreground" />
                     ) : (
-                      <EyeIcon className="h-5 w-5 text-gray-400" />
+                      <EyeIcon className="h-5 w-5 text-muted-foreground" />
                     )}
                   </button>
                   {errors.password && (
-                    <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
                   )}
                 </div>
               </div>
@@ -165,9 +165,9 @@ function LoginForm() {
                     {...register('rememberMe')}
                     id="rememberMe"
                     type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                   />
-                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-black">
+                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-foreground">
                     Remember me
                   </label>
                 </div>
@@ -175,7 +175,7 @@ function LoginForm() {
                 <div className="text-sm">
                   <Link
                     href="/forgot-password"
-                    className="font-medium text-primary-600 hover:text-primary-500"
+                    className="font-medium text-primary hover:text-primary/80"
                   >
                     Forgot your password?
                   </Link>
@@ -184,8 +184,8 @@ function LoginForm() {
 
               {/* Error Message */}
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm text-destructive">{error}</p>
                 </div>
               )}
 
@@ -194,7 +194,7 @@ function LoginForm() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Signing in...' : 'Sign in'}
                 </button>
@@ -205,10 +205,10 @@ function LoginForm() {
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+                  <div className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
                 </div>
               </div>
 
@@ -216,7 +216,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => { window.location.href = API_ENDPOINTS.auth.google; }}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-border rounded-md shadow-sm bg-background text-sm font-medium text-foreground hover:bg-muted"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24">
                     <path
@@ -239,7 +239,7 @@ function LoginForm() {
                   <span className="ml-2">Google</span>
                 </button>
 
-                <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <button className="w-full inline-flex justify-center py-2 px-4 border border-border rounded-md shadow-sm bg-background text-sm font-medium text-foreground hover:bg-muted">
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.024-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.097.118.112.22.82.402-.09.405-.293 1.185-.333 1.358-.053.218-.174.265-.402.159-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.357-.631-2.75-1.378 0 0-.602 2.323-.747 2.9-.271 1.056-1.005 2.382-1.492 3.19C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-12.014C24.007 5.36 18.641.001 12.017.001z" />
                   </svg>

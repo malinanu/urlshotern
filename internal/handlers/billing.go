@@ -167,10 +167,11 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var req struct {
-		ProductID  string  `json:"product_id" binding:"required"`
-		PriceID    *string `json:"price_id,omitempty"`
-		SuccessURL string  `json:"success_url"`
-		CancelURL  string  `json:"cancel_url"`
+		ProductID    string  `json:"product_id" binding:"required"`
+		PriceID      *string `json:"price_id,omitempty"`
+		DiscountCode *string `json:"discount_code,omitempty"`
+		SuccessURL   string  `json:"success_url"`
+		CancelURL    string  `json:"cancel_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -190,11 +191,49 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		req.CancelURL = bh.config.BaseURL + "/billing/cancelled"
 	}
 
+	// Handle coupons
+	var polarDiscountID *string
+	if req.DiscountCode != nil && *req.DiscountCode != "" {
+		coupon, err := bh.billingService.ValidateCoupon(*req.DiscountCode, req.ProductID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid or expired discount code",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		if coupon.DiscountType == "free_months" {
+			// Bypass Polar checkout
+			err := bh.billingService.RedeemFreeMonths(userID, req.ProductID, coupon)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error":   "Failed to redeem discount code",
+					"details": err.Error(),
+				})
+				return
+			}
+
+			// Return the success URL as the checkout URL so the frontend redirects there
+			c.JSON(http.StatusOK, gin.H{
+				"checkout_url": req.SuccessURL,
+				"is_free_bypass": true,
+			})
+			return
+		}
+
+		// For percentage or fixed discounts, pass the polar ID
+		if coupon.PolarDiscountID != nil && *coupon.PolarDiscountID != "" {
+			polarDiscountID = coupon.PolarDiscountID
+		}
+	}
+
 	checkout, err := bh.billingService.CreateCheckoutSession(
 		userID,
 		user.Email,
 		req.ProductID,
 		req.PriceID,
+		polarDiscountID,
 		req.SuccessURL,
 		req.CancelURL,
 	)
@@ -585,4 +624,28 @@ func (bh *BillingHandler) CheckFeatureAccess(feature string) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// ValidateCouponHandler handles coupon validation before checkout
+func (bh *BillingHandler) ValidateCouponHandler(c *gin.Context) {
+	code := c.Query("code")
+	planID := c.Query("plan_id")
+
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing code parameter"})
+		return
+	}
+
+	coupon, err := bh.billingService.ValidateCoupon(code, planID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "valid": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"valid":          true,
+		"discount_type":  coupon.DiscountType,
+		"discount_value": coupon.DiscountValue,
+		"description":    coupon.Description,
+	})
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import Layout from '@/components/layout/Layout';
-import { 
-  LinkIcon, 
-  ChartBarIcon, 
-  ShieldCheckIcon, 
+import {
+  LinkIcon,
+  ChartBarIcon,
+  ShieldCheckIcon,
   CursorArrowRaysIcon,
   GlobeAltIcon,
   ClockIcon,
@@ -163,7 +163,7 @@ export default function FeaturesPage() {
     return (
       <Layout>
         <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -172,16 +172,16 @@ export default function FeaturesPage() {
   return (
     <Layout>
       {/* Hero Section - Using CMS Content */}
-      <section className="bg-gradient-to-br from-primary-50 to-white py-20">
+      <section className="bg-gradient-to-br from-primary/10 to-background py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
               {hero.title.replace(hero.title_highlight || '', '')}
               {hero.title_highlight && (
-                <span className="text-primary-600">{hero.title_highlight}</span>
+                <span className="text-primary">{hero.title_highlight}</span>
               )}
             </h1>
-            <p className="text-xl text-black mb-12 max-w-3xl mx-auto">
+            <p className="text-xl text-foreground mb-12 max-w-3xl mx-auto">
               {hero.tagline}
             </p>
           </div>
@@ -189,38 +189,38 @@ export default function FeaturesPage() {
       </section>
 
       {/* Main Features Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-black mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
               {mainFeaturesBlock.heading}
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               {mainFeaturesBlock.tagline}
             </p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12">
             {mainFeatures.map((feature: any) => (
-              <div key={feature.name} className="bg-gray-50 rounded-xl p-8">
+              <div key={feature.name} className="bg-muted/30 rounded-xl p-8 border border-border">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="p-3 bg-primary-100 rounded-lg">
-                      <feature.icon className="h-8 w-8 text-primary-600" />
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <feature.icon className="h-8 w-8 text-primary" />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-black mb-3">
+                    <h3 className="text-xl font-semibold text-foreground mb-3">
                       {feature.name}
                     </h3>
-                    <p className="text-gray-600 mb-4 leading-relaxed">
+                    <p className="text-muted-foreground mb-4 leading-relaxed">
                       {feature.description}
                     </p>
                     <ul className="space-y-2">
                       {feature.details && feature.details.map((detail: string) => (
                         <li key={detail} className="flex items-center space-x-2">
-                          <CheckCircleIcon className="h-5 w-5 text-primary-600 flex-shrink-0" />
-                          <span className="text-black text-sm">{detail}</span>
+                          <CheckCircleIcon className="h-5 w-5 text-primary flex-shrink-0" />
+                          <span className="text-foreground text-sm">{detail}</span>
                         </li>
                       ))}
                     </ul>
@@ -233,23 +233,23 @@ export default function FeaturesPage() {
       </section>
 
       {/* Additional Features Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-black mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
               {additionalFeaturesBlock.heading}
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               {additionalFeaturesBlock.tagline}
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {additionalFeatures.map((feature: any) => (
-              <div key={feature.name} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div key={feature.name} className="bg-card p-6 rounded-lg shadow-sm border border-border">
                 <div className="flex items-center space-x-3">
-                  <feature.icon className="h-6 w-6 text-primary-600 flex-shrink-0" />
-                  <span className="text-black font-medium">{feature.name}</span>
+                  <feature.icon className="h-6 w-6 text-primary flex-shrink-0" />
+                  <span className="text-foreground font-medium">{feature.name}</span>
                 </div>
               </div>
             ))}
@@ -258,24 +258,24 @@ export default function FeaturesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary-600">
+      <section className="py-20 bg-primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className="text-3xl font-bold text-primary-foreground mb-4">
             {ctaBottom.heading}
           </h2>
-          <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
             {ctaBottom.tagline}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href={ctaBottom.cta_primary?.url || '/'}
-              className="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              className="bg-background text-primary px-8 py-3 rounded-lg font-semibold hover:bg-muted transition-colors"
             >
               {ctaBottom.cta_primary?.text || 'Try It Now'}
             </a>
             <a
               href={ctaBottom.cta_secondary?.url || '/pricing'}
-              className="border border-primary-400 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+              className="border border-primary-foreground/30 text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-primary/80 transition-colors"
             >
               {ctaBottom.cta_secondary?.text || 'View Pricing'}
             </a>

@@ -351,17 +351,17 @@ export default function APIDocsPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
         {/* Hero Section with Quick Reference */}
-        <div className="bg-gradient-to-br from-primary-600 via-primary-700 to-blue-700 text-white">
+        <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+              <div className="p-3 bg-background/10 backdrop-blur-sm rounded-xl">
                 <DocumentTextIcon className="h-10 w-10" />
               </div>
               <div>
                 <h1 className="text-4xl font-bold mb-2">API Documentation</h1>
-                <p className="text-primary-100 text-lg">
+                <p className="text-primary-foreground/80 text-lg">
                   Complete reference for integrating Trunc into your applications
                 </p>
               </div>
@@ -369,35 +369,35 @@ export default function APIDocsPage() {
 
             {/* Quick Reference Cards */}
             <div className="grid md:grid-cols-3 gap-4 mt-8">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <div className="bg-background/10 backdrop-blur-sm rounded-xl p-6 border border-background/20 hover:bg-background/15 transition-all duration-300">
                 <div className="flex items-center gap-3 mb-3">
-                  <GlobeAltIcon className="h-6 w-6 text-primary-100" />
+                  <GlobeAltIcon className="h-6 w-6 text-primary-foreground/80" />
                   <h3 className="font-semibold text-lg">Base URL</h3>
                 </div>
-                <code className="block bg-black/20 backdrop-blur-sm px-4 py-3 rounded-lg text-sm font-mono text-white">
+                <code className="block bg-black/20 backdrop-blur-sm px-4 py-3 rounded-lg text-sm font-mono text-primary-foreground">
                   {apiUrl}
                 </code>
-                <p className="text-xs text-primary-100 mt-3">
+                <p className="text-xs text-primary-foreground/80 mt-3">
                   Production: <code className="bg-black/20 px-2 py-1 rounded">https://api.trunc.site</code>
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <div className="bg-background/10 backdrop-blur-sm rounded-xl p-6 border border-background/20 hover:bg-background/15 transition-all duration-300">
                 <div className="flex items-center gap-3 mb-3">
-                  <LockClosedIcon className="h-6 w-6 text-primary-100" />
+                  <LockClosedIcon className="h-6 w-6 text-primary-foreground/80" />
                   <h3 className="font-semibold text-lg">Authentication</h3>
                 </div>
-                <code className="block bg-black/20 backdrop-blur-sm px-4 py-3 rounded-lg text-sm font-mono text-white break-all">
+                <code className="block bg-black/20 backdrop-blur-sm px-4 py-3 rounded-lg text-sm font-mono text-primary-foreground break-all">
                   Authorization: Bearer YOUR_KEY
                 </code>
-                <p className="text-xs text-primary-100 mt-3">
+                <p className="text-xs text-primary-foreground/80 mt-3">
                   API keys start with <code className="bg-black/20 px-2 py-1 rounded">us_</code> prefix
                 </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <div className="bg-background/10 backdrop-blur-sm rounded-xl p-6 border border-background/20 hover:bg-background/15 transition-all duration-300">
                 <div className="flex items-center gap-3 mb-3">
-                  <SparklesIcon className="h-6 w-6 text-primary-100" />
+                  <SparklesIcon className="h-6 w-6 text-primary-foreground/80" />
                   <h3 className="font-semibold text-lg">Rate Limits</h3>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -405,7 +405,7 @@ export default function APIDocsPage() {
                     <span>Standard</span>
                     <code className="font-mono">1000/hour</code>
                   </div>
-                  <p className="text-xs text-primary-100 mt-2">
+                  <p className="text-xs text-primary-foreground/80 mt-2">
                     Configurable per API key
                   </p>
                 </div>
@@ -419,13 +419,13 @@ export default function APIDocsPage() {
           <div className="mb-8 space-y-4">
             {/* Search Bar */}
             <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search endpoints by name, path, or method..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all outline-none text-gray-900 placeholder-gray-400"
+                className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-border bg-card text-foreground focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none placeholder-muted-foreground"
               />
             </div>
 
@@ -435,19 +435,17 @@ export default function APIDocsPage() {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`group px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
-                    selectedCategory === category
-                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 scale-105'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-primary-300'
-                  }`}
+                  className={`group px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 ${selectedCategory === category
+                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105'
+                      : 'bg-card text-foreground hover:bg-muted border-2 border-border hover:border-primary/50'
+                    }`}
                 >
                   {category !== 'All' && getCategoryIcon(category)}
                   {category}
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    selectedCategory === category
-                      ? 'bg-white/20 text-white'
-                      : 'bg-gray-100 text-gray-600 group-hover:bg-primary-50 group-hover:text-primary-700'
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${selectedCategory === category
+                      ? 'bg-background/20 text-primary-foreground'
+                      : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                    }`}>
                     {apiEndpoints.filter(e => category === 'All' || e.category === category).length}
                   </span>
                 </button>
@@ -458,13 +456,13 @@ export default function APIDocsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Endpoint List */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
+              <div className="bg-card rounded-2xl shadow-xl border border-border p-6 sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <CodeBracketIcon className="h-6 w-6 text-primary-600" />
+                  <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <CodeBracketIcon className="h-6 w-6 text-primary" />
                     Endpoints
                   </h2>
-                  <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold">
+                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold">
                     {filteredEndpoints.length}
                   </span>
                 </div>
@@ -474,34 +472,33 @@ export default function APIDocsPage() {
                     <button
                       key={index}
                       onClick={() => setSelectedEndpoint(endpoint)}
-                      className={`w-full text-left p-4 rounded-xl transition-all duration-300 group ${
-                        selectedEndpoint === endpoint
-                          ? 'bg-gradient-to-r from-primary-50 to-blue-50 border-2 border-primary-300 shadow-md scale-[1.02]'
-                          : 'hover:bg-gray-50 border-2 border-transparent hover:border-gray-200'
-                      }`}
+                      className={`w-full text-left p-4 rounded-xl transition-all duration-300 group ${selectedEndpoint === endpoint
+                          ? 'bg-primary/5 border-2 border-primary shadow-md scale-[1.02]'
+                          : 'hover:bg-muted/50 border-2 border-transparent hover:border-border'
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className={`px-3 py-1 text-xs font-bold rounded-lg ${getMethodColor(endpoint.method)} shadow-sm`}>
                           {endpoint.method}
                         </span>
                         {endpoint.auth && (
-                          <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
                             <LockClosedIcon className="h-3 w-3" />
                             {endpoint.auth}
                           </span>
                         )}
                       </div>
-                      <div className="text-sm font-mono text-gray-700 mb-2 break-all font-semibold">
+                      <div className="text-sm font-mono text-foreground mb-2 break-all font-semibold">
                         {endpoint.path}
                       </div>
-                      <div className="text-xs text-gray-600 line-clamp-2">
+                      <div className="text-xs text-muted-foreground line-clamp-2">
                         {endpoint.description}
                       </div>
                     </button>
                   ))}
 
                   {filteredEndpoints.length === 0 && (
-                    <div className="text-center py-12 text-gray-400">
+                    <div className="text-center py-12 text-muted-foreground">
                       <MagnifyingGlassIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p className="text-sm">No endpoints found</p>
                     </div>
@@ -513,33 +510,33 @@ export default function APIDocsPage() {
             {/* Endpoint Details */}
             <div className="lg:col-span-2">
               {selectedEndpoint ? (
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+                <div className="bg-card rounded-2xl shadow-xl border border-border p-8">
                   {selectedEndpoint.category && (
                     <div className="mb-4">
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 bg-primary-50 px-4 py-2 rounded-lg border border-primary-200">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
                         {getCategoryIcon(selectedEndpoint.category)}
                         {selectedEndpoint.category}
                       </span>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-4 mb-6 pb-6 border-b-2 border-gray-100">
+                  <div className="flex items-center gap-4 mb-6 pb-6 border-b-2 border-border">
                     <span className={`px-4 py-2 text-sm font-bold rounded-lg ${getMethodColor(selectedEndpoint.method)} shadow-md`}>
                       {selectedEndpoint.method}
                     </span>
-                    <code className="text-xl font-mono text-gray-900 break-all font-bold">{selectedEndpoint.path}</code>
+                    <code className="text-xl font-mono text-foreground break-all font-bold">{selectedEndpoint.path}</code>
                   </div>
 
-                  <p className="text-gray-700 mb-8 text-lg leading-relaxed">{selectedEndpoint.description}</p>
+                  <p className="text-muted-foreground mb-8 text-lg leading-relaxed">{selectedEndpoint.description}</p>
 
                   {/* Authentication */}
                   {selectedEndpoint.auth && (
-                    <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-400 rounded-r-xl p-6">
-                      <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <LockClosedIcon className="h-5 w-5 text-amber-600" />
+                    <div className="mb-8 bg-amber-500/10 border-l-4 border-amber-500 rounded-r-xl p-6">
+                      <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                        <LockClosedIcon className="h-5 w-5 text-amber-500" />
                         Authentication
                       </h3>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-muted-foreground">
                         {selectedEndpoint.auth === 'Required'
                           ? '🔒 This endpoint requires authentication. Include the Bearer token in the Authorization header.'
                           : '🔓 Authentication is optional for this endpoint. Include the Bearer token for enhanced features.'
@@ -551,33 +548,32 @@ export default function APIDocsPage() {
                   {/* Parameters */}
                   {selectedEndpoint.parameters && selectedEndpoint.parameters.length > 0 && (
                     <div className="mb-8">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <ChevronRightIcon className="h-5 w-5 text-primary-600" />
+                      <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                        <ChevronRightIcon className="h-5 w-5 text-primary" />
                         Parameters
                       </h3>
-                      <div className="overflow-hidden rounded-xl border-2 border-gray-200">
+                      <div className="overflow-hidden rounded-xl border-2 border-border">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                              <th className="text-left py-4 px-4 font-bold text-gray-700">Name</th>
-                              <th className="text-left py-4 px-4 font-bold text-gray-700">Type</th>
-                              <th className="text-left py-4 px-4 font-bold text-gray-700">Required</th>
-                              <th className="text-left py-4 px-4 font-bold text-gray-700">Description</th>
+                            <tr className="bg-muted/50 border-b-2 border-border">
+                              <th className="text-left py-4 px-4 font-bold text-muted-foreground">Name</th>
+                              <th className="text-left py-4 px-4 font-bold text-muted-foreground">Type</th>
+                              <th className="text-left py-4 px-4 font-bold text-muted-foreground">Required</th>
+                              <th className="text-left py-4 px-4 font-bold text-muted-foreground">Description</th>
                             </tr>
                           </thead>
                           <tbody>
                             {selectedEndpoint.parameters.map((param, index) => (
-                              <tr key={index} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-primary-50 transition-colors`}>
-                                <td className="py-4 px-4 font-mono font-semibold text-primary-700">{param.name}</td>
-                                <td className="py-4 px-4 text-gray-600">{param.type}</td>
+                              <tr key={index} className={`border-b border-border ${index % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-muted/50 transition-colors`}>
+                                <td className="py-4 px-4 font-mono font-semibold text-primary">{param.name}</td>
+                                <td className="py-4 px-4 text-muted-foreground">{param.type}</td>
                                 <td className="py-4 px-4">
-                                  <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                    param.required ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-gray-100 text-gray-600 border border-gray-200'
-                                  }`}>
+                                  <span className={`px-3 py-1 text-xs font-bold rounded-full ${param.required ? 'bg-destructive/10 text-destructive border border-destructive/20' : 'bg-muted text-muted-foreground border border-border'
+                                    }`}>
                                     {param.required ? 'Yes' : 'No'}
                                   </span>
                                 </td>
-                                <td className="py-4 px-4 text-gray-700">{param.description}</td>
+                                <td className="py-4 px-4 text-muted-foreground">{param.description}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -589,12 +585,12 @@ export default function APIDocsPage() {
                   {/* Request Body */}
                   {selectedEndpoint.requestBody && (
                     <div className="mb-8">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <ChevronRightIcon className="h-5 w-5 text-primary-600" />
+                      <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                        <ChevronRightIcon className="h-5 w-5 text-primary" />
                         Request Body
                       </h3>
-                      <p className="text-sm text-gray-600 mb-3 font-medium">
-                        Content-Type: <code className="bg-gray-100 px-2 py-1 rounded text-primary-700">{selectedEndpoint.requestBody.contentType}</code>
+                      <p className="text-sm text-muted-foreground mb-3 font-medium">
+                        Content-Type: <code className="bg-muted px-2 py-1 rounded text-primary">{selectedEndpoint.requestBody.contentType}</code>
                       </p>
                       <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 relative shadow-2xl border border-gray-700">
                         <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -619,23 +615,22 @@ export default function APIDocsPage() {
 
                   {/* Responses */}
                   <div className="mb-8">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <ChevronRightIcon className="h-5 w-5 text-primary-600" />
+                    <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                      <ChevronRightIcon className="h-5 w-5 text-primary" />
                       Responses
                     </h3>
                     <div className="space-y-4">
                       {selectedEndpoint.responses.map((response, index) => (
-                        <div key={index} className="border-2 border-gray-200 rounded-xl p-6 hover:border-primary-300 transition-all hover:shadow-lg">
+                        <div key={index} className="border-2 border-border rounded-xl p-6 hover:border-primary/50 transition-all hover:shadow-lg bg-card">
                           <div className="flex items-center gap-3 mb-4">
-                            <span className={`px-4 py-2 text-sm font-bold rounded-lg shadow-md ${
-                              response.status < 300 ? 'bg-green-500 text-white' :
-                              response.status < 400 ? 'bg-blue-500 text-white' :
-                              response.status < 500 ? 'bg-yellow-500 text-white' :
-                              'bg-red-500 text-white'
-                            }`}>
+                            <span className={`px-4 py-2 text-sm font-bold rounded-lg shadow-md ${response.status < 300 ? 'bg-green-500 text-white' :
+                                response.status < 400 ? 'bg-blue-500 text-white' :
+                                  response.status < 500 ? 'bg-yellow-500 text-white' :
+                                    'bg-red-500 text-white'
+                              }`}>
                               {response.status}
                             </span>
-                            <span className="text-sm text-gray-700 font-medium">{response.description}</span>
+                            <span className="text-sm text-foreground font-medium">{response.description}</span>
                           </div>
                           {response.schema && (
                             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg p-4 relative shadow-xl border border-gray-700">
@@ -662,14 +657,14 @@ export default function APIDocsPage() {
                   {/* Example */}
                   {selectedEndpoint.example && (
                     <div className="mb-6">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <SparklesIcon className="h-5 w-5 text-primary-600" />
+                      <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                        <SparklesIcon className="h-5 w-5 text-primary" />
                         Example
                       </h3>
 
                       {selectedEndpoint.example.request && (
                         <div className="mb-6">
-                          <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-muted-foreground mb-3 flex items-center gap-2">
                             📤 Request:
                           </h4>
                           <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 relative shadow-2xl border border-gray-700">
@@ -694,7 +689,7 @@ export default function APIDocsPage() {
                       )}
 
                       <div>
-                        <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-muted-foreground mb-3 flex items-center gap-2">
                           📥 Response:
                         </h4>
                         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 relative shadow-2xl border border-gray-700">
@@ -720,15 +715,15 @@ export default function APIDocsPage() {
                   )}
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-16 text-center">
+                <div className="bg-card rounded-2xl shadow-xl border border-border p-16 text-center">
                   <div className="max-w-md mx-auto">
-                    <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                      <CodeBracketIcon className="h-10 w-10 text-primary-600" />
+                    <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <CodeBracketIcon className="h-10 w-10 text-primary" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    <h3 className="text-2xl font-bold text-foreground mb-3">
                       Select an Endpoint
                     </h3>
-                    <p className="text-gray-600 text-lg">
+                    <p className="text-muted-foreground text-lg">
                       Choose an endpoint from the list to view detailed documentation and examples.
                     </p>
                   </div>
@@ -738,19 +733,19 @@ export default function APIDocsPage() {
           </div>
 
           {/* Integration Guide Section */}
-          <div className="mt-16 bg-gradient-to-br from-primary-50 via-blue-50 to-purple-50 rounded-3xl shadow-2xl border-2 border-primary-200 p-10 relative overflow-hidden">
+          <div className="mt-16 bg-muted/30 rounded-3xl shadow-2xl border-2 border-border p-10 relative overflow-hidden">
             {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary-200/20 to-blue-200/20 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-3xl"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
 
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-6">
-                <div className="p-4 bg-gradient-to-br from-primary-600 to-blue-600 rounded-2xl shadow-lg">
-                  <CodeBracketIcon className="h-10 w-10 text-white" />
+                <div className="p-4 bg-primary rounded-2xl shadow-lg">
+                  <CodeBracketIcon className="h-10 w-10 text-primary-foreground" />
                 </div>
                 <div>
-                  <h2 className="text-4xl font-bold text-gray-900">Integration Guide</h2>
-                  <p className="text-gray-700 text-lg mt-1">
+                  <h2 className="text-4xl font-bold text-foreground">Integration Guide</h2>
+                  <p className="text-muted-foreground text-lg mt-1">
                     Learn how to integrate Trunc into your applications
                   </p>
                 </div>
@@ -844,16 +839,15 @@ export default function APIDocsPage() {
                       <button
                         key={lang}
                         onClick={() => setSelectedLanguage(lang)}
-                        className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
-                          selectedLanguage === lang
+                        className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${selectedLanguage === lang
                             ? 'bg-gradient-to-r from-primary-600 to-blue-600 text-white shadow-lg scale-105'
                             : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-primary-300 hover:text-primary-700'
-                        }`}
+                          }`}
                       >
                         {lang === 'javascript' ? 'JavaScript' :
-                         lang === 'react' ? 'React' :
-                         lang === 'nodejs' ? 'Node.js' :
-                         'Python'}
+                          lang === 'react' ? 'React' :
+                            lang === 'nodejs' ? 'Node.js' :
+                              'Python'}
                       </button>
                     ))}
                   </div>

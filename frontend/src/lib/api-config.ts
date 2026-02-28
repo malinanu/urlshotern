@@ -75,6 +75,7 @@ export const API_ENDPOINTS = {
     portal: `${API_BASE_URL}/api/v1/billing/portal`,
     paymentMethod: `${API_BASE_URL}/api/v1/billing/payment-method`,
     history: `${API_BASE_URL}/api/v1/billing/history`,
+    validateCoupon: `${API_BASE_URL}/api/v1/billing/coupons/validate`,
   },
 
   // Admin endpoints (temporarily disabled in backend)
@@ -100,6 +101,14 @@ export const API_ENDPOINTS = {
       role: (roleId: string) => `${API_BASE_URL}/api/v1/admin/rbac/roles/${roleId}`,
       permissions: `${API_BASE_URL}/api/v1/admin/rbac/permissions`,
       audit: `${API_BASE_URL}/api/v1/admin/rbac/audit`,
+    },
+
+    // Coupons
+    coupons: {
+      list: `${API_BASE_URL}/api/v1/admin/coupons`,
+      create: `${API_BASE_URL}/api/v1/admin/coupons`,
+      delete: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}`,
+      toggle: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}/toggle`,
     },
   },
 

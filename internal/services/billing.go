@@ -138,6 +138,57 @@ var PredefinedPlans = map[string]Plan{
 			Advanced:     true,
 		},
 	},
+	"premium_yearly": {
+		ID:          "premium_yearly",
+		Name:        "Premium (Yearly)",
+		Description: "For professionals and small teams (2 months free)",
+		Price:       99.90, // 10 months price
+		Currency:    "usd",
+		Interval:    "year",
+		Features: []string{
+			"Unlimited URLs",
+			"100,000 clicks/month",
+			"Advanced analytics",
+			"1 year data retention",
+			"Custom domains",
+			"API access",
+			"Bulk import",
+		},
+		Limits: PlanLimits{
+			URLs:         -1, // unlimited
+			Clicks:       100000,
+			Analytics:    365,
+			CustomDomain: true,
+			APIAccess:    true,
+			BulkImport:   true,
+			Advanced:     true,
+		},
+	},
+	"enterprise_yearly": {
+		ID:          "enterprise_yearly",
+		Name:        "Enterprise (Yearly)",
+		Description: "For large organizations (2 months free)",
+		Price:       499.90, // 10 months price
+		Currency:    "usd",
+		Interval:    "year",
+		Features: []string{
+			"Unlimited everything",
+			"Advanced integrations",
+			"Priority support",
+			"Custom branding",
+			"SSO integration",
+			"Dedicated account manager",
+		},
+		Limits: PlanLimits{
+			URLs:         -1,
+			Clicks:       -1,
+			Analytics:    -1, // unlimited
+			CustomDomain: true,
+			APIAccess:    true,
+			BulkImport:   true,
+			Advanced:     true,
+		},
+	},
 }
 
 func NewBillingService(db *gorm.DB, config *configs.Config) *BillingService {
@@ -301,7 +352,7 @@ func (bs *BillingService) UpdateSubscription(userID int64, updates map[string]in
 }
 
 // CreateCheckoutSession creates a Polar checkout session
-func (bs *BillingService) CreateCheckoutSession(userID int64, email string, productID string, priceID *string, successURL, cancelURL string) (*PolarCheckoutSession, error) {
+func (bs *BillingService) CreateCheckoutSession(userID int64, email string, productID string, priceID *string, discountID *string, successURL, cancelURL string) (*PolarCheckoutSession, error) {
 	// Get or create Polar customer
 	customerID, err := bs.polarService.GetOrCreatePolarCustomer(userID, email, nil)
 	if err != nil {
@@ -315,7 +366,7 @@ func (bs *BillingService) CreateCheckoutSession(userID int64, email string, prod
 	}
 
 	// Create checkout session via Polar
-	checkout, err := bs.polarService.CreateCheckoutSession(productID, priceID, email, successURL, metadata)
+	checkout, err := bs.polarService.CreateCheckoutSession(productID, priceID, discountID, email, successURL, metadata)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create checkout: %w", err)
 	}
@@ -344,6 +395,118 @@ func (bs *BillingService) GetPolarService() *PolarService {
 // GetDB returns the database connection
 func (bs *BillingService) GetDB() *gorm.DB {
 	return bs.db
+}
+
+// ValidateCoupon validates a coupon code and returns it if valid
+func (bs *BillingService) ValidateCoupon(code string, planID string) (*models.Coupon, error) {
+	var coupon models.Coupon
+	if err := bs.db.Where("code = ? AND is_active = true", code).First(&coupon).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("invalid or expired coupon code")
+		}
+		return nil, err
+	}
+
+	now := time.Now()
+	if coupon.ValidFrom.After(now) {
+		return nil, fmt.Errorf("coupon is not yet valid")
+	}
+
+	if coupon.ValidUntil != nil && coupon.ValidUntil.Before(now) {
+		return nil, fmt.Errorf("coupon has expired")
+	}
+
+	if coupon.MaxRedemptions != nil && coupon.CurrentRedemptions >= *coupon.MaxRedemptions {
+		return nil, fmt.Errorf("coupon redemption limit reached")
+	}
+
+	if len(coupon.ApplicablePlans) > 0 && planID != "" {
+		planIsApplicable := false
+		for _, p := range coupon.ApplicablePlans {
+			if p == planID {
+				planIsApplicable = true
+				break
+			}
+		}
+		if !planIsApplicable {
+			return nil, fmt.Errorf("coupon is not applicable for this plan")
+		}
+	}
+
+	return &coupon, nil
+}
+
+func (bs *BillingService) RecordCouponRedemption(tx *gorm.DB, couponID int64, userID int64, subscriptionID *int64) error {
+	redemption := models.CouponRedemption{
+		CouponID:       couponID,
+		UserID:         userID,
+		SubscriptionID: subscriptionID,
+		RedeemedAt:     time.Now(),
+	}
+
+	if err := tx.Create(&redemption).Error; err != nil {
+		return err
+	}
+
+	return tx.Model(&models.Coupon{}).Where("id = ?", couponID).UpdateColumn("current_redemptions", gorm.Expr("current_redemptions + ?", 1)).Error
+}
+
+// RedeemFreeMonths immediately activates a subscription without a checkout session
+func (bs *BillingService) RedeemFreeMonths(userID int64, planID string, coupon *models.Coupon) error {
+	plan, err := bs.GetPlan(planID)
+	if err != nil {
+		return err
+	}
+
+	monthsToAdd := coupon.DiscountValue
+	if monthsToAdd <= 0 {
+		return fmt.Errorf("invalid free months value")
+	}
+
+	return bs.db.Transaction(func(tx *gorm.DB) error {
+		// Calculate the end period based on current sub if it exists and is active, else start from now
+		var currentSub models.PolarSubscription
+		err := tx.Where("user_id = ? AND status IN ?", userID, []string{"active", "trialing"}).Order("created_at DESC").First(&currentSub).Error
+		
+		now := time.Now()
+		var startPeriod time.Time = now
+		var endPeriod time.Time
+
+		if err == nil {
+			if currentSub.CurrentPeriodEnd != nil && currentSub.CurrentPeriodEnd.After(now) {
+				startPeriod = *currentSub.CurrentPeriodEnd
+			} else {
+				startPeriod = now
+			}
+		}
+
+		endPeriod = startPeriod.AddDate(0, monthsToAdd, 0)
+		
+		// Map planID to a generic polar plan ID for free override or something
+		// Assuming we bypass Polar for this totally free period.
+		
+		fakePolarSubID := fmt.Sprintf("sub_free_pass_%d_%d", userID, time.Now().Unix())
+
+		newSub := models.PolarSubscription{
+			UserID:              userID,
+			PolarCustomerID:     fmt.Sprintf("free_user_%d", userID),
+			PolarSubscriptionID: &fakePolarSubID,
+			PolarProductID:      planID,
+			Status:              "active",
+			PlanType:            plan.ID,
+			CurrentPeriodStart:  &startPeriod,
+			CurrentPeriodEnd:    &endPeriod,
+			Metadata:            models.JSONB{"coupon_id": coupon.ID, "free_months": true},
+			CreatedAt:           now,
+			UpdatedAt:           now,
+		}
+
+		if err := tx.Create(&newSub).Error; err != nil {
+			return err
+		}
+
+		return bs.RecordCouponRedemption(tx, coupon.ID, userID, &newSub.ID)
+	})
 }
 
 // API Handlers

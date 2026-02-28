@@ -142,10 +142,10 @@ interface AdvancedAnalyticsProps {
   className?: string;
 }
 
-export default function AdvancedAnalytics({ 
-  shortCode, 
+export default function AdvancedAnalytics({
+  shortCode,
   days = 30,
-  className = '' 
+  className = ''
 }: AdvancedAnalyticsProps) {
   const [analytics, setAnalytics] = useState<AdvancedAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -187,15 +187,15 @@ export default function AdvancedAnalytics({
 
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
         <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-4 bg-muted rounded w-1/4"></div>
           <div className="space-y-3">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+              <div key={i} className="h-20 bg-muted rounded"></div>
             ))}
           </div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -203,13 +203,13 @@ export default function AdvancedAnalytics({
 
   if (error) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
         <div className="text-center py-8">
-          <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">{error}</p>
+          <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">{error}</p>
           <button
             onClick={fetchAdvancedAnalytics}
-            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Retry
           </button>
@@ -220,10 +220,10 @@ export default function AdvancedAnalytics({
 
   if (!analytics) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+      <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
         <div className="text-center py-8">
-          <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No advanced analytics data available</p>
+          <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No advanced analytics data available</p>
         </div>
       </div>
     );
@@ -246,28 +246,27 @@ export default function AdvancedAnalytics({
   );
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <ArrowTrendingUpIcon className="h-6 w-6 text-primary-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Advanced Analytics</h2>
+          <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">Advanced Analytics</h2>
         </div>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-muted-foreground">
           Last updated: {new Date(analytics.last_updated).toLocaleString()}
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-border mb-6">
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('geographic')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'geographic'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'geographic'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
           >
             <div className="flex items-center gap-2">
               <GlobeAltIcon className="h-4 w-4" />
@@ -276,11 +275,10 @@ export default function AdvancedAnalytics({
           </button>
           <button
             onClick={() => setActiveTab('time')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'time'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'time'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
           >
             <div className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4" />
@@ -289,11 +287,10 @@ export default function AdvancedAnalytics({
           </button>
           <button
             onClick={() => setActiveTab('device')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'device'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'device'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
           >
             <div className="flex items-center gap-2">
               <DevicePhoneMobileIcon className="h-4 w-4" />
@@ -321,8 +318,8 @@ export default function AdvancedAnalytics({
 const ChartSkeleton = () => (
   <div className="h-80 flex items-center justify-center">
     <div className="animate-pulse space-y-4 w-full">
-      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-      <div className="h-64 bg-gray-200 rounded"></div>
+      <div className="h-4 bg-muted rounded w-3/4"></div>
+      <div className="h-64 bg-muted rounded"></div>
     </div>
   </div>
 );
@@ -339,7 +336,7 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
       {/* Countries Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
             <MapIcon className="h-5 w-5" />
             Top Countries
           </h3>
@@ -363,7 +360,7 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
         </div>
 
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Country Distribution</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">Country Distribution</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -398,45 +395,45 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
 
       {/* Countries Table */}
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Detailed Country Statistics</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <h3 className="text-lg font-medium text-foreground mb-4">Detailed Country Statistics</h3>
+        <div className="overflow-x-auto border border-border rounded-lg">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Country
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Clicks
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Percentage
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Unique IPs
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {data.countries.map((country, index) => (
-                <tr key={country.country_code} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <tr key={country.country_code} className={index % 2 === 0 ? 'bg-card' : 'bg-muted/30'}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-foreground">
                         {country.country_name}
                       </span>
-                      <span className="ml-2 text-xs text-gray-500">
+                      <span className="ml-2 text-xs text-muted-foreground">
                         ({country.country_code})
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {formatNumber(country.clicks)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {formatPercentage(country.percentage)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {formatNumber(country.unique_ips)}
                   </td>
                 </tr>
@@ -464,21 +461,21 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
     <div className="space-y-6">
       {/* Peak Times Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-blue-800">Peak Hour</div>
-          <div className="text-2xl font-bold text-blue-900">
+        <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
+          <div className="text-sm font-medium text-primary">Peak Hour</div>
+          <div className="text-2xl font-bold text-foreground">
             {data.peak_times.peak_hour.toString().padStart(2, '0')}:00
           </div>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-green-800">Peak Day</div>
-          <div className="text-2xl font-bold text-green-900">
+        <div className="bg-green-500/10 p-4 rounded-lg border border-green-500/20">
+          <div className="text-sm font-medium text-green-600 dark:text-green-500">Peak Day</div>
+          <div className="text-2xl font-bold text-foreground">
             {data.peak_times.peak_day}
           </div>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-purple-800">Max Clicks</div>
-          <div className="text-2xl font-bold text-purple-900">
+        <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/20">
+          <div className="text-sm font-medium text-purple-600 dark:text-purple-500">Max Clicks</div>
+          <div className="text-2xl font-bold text-foreground">
             {formatNumber(data.peak_times.max_clicks)}
           </div>
         </div>
@@ -487,7 +484,7 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
             <ClockIcon className="h-5 w-5" />
             Hourly Pattern
           </h3>
@@ -515,7 +512,7 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
         </div>
 
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
             Weekly Pattern
           </h3>
@@ -543,7 +540,7 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Device Types */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Device Types</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">Device Types</h3>
           <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -568,21 +565,21 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
 
         {/* Top Browsers */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Top Browsers</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">Top Browsers</h3>
           <div className="space-y-3">
             {data.browsers.slice(0, 5).map((browser, index) => (
               <div key={`${browser.browser_name}-${browser.browser_version}`} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-muted-foreground">
                   {browser.browser_name} {browser.browser_version}
                 </span>
                 <div className="flex items-center gap-2">
-                  <div className="w-20 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full"
+                  <div className="w-20 bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full"
                       style={{ width: `${Math.max(10, browser.percentage)}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm font-medium text-gray-900 w-8 text-right">
+                  <span className="text-sm font-medium text-foreground w-8 text-right">
                     {formatNumber(browser.clicks)}
                   </span>
                 </div>
@@ -593,21 +590,21 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
 
         {/* Operating Systems */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Operating Systems</h3>
+          <h3 className="text-lg font-medium text-foreground mb-4">Operating Systems</h3>
           <div className="space-y-3">
             {data.operating_systems.slice(0, 5).map((os, index) => (
               <div key={`${os.os_name}-${os.os_version}`} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-muted-foreground">
                   {os.os_name} {os.os_version}
                 </span>
                 <div className="flex items-center gap-2">
-                  <div className="w-20 bg-gray-200 rounded-full h-2">
-                    <div 
+                  <div className="w-20 bg-muted rounded-full h-2">
+                    <div
                       className="bg-green-500 h-2 rounded-full"
                       style={{ width: `${Math.max(10, os.percentage)}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm font-medium text-gray-900 w-8 text-right">
+                  <span className="text-sm font-medium text-foreground w-8 text-right">
                     {formatNumber(os.clicks)}
                   </span>
                 </div>
