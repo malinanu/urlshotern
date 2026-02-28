@@ -208,8 +208,9 @@ function BillingContent() {
         const yearlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'year');
         if (yearlyPrice) priceId = yearlyPrice.id;
         else {
-          const fallbackPrice = product.prices.find(p => !p.is_archived);
-          if (fallbackPrice) priceId = fallbackPrice.id;
+          alert('A Yearly price has not been configured in Polar yet for this plan.');
+          setUpgrading(null);
+          return;
         }
       } else {
         const monthlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month');

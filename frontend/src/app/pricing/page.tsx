@@ -177,13 +177,13 @@ export default function PricingPage() {
       const fallback = fallbacks[planType];
       if (!fallback) return { price: '—', period: '', priceId: null };
 
-      const displayPrice = billingInterval === 'year'
-        ? `$${(fallback.price * 10).toFixed(2)}`
-        : `$${fallback.price}`;
+      if (billingInterval === 'year') {
+        return { price: 'Unavailable', period: '', priceId: null };
+      }
 
       return {
-        price: displayPrice,
-        period: billingInterval === 'year' ? '/year' : '/month',
+        price: `$${fallback.price}`,
+        period: '/month',
         priceId: null
       };
     }
@@ -206,11 +206,7 @@ export default function PricingPage() {
     if (firstActivePrice) {
       const isMonthlyButWantedYearly = firstActivePrice.recurring_interval === 'month' && billingInterval === 'year';
       if (isMonthlyButWantedYearly) {
-        return {
-          price: formatPrice(firstActivePrice.price_amount * 10, firstActivePrice.price_currency),
-          period: '/year',
-          priceId: firstActivePrice.id // Warning: This falls back to charging Monthly because Polar doesn't have a Yearly price configured!
-        };
+        return { price: 'Unavailable', period: '', priceId: null };
       }
 
       const interval = firstActivePrice.recurring_interval || 'month';
