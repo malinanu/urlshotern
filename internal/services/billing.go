@@ -589,7 +589,7 @@ func (bs *BillingService) CreateCheckoutHandler(c *gin.Context) {
 		return
 	}
 
-	checkoutURL, err := bs.CreateCheckoutSession(userID, user.Email, req.PlanID, nil, req.SuccessURL, req.CancelURL)
+	checkoutURL, err := bs.CreateCheckoutSession(userID, user.Email, req.PlanID, nil, nil, req.SuccessURL, req.CancelURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
 		return
