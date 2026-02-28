@@ -12,6 +12,7 @@ export default function PricingPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsFetchError, setProductsFetchError] = useState<{
@@ -181,19 +182,19 @@ export default function PricingPage() {
       return { price: 'Contact Us', period: '' };
     }
 
-    // Prioritize monthly pricing
-    const monthlyPrice = product.prices.find(
-      p => !p.is_archived && p.recurring_interval === 'month'
+    // Attempt to find the price matching the current billing interval
+    const activePrice = product.prices.find(
+      p => !p.is_archived && p.recurring_interval === billingInterval
     );
 
-    if (monthlyPrice) {
+    if (activePrice) {
       return {
-        price: formatPrice(monthlyPrice.price_amount, monthlyPrice.price_currency),
-        period: '/month'
+        price: formatPrice(activePrice.price_amount, activePrice.price_currency),
+        period: billingInterval === 'year' ? '/year' : '/month'
       };
     }
 
-    // Fall back to first active price
+    // Fall back to first active price if the requested interval isn't found
     const firstActivePrice = product.prices.find(p => !p.is_archived);
     if (firstActivePrice) {
       const interval = firstActivePrice.recurring_interval || 'month';
@@ -351,6 +352,29 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Monthly/Yearly Toggle */}
+          <div className="flex justify-center items-center mb-12 space-x-4">
+            <span className={`text-lg font-medium ${billingInterval === 'month' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setBillingInterval(prev => prev === 'month' ? 'year' : 'month')}
+              className="relative inline-flex h-8 w-16 items-center rounded-full bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              <span
+                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${billingInterval === 'year' ? 'translate-x-9' : 'translate-x-1'
+                  }`}
+              />
+            </button>
+            <span className={`text-lg font-medium flex items-center ${billingInterval === 'year' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Yearly
+              <span className="ml-2 inline-flex items-center rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500 ring-1 ring-inset ring-green-500/20">
+                Save 20%
+              </span>
+            </span>
+          </div>
+
           <div className="grid lg:grid-cols-3 gap-8">
             {plans.map((plan) => (
               <div
