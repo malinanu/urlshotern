@@ -178,6 +178,8 @@ export default function PricingPage() {
       if (!fallback) return { price: '—', period: '', priceId: null };
 
       if (billingInterval === 'year') {
+        if (planType === 'enterprise') return { price: '$499.90', period: '/year', priceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf' };
+        if (planType === 'premium') return { price: '$99.90', period: '/year', priceId: '007b1039-40e1-4861-81ba-da61ea34fdd7' };
         return { price: 'Unavailable', period: '', priceId: null };
       }
 
