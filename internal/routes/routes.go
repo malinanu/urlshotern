@@ -553,6 +553,31 @@ func setupStaticRoutes(router *gin.Engine) {
 
 		// Handle sub-routes with /*path
 		subRouteHandler := func(c *gin.Context) {
+			subPath := c.Param("path")
+			fullPath := routePath + subPath
+
+			// Try to serve the specific HTML file for this sub-route
+			htmlPath := filepath.Join("./static", fullPath+".html")
+			if _, err := os.Stat(htmlPath); err == nil {
+				c.File(htmlPath)
+				return
+			}
+
+			// Try nested index.html
+			nestedPath := filepath.Join("./static", fullPath, "index.html")
+			if _, err := os.Stat(nestedPath); err == nil {
+				c.File(nestedPath)
+				return
+			}
+
+			// Try route's main HTML file (e.g. /admin.html)
+			routeHtmlPath := filepath.Join("./static", routePath+".html")
+			if _, err := os.Stat(routeHtmlPath); err == nil {
+				c.File(routeHtmlPath)
+				return
+			}
+
+			// Fallback to root index.html
 			indexPath := filepath.Join("./static", "index.html")
 			c.File(indexPath)
 		}
