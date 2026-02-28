@@ -33,7 +33,6 @@ export default function AdminCouponsPage() {
         description: '',
         discount_type: 'percentage',
         discount_value: 0,
-        polar_discount_id: '',
     });
 
     useEffect(() => {
@@ -200,21 +199,6 @@ export default function AdminCouponsPage() {
                                         placeholder="e.g. 20 (for 20%)"
                                     />
                                 </div>
-                                {newCoupon.discount_type !== 'free_months' && (
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium mb-1 text-foreground">Polar Discount ID (Required for non-free passes)</label>
-                                        <input
-                                            type="text"
-                                            value={newCoupon.polar_discount_id}
-                                            onChange={(e) => setNewCoupon({ ...newCoupon, polar_discount_id: e.target.value })}
-                                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                            placeholder="Polar ID from Dashboard"
-                                        />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Percentage or Fixed amounts must exist in your Polar dashboard first. Link the ID here.
-                                        </p>
-                                    </div>
-                                )}
                             </div>
                             <button
                                 type="submit"
