@@ -56,8 +56,8 @@ func (h *AdminCouponHandlers) CreateCoupon(c *gin.Context) {
 			payload.Currency = &usd
 		}
 
-		if coupon.MaxRedemptions > 0 {
-			payload.MaxRedemptions = &coupon.MaxRedemptions
+		if coupon.MaxRedemptions != nil && *coupon.MaxRedemptions > 0 {
+			payload.MaxRedemptions = coupon.MaxRedemptions
 		}
 
 		polarDiscount, err := h.polarService.CreateDiscount(payload)
@@ -67,7 +67,7 @@ func (h *AdminCouponHandlers) CreateCoupon(c *gin.Context) {
 		}
 
 		// Save the Polar discount ID locally so we can reference it
-		coupon.PolarDiscountID = polarDiscount.ID
+		coupon.PolarDiscountID = &polarDiscount.ID
 	}
 
 	if err := h.db.Create(&coupon).Error; err != nil {
