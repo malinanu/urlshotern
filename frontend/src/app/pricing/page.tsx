@@ -131,6 +131,11 @@ export default function PricingPage() {
 
   // Helper function to find Polar product by plan type
   const getPolarProductId = (planType: string): string | null => {
+    // Hardcoded production overrides for missing Polar syncs
+    if (planType === 'free') return 'd8f317f0-a783-4309-8644-7ab98c68c3dd';
+    if (planType === 'premium') return '7808475d-8682-4d39-8821-efab2ac6548d';
+    if (planType === 'enterprise') return 'fcb60f51-4c53-43cd-a47c-fd62dc53b246';
+
     const product = polarProducts.find(p => p.plan_type === planType);
 
     if (!product) {
@@ -164,69 +169,17 @@ export default function PricingPage() {
       return { price: '$0', period: '/month', priceId: null };
     }
 
-    // Find the product for this plan type
-    const product = polarProducts.find(p => p.plan_type === planType);
-
-    // Fallback during loading or if product not found
-    if (!product || productsLoading || !product.prices || product.prices.length === 0) {
-      const fallbacks: Record<string, { price: number; period: string }> = {
-        premium: { price: 9.99, period: '/month' },
-        enterprise: { price: 49.99, period: '/month' },
-      };
-
-      const fallback = fallbacks[planType];
-      if (!fallback) return { price: '—', period: '', priceId: null };
-
-      if (billingInterval === 'year') {
-        if (planType === 'enterprise') return { price: '$499.90', period: '/year', priceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf' };
-        if (planType === 'premium') return { price: '$99.90', period: '/year', priceId: '007b1039-40e1-4861-81ba-da61ea34fdd7' };
-        return { price: 'Unavailable', period: '', priceId: null };
-      }
-
-      return {
-        price: `$${fallback.price}`,
-        period: '/month',
-        priceId: null
-      };
-    }
-
-    // Attempt to find the price matching the current billing interval
-    const activePrice = product.prices.find(
-      p => !p.is_archived && p.recurring_interval === billingInterval
-    );
-
-    if (activePrice) {
-      return {
-        price: formatPrice(activePrice.price_amount, activePrice.price_currency),
-        period: billingInterval === 'year' ? '/year' : '/month',
-        priceId: activePrice.id
-      };
-    }
-
-    // Hardcoded production overrides for missing Polar syncs MUST be checked for YEARLY explicitly here
-    // before we fallback to monthly
+    // Hardcoded production overrides for pricing
     if (billingInterval === 'year') {
-      if (planType === 'enterprise') {
-        return { price: '$499.90', period: '/year', priceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf' };
-      }
-      if (planType === 'premium') {
-        return { price: '$99.90', period: '/year', priceId: '007b1039-40e1-4861-81ba-da61ea34fdd7' };
-      }
+      if (planType === 'enterprise') return { price: '$499.90', period: '/year', priceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf' };
+      if (planType === 'premium') return { price: '$99.90', period: '/year', priceId: '007b1039-40e1-4861-81ba-da61ea34fdd7' };
       return { price: 'Unavailable', period: '', priceId: null };
     }
 
-    // Fall back to monthly price if requested interval isn't explicitly found
-    const firstActivePrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month') || product.prices.find(p => !p.is_archived);
-    if (firstActivePrice) {
-      const interval = firstActivePrice.recurring_interval || 'month';
-      return {
-        price: formatPrice(firstActivePrice.price_amount, firstActivePrice.price_currency),
-        period: interval === 'year' ? '/year' : '/month',
-        priceId: firstActivePrice.id
-      };
-    }
+    // Monthly pricing fallback
+    if (planType === 'enterprise') return { price: '$49.99', period: '/month', priceId: null };
+    if (planType === 'premium') return { price: '$9.99', period: '/month', priceId: null };
 
-    // All prices archived
     return { price: 'Unavailable', period: '', priceId: null };
   };
 
