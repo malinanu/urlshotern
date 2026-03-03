@@ -194,34 +194,72 @@ function BillingContent() {
       const basePlanType = planId.replace('_yearly', '');
       const product = polarProducts.find(p => p.plan_type === basePlanType);
 
-      if (!product) {
-        console.error('Polar product not found for plan:', basePlanType);
-        alert('Plan configuration error. Please contact support.');
-        setUpgrading(null);
-        return;
-      }
+      // Hardcoded production overrides for missing or unreliable Polar syncs
+      const hardcodedPrices: Record<string, { monthPriceId: string, yearPriceId: string, productId: string }> = {
+        free: {
+          monthPriceId: 'd8f317f0-a783-4309-8644-7ab98c68c3dd', yearPriceId: 'd8f317f0-a783-4309-8644-7ab98c68c3dd', productId: 'd8f317f0-a783-4309-8644-7ab98c68c3dd'
+        },
+        premium: {
+          monthPriceId: '7808475d-8682-4d39-8821-efab2ac6548d', yearPriceId: '007b1039-40e1-4861-81ba-da61ea34fdd7', productId: '7808475d-8682-4d39-8821-efab2ac6548d'
+        },
+        enterprise: {
+          monthPriceId: 'fcb60f51-4c53-43cd-a47c-fd62dc53b246', yearPriceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf', productId: 'fcb60f51-4c53-43cd-a47c-fd62dc53b246'
+        },
+      };
 
-      let priceId: string | undefined = undefined;
       const isYearly = planId.endsWith('_yearly') || billingInterval === 'year';
 
-      if (isYearly) {
-        const yearlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'year');
-        if (yearlyPrice) priceId = yearlyPrice.id;
-        else if (basePlanType === 'enterprise') {
-          priceId = 'e5e3b4b7-e572-42db-b271-b4ba637e83bf';
-        } else if (basePlanType === 'premium') {
-          priceId = '007b1039-40e1-4861-81ba-da61ea34fdd7';
-        } else {
-          alert('A Yearly price has not been configured in Polar yet for this plan.');
+      let finalProductId: string;
+      let finalPriceId: string | undefined;
+
+      // Fallback usage if Polar sync failed entirely or contains empty prices
+      if (!product || !product.prices || product.prices.length === 0) {
+        const fallback = hardcodedPrices[basePlanType];
+        if (!fallback) {
+          console.error('Polar product not found and no override fallback present for plan:', basePlanType);
+          alert('Plan configuration error. Please contact support.');
           setUpgrading(null);
           return;
         }
+
+        finalProductId = fallback.productId; // The base product UUID
+
+        // Strictly return the specific Price UUID over the Product UUID based on active tab
+        if (isYearly) {
+          finalPriceId = fallback.yearPriceId;
+        } else {
+          finalPriceId = fallback.monthPriceId;
+        }
       } else {
-        const monthlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month');
-        if (monthlyPrice) priceId = monthlyPrice.id;
-        else {
-          const fallbackPrice = product.prices.find(p => !p.is_archived);
-          if (fallbackPrice) priceId = fallbackPrice.id;
+        // Safe natural route: Products loaded properly natively from API sync
+        finalProductId = product.id;
+        if (isYearly) {
+          const yearlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'year');
+          if (yearlyPrice) {
+            finalPriceId = yearlyPrice.id;
+          } else {
+            const fallback = hardcodedPrices[basePlanType];
+            if (fallback) {
+              finalPriceId = fallback.yearPriceId
+            } else {
+              alert('A Yearly price has not been configured in Polar yet for this plan.');
+              setUpgrading(null);
+              return;
+            }
+          }
+        } else {
+          const monthlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month');
+          if (monthlyPrice) {
+            finalPriceId = monthlyPrice.id;
+          } else {
+            const fallback = hardcodedPrices[basePlanType];
+            if (fallback) {
+              finalPriceId = fallback.monthPriceId
+            } else {
+              const fallbackPrice = product.prices.find(p => !p.is_archived);
+              if (fallbackPrice) finalPriceId = fallbackPrice.id;
+            }
+          }
         }
       }
 
@@ -232,8 +270,8 @@ function BillingContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          product_id: product.id,
-          price_id: priceId,
+          product_id: finalProductId,
+          price_id: finalPriceId,
           discount_code: discountData ? discountCode : undefined,
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/billing`,
