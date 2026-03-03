@@ -190,8 +190,18 @@ function BillingContent() {
     setUpgrading(planId);
 
     try {
-      // Find corresponding Polar product
       const basePlanType = planId.replace('_yearly', '');
+
+      // Hardcoded production overrides to bypass failing Polar syncs
+      const productOverrides: Record<string, string> = {
+        'free': 'd8f317f0-a783-4309-8644-7ab98c68c3dd',
+        'premium': '7808475d-8682-4d39-8821-efab2ac6548d',
+        'enterprise': 'fcb60f51-4c53-43cd-a47c-fd62dc53b246',
+      };
+
+      const hardcodedProductId = productOverrides[basePlanType];
+
+      // Fallback to sync if no hardcoded available, but currently all 3 tiers are hardcoded
       const product = polarProducts.find(p => p.plan_type === basePlanType);
 
       // Hardcoded production overrides for missing or unreliable Polar syncs
