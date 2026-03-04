@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, startTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import RealTimeAnalytics from '@/components/analytics/RealTimeAnalytics';
@@ -126,7 +126,7 @@ function AnalyticsContent() {
               <div className="border-b border-border">
                 <nav className="flex space-x-8">
                   <button
-                    onClick={() => setActiveView('realtime')}
+                    onClick={() => startTransition(() => setActiveView('realtime'))}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${activeView === 'realtime'
                       ? 'border-primary text-primary'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
@@ -138,7 +138,7 @@ function AnalyticsContent() {
                     </div>
                   </button>
                   <button
-                    onClick={() => setActiveView('advanced')}
+                    onClick={() => startTransition(() => setActiveView('advanced'))}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${activeView === 'advanced'
                       ? 'border-primary text-primary'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
@@ -150,7 +150,7 @@ function AnalyticsContent() {
                     </div>
                   </button>
                   <button
-                    onClick={() => setActiveView('ai')}
+                    onClick={() => startTransition(() => setActiveView('ai'))}
                     className={`py-2 px-1 border-b-2 font-medium text-sm ${activeView === 'ai'
                       ? 'border-primary text-primary'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
@@ -170,19 +170,25 @@ function AnalyticsContent() {
           {selectedShortCode ? (
             <>
               {activeView === 'realtime' && (
-                <RealTimeAnalytics
-                  shortCode={selectedShortCode}
-                  refreshInterval={30000} // 30 seconds
-                />
+                <Suspense fallback={<div className="h-64 bg-card border border-border rounded-lg animate-pulse" />}>
+                  <RealTimeAnalytics
+                    shortCode={selectedShortCode}
+                    refreshInterval={30000}
+                  />
+                </Suspense>
               )}
               {activeView === 'advanced' && (
-                <AdvancedAnalytics
-                  shortCode={selectedShortCode}
-                  days={30}
-                />
+                <Suspense fallback={<div className="h-64 bg-card border border-border rounded-lg animate-pulse" />}>
+                  <AdvancedAnalytics
+                    shortCode={selectedShortCode}
+                    days={30}
+                  />
+                </Suspense>
               )}
               {activeView === 'ai' && (
-                <AIInsightsPanel shortCode={selectedShortCode} />
+                <Suspense fallback={<div className="h-64 bg-card border border-border rounded-lg animate-pulse" />}>
+                  <AIInsightsPanel shortCode={selectedShortCode} />
+                </Suspense>
               )}
             </>
           ) : (
