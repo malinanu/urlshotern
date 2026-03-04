@@ -28,6 +28,15 @@ func NewPolarWebhookHandler(db *gorm.DB, billingService *services.BillingService
 	}
 }
 
+// updateUserAccountType syncs users.account_type so JWT-based plan gating reflects the current plan.
+func (pwh *PolarWebhookHandler) updateUserAccountType(userID int64, planType string) {
+	if err := pwh.db.Exec("UPDATE users SET account_type = ?, updated_at = NOW() WHERE id = ?", planType, userID).Error; err != nil {
+		log.Printf("[webhook] failed to update account_type for user %d: %v", userID, err)
+	} else {
+		log.Printf("[webhook] account_type updated to %q for user %d", planType, userID)
+	}
+}
+
 // Polar webhook event structures
 
 type PolarWebhookPayload struct {
@@ -312,6 +321,7 @@ func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventD
 		return fmt.Errorf("failed to save subscription: %w", err)
 	}
 
+	pwh.updateUserAccountType(userID, planType)
 	log.Printf("Subscription created/updated for user %d: %s", userID, subscription.ID)
 	return nil
 }
@@ -391,6 +401,7 @@ func (pwh *PolarWebhookHandler) handleSubscriptionCreated(data json.RawMessage) 
 		return fmt.Errorf("failed to create subscription: %w", err)
 	}
 
+	pwh.updateUserAccountType(userID, planType)
 	log.Printf("Subscription saved for user %d", userID)
 	return nil
 }
@@ -423,6 +434,16 @@ func (pwh *PolarWebhookHandler) handleSubscriptionUpdated(data json.RawMessage) 
 		return fmt.Errorf("failed to update subscription: %w", err)
 	}
 
+	// Sync account_type based on new status
+	switch subscription.Status {
+	case "active", "trialing":
+		pwh.updateUserAccountType(polarSub.UserID, polarSub.PlanType)
+	case "cancelled", "revoked", "inactive", "past_due":
+		// Only downgrade if not just flagged for future cancellation
+		if !subscription.CancelAtPeriodEnd {
+			pwh.updateUserAccountType(polarSub.UserID, "free")
+		}
+	}
 	log.Printf("Subscription updated in database")
 	return nil
 }
@@ -454,6 +475,10 @@ func (pwh *PolarWebhookHandler) handleSubscriptionCancelled(data json.RawMessage
 		return fmt.Errorf("failed to cancel subscription: %w", err)
 	}
 
+	// Only downgrade immediately if cancel_at_period_end is false (immediate cancellation)
+	if !subscription.CancelAtPeriodEnd {
+		pwh.updateUserAccountType(polarSub.UserID, "free")
+	}
 	log.Printf("Subscription marked as cancelled in database")
 	return nil
 }
@@ -512,6 +537,7 @@ func (pwh *PolarWebhookHandler) handleSubscriptionActive(data json.RawMessage) e
 		return fmt.Errorf("failed to activate subscription: %w", err)
 	}
 
+	pwh.updateUserAccountType(polarSub.UserID, polarSub.PlanType)
 	log.Printf("Subscription marked as active - user features enabled")
 	return nil
 }
@@ -548,6 +574,7 @@ func (pwh *PolarWebhookHandler) handleSubscriptionUncanceled(data json.RawMessag
 		return fmt.Errorf("failed to reactivate subscription: %w", err)
 	}
 
+	pwh.updateUserAccountType(polarSub.UserID, polarSub.PlanType)
 	log.Printf("Subscription reactivated successfully")
 	return nil
 }
@@ -579,6 +606,7 @@ func (pwh *PolarWebhookHandler) handleSubscriptionRevoked(data json.RawMessage) 
 		return fmt.Errorf("failed to revoke subscription: %w", err)
 	}
 
+	pwh.updateUserAccountType(polarSub.UserID, "free")
 	log.Printf("⛔ Subscription revoked - access terminated immediately")
 	// TODO: Send notification to user about revocation
 	return nil
