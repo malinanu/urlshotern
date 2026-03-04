@@ -89,7 +89,7 @@
 | ~~Privacy: IP hashing~~ | ~~Backend~~ | ~~🟡 Medium~~ | ~~Medium~~ | ✅ Done (ip_hash in RecordClick) |
 | ~~Privacy: data retention job~~ | ~~Backend~~ | ~~🟡 Medium~~ | ~~Medium~~ | ✅ Done |
 | ~~Custom domains (currently stub)~~ | ~~Backend + Frontend~~ | ~~🟡 Medium~~ | ~~High~~ | ✅ Done |
-| /teams page & team management UI | Frontend | 🟡 Medium | Medium |
+| ~~/ teams page & team management UI~~ | ~~Frontend~~ | ~~🟡 Medium~~ | ~~Medium~~ | ✅ Done |
 | ~~/ ab-tests dedicated page~~ | ~~Frontend~~ | ~~🟢 Low~~ | ~~Low~~ | ✅ Done |
 | ~~Database migration tool~~ | ~~Infrastructure~~ | ~~🟡 Medium~~ | ~~Medium~~ | ✅ Done (cmd/migrate) |
 
@@ -536,7 +536,14 @@ Work through these phases in order. Do not start a phase until the previous one 
 - [x] Build `/ab-tests` page — list/create/start/stop tests; results modal with p-value + confidence
 - [x] Build `/audience/[shortCode]` page — referrer distribution + AI audience categories (Ultra gated)
 - [x] Add "Analytics" tab to admin panel — platform KPIs, today's activity, plan distribution, system health
-- [ ] `/dashboard/team` page — skipped; team service is stub-only (no real DB queries)
+- [x] `/teams` page — built; real TeamService wired (12 routes), create/invite/remove flow, plan-gated
+
+### ✅ P5 — Feature Completeness — COMPLETE
+- [x] Sync plan feature lists: billing.go `PlanLimits` extended; display names Pro/Ultra (never in DB)
+- [x] QR codes — confirmed built (`QRCode.tsx`, wired in `VirtualizedURLList`, `qrcode` library installed)
+- [x] Custom short codes UI — "Advanced options" toggle in `URLShortener.tsx` for Pro+ users
+- [x] Password protection — bcrypt hash on `url_mappings.password_hash`; redirect to `/p/[shortCode]`; `CheckPassword` handler
+- [x] Billing page uses Polar prices — `getPolarPrice()` helper reads live Polar products, no hardcoded prices
 
 ### ✅ P4 — Custom Domains + Infrastructure — COMPLETE
 - [x] Implement custom domain backend — real SQL via `storage/postgres_domains.go`, `services/domain.go` wired to DB
