@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { CheckIcon, XMarkIcon, StarIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { redirectToCheckout, getProducts, type PolarProduct, formatPrice } from '@/lib/polar';
+import { getProducts, type PolarProduct, formatPrice } from '@/lib/polar';
 
 export default function PricingPage() {
   const { isAuthenticated, getAccessToken } = useAuth();
@@ -96,7 +96,7 @@ export default function PricingPage() {
       return;
     }
 
-    // Get access token
+    // Get access token to ensure session is genuinely active
     const accessToken = getAccessToken();
     if (!accessToken) {
       console.error('[Pricing] User is authenticated but no access token found');
@@ -105,27 +105,10 @@ export default function PricingPage() {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setLoadingPlan(planName);
-      console.log(`[Pricing] Creating checkout for product: ${productId} with price: ${priceId}`);
-      await redirectToCheckout(productId, accessToken, priceId || undefined);
-    } catch (error) {
-      console.error('[Pricing] Failed to create checkout session:', error);
-
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start checkout';
-
-      if (errorMessage.includes('session has expired') || errorMessage.includes('log in again')) {
-        // Token expired - redirect to login
-        router.push(`/login?returnUrl=${encodeURIComponent('/pricing')}`);
-      } else {
-        // Other error - show user-friendly message
-        alert(errorMessage + '\n\nPlease try again or contact support if the problem persists.');
-      }
-
-      setIsLoading(false);
-      setLoadingPlan(null);
-    }
+    // Instead of completing checkout directly on /pricing, route centrally to /billing
+    // The query explicitly selects the tab and the plan
+    const billingUrl = `/billing?plan=${planType.toLowerCase()}&interval=${billingInterval}`;
+    router.push(billingUrl);
   };
 
 
