@@ -546,7 +546,10 @@ func (bs *BillingService) RedeemFreeMonths(userID int64, planID string, coupon *
 			return err
 		}
 
-		return bs.RecordCouponRedemption(tx, coupon.ID, userID, &newSub.ID)
+		// coupon_redemptions.subscription_id references subscriptions(id), not polar_subscriptions.
+		// For free-month coupons we bypass Polar entirely, so there is no subscriptions row.
+		// Pass nil — the column is nullable.
+		return bs.RecordCouponRedemption(tx, coupon.ID, userID, nil)
 	})
 }
 
