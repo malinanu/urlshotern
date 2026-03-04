@@ -37,7 +37,7 @@ interface DomainUsage {
 type ModalType = 'add' | 'verify' | null;
 
 export default function CustomDomainsPage() {
-  const { user, token } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const [domains, setDomains] = useState<CustomDomain[]>([]);
   const [usage, setUsage] = useState<DomainUsage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,8 +48,8 @@ export default function CustomDomainsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const authHeaders = useCallback(
-    () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
-    [token]
+    () => ({ Authorization: `Bearer ${getAccessToken()}`, 'Content-Type': 'application/json' }),
+    [getAccessToken]
   );
 
   const fetchDomains = useCallback(async () => {
@@ -71,8 +71,8 @@ export default function CustomDomainsPage() {
   }, [authHeaders]);
 
   useEffect(() => {
-    if (token) fetchDomains();
-  }, [token, fetchDomains]);
+    if (user) fetchDomains();
+  }, [user, fetchDomains]);
 
   const handleAdd = async () => {
     setError('');
