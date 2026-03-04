@@ -186,6 +186,22 @@ export default function AdvancedAnalytics({
     fetchAdvancedAnalytics();
   }, [fetchAdvancedAnalytics]);
 
+  // All useMemo calls must be before any conditional returns (Rules of Hooks)
+  const topCountriesForChart = useMemo(
+    () => analytics?.geographic?.countries?.slice(0, 10) ?? [],
+    [analytics?.geographic?.countries]
+  );
+
+  const topCountriesForPie = useMemo(
+    () => analytics?.geographic?.countries?.slice(0, 8) ?? [],
+    [analytics?.geographic?.countries]
+  );
+
+  const chartColors = useMemo(
+    () => topCountriesForPie.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+    [topCountriesForPie]
+  );
+
   if (isLoading) {
     return (
       <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
@@ -229,22 +245,6 @@ export default function AdvancedAnalytics({
       </div>
     );
   }
-
-  // Memoize expensive computations to avoid re-calculation on every render
-  const topCountriesForChart = useMemo(
-    () => analytics.geographic?.countries.slice(0, 10) || [],
-    [analytics.geographic?.countries]
-  );
-
-  const topCountriesForPie = useMemo(
-    () => analytics.geographic?.countries.slice(0, 8) || [],
-    [analytics.geographic?.countries]
-  );
-
-  const chartColors = useMemo(
-    () => topCountriesForPie.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
-    [topCountriesForPie]
-  );
 
   return (
     <div className={`bg-card rounded-lg shadow-sm border border-border p-6 ${className}`}>
