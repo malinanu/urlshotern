@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import Link from 'next/link';
 import {
   GlobeAltIcon,
   PlusIcon,
@@ -13,6 +14,8 @@ import {
   ArrowPathIcon,
   ShieldCheckIcon,
   XMarkIcon,
+  LockClosedIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 
 interface CustomDomain {
@@ -86,7 +89,11 @@ export default function CustomDomainsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message ?? 'Failed to add domain');
+        if (res.status === 403) {
+          setError('Custom domains require a Pro or Ultra plan. Please upgrade your plan.');
+        } else {
+          setError(data.message ?? 'Failed to add domain');
+        }
         return;
       }
       setNewDomain('');
@@ -140,11 +147,50 @@ export default function CustomDomainsPage() {
     setModal('verify');
   };
 
+  const hasDomainAccess = user?.account_type === 'premium' || user?.account_type === 'enterprise';
+
   if (!user) {
     return (
       <Layout>
         <div className="min-h-screen bg-background flex items-center justify-center">
           <p className="text-muted-foreground">Please log in to manage custom domains.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!hasDomainAccess) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-background py-8">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center space-x-3 mb-8">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <GlobeAltIcon className="h-6 w-6 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Custom Domains</h1>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <div className="mx-auto w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <LockClosedIcon className="h-7 w-7 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">Pro Feature</h2>
+              <p className="text-muted-foreground mb-2 max-w-md mx-auto">
+                Custom domains let you use your own branded URL (e.g.{' '}
+                <span className="font-mono text-foreground">links.yourcompany.com</span>) for all shortened links.
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                Upgrade to <strong>Pro</strong> or <strong>Ultra</strong> to unlock this feature.
+              </p>
+              <Link
+                href="/billing"
+                className="inline-flex items-center space-x-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors"
+              >
+                <SparklesIcon className="h-4 w-4" />
+                <span>Upgrade Plan</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </Layout>
     );
