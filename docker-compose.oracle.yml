@@ -64,6 +64,9 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL:-}
 
+      # AI Insights (OpenRouter — required for Ultra-plan AI features)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+
       # Admin Routes Configuration
       - ENABLE_ADMIN_ROUTES=true
 
