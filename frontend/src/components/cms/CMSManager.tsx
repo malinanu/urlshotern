@@ -17,6 +17,7 @@ import {
   ClockIcon,
   CubeIcon,
   DocumentDuplicateIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -477,7 +478,7 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <span className="sr-only">Close</span>
-                  <ClockIcon className="h-6 w-6" />
+                  <XMarkIcon className="h-6 w-6" />
                 </button>
               </div>
 

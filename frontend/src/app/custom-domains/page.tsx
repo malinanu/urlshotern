@@ -272,7 +272,15 @@ export default function CustomDomainsPage() {
       {modal === 'add' && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-card border border-border rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Add Custom Domain</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Add Custom Domain</h2>
+              <button
+                onClick={() => { setModal(null); setError(''); setNewDomain(''); }}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors rounded"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
             <label className="block text-sm font-medium text-foreground mb-1">Domain</label>
             <input
               type="text"
@@ -314,7 +322,15 @@ export default function CustomDomainsPage() {
       {modal === 'verify' && selectedDomain && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-card border border-border rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
-            <h2 className="text-lg font-semibold text-foreground mb-2">Verify Domain Ownership</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold text-foreground">Verify Domain Ownership</h2>
+              <button
+                onClick={() => setModal(null)}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors rounded"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground mb-4">
               Add this TXT record to your DNS for{' '}
               <span className="font-mono font-semibold text-foreground">{selectedDomain.domain}</span>:

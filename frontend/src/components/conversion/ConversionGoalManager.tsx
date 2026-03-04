@@ -10,7 +10,8 @@ import {
   CurrencyDollarIcon,
   ClipboardDocumentListIcon,
   LinkIcon,
-  BeakerIcon
+  BeakerIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -320,9 +321,18 @@ const ConversionGoalManager: React.FC = () => {
       {(showCreateModal || editingGoal) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              {editingGoal ? 'Edit Conversion Goal' : 'Create Conversion Goal'}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                {editingGoal ? 'Edit Conversion Goal' : 'Create Conversion Goal'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => { setShowCreateModal(false); setEditingGoal(null); }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
 
             <form onSubmit={editingGoal ? handleUpdateGoal : handleCreateGoal} className="space-y-4">
               {/* Goal Name */}
