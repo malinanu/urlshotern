@@ -6,18 +6,20 @@ import (
 
 // CustomDomain represents a custom domain configuration
 type CustomDomain struct {
-	ID              int64      `json:"id" db:"id"`
-	Domain          string     `json:"domain" db:"domain"`
-	UserID          int64      `json:"user_id" db:"user_id"`
-	IsActive        bool       `json:"is_active" db:"is_active"`
-	IsVerified      bool       `json:"is_verified" db:"is_verified"`
-	VerificationKey string     `json:"-" db:"verification_key"` // Hidden from JSON
-	SSLEnabled      bool       `json:"ssl_enabled" db:"ssl_enabled"`
-	SSLStatus       string     `json:"ssl_status" db:"ssl_status"`
-	DNSStatus       string     `json:"dns_status" db:"dns_status"`
-	LastChecked     *time.Time `json:"last_checked" db:"last_checked"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	ID              int64     `json:"id" db:"id"`
+	Domain          string    `json:"domain" db:"domain"`
+	UserID          int64     `json:"user_id" db:"user_id"`
+	IsActive        bool      `json:"is_active" db:"is_active"`
+	IsVerified      bool      `json:"is_verified" db:"is_verified"`
+	VerificationKey string    `json:"verification_key,omitempty" db:"verification_key"`
+	VerifiedAt      time.Time `json:"verified_at,omitempty" db:"verified_at"`
+	SSLEnabled      bool      `json:"ssl_enabled" db:"ssl_enabled"`
+	SSLStatus       string    `json:"ssl_status" db:"ssl_status"`
+	DNSStatus       string    `json:"dns_status" db:"dns_status"`
+	HealthStatus    string    `json:"health_status" db:"health_status"`
+	LastChecked     time.Time `json:"last_checked,omitempty" db:"last_checked"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // DomainVerification represents domain verification record

@@ -1,9 +1,11 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -14,6 +16,74 @@ import (
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/URLshorter/url-shortener/internal/utils"
 )
+
+// privateIPBlocks lists CIDR ranges that must not be reached from user-supplied domains.
+var privateIPBlocks []*net.IPNet
+
+func init() {
+	for _, cidr := range []string{
+		"127.0.0.0/8",    // loopback
+		"10.0.0.0/8",     // RFC1918
+		"172.16.0.0/12",  // RFC1918
+		"192.168.0.0/16", // RFC1918
+		"169.254.0.0/16", // link-local (AWS/GCP metadata)
+		"100.64.0.0/10",  // carrier-grade NAT
+		"::1/128",        // IPv6 loopback
+		"fc00::/7",       // IPv6 ULA
+		"fe80::/10",      // IPv6 link-local
+	} {
+		_, block, _ := net.ParseCIDR(cidr)
+		privateIPBlocks = append(privateIPBlocks, block)
+	}
+}
+
+// isPrivateIP returns true if the IP is in a reserved/private range.
+func isPrivateIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+	for _, block := range privateIPBlocks {
+		if block.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// isSafeHostname resolves a hostname and rejects it if any resolved IP is private.
+func isSafeHostname(host string) bool {
+	// Reject bare IP addresses that are private
+	if ip := net.ParseIP(host); ip != nil {
+		return !isPrivateIP(ip)
+	}
+	// Resolve and check every returned IP
+	addrs, err := net.LookupHost(host)
+	if err != nil {
+		return false
+	}
+	for _, addr := range addrs {
+		ip := net.ParseIP(addr)
+		if ip == nil || isPrivateIP(ip) {
+			return false
+		}
+	}
+	return len(addrs) > 0
+}
+
+// safeHTTPClient is a shared client with a strict timeout and no redirect following.
+var safeHTTPClient = &http.Client{
+	Timeout: 10 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		// Allow up to 3 redirects but re-check each target host
+		if len(via) >= 3 {
+			return fmt.Errorf("too many redirects")
+		}
+		if !isSafeHostname(req.URL.Hostname()) {
+			return fmt.Errorf("redirect to private/internal host denied")
+		}
+		return nil
+	},
+}
 
 type DomainService struct {
 	db              *storage.PostgresStorage
@@ -72,26 +142,19 @@ func (d *DomainService) CreateDomain(req *models.CreateDomainRequest, userID int
 
 	// Create domain record
 	domain := &models.CustomDomain{
-		ID:              time.Now().Unix(), // Temporary ID generation
 		Domain:          strings.ToLower(req.Domain),
 		UserID:          userID,
 		IsActive:        false, // Inactive until verified
 		IsVerified:      false,
 		VerificationKey: verificationKey,
-		SSLEnabled:      true, // Default to SSL enabled
+		SSLEnabled:      true,
 		SSLStatus:       models.SSLStatusPending,
 		DNSStatus:       models.DNSStatusPending,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 	}
 
 	// Save to database
-	// Implementation would save domain to database
-
-	// Create verification records
-	err = d.createVerificationRecords(domain.ID, verificationKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create verification records: %w", err)
+	if err := d.db.CreateCustomDomain(domain); err != nil {
+		return nil, fmt.Errorf("failed to save domain: %w", err)
 	}
 
 	return domain, nil
@@ -99,64 +162,17 @@ func (d *DomainService) CreateDomain(req *models.CreateDomainRequest, userID int
 
 // GetUserDomains retrieves all domains for a user
 func (d *DomainService) GetUserDomains(userID int64) ([]*models.CustomDomain, error) {
-	// Implementation would query database
-	// For now, return simulated domains
-	domains := []*models.CustomDomain{
-		{
-			ID:         1,
-			Domain:     "short.example.com",
-			UserID:     userID,
-			IsActive:   true,
-			IsVerified: true,
-			SSLEnabled: true,
-			SSLStatus:  models.SSLStatusActive,
-			DNSStatus:  models.DNSStatusConfigured,
-			CreatedAt:  time.Now().Add(-7 * 24 * time.Hour),
-			UpdatedAt:  time.Now().Add(-1 * time.Hour),
-		},
-	}
-
-	return domains, nil
+	return d.db.GetCustomDomainsByUser(userID)
 }
 
 // GetDomainByID retrieves a domain by ID
 func (d *DomainService) GetDomainByID(domainID int64) (*models.CustomDomain, error) {
-	// Implementation would query database
-	// For now, return simulated domain
-	return &models.CustomDomain{
-		ID:         domainID,
-		Domain:     "short.example.com",
-		UserID:     1,
-		IsActive:   true,
-		IsVerified: true,
-		SSLEnabled: true,
-		SSLStatus:  models.SSLStatusActive,
-		DNSStatus:  models.DNSStatusConfigured,
-		CreatedAt:  time.Now().Add(-7 * 24 * time.Hour),
-		UpdatedAt:  time.Now().Add(-1 * time.Hour),
-	}, nil
+	return d.db.GetCustomDomainByID(domainID)
 }
 
 // GetDomainByName retrieves a domain by domain name
 func (d *DomainService) GetDomainByName(domainName string) (*models.CustomDomain, error) {
-	// Implementation would query database by domain name
-	// For now, return nil for non-existing domains
-	if domainName == "short.example.com" {
-		return &models.CustomDomain{
-			ID:         1,
-			Domain:     "short.example.com",
-			UserID:     1,
-			IsActive:   true,
-			IsVerified: true,
-			SSLEnabled: true,
-			SSLStatus:  models.SSLStatusActive,
-			DNSStatus:  models.DNSStatusConfigured,
-			CreatedAt:  time.Now().Add(-7 * 24 * time.Hour),
-			UpdatedAt:  time.Now().Add(-1 * time.Hour),
-		}, nil
-	}
-	
-	return nil, fmt.Errorf("domain not found")
+	return d.db.GetCustomDomainByName(domainName)
 }
 
 // UpdateDomain updates domain settings
@@ -184,8 +200,9 @@ func (d *DomainService) UpdateDomain(domainID int64, req *models.UpdateDomainReq
 
 	domain.UpdatedAt = time.Now()
 
-	// Save changes to database
-	// Implementation would update database
+	if err := d.db.UpdateCustomDomain(domain); err != nil {
+		return nil, fmt.Errorf("failed to update domain: %w", err)
+	}
 
 	return domain, nil
 }
@@ -212,10 +229,7 @@ func (d *DomainService) DeleteDomain(domainID int64, userID int64) error {
 		return fmt.Errorf("cannot delete domain with active URLs")
 	}
 
-	// Delete domain from database
-	// Implementation would delete domain and related records
-
-	return nil
+	return d.db.DeleteCustomDomain(domainID, userID)
 }
 
 // Domain Verification
@@ -266,11 +280,16 @@ func (d *DomainService) GetDomainVerificationInfo(domainID int64) (*models.Domai
 	}, nil
 }
 
-// VerifyDomain verifies domain ownership
-func (d *DomainService) VerifyDomain(domainID int64) error {
+// VerifyDomain verifies domain ownership using DNS/HTTP checks.
+// userID is needed to confirm ownership before marking verified.
+func (d *DomainService) VerifyDomain(domainID int64, userID int64) error {
 	domain, err := d.GetDomainByID(domainID)
 	if err != nil {
 		return err
+	}
+
+	if domain.UserID != userID {
+		return fmt.Errorf("access denied")
 	}
 
 	if domain.IsVerified {
@@ -278,34 +297,22 @@ func (d *DomainService) VerifyDomain(domainID int64) error {
 	}
 
 	// Try different verification methods
-	verified := false
-
-	// Try DNS verification
-	if d.verifyDNSRecord(domain.Domain, domain.VerificationKey) {
-		verified = true
-	} else if d.verifyHTTPFile(domain.Domain, domain.VerificationKey) {
-		// Try HTTP file verification
-		verified = true
-	} else if d.verifyHTMLFile(domain.Domain, domain.VerificationKey) {
-		// Try HTML file verification
-		verified = true
-	}
+	verified := d.verifyDNSRecord(domain.Domain, domain.VerificationKey) ||
+		d.verifyHTTPFile(domain.Domain, domain.VerificationKey) ||
+		d.verifyHTMLFile(domain.Domain, domain.VerificationKey)
 
 	if !verified {
-		return fmt.Errorf("domain verification failed")
+		return fmt.Errorf("domain verification failed: DNS TXT record or HTTP file not found")
 	}
 
-	// Update domain status
-	domain.IsVerified = true
-	domain.IsActive = true // Activate domain after verification
-	domain.DNSStatus = models.DNSStatusConfigured
-	domain.UpdatedAt = time.Now()
-
-	// Save to database
-	// Implementation would update database
+	// Persist verification to DB
+	if err := d.db.VerifyCustomDomain(domainID, userID, domain.VerificationKey); err != nil {
+		return fmt.Errorf("failed to save verification: %w", err)
+	}
 
 	// Schedule SSL certificate provisioning if enabled
 	if domain.SSLEnabled {
+		domain.IsVerified = true
 		go d.provisionSSLCertificate(domain)
 	}
 
@@ -378,22 +385,18 @@ func (d *DomainService) GetDomainStatus(domainID int64) (*models.DomainStatus, e
 
 // CanAddDomain checks if a user can add another domain
 func (d *DomainService) CanAddDomain(userID int64) (bool, error) {
-	// Get user account type
 	user, err := d.userService.GetUserByID(userID)
 	if err != nil {
 		return false, err
 	}
 
-	// Count current domains
-	domains, err := d.GetUserDomains(userID)
+	count, err := d.db.CountCustomDomainsByUser(userID)
 	if err != nil {
 		return false, err
 	}
 
-	currentCount := len(domains)
 	limit := models.GetDomainLimit(user.AccountType)
-
-	return currentCount < limit, nil
+	return count < limit, nil
 }
 
 // GetDomainUsage retrieves domain usage statistics for a user
@@ -403,14 +406,12 @@ func (d *DomainService) GetDomainUsage(userID int64) (*models.DomainUsage, error
 		return nil, err
 	}
 
-	domains, err := d.GetUserDomains(userID)
+	used, err := d.db.CountCustomDomainsByUser(userID)
 	if err != nil {
 		return nil, err
 	}
 
 	limit := models.GetDomainLimit(user.AccountType)
-	used := len(domains)
-
 	return &models.DomainUsage{
 		UserID:       userID,
 		DomainsUsed:  used,
@@ -467,20 +468,48 @@ func (d *DomainService) getDomainAnalytics(domainID int64) (*models.DomainAnalyt
 
 // Helper Methods
 
-// validateDomainName validates domain format
+// blockedTLDs are reserved/internal TLDs that should never point to public servers.
+var blockedTLDs = map[string]bool{
+	"local": true, "internal": true, "lan": true, "intranet": true,
+	"test": true, "example": true, "invalid": true, "localhost": true,
+}
+
+// validateDomainName validates domain format and blocks internal/reserved names.
 func (d *DomainService) validateDomainName(domain string) error {
-	if len(domain) == 0 || len(domain) > 255 {
+	if len(domain) == 0 || len(domain) > 253 {
 		return fmt.Errorf("invalid domain length")
+	}
+
+	// Reject raw IP addresses
+	if net.ParseIP(domain) != nil {
+		return fmt.Errorf("IP addresses are not allowed as custom domains")
 	}
 
 	if strings.Contains(domain, "..") || strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
 		return fmt.Errorf("invalid domain format")
 	}
 
-	// Basic domain validation (in production, use more robust validation)
 	parts := strings.Split(domain, ".")
 	if len(parts) < 2 {
-		return fmt.Errorf("domain must have at least one subdomain and TLD")
+		return fmt.Errorf("domain must include at least one dot (e.g. links.example.com)")
+	}
+
+	// Validate each label
+	for _, part := range parts {
+		if len(part) == 0 || len(part) > 63 {
+			return fmt.Errorf("invalid domain label length")
+		}
+	}
+
+	// Block reserved TLDs
+	tld := strings.ToLower(parts[len(parts)-1])
+	if blockedTLDs[tld] {
+		return fmt.Errorf("domain uses a reserved or internal TLD")
+	}
+
+	// Block localhost explicitly
+	if strings.ToLower(domain) == "localhost" {
+		return fmt.Errorf("localhost is not allowed as a custom domain")
 	}
 
 	return nil
@@ -520,33 +549,65 @@ func (d *DomainService) verifyDNSRecord(domain, key string) bool {
 }
 
 func (d *DomainService) verifyHTTPFile(domain, key string) bool {
-	// Check for verification file at /.well-known/urlshortener-verify.txt
-	url := fmt.Sprintf("http://%s/.well-known/urlshortener-verify.txt", domain)
-	resp, err := http.Get(url)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
+	// Reject private/internal hosts before making any outbound request
+	if !isSafeHostname(domain) {
 		return false
 	}
 
-	// Read and compare content (simplified)
-	// In production, would properly read and validate content
-	return true
+	// Try HTTPS first, fall back to HTTP
+	for _, scheme := range []string{"https", "http"} {
+		target := fmt.Sprintf("%s://%s/.well-known/urlshortener-verify.txt", scheme, domain)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("User-Agent", "URLshortn-Verifier/1.0")
+
+		resp, err := safeHTTPClient.Do(req)
+		if err != nil {
+			continue
+		}
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024)) // max 1 KB
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK && strings.TrimSpace(string(body)) == key {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *DomainService) verifyHTMLFile(domain, key string) bool {
-	// Check for HTML file with verification key in filename
-	url := fmt.Sprintf("http://%s/urlshortener-verify-%s.html", domain, key)
-	resp, err := http.Get(url)
-	if err != nil {
+	// Reject private/internal hosts before making any outbound request
+	if !isSafeHostname(domain) {
 		return false
 	}
-	defer resp.Body.Close()
 
-	return resp.StatusCode == http.StatusOK
+	for _, scheme := range []string{"https", "http"} {
+		target := fmt.Sprintf("%s://%s/urlshortener-verify-%s.html", scheme, domain, key)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("User-Agent", "URLshortn-Verifier/1.0")
+
+		resp, err := safeHTTPClient.Do(req)
+		if err != nil {
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			return true
+		}
+	}
+	return false
 }
 
 // SSL Certificate Management
@@ -597,14 +658,28 @@ func (d *DomainService) checkDNSResolution(domain string) models.DomainStatusChe
 }
 
 func (d *DomainService) checkHTTPResponse(domain string) models.DomainStatusCheck {
-	url := fmt.Sprintf("http://%s", domain)
-	resp, err := http.Get(url)
 	status := models.CheckStatusPass
 	message := "HTTP response successful"
-	
+
+	// Safety check before making any outbound request
+	if !isSafeHostname(domain) {
+		return models.DomainStatusCheck{
+			Name: "http_response", Status: models.CheckStatusFail,
+			Message: "Domain resolves to a private or internal address",
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://%s", domain), nil)
+	if err != nil {
+		return models.DomainStatusCheck{Name: "http_response", Status: models.CheckStatusFail, Message: "request build failed"}
+	}
+	req.Header.Set("User-Agent", "URLshortn-HealthCheck/1.0")
+	resp, err := safeHTTPClient.Do(req)
 	if err != nil {
 		status = models.CheckStatusFail
-		message = fmt.Sprintf("HTTP request failed: %v", err)
+		message = "HTTP request failed"
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode >= 400 {

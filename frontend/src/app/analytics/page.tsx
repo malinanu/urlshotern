@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import RealTimeAnalytics from '@/components/analytics/RealTimeAnalytics';
 import AdvancedAnalytics from '@/components/analytics/AdvancedAnalytics';
+import { AIInsightsPanel } from '@/components/analytics/AIInsightsPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   ChartBarIcon,
   PresentationChartLineIcon,
   ChartPieIcon,
-  ArrowTrendingUpIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -19,7 +20,7 @@ function AnalyticsContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [selectedShortCode, setSelectedShortCode] = useState<string>('');
   const [userUrls, setUserUrls] = useState<any[]>([]);
-  const [activeView, setActiveView] = useState<'realtime' | 'advanced'>('realtime');
+  const [activeView, setActiveView] = useState<'realtime' | 'advanced' | 'ai'>('realtime');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -148,6 +149,18 @@ function AnalyticsContent() {
                       Advanced Analytics
                     </div>
                   </button>
+                  <button
+                    onClick={() => setActiveView('ai')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${activeView === 'ai'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SparklesIcon className="h-4 w-4" />
+                      AI Insights
+                    </div>
+                  </button>
                 </nav>
               </div>
             </div>
@@ -167,6 +180,9 @@ function AnalyticsContent() {
                   shortCode={selectedShortCode}
                   days={30}
                 />
+              )}
+              {activeView === 'ai' && (
+                <AIInsightsPanel shortCode={selectedShortCode} />
               )}
             </>
           ) : (

@@ -19,6 +19,7 @@ import (
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/URLshorter/url-shortener/internal/workers"
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -63,14 +64,18 @@ func main() {
 	shortenerService := services.NewShortenerService(db, redis, config)
 	analyticsService := services.NewAnalyticsService(db)
 	advancedAnalyticsService := services.NewAdvancedAnalyticsService(db)
-	// userAnalyticsService := services.NewUserAnalyticsService(db)  // Temporarily disabled
-	var userAnalyticsService *services.UserAnalyticsService // Placeholder
+	sqlxDB := sqlx.NewDb(db.GetRawDB(), "postgres")
+	userAnalyticsService := services.NewUserAnalyticsService(sqlxDB)
+	botDetectionService := services.NewBotDetectionService(redis)
+	aiInsightsService := services.NewAIInsightsService(config.OpenRouterAPIKey, db, redis, advancedAnalyticsService)
+	brandingService := services.NewBrandingService(db)
 
 	// Initialize auth-related services
 	smsService := services.NewSMSService(db, config)
 	emailService := services.NewEmailService(db, config)
 	jwtService := services.NewJWTService(config.JWTSecret, config.JWTIssuer, time.Hour*24, time.Hour*24*7)
 	userService := services.NewUserService(db, redis, jwtService, smsService, emailService, nil)
+	domainService := services.NewDomainService(db, redis, config, analyticsService, userService)
 	authService := services.NewAuthService(userService, jwtService, smsService, emailService, db, redis, config)
 	rbacService := services.NewRBACServiceImpl(db, redis)
 	conversionTrackingService := services.NewConversionTrackingService(db)
@@ -81,9 +86,6 @@ func main() {
 	globalSettingsService := services.NewGlobalSettingsService(db)
 	contentBlockService := services.NewContentBlockService(db, globalSettingsService)
 	pageTemplateService := services.NewPageTemplateService(db, contentBlockService, globalSettingsService)
-	// cmsService := services.NewCMSService(db)  // Temporarily disabled
-	// apiKeyService := services.NewAPIKeyService(db)  // Temporarily disabled
-
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
 	
@@ -97,7 +99,7 @@ func main() {
 	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config, contentBlockService, pageTemplateService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	adminRBACHandlers := handlers.NewAdminRBACHandlers(adminService, rbacService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService)
 
 	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
@@ -129,6 +131,11 @@ func main() {
 	productSyncWorker := workers.NewProductSyncWorker(polarSvc, syncInterval)
 	go productSyncWorker.Start(workerCtx)
 	log.Printf("✅ Product sync worker started (interval: %v)", syncInterval)
+
+	// Start data retention worker in background (nightly at 02:00)
+	retentionWorker := workers.NewRetentionWorker(db)
+	go retentionWorker.Start(workerCtx)
+	log.Println("✅ Data retention worker started")
 
 	// Setup Gin router
 	if config.Environment == "production" {

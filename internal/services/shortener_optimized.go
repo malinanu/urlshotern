@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/url"
@@ -181,13 +183,21 @@ func (s *OptimizedShortenerService) ShortenURL(request *models.ShortenRequest, c
 	return response, nil
 }
 
-// RecordClick records a click event using worker pool with context timeouts
-func (s *OptimizedShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string) error {
+// RecordClick records a click event using worker pool with context timeouts.
+// isBot should be determined by the caller before invoking this.
+func (s *OptimizedShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string, isBot bool) error {
 	// Generate ID for click event
 	id, err := utils.GenerateID()
 	if err != nil {
 		return fmt.Errorf("failed to generate click event ID: %w", err)
 	}
+
+	// Generate privacy-preserving IP hash
+	dailySalt := time.Now().UTC().Format("2006-01-02")
+	rawHash := sha256.Sum256([]byte(clientIP + dailySalt))
+	ipHash := hex.EncodeToString(rawHash[:])
+
+	isUnique, _ := s.redis.CheckAndSetUniqueVisitor(ipHash, shortCode)
 
 	// Create click event
 	event := &models.ClickEvent{
@@ -198,6 +208,9 @@ func (s *OptimizedShortenerService) RecordClick(shortCode, clientIP, userAgent, 
 		UserAgent:   userAgent,
 		Referrer:    referrer,
 		CountryCode: s.getCountryFromIP(clientIP),
+		IsBot:       isBot,
+		IsUnique:    isUnique,
+		IPHash:      ipHash,
 	}
 
 	// Submit all analytics tasks to worker pool with proper error handling
@@ -212,16 +225,18 @@ func (s *OptimizedShortenerService) RecordClick(shortCode, clientIP, userAgent, 
 		},
 	})
 
-	// Task 2: Process enhanced analytics
-	s.workerPool.Submit(workers.Task{
-		ID: fmt.Sprintf("analytics_%d", id),
-		Execute: func(ctx context.Context) error {
-			return s.analytics.ProcessEnhancedClickEvent(event)
-		},
-		OnError: func(err error) {
-			fmt.Printf("Failed to process enhanced click analytics: %v\n", err)
-		},
-	})
+	// Task 2: Process enhanced analytics (bots excluded)
+	if !isBot {
+		s.workerPool.Submit(workers.Task{
+			ID: fmt.Sprintf("analytics_%d", id),
+			Execute: func(ctx context.Context) error {
+				return s.analytics.ProcessEnhancedClickEvent(event)
+			},
+			OnError: func(err error) {
+				fmt.Printf("Failed to process enhanced click analytics: %v\n", err)
+			},
+		})
+	}
 
 	// Task 3: Increment click count in database
 	s.workerPool.Submit(workers.Task{

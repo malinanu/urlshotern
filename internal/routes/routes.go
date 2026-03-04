@@ -183,18 +183,34 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	api.DELETE("/my-urls/:shortCode", handler.DeleteURL)
 	api.PUT("/my-urls/:shortCode", handler.UpdateURL)
 	
-	// Enhanced analytics for authenticated users - temporarily disabled
+	// Enhanced analytics for authenticated users
+	billing := handler.GetBillingService()
 	api.GET("/analytics/:shortCode/trends", handler.GetClickTrends)
-	// api.GET("/analytics/:shortCode/advanced", handler.AdvancedAnalyticsHandlers.GetAdvancedAnalytics)
-	// api.GET("/analytics/:shortCode/geographic", handler.AdvancedAnalyticsHandlers.GetGeographicAnalytics)
-	// api.GET("/analytics/:shortCode/time", handler.AdvancedAnalyticsHandlers.GetTimeAnalytics)
-	// api.GET("/analytics/:shortCode/device", handler.AdvancedAnalyticsHandlers.GetDeviceAnalytics)
-	// api.GET("/analytics/:shortCode/referrers", handler.AdvancedAnalyticsHandlers.GetReferrerAnalytics)
-	// api.GET("/analytics/:shortCode/referrers/enhanced", handler.AdvancedAnalyticsHandlers.GetEnhancedReferrerAnalytics)
-	// api.GET("/analytics/:shortCode/utm-campaigns", handler.AdvancedAnalyticsHandlers.GetUTMCampaignAnalytics)
-	// api.GET("/analytics/:shortCode/referrers/insights", handler.AdvancedAnalyticsHandlers.GetReferrerInsights)
-	// api.GET("/analytics/:shortCode/heatmap", handler.AdvancedAnalyticsHandlers.GetHeatmapAnalytics)
-	// api.GET("/analytics/:shortCode/map", handler.AdvancedAnalyticsHandlers.GetMapAnalytics)
+	api.GET("/analytics/:shortCode/advanced",           handler.AdvancedAnalyticsHandlers.GetAdvancedAnalytics)
+	api.GET("/analytics/:shortCode/device",             handler.AdvancedAnalyticsHandlers.GetDeviceAnalytics)
+	api.GET("/analytics/:shortCode/referrers",          handler.AdvancedAnalyticsHandlers.GetReferrerAnalytics)
+	// Pro+ features
+	api.GET("/analytics/:shortCode/geographic",
+		middleware.CheckPlanFeature(billing, middleware.FeatureCityGeo),
+		handler.AdvancedAnalyticsHandlers.GetGeographicAnalytics)
+	api.GET("/analytics/:shortCode/time",
+		middleware.CheckPlanFeature(billing, middleware.FeatureTimeSeries),
+		handler.AdvancedAnalyticsHandlers.GetTimeAnalytics)
+	api.GET("/analytics/:shortCode/heatmap",
+		middleware.CheckPlanFeature(billing, middleware.FeatureHeatmap),
+		handler.AdvancedAnalyticsHandlers.GetHeatmapAnalytics)
+	api.GET("/analytics/:shortCode/utm-campaigns",
+		middleware.CheckPlanFeature(billing, middleware.FeatureUTM),
+		handler.AdvancedAnalyticsHandlers.GetUTMCampaignAnalytics)
+	api.GET("/analytics/:shortCode/referrers/enhanced",
+		middleware.CheckPlanFeature(billing, middleware.FeatureUTM),
+		handler.AdvancedAnalyticsHandlers.GetEnhancedReferrerAnalytics)
+	api.GET("/analytics/:shortCode/referrers/insights",
+		middleware.CheckPlanFeature(billing, middleware.FeatureUTM),
+		handler.AdvancedAnalyticsHandlers.GetReferrerInsights)
+	api.GET("/analytics/:shortCode/map",
+		middleware.CheckPlanFeature(billing, middleware.FeatureLiveMap),
+		handler.AdvancedAnalyticsHandlers.GetMapAnalytics)
 	api.GET("/dashboard/stats", handler.GetUserDashboardStats)
 	
 	// Billing and subscription routes
@@ -215,6 +231,31 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	
 	// User analytics routes
 	setupUserAnalyticsRoutes(api, handler)
+
+	// White-label branding (enterprise only)
+	api.GET("/branding",
+		middleware.CheckPlanFeature(billing, middleware.FeatureBranding),
+		handler.BrandingHandlers.GetBranding)
+	api.PUT("/branding",
+		middleware.CheckPlanFeature(billing, middleware.FeatureBranding),
+		handler.BrandingHandlers.UpdateBranding)
+
+	// Ultra (enterprise) — AI Insights
+	api.GET("/insights/:shortCode/summary",
+		middleware.CheckPlanFeature(billing, middleware.FeatureAISummary),
+		handler.AIInsightsHandlers.GetSummary)
+	api.GET("/insights/:shortCode/anomalies",
+		middleware.CheckPlanFeature(billing, middleware.FeatureAIAnomaly),
+		handler.AIInsightsHandlers.GetAnomalies)
+	api.GET("/insights/:shortCode/recommendations",
+		middleware.CheckPlanFeature(billing, middleware.FeatureAIRecommend),
+		handler.AIInsightsHandlers.GetRecommendations)
+	api.GET("/insights/:shortCode/forecast",
+		middleware.CheckPlanFeature(billing, middleware.FeatureForecast),
+		handler.AIInsightsHandlers.GetForecast)
+	api.GET("/insights/:shortCode/audience",
+		middleware.CheckPlanFeature(billing, middleware.FeatureAudience),
+		handler.AIInsightsHandlers.GetAudienceProfile)
 }
 
 // setupAdminRoutes configures routes that require admin access
@@ -391,6 +432,10 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 		seo.POST("/meta-tags", handler.AuthHandlers.CreateMetaTag)
 		seo.DELETE("/meta-tags/:id", handler.AuthHandlers.DeleteMetaTag)
 	}
+
+	// Custom domain admin routes
+	admin.GET("/domains", handler.DomainHandlers.GetAllDomains)
+	admin.GET("/domains/stats", handler.DomainHandlers.GetDomainStats)
 }
 
 // setupConversionTrackingRoutes configures conversion tracking routes
@@ -479,18 +524,22 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	// Webhooks (no auth required for Polar webhooks)
 	api.POST("/webhooks/polar", handler.PolarWebhookHandler.HandleWebhook)
 	
-	// Feature-protected routes
+	// Custom domain management (requires custom_domain feature)
 	customDomain := api.Group("/custom-domains")
 	customDomain.Use(handler.BillingHandlers.CheckFeatureAccess("custom_domain"))
 	{
-		customDomain.POST("/", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "Custom domain management - coming soon"})
-		})
-		customDomain.GET("/", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "List custom domains - coming soon"})
-		})
+		customDomain.POST("/", handler.DomainHandlers.CreateDomain)
+		customDomain.GET("/", handler.DomainHandlers.GetUserDomains)
+		customDomain.GET("/usage", handler.DomainHandlers.GetDomainUsage)
+		customDomain.GET("/:id", handler.DomainHandlers.GetDomain)
+		customDomain.PUT("/:id", handler.DomainHandlers.UpdateDomain)
+		customDomain.DELETE("/:id", handler.DomainHandlers.DeleteDomain)
+		customDomain.GET("/:id/verification", handler.DomainHandlers.GetDomainVerification)
+		customDomain.POST("/:id/verify", handler.DomainHandlers.VerifyDomain)
+		customDomain.GET("/:id/settings", handler.DomainHandlers.GetDomainSettings)
+		customDomain.GET("/:id/status", handler.DomainHandlers.GetDomainStatus)
 	}
-	
+
 	// API key management routes - ENABLED for professional API integration
 	// Removed billing feature gate - API keys available to all authenticated users
 	api.POST("/api-keys", handler.APIKeyHandlers.CreateAPIKey)
@@ -524,7 +573,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/dashboard", "/login", "/register",
 		"/analytics", "/profile", "/settings",
 		"/bulk", "/conversions", "/api-keys", "/admin",
-		"/billing", "/pages",
+		"/billing", "/pages", "/custom-domains",
 		"/forgot-password", "/reset-password",  // Password reset pages
 	}
 

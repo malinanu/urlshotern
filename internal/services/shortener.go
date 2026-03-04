@@ -234,23 +234,35 @@ func (s *ShortenerService) DeleteURL(shortCode string) error {
 }
 
 
-// RecordClick records a click event for analytics
-func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string) error {
+// RecordClick records a click event for analytics.
+// isBot should be determined by the caller (handler) before invoking this.
+func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string, isBot bool) error {
 	// Generate ID for click event
 	id, err := utils.GenerateID()
 	if err != nil {
 		return fmt.Errorf("failed to generate click event ID: %w", err)
 	}
 
+	// Generate privacy-preserving IP hash (daily rotating salt)
+	dailySalt := time.Now().UTC().Format("2006-01-02")
+	rawHash := sha256.Sum256([]byte(clientIP + dailySalt))
+	ipHash := hex.EncodeToString(rawHash[:])
+
+	// Determine unique visitor (first click with this ip_hash+shortCode today)
+	isUnique, _ := s.redis.CheckAndSetUniqueVisitor(ipHash, shortCode)
+
 	// Create click event
 	event := &models.ClickEvent{
-		ID:        id,
-		ShortCode: shortCode,
-		ClickedAt: time.Now(),
-		IPAddress: clientIP,
-		UserAgent: userAgent,
-		Referrer:  referrer,
-		CountryCode: s.getCountryFromIP(clientIP), // Simple implementation
+		ID:          id,
+		ShortCode:   shortCode,
+		ClickedAt:   time.Now(),
+		IPAddress:   clientIP,
+		UserAgent:   userAgent,
+		Referrer:    referrer,
+		CountryCode: s.getCountryFromIP(clientIP),
+		IsBot:       isBot,
+		IsUnique:    isUnique,
+		IPHash:      ipHash,
 	}
 
 	// Save to database (async operation for better performance)
@@ -258,10 +270,12 @@ func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer 
 		return s.db.SaveClickEvent(event)
 	})
 
-	// Process enhanced analytics (async operation)
-	utils.Go("process_enhanced_click_analytics", func() error {
-		return s.analytics.ProcessEnhancedClickEvent(event)
-	})
+	// Process enhanced analytics only for non-bot clicks
+	if !isBot {
+		utils.Go("process_enhanced_click_analytics", func() error {
+			return s.analytics.ProcessEnhancedClickEvent(event)
+		})
+	}
 
 	// Increment click count in database
 	utils.Go("increment_click_count", func() error {

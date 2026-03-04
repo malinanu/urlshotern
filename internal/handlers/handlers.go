@@ -25,6 +25,7 @@ type Handler struct {
 	realtimeService        *services.RealtimeAnalyticsService
 	attributionService     *services.AttributionService
 	billingService         *services.BillingService  // Added for usage limit enforcement
+	botDetector            *services.BotDetectionService
 	db                     *storage.PostgresStorage  // Database storage for monitoring
 	AuthHandlers           *AuthHandlers
 	AnalyticsHandlers      *AnalyticsHandlers
@@ -34,16 +35,19 @@ type Handler struct {
 	BillingHandlers        *BillingHandler
 	APIKeyHandlers         *APIKeyHandler
 	PolarWebhookHandler    *PolarWebhookHandler
-	// AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler  // Temporarily disabled
+	AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler
 	AttributionHandlers    *AttributionHandler
 	CMSHandlers            *CMSHandlers
 	AdminRBACHandlers      *AdminRBACHandlers  // RBAC user and role management
 	AdminCouponHandlers    *AdminCouponHandlers
 	ContactHandlers        *ContactHandlers
+	AIInsightsHandlers     *AIInsightsHandler
+	DomainHandlers         *DomainHandlers
+	BrandingHandlers       *BrandingHandler
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers, botDetector *services.BotDetectionService, aiInsightsService *services.AIInsightsService, domainService *services.DomainService, brandingService *services.BrandingService) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
 
@@ -63,6 +67,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		realtimeService:        realtimeService,
 		attributionService:     attributionService,
 		billingService:         billingHandler.billingService,  // Store billing service for usage limit checks
+		botDetector:            botDetector,
 		db:                     db,  // Store database for monitoring
 		AuthHandlers:           authHandlers,
 		AnalyticsHandlers:      analyticsHandlers,
@@ -72,13 +77,21 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		BillingHandlers:        billingHandler,
 		APIKeyHandlers:         NewAPIKeyHandler(apiKeyService),
 		PolarWebhookHandler:    NewPolarWebhookHandler(gormDB, billingHandler.billingService),
-		// AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService), // Temporarily disabled
+		AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService),
 		AttributionHandlers:    NewAttributionHandler(attributionService),
 		CMSHandlers:            cmsHandlers,
 		AdminRBACHandlers:      adminRBACHandlers,
 		AdminCouponHandlers:    NewAdminCouponHandlers(gormDB, billingHandler.billingService.GetPolarService()),
 		ContactHandlers:        NewContactHandlers(authHandlers.GetEmailService()),
+		AIInsightsHandlers:     NewAIInsightsHandler(aiInsightsService),
+		DomainHandlers:         NewDomainHandlers(domainService),
+		BrandingHandlers:       NewBrandingHandler(brandingService),
 	}
+}
+
+// GetBillingService exposes the billing service for plan gating middleware.
+func (h *Handler) GetBillingService() *services.BillingService {
+	return h.billingService
 }
 
 // HealthCheck handles health check requests
@@ -251,9 +264,13 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 	clientIP := getClientIP(c)
 	userAgent := c.GetHeader("User-Agent")
 	referrer := c.GetHeader("Referer")
+	acceptLang := c.GetHeader("Accept-Language")
+	accept := c.GetHeader("Accept")
+
+	isBot := h.botDetector.IsBot(userAgent, acceptLang, accept, clientIP, shortCode)
 
 	utils.Go("record_click", func() error {
-		return h.shortenerService.RecordClick(shortCode, clientIP, userAgent, referrer)
+		return h.shortenerService.RecordClick(shortCode, clientIP, userAgent, referrer, isBot)
 	})
 
 	// Perform the redirect

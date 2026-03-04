@@ -268,8 +268,8 @@ func (p *PostgresStorage) InvalidateAnalyticsCache(
 // Less efficient than batch, but faster than unprepared queries
 func (p *PostgresStorage) PreparedInsertClickEvent(ctx context.Context, event *models.ClickEvent) error {
 	query := `
-		INSERT INTO click_events (id, short_code, clicked_at, ip_address, user_agent, referrer, country_code)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO click_events (id, short_code, clicked_at, ip_address, user_agent, referrer, country_code, is_bot, is_unique, ip_hash)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := p.db.ExecContext(ctx, query,
@@ -280,6 +280,9 @@ func (p *PostgresStorage) PreparedInsertClickEvent(ctx context.Context, event *m
 		event.UserAgent,
 		event.Referrer,
 		event.CountryCode,
+		event.IsBot,
+		event.IsUnique,
+		event.IPHash,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert click event: %w", err)

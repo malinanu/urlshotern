@@ -18,6 +18,7 @@ import {
   EyeSlashIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  SwatchIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -68,6 +69,12 @@ export default function SettingsPage() {
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  const [brandingForm, setBrandingForm] = useState({
+    company_name: '', logo_url: '', primary_color: '#3b82f6',
+    accent_color: '#10b981', custom_css: '', favicon_url: '',
+  });
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingMsg, setBrandingMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
 
   // Profile form
@@ -330,11 +337,14 @@ export default function SettingsPage() {
     );
   }
 
+  const isEnterprise = user?.account_type === 'enterprise';
+
   const tabs = [
     { id: 'profile', name: 'Profile', icon: UserCircleIcon },
     { id: 'password', name: 'Password', icon: KeyIcon },
     { id: 'preferences', name: 'Preferences', icon: BellIcon },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon },
+    ...(isEnterprise ? [{ id: 'branding', name: 'Branding', icon: SwatchIcon }] : []),
     { id: 'danger', name: 'Danger Zone', icon: ExclamationTriangleIcon },
   ];
 
@@ -736,6 +746,99 @@ export default function SettingsPage() {
                         </button>
                       )}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'branding' && (
+                <div>
+                  <h2 className="text-lg font-medium text-foreground mb-1">White-Label Branding</h2>
+                  <p className="text-sm text-gray-500 mb-6">Customize the appearance of your branded short links (Enterprise only).</p>
+                  {brandingMsg && (
+                    <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${brandingMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {brandingMsg.text}
+                    </div>
+                  )}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                        <input type="text" value={brandingForm.company_name}
+                          onChange={e => setBrandingForm(f => ({ ...f, company_name: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Acme Corp" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
+                        <input type="url" value={brandingForm.logo_url}
+                          onChange={e => setBrandingForm(f => ({ ...f, logo_url: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+                        <div className="flex items-center gap-2">
+                          <input type="color" value={brandingForm.primary_color}
+                            onChange={e => setBrandingForm(f => ({ ...f, primary_color: e.target.value }))}
+                            className="h-9 w-14 border border-gray-300 rounded cursor-pointer" />
+                          <input type="text" value={brandingForm.primary_color}
+                            onChange={e => setBrandingForm(f => ({ ...f, primary_color: e.target.value }))}
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Accent Color</label>
+                        <div className="flex items-center gap-2">
+                          <input type="color" value={brandingForm.accent_color}
+                            onChange={e => setBrandingForm(f => ({ ...f, accent_color: e.target.value }))}
+                            className="h-9 w-14 border border-gray-300 rounded cursor-pointer" />
+                          <input type="text" value={brandingForm.accent_color}
+                            onChange={e => setBrandingForm(f => ({ ...f, accent_color: e.target.value }))}
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Favicon URL</label>
+                        <input type="url" value={brandingForm.favicon_url}
+                          onChange={e => setBrandingForm(f => ({ ...f, favicon_url: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Custom CSS</label>
+                      <textarea value={brandingForm.custom_css}
+                        onChange={e => setBrandingForm(f => ({ ...f, custom_css: e.target.value }))}
+                        rows={4}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                        placeholder="/* custom styles */" />
+                    </div>
+                    <button
+                      disabled={brandingSaving}
+                      onClick={async () => {
+                        setBrandingSaving(true); setBrandingMsg(null);
+                        try {
+                          const token = await getAccessToken();
+                          const res = await fetch(`${API_BASE_URL}/api/v1/branding`, {
+                            method: 'PUT',
+                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              company_name: brandingForm.company_name,
+                              logo_url: brandingForm.logo_url,
+                              primary_color: brandingForm.primary_color,
+                              accent_color: brandingForm.accent_color,
+                              custom_css: brandingForm.custom_css,
+                              favicon_url: brandingForm.favicon_url,
+                            }),
+                          });
+                          const data = await res.json();
+                          if (res.ok) setBrandingMsg({ type: 'success', text: 'Branding saved successfully.' });
+                          else setBrandingMsg({ type: 'error', text: data.error ?? 'Failed to save branding.' });
+                        } finally {
+                          setBrandingSaving(false);
+                        }
+                      }}
+                      className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {brandingSaving ? 'Saving...' : 'Save Branding'}
+                    </button>
                   </div>
                 </div>
               )}

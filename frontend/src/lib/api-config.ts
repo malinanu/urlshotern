@@ -110,6 +110,12 @@ export const API_ENDPOINTS = {
       delete: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}`,
       toggle: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}/toggle`,
     },
+
+    // Domain management (admin)
+    domains: {
+      list: `${API_BASE_URL}/api/v1/admin/domains`,
+      stats: `${API_BASE_URL}/api/v1/admin/domains/stats`,
+    },
   },
 
   // CMS endpoints (temporarily disabled in backend)
@@ -178,6 +184,35 @@ export const API_ENDPOINTS = {
     revoke: (id: string) => `${API_BASE_URL}/api/v1/api-keys/${id}/revoke`,
     delete: (id: string) => `${API_BASE_URL}/api/v1/api-keys/${id}`,
     stats: (id: string) => `${API_BASE_URL}/api/v1/api-keys/${id}/stats`,
+  },
+
+  // AI Insights endpoints (enterprise / Ultra plan)
+  insights: {
+    summary:         (sc: string) => `${API_BASE_URL}/api/v1/insights/${sc}/summary`,
+    anomalies:       (sc: string) => `${API_BASE_URL}/api/v1/insights/${sc}/anomalies`,
+    recommendations: (sc: string) => `${API_BASE_URL}/api/v1/insights/${sc}/recommendations`,
+    forecast:        (sc: string) => `${API_BASE_URL}/api/v1/insights/${sc}/forecast`,
+    audience:        (sc: string) => `${API_BASE_URL}/api/v1/insights/${sc}/audience`,
+  },
+
+  // Custom domain management endpoints (requires custom_domain feature)
+  domains: {
+    list:         `${API_BASE_URL}/api/v1/custom-domains`,
+    create:       `${API_BASE_URL}/api/v1/custom-domains`,
+    usage:        `${API_BASE_URL}/api/v1/custom-domains/usage`,
+    get:          (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}`,
+    update:       (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}`,
+    delete:       (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}`,
+    verification: (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}/verification`,
+    verify:       (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}/verify`,
+    settings:     (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}/settings`,
+    status:       (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}/status`,
+  },
+
+  // White-label branding endpoints (enterprise)
+  branding: {
+    get:    `${API_BASE_URL}/api/v1/branding`,
+    update: `${API_BASE_URL}/api/v1/branding`,
   },
 
   // Health check endpoints

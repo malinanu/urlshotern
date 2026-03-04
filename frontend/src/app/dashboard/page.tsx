@@ -17,6 +17,8 @@ import {
   TrashIcon,
   PencilIcon,
   QrCodeIcon,
+  SwatchIcon,
+  ArrowRightIcon,
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -324,6 +326,62 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
+          {/* Quick Access Feature Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <a
+              href="/custom-domains"
+              className="bg-card border border-border rounded-lg p-5 flex items-start space-x-4 hover:border-primary/50 hover:shadow-md transition-all group"
+            >
+              <div className="p-2 bg-primary/10 rounded-lg shrink-0 group-hover:bg-primary/20 transition-colors">
+                <GlobeAltIcon className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">Custom Domains</h3>
+                  <ArrowRightIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Use your own branded domain for short links
+                </p>
+              </div>
+            </a>
+
+            {user?.account_type === 'enterprise' ? (
+              <a
+                href="/settings?tab=branding"
+                className="bg-card border border-border rounded-lg p-5 flex items-start space-x-4 hover:border-primary/50 hover:shadow-md transition-all group"
+              >
+                <div className="p-2 bg-primary/10 rounded-lg shrink-0 group-hover:bg-primary/20 transition-colors">
+                  <SwatchIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-foreground">White-Label Branding</h3>
+                    <ArrowRightIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Customize colors, logo, and company name
+                  </p>
+                </div>
+              </a>
+            ) : (
+              <div className="bg-card border border-border rounded-lg p-5 flex items-start space-x-4 opacity-60">
+                <div className="p-2 bg-muted rounded-lg shrink-0">
+                  <SwatchIcon className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-foreground">White-Label Branding</h3>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">Ultra</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Customize colors, logo, and company name
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Trunc */}
           <div className="mb-8">

@@ -102,6 +102,11 @@ func (p *PostgresStorage) Begin() (*sql.Tx, error) {
 	return p.db.Begin()
 }
 
+// GetRawDB returns the underlying *sql.DB for use with sqlx wrappers.
+func (p *PostgresStorage) GetRawDB() *sql.DB {
+	return p.db
+}
+
 // initTables creates the necessary tables if they don't exist
 func (p *PostgresStorage) initTables() error {
 	// Initialize authentication tables first (required by url_mappings and analytics)
@@ -136,6 +141,11 @@ func (p *PostgresStorage) initTables() error {
 			country_code CHAR(2)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_short_code_time ON click_events(short_code, clicked_at)`,
+		// Bot detection columns — added after initial schema
+		`ALTER TABLE click_events ADD COLUMN IF NOT EXISTS is_bot    BOOLEAN DEFAULT FALSE`,
+		`ALTER TABLE click_events ADD COLUMN IF NOT EXISTS is_unique BOOLEAN DEFAULT FALSE`,
+		`ALTER TABLE click_events ADD COLUMN IF NOT EXISTS ip_hash   VARCHAR(64)`,
+		`CREATE INDEX IF NOT EXISTS idx_click_events_is_bot ON click_events(is_bot)`,
 	}
 
 	for _, query := range queries {
@@ -683,6 +693,59 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_attribution_session ON attribution_touchpoints(session_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_attribution_conversion ON attribution_touchpoints(conversion_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_attribution_time ON attribution_touchpoints(touchpoint_time)`,
+
+		// AI Insights table — one active insight per type per link
+		`CREATE TABLE IF NOT EXISTS ai_insights (
+			id            BIGSERIAL PRIMARY KEY,
+			short_code    VARCHAR(10) NOT NULL REFERENCES url_mappings(short_code) ON DELETE CASCADE,
+			user_id       BIGINT REFERENCES users(id),
+			insight_type  VARCHAR(50) NOT NULL,
+			content       TEXT NOT NULL,
+			data_snapshot JSONB,
+			generated_at  TIMESTAMPTZ DEFAULT NOW(),
+			expires_at    TIMESTAMPTZ,
+			is_read       BOOLEAN DEFAULT FALSE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_insights_short_code ON ai_insights(short_code)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_insights_type ON ai_insights(insight_type)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_insights_code_type ON ai_insights(short_code, insight_type)`,
+
+		// Custom Domains — premium/enterprise feature
+		`CREATE TABLE IF NOT EXISTS custom_domains (
+			id                  BIGSERIAL PRIMARY KEY,
+			user_id             BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			domain              VARCHAR(255) UNIQUE NOT NULL,
+			verification_method VARCHAR(20) DEFAULT 'dns',
+			verification_token  VARCHAR(255) UNIQUE NOT NULL,
+			is_verified         BOOLEAN DEFAULT FALSE,
+			verified_at         TIMESTAMPTZ,
+			ssl_enabled         BOOLEAN DEFAULT TRUE,
+			ssl_status          VARCHAR(20) DEFAULT 'pending',
+			dns_status          VARCHAR(20) DEFAULT 'pending',
+			health_status       VARCHAR(20) DEFAULT 'unknown',
+			last_health_check   TIMESTAMPTZ,
+			is_active           BOOLEAN DEFAULT TRUE,
+			created_at          TIMESTAMPTZ DEFAULT NOW(),
+			updated_at          TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_custom_domains_user_id ON custom_domains(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_custom_domains_domain  ON custom_domains(domain)`,
+		`CREATE INDEX IF NOT EXISTS idx_custom_domains_verified ON custom_domains(is_verified)`,
+
+		// Brand Settings — enterprise white-label customisation
+		`CREATE TABLE IF NOT EXISTS brand_settings (
+			id             BIGSERIAL PRIMARY KEY,
+			user_id        BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			company_name   VARCHAR(100) DEFAULT '',
+			logo_url       TEXT DEFAULT '',
+			primary_color  VARCHAR(7)  DEFAULT '#3b82f6',
+			accent_color   VARCHAR(7)  DEFAULT '#10b981',
+			custom_css     TEXT DEFAULT '',
+			favicon_url    TEXT DEFAULT '',
+			created_at     TIMESTAMPTZ DEFAULT NOW(),
+			updated_at     TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_brand_settings_user_id ON brand_settings(user_id)`,
 	}
 
 	for _, query := range queries {
@@ -692,6 +755,55 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 	}
 
 	return nil
+}
+
+// SaveAIInsight upserts an AI insight (one per short_code + insight_type).
+func (p *PostgresStorage) SaveAIInsight(insight *models.AIInsight) error {
+	query := `
+		INSERT INTO ai_insights (short_code, user_id, insight_type, content, data_snapshot, generated_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (short_code, insight_type) DO UPDATE SET
+			content       = EXCLUDED.content,
+			data_snapshot = EXCLUDED.data_snapshot,
+			generated_at  = EXCLUDED.generated_at,
+			expires_at    = EXCLUDED.expires_at,
+			is_read       = FALSE
+		RETURNING id
+	`
+	return p.db.QueryRow(query,
+		insight.ShortCode, insight.UserID, insight.InsightType,
+		insight.Content, insight.DataSnapshot,
+		insight.GeneratedAt, insight.ExpiresAt,
+	).Scan(&insight.ID)
+}
+
+// GetAIInsight retrieves the latest AI insight for a given short code and type.
+func (p *PostgresStorage) GetAIInsight(shortCode, insightType string) (*models.AIInsight, error) {
+	query := `
+		SELECT id, short_code, user_id, insight_type, content, data_snapshot, generated_at, expires_at, is_read
+		FROM ai_insights
+		WHERE short_code = $1 AND insight_type = $2
+	`
+	row := p.db.QueryRow(query, shortCode, insightType)
+
+	var ins models.AIInsight
+	var userID sql.NullInt64
+	var expiresAt sql.NullTime
+	var dataSnapshot []byte
+
+	err := row.Scan(&ins.ID, &ins.ShortCode, &userID, &ins.InsightType,
+		&ins.Content, &dataSnapshot, &ins.GeneratedAt, &expiresAt, &ins.IsRead)
+	if err != nil {
+		return nil, err
+	}
+	if userID.Valid {
+		ins.UserID = &userID.Int64
+	}
+	if expiresAt.Valid {
+		ins.ExpiresAt = &expiresAt.Time
+	}
+	ins.DataSnapshot = dataSnapshot
+	return &ins, nil
 }
 
 // SaveURLMapping saves a URL mapping to the database
@@ -774,11 +886,12 @@ func (p *PostgresStorage) IncrementClickCount(shortCode string) error {
 // SaveClickEvent saves a click event to the database
 func (p *PostgresStorage) SaveClickEvent(event *models.ClickEvent) error {
 	query := `
-		INSERT INTO click_events (id, short_code, clicked_at, ip_address, user_agent, referrer, country_code)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO click_events (id, short_code, clicked_at, ip_address, user_agent, referrer, country_code, is_bot, is_unique, ip_hash)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	_, err := p.db.Exec(query, event.ID, event.ShortCode, event.ClickedAt,
-		event.IPAddress, event.UserAgent, event.Referrer, event.CountryCode)
+		event.IPAddress, event.UserAgent, event.Referrer, event.CountryCode,
+		event.IsBot, event.IsUnique, event.IPHash)
 
 	if err != nil {
 		return fmt.Errorf("failed to save click event: %w", err)
@@ -815,7 +928,7 @@ func (p *PostgresStorage) GetAnalytics(shortCode string, days int) (*models.Anal
 	dailyClicksQuery := `
 		SELECT DATE(clicked_at) as date, COUNT(*) as clicks
 		FROM click_events
-		WHERE short_code = $1 AND clicked_at >= NOW() - INTERVAL '%d days'
+		WHERE short_code = $1 AND clicked_at >= NOW() - INTERVAL '%d days' AND is_bot = FALSE
 		GROUP BY DATE(clicked_at)
 		ORDER BY date DESC
 	`
@@ -834,7 +947,7 @@ func (p *PostgresStorage) GetAnalytics(shortCode string, days int) (*models.Anal
 	countryStatsQuery := `
 		SELECT country_code, COUNT(*) as clicks
 		FROM click_events
-		WHERE short_code = $1 AND country_code IS NOT NULL
+		WHERE short_code = $1 AND country_code IS NOT NULL AND is_bot = FALSE
 		GROUP BY country_code
 		ORDER BY clicks DESC
 		LIMIT 10
@@ -1305,5 +1418,60 @@ func (s *PostgresStorage) SeedDefaultStaticPages() error {
 			return fmt.Errorf("seed static page %s: %w", p.slug, err)
 		}
 	}
+	return nil
+}
+
+// RunRetentionJob executes the nightly data retention policy:
+//  1. Null raw IP addresses older than 24 hours
+//  2. Delete click events for free-plan users older than 30 days
+//  3. Delete click events for premium-plan users older than 1 year
+//  4. Enterprise users: never delete
+func (p *PostgresStorage) RunRetentionJob() error {
+	// 1. Null raw IPs older than 24 hours
+	res, err := p.db.Exec(`
+		UPDATE click_events
+		SET ip_address = NULL
+		WHERE clicked_at < NOW() - INTERVAL '24 hours'
+		  AND ip_address IS NOT NULL
+	`)
+	if err != nil {
+		return fmt.Errorf("null raw IPs: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		log.Printf("🗑️  Retention: nulled %d raw IPs older than 24 h", n)
+	}
+
+	// 2. Delete clicks for free users older than 30 days
+	res, err = p.db.Exec(`
+		DELETE FROM click_events ce
+		USING url_mappings um, users u
+		WHERE ce.short_code = um.short_code
+		  AND um.user_id   = u.id
+		  AND u.account_type = 'free'
+		  AND ce.clicked_at < NOW() - INTERVAL '30 days'
+	`)
+	if err != nil {
+		return fmt.Errorf("delete free-plan clicks: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		log.Printf("🗑️  Retention: deleted %d click events for free users (>30 days)", n)
+	}
+
+	// 3. Delete clicks for premium users older than 1 year
+	res, err = p.db.Exec(`
+		DELETE FROM click_events ce
+		USING url_mappings um, users u
+		WHERE ce.short_code = um.short_code
+		  AND um.user_id   = u.id
+		  AND u.account_type = 'premium'
+		  AND ce.clicked_at < NOW() - INTERVAL '1 year'
+	`)
+	if err != nil {
+		return fmt.Errorf("delete premium-plan clicks: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		log.Printf("🗑️  Retention: deleted %d click events for premium users (>1 year)", n)
+	}
+
 	return nil
 }

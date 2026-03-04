@@ -26,6 +26,9 @@ type ClickEvent struct {
 	UserAgent   string    `json:"user_agent,omitempty" db:"user_agent"`
 	Referrer    string    `json:"referrer,omitempty" db:"referrer"`
 	CountryCode string    `json:"country_code,omitempty" db:"country_code"`
+	IsBot       bool      `json:"is_bot" db:"is_bot"`
+	IsUnique    bool      `json:"is_unique" db:"is_unique"`
+	IPHash      string    `json:"ip_hash,omitempty" db:"ip_hash"`
 }
 
 // ShortenRequest represents the request payload for shortening URLs

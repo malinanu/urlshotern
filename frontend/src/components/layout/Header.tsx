@@ -118,6 +118,13 @@ export default function Header() {
                       API Keys
                     </Link>
                     <Link
+                      href="/custom-domains"
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      Custom Domains
+                    </Link>
+                    <Link
                       href="/settings"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
@@ -218,6 +225,13 @@ export default function Header() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       API Keys
+                    </Link>
+                    <Link
+                      href="/custom-domains"
+                      className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Custom Domains
                     </Link>
                     <Link
                       href="/settings"

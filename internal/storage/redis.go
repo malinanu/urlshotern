@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
@@ -12,19 +14,32 @@ import (
 )
 
 type RedisStorage struct {
-	client *redis.Client
+	client redis.UniversalClient
 	ctx    context.Context
 }
 
-// NewRedisStorage creates a new Redis storage instance
+// NewRedisStorage creates a new Redis storage instance.
+// Set REDIS_CLUSTER_ADDRS to a comma-separated list of nodes to enable cluster mode.
 func NewRedisStorage(config *configs.Config) (*RedisStorage, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.RedisHost, config.RedisPort),
-		Password: config.RedisPassword,
-		DB:       config.RedisDB,
-	})
-
 	ctx := context.Background()
+
+	var rdb redis.UniversalClient
+	if config.RedisClusterAddrs != "" {
+		// Cluster mode: split comma-separated addresses
+		addrs := splitAddrs(config.RedisClusterAddrs)
+		rdb = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    addrs,
+			Password: config.RedisPassword,
+		})
+		log.Printf("🔗 Redis cluster mode: %v", addrs)
+	} else {
+		// Single-node mode (default)
+		rdb = redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%s", config.RedisHost, config.RedisPort),
+			Password: config.RedisPassword,
+			DB:       config.RedisDB,
+		})
+	}
 
 	// Test the connection
 	if err := rdb.Ping(ctx).Err(); err != nil {
@@ -35,6 +50,17 @@ func NewRedisStorage(config *configs.Config) (*RedisStorage, error) {
 		client: rdb,
 		ctx:    ctx,
 	}, nil
+}
+
+func splitAddrs(s string) []string {
+	var out []string
+	for _, a := range strings.Split(s, ",") {
+		a = strings.TrimSpace(a)
+		if a != "" {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 // Close closes the Redis connection
@@ -246,6 +272,31 @@ func (r *RedisStorage) BlacklistToken(token string, expiresAt time.Time) error {
 		return fmt.Errorf("failed to blacklist token: %w", err)
 	}
 	return nil
+}
+
+// IncrBotRateCheck increments and returns the click count for an IP+shortCode pair
+// within a 60-second window. Used for bot rate detection.
+func (r *RedisStorage) IncrBotRateCheck(ip, shortCode string) (int64, error) {
+	key := fmt.Sprintf("bot_rate:%s:%s", ip, shortCode)
+	count, err := r.client.Incr(r.ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if count == 1 {
+		r.client.Expire(r.ctx, key, 60*time.Second)
+	}
+	return count, nil
+}
+
+// CheckAndSetUniqueVisitor returns true if this is the first visit for the
+// given ipHash+shortCode combination today. Sets the key on first visit.
+func (r *RedisStorage) CheckAndSetUniqueVisitor(ipHash, shortCode string) (bool, error) {
+	key := fmt.Sprintf("unique:%s:%s", shortCode, ipHash)
+	set, err := r.client.SetNX(r.ctx, key, 1, 24*time.Hour).Result()
+	if err != nil {
+		return false, err
+	}
+	return set, nil
 }
 
 // IsTokenBlacklisted checks if a token is blacklisted

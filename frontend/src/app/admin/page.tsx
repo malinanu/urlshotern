@@ -25,6 +25,9 @@ import {
   CubeIcon,
   PlusIcon,
   TicketIcon,
+  UsersIcon,
+  GlobeAltIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import CMSManager from '@/components/cms/CMSManager';
 import APIKeyManager from '@/components/api-keys/APIKeyManager';
@@ -67,6 +70,26 @@ interface RecentActivity {
   ip_address?: string;
 }
 
+interface AdminDomain {
+  id: number;
+  domain: string;
+  is_active: boolean;
+  is_verified: boolean;
+  ssl_enabled: boolean;
+  dns_status: string;
+  health_status: string;
+  created_at: string;
+}
+
+interface DomainStats {
+  total_domains: number;
+  active_domains: number;
+  verified_domains: number;
+  ssl_domains: number;
+  pending_domains: number;
+  failed_domains: number;
+}
+
 export default function AdminPage() {
   const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -76,6 +99,9 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [adminDomains, setAdminDomains] = useState<AdminDomain[]>([]);
+  const [domainStats, setDomainStats] = useState<DomainStats | null>(null);
+  const [loadingDomains, setLoadingDomains] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
@@ -145,6 +171,37 @@ export default function AdminPage() {
     if (!isAuthenticated || !isAdmin) return;
     fetchAdminData();
   }, [isAuthenticated, isAdmin]);
+
+  const fetchDomainData = async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    setLoadingDomains(true);
+    try {
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+      const [domainsRes, statsRes] = await Promise.all([
+        fetch(API_ENDPOINTS.admin.domains.list, { headers }),
+        fetch(API_ENDPOINTS.admin.domains.stats, { headers }),
+      ]);
+      if (domainsRes.ok) {
+        const data = await domainsRes.json();
+        setAdminDomains(data.domains ?? []);
+      }
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        setDomainStats(data.stats ?? null);
+      }
+    } catch (error) {
+      console.error('Error fetching domain data:', error);
+    } finally {
+      setLoadingDomains(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'domains' && isAuthenticated && isAdmin) {
+      fetchDomainData();
+    }
+  }, [activeTab, isAuthenticated, isAdmin]);
 
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
     const token = getAccessToken();
@@ -242,6 +299,8 @@ export default function AdminPage() {
   const tabs = [
     { id: 'overview', name: 'Overview', icon: ChartBarIcon },
     { id: 'users', name: 'Users', icon: UserGroupIcon },
+    { id: 'analytics', name: 'Analytics', icon: LinkIcon },
+    { id: 'domains', name: 'Domains', icon: GlobeAltIcon },
     { id: 'cms', name: 'Content', icon: DocumentTextIcon },
     { id: 'builder', name: 'Page Builder', icon: CubeIcon },
     { id: 'seo', name: 'SEO Tools', icon: MagnifyingGlassIcon },
@@ -539,6 +598,191 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'analytics' && stats && (
+            <div className="space-y-6">
+              {/* Platform KPIs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: 'Total Users', value: stats.total_users, icon: UsersIcon, color: 'text-blue-600 dark:text-blue-400' },
+                  { label: 'Active Users', value: stats.active_users, icon: UserGroupIcon, color: 'text-green-600 dark:text-green-400' },
+                  { label: 'Total URLs', value: stats.total_urls, icon: LinkIcon, color: 'text-purple-600 dark:text-purple-400' },
+                  { label: 'Total Clicks', value: stats.total_clicks, icon: ChartBarIcon, color: 'text-amber-600 dark:text-amber-400' },
+                ].map(({ label, value, icon: Icon, color }) => (
+                  <div key={label} className="bg-card rounded-lg border border-border p-5">
+                    <div className="flex items-center gap-3">
+                      <Icon className={`h-7 w-7 ${color}`} />
+                      <div>
+                        <p className="text-sm text-muted-foreground">{label}</p>
+                        <p className="text-2xl font-bold text-foreground">{value?.toLocaleString() ?? '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Today's Activity */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-card rounded-lg border border-border p-5">
+                  <h3 className="font-semibold text-foreground mb-3">Today's Activity</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">New Signups</span>
+                      <span className="font-medium text-foreground">{stats.daily_signups}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">URLs Created</span>
+                      <span className="font-medium text-foreground">{stats.daily_urls_created}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-card rounded-lg border border-border p-5">
+                  <h3 className="font-semibold text-foreground mb-3">Plan Distribution</h3>
+                  {users.length > 0 ? (
+                    <div className="space-y-2 text-sm">
+                      {(['free', 'premium', 'enterprise'] as const).map(plan => {
+                        const count = users.filter(u => u.account_type === plan).length;
+                        const pct = users.length > 0 ? Math.round((count / users.length) * 100) : 0;
+                        const displayName = plan === 'free' ? 'Free' : plan === 'premium' ? 'Pro' : 'Ultra';
+                        return (
+                          <div key={plan} className="flex items-center gap-3">
+                            <span className="w-10 text-muted-foreground">{displayName}</span>
+                            <div className="flex-1 bg-muted rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="w-8 text-right font-medium text-foreground">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Load the Users tab first to see plan data.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* System Health */}
+              <div className="bg-card rounded-lg border border-border p-5">
+                <h3 className="font-semibold text-foreground mb-3">System Health</h3>
+                <div className="flex items-center gap-3">
+                  <span className={`inline-flex items-center gap-1.5 text-sm font-medium capitalize px-3 py-1 rounded-full ${
+                    stats.system_status === 'healthy'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : stats.system_status === 'warning'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                    <span className={`h-2 w-2 rounded-full ${
+                      stats.system_status === 'healthy' ? 'bg-green-500' :
+                      stats.system_status === 'warning' ? 'bg-amber-500' : 'bg-red-500'
+                    }`} />
+                    {stats.system_status}
+                  </span>
+                  <span className="text-sm text-muted-foreground">Storage: {stats.storage_used}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'domains' && (
+            <div className="space-y-6">
+              {/* Domain Stats */}
+              {loadingDomains ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="bg-card border border-border rounded-lg p-5 animate-pulse">
+                      <div className="h-4 bg-muted rounded w-24 mb-2" />
+                      <div className="h-8 bg-muted rounded w-16" />
+                    </div>
+                  ))}
+                </div>
+              ) : domainStats && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Total Domains', value: domainStats.total_domains, color: 'text-blue-600 dark:text-blue-400' },
+                    { label: 'Active', value: domainStats.active_domains, color: 'text-green-600 dark:text-green-400' },
+                    { label: 'Verified', value: domainStats.verified_domains, color: 'text-primary' },
+                    { label: 'SSL Enabled', value: domainStats.ssl_domains, color: 'text-purple-600 dark:text-purple-400' },
+                    { label: 'Pending', value: domainStats.pending_domains, color: 'text-amber-600 dark:text-amber-400' },
+                    { label: 'Failed', value: domainStats.failed_domains, color: 'text-destructive' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="bg-card border border-border rounded-lg p-5">
+                      <p className="text-sm text-muted-foreground">{label}</p>
+                      <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Domain List */}
+              <div className="bg-card border border-border rounded-lg">
+                <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">All Custom Domains</h3>
+                  <button
+                    onClick={fetchDomainData}
+                    className="flex items-center space-x-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ArrowPathIcon className="h-4 w-4" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {loadingDomains ? (
+                  <div className="p-6 space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-12 bg-muted rounded animate-pulse" />
+                    ))}
+                  </div>
+                ) : adminDomains.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <GlobeAltIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">No custom domains registered on the platform.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Domain</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">DNS</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Health</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Added</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {adminDomains.map((d) => (
+                          <tr key={d.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="px-6 py-4 font-mono text-foreground">{d.domain}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center space-x-1.5">
+                                {d.is_verified ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-600">Verified</span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-600">Pending</span>
+                                )}
+                                {d.ssl_enabled && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">SSL</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-muted-foreground capitalize">{d.dns_status}</td>
+                            <td className="px-6 py-4 text-muted-foreground capitalize">{d.health_status}</td>
+                            <td className="px-6 py-4 text-muted-foreground">
+                              {new Date(d.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

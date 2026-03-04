@@ -12,14 +12,12 @@ import (
 
 type DomainHandlers struct {
 	domainService *services.DomainService
-	rbacService   *services.RBACService
 }
 
 // NewDomainHandlers creates new domain handlers
-func NewDomainHandlers(domainService *services.DomainService, rbacService *services.RBACService) *DomainHandlers {
+func NewDomainHandlers(domainService *services.DomainService) *DomainHandlers {
 	return &DomainHandlers{
 		domainService: domainService,
-		rbacService:   rbacService,
 	}
 }
 
@@ -372,11 +370,14 @@ func (h *DomainHandlers) VerifyDomain(c *gin.Context) {
 		return
 	}
 
-	err = h.domainService.VerifyDomain(domainID)
+	err = h.domainService.VerifyDomain(domainID, userID.(int64))
 	if err != nil {
+		// Return a generic message — the exact reason (DNS record missing,
+		// token mismatch, etc.) is intentionally not forwarded to the client
+		// to avoid leaking internal verification logic.
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "verification_failed",
-			Message: err.Error(),
+			Message: "Domain verification failed. Please check that the DNS TXT record has been set correctly and propagated, then try again.",
 		})
 		return
 	}
@@ -588,8 +589,8 @@ func (h *DomainHandlers) GetDomainStats(c *gin.Context) {
 
 // Helper Methods
 
-// hasSystemAccess checks if user has system-level access to all domains
-func (h *DomainHandlers) hasSystemAccess(userID int64) bool {
-	hasPermission, _ := h.rbacService.UserHasPermission(userID, models.PermissionSystemManage)
-	return hasPermission
+// hasSystemAccess checks if user has system-level access to all domains.
+// Admin access to all domains is handled via dedicated admin routes.
+func (h *DomainHandlers) hasSystemAccess(_ int64) bool {
+	return false
 }

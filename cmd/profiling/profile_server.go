@@ -68,12 +68,16 @@ func main() {
 	jwtService := services.NewJWTService(config.JWTSecret, config.JWTIssuer, time.Hour*24, time.Hour*24*7)
 	userService := services.NewUserService(db, redis, jwtService, smsService, emailService, nil)
 	authService := services.NewAuthService(userService, jwtService, smsService, emailService, db, redis, config)
-	rbacService := services.NewRBACService(db, redis)
+	rbacService := services.NewRBACServiceImpl(db, redis)
 	conversionTrackingService := services.NewConversionTrackingService(db)
 	abTestingService := services.NewABTestingService(db, redis)
 	realtimeAnalyticsService := services.NewRealtimeAnalyticsService(db, redis, analyticsService)
 	attributionService := services.NewAttributionService(db, conversionTrackingService)
-	adminService := services.NewAdminService(db)
+	adminService := services.NewAdminService(db, rbacService)
+	botDetectionService := services.NewBotDetectionService(redis)
+	aiInsightsService := services.NewAIInsightsService(config.OpenRouterAPIKey, db, redis, advancedAnalyticsService)
+	brandingService := services.NewBrandingService(db)
+	domainService := services.NewDomainService(db, redis, config, analyticsService, userService)
 
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
 	shortenerService.SetAttributionService(attributionService)
@@ -84,7 +88,8 @@ func main() {
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config, nil, nil)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config)
+	adminRBACHandlers := handlers.NewAdminRBACHandlers(adminService, rbacService)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService)
 
 	// Setup Gin router with metrics middleware
 	gin.SetMode(gin.ReleaseMode)

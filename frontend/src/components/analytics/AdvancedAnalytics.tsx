@@ -11,6 +11,7 @@ import {
   ChartBarIcon,
   MapIcon,
   CalendarIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
 
 // Import Recharts components (already optimized in next.config.ts)
@@ -150,7 +151,7 @@ export default function AdvancedAnalytics({
   const [analytics, setAnalytics] = useState<AdvancedAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'geographic' | 'time' | 'device'>('geographic');
+  const [activeTab, setActiveTab] = useState<'geographic' | 'time' | 'device' | 'referrers'>('geographic');
   const { getAccessToken, isAuthenticated } = useAuth();
 
   const fetchAdvancedAnalytics = useCallback(async () => {
@@ -297,6 +298,18 @@ export default function AdvancedAnalytics({
               Devices & Browsers
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab('referrers')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'referrers'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+          >
+            <div className="flex items-center gap-2">
+              <LinkIcon className="h-4 w-4" />
+              Referrers
+            </div>
+          </button>
         </nav>
       </div>
 
@@ -309,6 +322,9 @@ export default function AdvancedAnalytics({
       )}
       {activeTab === 'device' && (
         <DeviceAnalytics data={analytics.device_analytics} />
+      )}
+      {activeTab === 'referrers' && (
+        <ReferrerAnalytics data={analytics.referrers} />
       )}
     </div>
   );
@@ -527,6 +543,112 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Referrer Analytics Component
+function ReferrerAnalytics({ data }: { data: AdvancedAnalyticsData['referrers'] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <LinkIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">No referrer data available yet.</p>
+      </div>
+    );
+  }
+
+  const total = data.reduce((sum, r) => sum + r.clicks, 0);
+  const top10 = [...data].sort((a, b) => b.clicks - a.clicks).slice(0, 10);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bar chart */}
+        <div>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center gap-2">
+            <LinkIcon className="h-5 w-5" />
+            Top Referrers
+          </h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={top10} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis
+                  type="category"
+                  dataKey="referrer"
+                  width={120}
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 18) + '…' : v)}
+                />
+                <Tooltip formatter={(value: number) => [formatNumber(value), 'Clicks']} />
+                <Bar dataKey="clicks" fill={COLORS.indigo} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Pie chart */}
+        <div>
+          <h3 className="text-lg font-medium text-foreground mb-4">Source Distribution</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={top10}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={110}
+                  paddingAngle={2}
+                  dataKey="clicks"
+                  nameKey="referrer"
+                >
+                  {top10.map((_, index) => (
+                    <Cell key={`ref-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => [formatNumber(value), 'Clicks']}
+                  labelFormatter={(_: any, payload: any) =>
+                    payload?.[0]?.payload?.referrer ?? ''
+                  }
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div>
+        <h3 className="text-lg font-medium text-foreground mb-4">All Referrers</h3>
+        <div className="overflow-x-auto border border-border rounded-lg">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">#</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Referrer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Clicks</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Share</th>
+              </tr>
+            </thead>
+            <tbody className="bg-card divide-y divide-border">
+              {top10.map((ref, index) => (
+                <tr key={ref.referrer} className={index % 2 === 0 ? 'bg-card' : 'bg-muted/30'}>
+                  <td className="px-6 py-3 text-sm text-muted-foreground">{index + 1}</td>
+                  <td className="px-6 py-3 text-sm text-foreground font-medium break-all">{ref.referrer || '(direct)'}</td>
+                  <td className="px-6 py-3 text-sm text-foreground">{formatNumber(ref.clicks)}</td>
+                  <td className="px-6 py-3 text-sm text-foreground">
+                    {total > 0 ? formatPercentage((ref.clicks / total) * 100) : '0%'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

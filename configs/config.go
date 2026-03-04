@@ -27,10 +27,11 @@ type Config struct {
 	DBConnMaxIdleTime   int // in seconds
 
 	// Redis Configuration
-	RedisHost     string
-	RedisPort     string
-	RedisPassword string
-	RedisDB       int
+	RedisHost         string
+	RedisPort         string
+	RedisPassword     string
+	RedisDB           int
+	RedisClusterAddrs string // Comma-separated list of cluster node addresses (enables cluster mode)
 
 	// Snowflake Configuration
 	NodeID int64
@@ -68,6 +69,9 @@ type Config struct {
 	// Product Sync Configuration
 	ProductSyncIntervalMinutes int // How often to sync products from Polar (in minutes)
 
+	// AI Configuration (OpenRouter)
+	OpenRouterAPIKey string
+
 	// Admin Panel Control
 	EnableAdminRoutes bool // Enable admin routes at /api/v1/admin/* (default: false for security)
 }
@@ -93,10 +97,11 @@ func LoadConfig() (*Config, error) {
 		DBConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),
 		DBConnMaxIdleTime: getEnvAsInt("DB_CONN_MAX_IDLE_TIME", 600),
 
-		RedisHost:     getEnv("REDIS_HOST", "localhost"),
-		RedisPort:     getEnv("REDIS_PORT", "6379"),
-		RedisPassword: getEnv("REDIS_PASSWORD", ""),
-		RedisDB:       getEnvAsInt("REDIS_DB", 0),
+		RedisHost:         getEnv("REDIS_HOST", "localhost"),
+		RedisPort:         getEnv("REDIS_PORT", "6379"),
+		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
+		RedisDB:           getEnvAsInt("REDIS_DB", 0),
+		RedisClusterAddrs: getEnv("REDIS_CLUSTER_ADDRS", ""), // e.g. "node1:6379,node2:6379,node3:6379"
 
 		NodeID: getEnvAsInt64("NODE_ID", 1),
 
@@ -128,6 +133,9 @@ func LoadConfig() (*Config, error) {
 
 		// Product Sync Configuration
 		ProductSyncIntervalMinutes: getEnvAsInt("PRODUCT_SYNC_INTERVAL_MINUTES", 60), // Default: sync every hour
+
+		// AI Configuration (OpenRouter)
+		OpenRouterAPIKey: getEnv("OPENROUTER_API_KEY", ""),
 
 		// Admin Panel Control (default: false for security)
 		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
