@@ -71,14 +71,16 @@ interface BillingData {
 }
 
 function BillingContent() {
-  const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
+  const { user, isAuthenticated, isLoading, getAccessToken, refreshToken } = useAuth();
   const searchParams = useSearchParams();
   const [billingData, setBillingData] = useState<BillingData | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
-  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
+  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>(
+    (searchParams?.get('interval') as 'month' | 'year') || 'month'
+  );
   const [discountCode, setDiscountCode] = useState(searchParams?.get('discount') || '');
   const [discountData, setDiscountData] = useState<any>(null);
   const [validatingDiscount, setValidatingDiscount] = useState(false);
@@ -92,6 +94,20 @@ function BillingContent() {
       router.push('/login');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Handle plan auto-scroll from query parameter mapping
+  useEffect(() => {
+    const planParam = searchParams?.get('plan');
+    if (planParam && !isLoading && !loading) {
+      // Find the tier card with an ID or smoothly scroll down to the plans grid
+      const plansSection = document.getElementById('pricing-plans');
+      if (plansSection) {
+        setTimeout(() => {
+          plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300); // slight delay to ensure render
+      }
+    }
+  }, [searchParams, isLoading, loading]);
 
   const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
 
@@ -280,6 +296,8 @@ function BillingContent() {
         const data = await response.json();
         // Check if bypass was successful
         if (data.is_free_bypass) {
+          // Refresh JWT so the new account_type is embedded before redirect
+          await refreshToken();
           window.location.href = data.checkout_url; // which maps to successURL
         } else if (data.checkout_url) {
           window.location.href = data.checkout_url;
@@ -512,7 +530,7 @@ function BillingContent() {
               </div>
 
               {/* Available Plans */}
-              <div className="mb-8">
+              <div id="pricing-plans" className="mb-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                   <h2 className="text-xl font-semibold text-foreground">Available Plans</h2>
                   <div className="bg-muted p-1 rounded-lg inline-flex self-start md:self-auto">
