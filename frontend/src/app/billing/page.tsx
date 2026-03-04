@@ -201,8 +201,17 @@ function BillingContent() {
 
       const hardcodedProductId = productOverrides[basePlanType];
 
+      const isYearly = planId.endsWith('_yearly') || billingInterval === 'year';
+
       // Fallback to sync if no hardcoded available, but currently all 3 tiers are hardcoded
-      const product = polarProducts.find(p => p.plan_type === basePlanType);
+      let product = polarProducts.find(p => p.plan_type === basePlanType && p.is_recurring && (!p.name.includes("Yearly") && !p.name.includes("yearly")));
+      if (isYearly && basePlanType !== 'free') {
+        product = polarProducts.find(p => p.plan_type === basePlanType && (p.name.includes("Yearly") || p.name.includes("yearly")) && p.is_recurring);
+      }
+
+      if (!product) {
+        product = polarProducts.find(p => p.plan_type === basePlanType && p.is_recurring);
+      }
 
       // Hardcoded production overrides for missing or unreliable Polar syncs
       const hardcodedPrices: Record<string, { monthPriceId: string, yearPriceId: string, productId: string }> = {

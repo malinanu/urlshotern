@@ -169,8 +169,24 @@ export default function PricingPage() {
       return { price: '$0', period: '/month', priceId: 'd8f317f0-a783-4309-8644-7ab98c68c3dd' };
     }
 
-    // Find the product for this plan type
-    const product = polarProducts.find(p => p.plan_type === planType);
+    // Because the production database mapped to Polar is returning Yearly as entirely separate Products (e.g "Ultra Yearly")
+    // we need to dynamically look for the appropriate product match based on the toggle interval requested.
+    let productMatchStr = planType;
+    if (billingInterval === 'year' && planType !== 'free') {
+      productMatchStr = `${planType}`; // Polar plan_type currently holds both name bases but we might need to filter by name. Let's look closer at JSON.
+    }
+
+    // According to JSON, both share "plan_type": "enterprise" or "premium".
+    // "name": "Ultra Yearly" vs "Ultra".
+    let product = polarProducts.find(p => p.plan_type === planType && p.is_recurring && (!p.name.includes("Yearly") && !p.name.includes("yearly")));
+    if (billingInterval === 'year' && planType !== 'free') {
+      product = polarProducts.find(p => p.plan_type === planType && (p.name.includes("Yearly") || p.name.includes("yearly")) && p.is_recurring);
+    }
+
+    // If the precise year/month variant product is not found, fallback to the base
+    if (!product) {
+      product = polarProducts.find(p => p.plan_type === planType && p.is_recurring);
+    }
 
     // Hardcoded production overrides for missing or unreliable Polar syncs
     const hardcodedPrices: Record<string, { monthPrice: string, monthPriceId: string, yearPrice: string, yearPriceId: string }> = {
