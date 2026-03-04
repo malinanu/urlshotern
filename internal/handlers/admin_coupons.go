@@ -36,13 +36,13 @@ func (h *AdminCouponHandlers) CreateCoupon(c *gin.Context) {
 		return
 	}
 
-	// Sync with Polar if it's a monetary discount
+	// Sync with Polar if it's a monetary discount (non-blocking — failure just logs a warning)
 	if coupon.DiscountType == "percentage" || coupon.DiscountType == "fixed" {
 		codeStr := coupon.Code
 		payload := services.CreateDiscountPayload{
 			Name:     coupon.Name,
 			Code:     &codeStr,
-			Type:     coupon.DiscountType, // "percentage" or "fixed"
+			Type:     coupon.DiscountType,
 			Duration: "once",
 		}
 
@@ -50,7 +50,7 @@ func (h *AdminCouponHandlers) CreateCoupon(c *gin.Context) {
 			bp := int(coupon.DiscountValue * 100)
 			payload.BasisPoints = &bp
 		} else if coupon.DiscountType == "fixed" {
-			amt := int(coupon.DiscountValue * 100) // Assumes USD dollars -> cents
+			amt := int(coupon.DiscountValue * 100) // dollars → cents
 			usd := "usd"
 			payload.Amount = &amt
 			payload.Currency = &usd
@@ -60,14 +60,12 @@ func (h *AdminCouponHandlers) CreateCoupon(c *gin.Context) {
 			payload.MaxRedemptions = coupon.MaxRedemptions
 		}
 
-		polarDiscount, err := h.polarService.CreateDiscount(payload)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create discount in Polar dashboard", "details": err.Error()})
-			return
+		if polarDiscount, err := h.polarService.CreateDiscount(payload); err != nil {
+			// Non-fatal: log and continue; coupon still gets saved locally
+			_ = err // logged inside CreateDiscount
+		} else {
+			coupon.PolarDiscountID = &polarDiscount.ID
 		}
-
-		// Save the Polar discount ID locally so we can reference it
-		coupon.PolarDiscountID = &polarDiscount.ID
 	}
 
 	if err := h.db.Create(&coupon).Error; err != nil {
