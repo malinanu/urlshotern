@@ -131,6 +131,7 @@ func (p *PostgresStorage) initTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_short_code ON url_mappings(short_code)`,
 		`CREATE INDEX IF NOT EXISTS idx_created_at ON url_mappings(created_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_active ON url_mappings(is_active)`,
+		`ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`,
 		`CREATE TABLE IF NOT EXISTS click_events (
 			id BIGINT PRIMARY KEY,
 			short_code VARCHAR(10) NOT NULL,
@@ -809,11 +810,11 @@ func (p *PostgresStorage) GetAIInsight(shortCode, insightType string) (*models.A
 // SaveURLMapping saves a URL mapping to the database
 func (p *PostgresStorage) SaveURLMapping(mapping *models.URLMapping) error {
 	query := `
-		INSERT INTO url_mappings (id, short_code, original_url, created_at, expires_at, created_by_ip, user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO url_mappings (id, short_code, original_url, created_at, expires_at, created_by_ip, user_id, password_hash)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	_, err := p.db.Exec(query, mapping.ID, mapping.ShortCode, mapping.OriginalURL,
-		mapping.CreatedAt, mapping.ExpiresAt, mapping.CreatedByIP, mapping.UserID)
+		mapping.CreatedAt, mapping.ExpiresAt, mapping.CreatedByIP, mapping.UserID, mapping.PasswordHash)
 
 	if err != nil {
 		return fmt.Errorf("failed to save URL mapping: %w", err)
@@ -832,7 +833,7 @@ func (p *PostgresStorage) CountURLsByIP(ip string) (int64, error) {
 // GetURLMappingByShortCode retrieves a URL mapping by its short code
 func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.URLMapping, error) {
 	query := `
-		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active, created_by_ip, user_id
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active, created_by_ip, user_id, password_hash
 		FROM url_mappings
 		WHERE short_code = $1 AND is_active = TRUE
 	`
@@ -841,11 +842,12 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	var expiresAt sql.NullTime
 	var createdByIP sql.NullString
 	var userID sql.NullInt64
+	var passwordHash sql.NullString
 
 	err := p.db.QueryRow(query, shortCode).Scan(
 		&mapping.ID, &mapping.ShortCode, &mapping.OriginalURL,
 		&mapping.CreatedAt, &expiresAt, &mapping.ClickCount,
-		&mapping.IsActive, &createdByIP, &userID,
+		&mapping.IsActive, &createdByIP, &userID, &passwordHash,
 	)
 
 	if err != nil {
@@ -863,6 +865,9 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	}
 	if userID.Valid {
 		mapping.UserID = &userID.Int64
+	}
+	if passwordHash.Valid {
+		mapping.PasswordHash = &passwordHash.String
 	}
 
 	// Check if URL has expired

@@ -91,6 +91,9 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	apiKeyService := handler.APIKeyHandlers.GetAPIKeyService()
 
 	// URL shortening (anonymous users get 5 free URLs, authenticated users use billing limits)
+	// Password check for protected links (public — no auth required)
+	router.POST("/api/v1/check-password/:shortCode", handler.CheckPassword)
+
 	router.POST("/api/v1/shorten",
 		authMiddleware.OptionalAuth(),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
@@ -539,6 +542,26 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 		customDomain.GET("/:id/settings", handler.DomainHandlers.GetDomainSettings)
 		customDomain.GET("/:id/status", handler.DomainHandlers.GetDomainStatus)
 	}
+
+	// Team collaboration routes (Pro+ feature)
+	teams := api.Group("/teams")
+	teams.Use(handler.BillingHandlers.CheckFeatureAccess("custom_domain")) // Pro+ gate (same tier as custom domains)
+	{
+		teams.POST("/", handler.TeamHandlers.CreateTeam)
+		teams.GET("/", handler.TeamHandlers.ListUserTeams)
+		teams.GET("/:id", handler.TeamHandlers.GetTeam)
+		teams.PUT("/:id", handler.TeamHandlers.UpdateTeam)
+		teams.DELETE("/:id", handler.TeamHandlers.DeleteTeam)
+		teams.POST("/:id/invite", handler.TeamHandlers.InviteTeamMember)
+		teams.GET("/:id/invitations", handler.TeamHandlers.ListTeamInvitations)
+		teams.PUT("/:id/members/:memberID", handler.TeamHandlers.UpdateTeamMember)
+		teams.DELETE("/:id/members/:memberID", handler.TeamHandlers.RemoveTeamMember)
+		teams.POST("/:id/leave", handler.TeamHandlers.LeaveTeam)
+		teams.POST("/:id/transfer-ownership", handler.TeamHandlers.TransferTeamOwnership)
+	}
+	// Team invitation acceptance (public — token-based)
+	api.POST("/teams/invitations/accept", handler.TeamHandlers.AcceptTeamInvitation)
+	api.POST("/teams/invitations/reject", handler.TeamHandlers.RejectTeamInvitation)
 
 	// API key management routes - ENABLED for professional API integration
 	// Removed billing feature gate - API keys available to all authenticated users

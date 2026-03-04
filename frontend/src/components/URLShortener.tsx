@@ -36,7 +36,12 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const { getAccessToken, isAuthenticated, refreshToken } = useAuth();
+  const [customCode, setCustomCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const { user, getAccessToken, isAuthenticated, refreshToken } = useAuth();
+
+  const isPro = user?.account_type === 'premium' || user?.account_type === 'enterprise';
 
   const {
     register,
@@ -63,10 +68,14 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
         headers.Authorization = `Bearer ${token}`;
       }
 
+      const body: Record<string, string> = { url: data.url };
+      if (isPro && customCode.trim()) body.custom_code = customCode.trim();
+      if (isPro && password.trim()) body.password = password.trim();
+
       const response = await fetch(API_ENDPOINTS.urls.shorten, {
         method: 'POST',
         headers,
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
 
       // Handle token expiration
@@ -115,6 +124,8 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
       onUrlCreated?.(result);
 
       reset();
+      setCustomCode('');
+      setPassword('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -173,6 +184,48 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
               </button>
             </div>
           </div>
+
+          {/* Pro Options: Custom short code + Password */}
+          {isPro && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showAdvanced ? '▲ Hide options' : '▼ Advanced options (custom code, password)'}
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">
+                      Custom short code <span className="text-muted-foreground">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customCode}
+                      onChange={(e) => setCustomCode(e.target.value)}
+                      placeholder="e.g. my-link"
+                      maxLength={20}
+                      className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">
+                      Password protect <span className="text-muted-foreground">(optional)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Set a password"
+                      className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </form>
 
         {/* Error Display */}

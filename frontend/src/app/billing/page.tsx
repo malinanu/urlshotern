@@ -95,6 +95,21 @@ function BillingContent() {
 
   const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
 
+  // Get live price from Polar for a given plan type + interval
+  const getPolarPrice = (planType: string, interval: 'month' | 'year'): string => {
+    if (planType === 'free') return '$0';
+    const basePlan = planType.replace('_yearly', '');
+    let product = interval === 'year'
+      ? polarProducts.find(p => p.plan_type === basePlan && (p.name.includes('Yearly') || p.name.includes('yearly')) && p.is_recurring)
+      : polarProducts.find(p => p.plan_type === basePlan && p.is_recurring && !p.name.includes('Yearly') && !p.name.includes('yearly'));
+    if (!product) product = polarProducts.find(p => p.plan_type === basePlan && p.is_recurring);
+    if (!product?.prices?.length) return '—';
+    const price = product.prices.find(p => !p.is_archived && p.recurring_interval === interval)
+      ?? product.prices.find(p => !p.is_archived);
+    if (!price) return '—';
+    return formatPrice(price.price_amount, price.price_currency);
+  };
+
   const fetchBillingData = async () => {
     if (!isAuthenticated || !user) return;
 
@@ -363,9 +378,9 @@ function BillingContent() {
                         <span className="text-2xl font-bold text-primary capitalize">
                           {billingData.plan.name}
                         </span>
-                        {billingData.plan.price > 0 && (
+                        {billingData.subscription.plan_type !== 'free' && (
                           <span className="ml-2 text-muted-foreground">
-                            ${billingData.plan.price}/{billingData.plan.interval}
+                            {getPolarPrice(billingData.subscription.plan_type, billingData.subscription.billing_cycle as 'month' | 'year' || 'month')}/{billingData.subscription.billing_cycle || 'month'}
                           </span>
                         )}
                       </div>
@@ -562,9 +577,9 @@ function BillingContent() {
                         <p className="text-muted-foreground mt-1">{plan.description}</p>
                         <div className="mt-4">
                           <span className="text-3xl font-bold text-foreground">
-                            ${plan.price}
+                            {plan.id === 'free' ? '$0' : getPolarPrice(plan.id, billingInterval)}
                           </span>
-                          <span className="text-muted-foreground">/{plan.interval}</span>
+                          <span className="text-muted-foreground">/{billingInterval}</span>
                         </div>
                       </div>
 

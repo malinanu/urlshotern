@@ -14,6 +14,7 @@ import (
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
 	"github.com/URLshorter/url-shortener/internal/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type ShortenerService struct {
@@ -105,16 +106,28 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 		}
 	}
 
+	// Hash password if provided
+	var passwordHashPtr *string
+	if request.Password != "" {
+		hashed, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash password: %w", err)
+		}
+		h := string(hashed)
+		passwordHashPtr = &h
+	}
+
 	// Create URL mapping
 	mapping := &models.URLMapping{
-		ID:          id,
-		ShortCode:   shortCode,
-		OriginalURL: request.URL,
-		CreatedAt:   time.Now(),
-		ExpiresAt:   request.ExpiresAt,
-		IsActive:    true,
-		CreatedByIP: clientIP,
-		UserID:      userID,
+		ID:           id,
+		ShortCode:    shortCode,
+		OriginalURL:  request.URL,
+		CreatedAt:    time.Now(),
+		ExpiresAt:    request.ExpiresAt,
+		IsActive:     true,
+		CreatedByIP:  clientIP,
+		UserID:       userID,
+		PasswordHash: passwordHashPtr,
 	}
 
 	// Save to database
@@ -328,6 +341,11 @@ func (s *ShortenerService) validateURL(rawURL string) error {
 	}
 
 	return nil
+}
+
+// CheckPassword verifies a plaintext password against a bcrypt hash
+func (s *ShortenerService) CheckPassword(hash, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
 // validateCustomCode validates custom short codes

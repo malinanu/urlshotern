@@ -99,7 +99,10 @@ func main() {
 	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config, contentBlockService, pageTemplateService)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	adminRBACHandlers := handlers.NewAdminRBACHandlers(adminService, rbacService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService)
+	rbacServiceBase := services.NewRBACService(db, redis)
+	teamService := services.NewTeamService(db, redis, rbacServiceBase, userService, emailService)
+	teamHandlers := handlers.NewTeamHandlers(teamService, rbacServiceBase, userService)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService, teamHandlers)
 
 	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)

@@ -6,15 +6,16 @@ import (
 
 // URLMapping represents a URL mapping in the database
 type URLMapping struct {
-	ID          int64     `json:"id" db:"id"`
-	ShortCode   string    `json:"short_code" db:"short_code"`
-	OriginalURL string    `json:"original_url" db:"original_url"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty" db:"expires_at"`
-	ClickCount  int64     `json:"click_count" db:"click_count"`
-	IsActive    bool      `json:"is_active" db:"is_active"`
-	CreatedByIP string    `json:"created_by_ip,omitempty" db:"created_by_ip"`
-	UserID      *int64    `json:"user_id,omitempty" db:"user_id"`
+	ID           int64      `json:"id" db:"id"`
+	ShortCode    string     `json:"short_code" db:"short_code"`
+	OriginalURL  string     `json:"original_url" db:"original_url"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	ExpiresAt    *time.Time `json:"expires_at,omitempty" db:"expires_at"`
+	ClickCount   int64      `json:"click_count" db:"click_count"`
+	IsActive     bool       `json:"is_active" db:"is_active"`
+	CreatedByIP  string     `json:"created_by_ip,omitempty" db:"created_by_ip"`
+	UserID       *int64     `json:"user_id,omitempty" db:"user_id"`
+	PasswordHash *string    `json:"password_hash,omitempty" db:"password_hash"`
 }
 
 // ClickEvent represents a click tracking event
@@ -33,9 +34,10 @@ type ClickEvent struct {
 
 // ShortenRequest represents the request payload for shortening URLs
 type ShortenRequest struct {
-	URL       string     `json:"url" binding:"required,url"`
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
-	CustomCode string    `json:"custom_code,omitempty"`
+	URL        string     `json:"url" binding:"required,url"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	CustomCode string     `json:"custom_code,omitempty"`
+	Password   string     `json:"password,omitempty"`
 }
 
 // ShortenResponse represents the response for URL shortening

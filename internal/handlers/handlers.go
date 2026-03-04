@@ -44,10 +44,11 @@ type Handler struct {
 	AIInsightsHandlers     *AIInsightsHandler
 	DomainHandlers         *DomainHandlers
 	BrandingHandlers       *BrandingHandler
+	TeamHandlers           *TeamHandlers
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers, botDetector *services.BotDetectionService, aiInsightsService *services.AIInsightsService, domainService *services.DomainService, brandingService *services.BrandingService) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers, botDetector *services.BotDetectionService, aiInsightsService *services.AIInsightsService, domainService *services.DomainService, brandingService *services.BrandingService, teamHandlers *TeamHandlers) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
 
@@ -86,6 +87,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		AIInsightsHandlers:     NewAIInsightsHandler(aiInsightsService),
 		DomainHandlers:         NewDomainHandlers(domainService),
 		BrandingHandlers:       NewBrandingHandler(brandingService),
+		TeamHandlers:           teamHandlers,
 	}
 }
 
@@ -260,6 +262,12 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 		return
 	}
 
+	// Password-protected link: redirect to password entry page
+	if mapping.PasswordHash != nil {
+		c.Redirect(http.StatusFound, "/p/"+shortCode)
+		return
+	}
+
 	// Record the click for analytics
 	clientIP := getClientIP(c)
 	userAgent := c.GetHeader("User-Agent")
@@ -275,6 +283,47 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 
 	// Perform the redirect
 	c.Redirect(http.StatusMovedPermanently, mapping.OriginalURL)
+}
+
+// CheckPassword verifies a link password and returns the destination URL
+func (h *Handler) CheckPassword(c *gin.Context) {
+	shortCode := c.Param("shortCode")
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password required"})
+		return
+	}
+
+	mapping, err := h.shortenerService.GetOriginalURL(shortCode)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "link not found"})
+		return
+	}
+	if mapping.PasswordHash == nil {
+		// No password needed — just return the URL
+		c.JSON(http.StatusOK, gin.H{"redirect_url": mapping.OriginalURL})
+		return
+	}
+
+	if err := h.shortenerService.CheckPassword(*mapping.PasswordHash, req.Password); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+		return
+	}
+
+	// Record click after successful password verification
+	clientIP := getClientIP(c)
+	userAgent := c.GetHeader("User-Agent")
+	referrer := c.GetHeader("Referer")
+	acceptLang := c.GetHeader("Accept-Language")
+	accept := c.GetHeader("Accept")
+	isBot := h.botDetector.IsBot(userAgent, acceptLang, accept, clientIP, shortCode)
+	utils.Go("record_click", func() error {
+		return h.shortenerService.RecordClick(shortCode, clientIP, userAgent, referrer, isBot)
+	})
+
+	c.JSON(http.StatusOK, gin.H{"redirect_url": mapping.OriginalURL})
 }
 
 // GetAnalytics handles analytics requests
