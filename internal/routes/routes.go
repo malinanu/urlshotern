@@ -354,6 +354,7 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 			coupons.POST("", handler.AdminCouponHandlers.CreateCoupon)
 			coupons.DELETE("/:id", handler.AdminCouponHandlers.DeleteCoupon)
 			coupons.PUT("/:id/toggle", handler.AdminCouponHandlers.ToggleCoupon)
+			coupons.POST("/:id/sync-polar", handler.AdminCouponHandlers.SyncToPolar)
 		}
 	}
 

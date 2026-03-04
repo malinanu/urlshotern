@@ -109,6 +109,7 @@ export const API_ENDPOINTS = {
       create: `${API_BASE_URL}/api/v1/admin/coupons`,
       delete: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}`,
       toggle: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}/toggle`,
+      syncPolar: (id: string | number) => `${API_BASE_URL}/api/v1/admin/coupons/${id}/sync-polar`,
     },
 
     // Domain management (admin)
