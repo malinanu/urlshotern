@@ -136,7 +136,7 @@ export default function PricingPage() {
     if (planType === 'premium') return '7808475d-8682-4d39-8821-efab2ac6548d';
     if (planType === 'enterprise') return 'fcb60f51-4c53-43cd-a47c-fd62dc53b246';
 
-    const product = polarProducts.find(p => p.plan_type === planType);
+    const product = polarProducts.find((p: any) => p.plan_type === planType);
 
     if (!product) {
       // Don't log errors during initial loading phase - this is expected behavior
@@ -150,7 +150,7 @@ export default function PricingPage() {
           console.error('[Pricing] Admin action: POST /api/v1/billing/sync-products');
         } else {
           console.error(`[Pricing] Product not found for plan type: ${planType}`);
-          console.error('[Pricing] Available plan types:', polarProducts.map(p => p.plan_type));
+          console.error('[Pricing] Available plan types:', polarProducts.map((p: any) => p.plan_type));
           console.error('[Pricing] Admin may need to re-sync from Polar');
         }
       }
@@ -178,14 +178,14 @@ export default function PricingPage() {
 
     // According to JSON, both share "plan_type": "enterprise" or "premium".
     // "name": "Ultra Yearly" vs "Ultra".
-    let product = polarProducts.find(p => p.plan_type === planType && p.is_recurring && (!p.name.includes("Yearly") && !p.name.includes("yearly")));
+    let product = polarProducts.find((p: any) => p.plan_type === planType && p.is_recurring && (!p.name.includes("Yearly") && !p.name.includes("yearly")));
     if (billingInterval === 'year' && planType !== 'free') {
-      product = polarProducts.find(p => p.plan_type === planType && (p.name.includes("Yearly") || p.name.includes("yearly")) && p.is_recurring);
+      product = polarProducts.find((p: any) => p.plan_type === planType && (p.name.includes("Yearly") || p.name.includes("yearly")) && p.is_recurring);
     }
 
     // If the precise year/month variant product is not found, fallback to the base
     if (!product) {
-      product = polarProducts.find(p => p.plan_type === planType && p.is_recurring);
+      product = polarProducts.find((p: any) => p.plan_type === planType && p.is_recurring);
     }
 
     // Hardcoded production overrides for missing or unreliable Polar syncs
@@ -213,7 +213,7 @@ export default function PricingPage() {
 
     // Attempt to find the price matching the current user-selected billing interval normally
     const activePrice = product.prices.find(
-      p => !p.is_archived && p.recurring_interval === billingInterval
+      (p: any) => !p.is_archived && p.recurring_interval === billingInterval
     );
 
     if (activePrice) {
@@ -225,7 +225,7 @@ export default function PricingPage() {
     }
 
     // Fall back to monthly price native sync if requested interval isn't explicitly found natively
-    const fallbackPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month') || product.prices.find(p => !p.is_archived);
+    const fallbackPrice = product.prices.find((p: any) => !p.is_archived && p.recurring_interval === 'month') || product.prices.find((p: any) => !p.is_archived);
     if (fallbackPrice) {
       const interval = fallbackPrice.recurring_interval || 'month';
       return {
@@ -448,7 +448,7 @@ export default function PricingPage() {
                 <div className="mt-8">
                   <h4 className="font-semibold text-foreground mb-4">What's included:</h4>
                   <ul className="space-y-3">
-                    {plan.features.map((feature) => (
+                    {plan.features.map((feature: any, index: number) => (
                       <li key={feature.name} className="flex items-center space-x-3">
                         {feature.included ? (
                           <CheckIcon className="h-5 w-5 text-primary flex-shrink-0" />

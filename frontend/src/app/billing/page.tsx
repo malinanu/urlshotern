@@ -153,7 +153,7 @@ function BillingContent() {
     setDiscountError(null);
     try {
       // Find the currently selected plan to validate against
-      const selectedPlan = plans.find(p => p.interval === billingInterval && p.id !== 'free');
+      const selectedPlan = plans.find((p: any) => p.interval === billingInterval && p.id !== 'free');
       const planId = selectedPlan ? selectedPlan.id : '';
 
       const response = await fetch(`${API_ENDPOINTS.billing.validateCoupon}?code=${discountCode}&plan_id=${planId}`, {
@@ -204,13 +204,13 @@ function BillingContent() {
       const isYearly = planId.endsWith('_yearly') || billingInterval === 'year';
 
       // Fallback to sync if no hardcoded available, but currently all 3 tiers are hardcoded
-      let product = polarProducts.find(p => p.plan_type === basePlanType && p.is_recurring && (!p.name.includes("Yearly") && !p.name.includes("yearly")));
+      let product = polarProducts.find((p: any) => p.plan_type === basePlanType && p.is_recurring && (!p.name.includes("Yearly") && !p.name.includes("yearly")));
       if (isYearly && basePlanType !== 'free') {
-        product = polarProducts.find(p => p.plan_type === basePlanType && (p.name.includes("Yearly") || p.name.includes("yearly")) && p.is_recurring);
+        product = polarProducts.find((p: any) => p.plan_type === basePlanType && (p.name.includes("Yearly") || p.name.includes("yearly")) && p.is_recurring);
       }
 
       if (!product) {
-        product = polarProducts.find(p => p.plan_type === basePlanType && p.is_recurring);
+        product = polarProducts.find((p: any) => p.plan_type === basePlanType && p.is_recurring);
       }
 
       // Hardcoded production overrides for missing or unreliable Polar syncs
@@ -225,8 +225,6 @@ function BillingContent() {
           monthPriceId: 'fcb60f51-4c53-43cd-a47c-fd62dc53b246', yearPriceId: 'e5e3b4b7-e572-42db-b271-b4ba637e83bf', productId: 'fcb60f51-4c53-43cd-a47c-fd62dc53b246'
         },
       };
-
-      const isYearly = planId.endsWith('_yearly') || billingInterval === 'year';
 
       let finalProductId: string;
       let finalPriceId: string | undefined;
@@ -253,7 +251,7 @@ function BillingContent() {
         // Safe natural route: Products loaded properly natively from API sync
         finalProductId = product.id;
         if (isYearly) {
-          const yearlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'year');
+          const yearlyPrice = product.prices.find((p: any) => !p.is_archived && p.recurring_interval === 'year');
           if (yearlyPrice) {
             finalPriceId = yearlyPrice.id;
           } else {
@@ -267,7 +265,7 @@ function BillingContent() {
             }
           }
         } else {
-          const monthlyPrice = product.prices.find(p => !p.is_archived && p.recurring_interval === 'month');
+          const monthlyPrice = product.prices.find((p: any) => !p.is_archived && p.recurring_interval === 'month');
           if (monthlyPrice) {
             finalPriceId = monthlyPrice.id;
           } else {
@@ -275,7 +273,7 @@ function BillingContent() {
             if (fallback) {
               finalPriceId = fallback.monthPriceId
             } else {
-              const fallbackPrice = product.prices.find(p => !p.is_archived);
+              const fallbackPrice = product.prices.find((p: any) => !p.is_archived);
               if (fallbackPrice) finalPriceId = fallbackPrice.id;
             }
           }
@@ -502,7 +500,7 @@ function BillingContent() {
                   <div className="mt-6">
                     <h3 className="text-sm font-medium text-muted-foreground mb-3">Current Plan Features</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {billingData.plan.features.map((feature, index) => (
+                      {billingData.plan.features.map((feature: any, index: number) => (
                         <div key={index} className="flex items-center text-sm text-muted-foreground">
                           <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-500 mr-2 flex-shrink-0" />
                           {feature}
@@ -605,7 +603,7 @@ function BillingContent() {
                       </div>
 
                       <ul className="space-y-3 mb-6">
-                        {plan.features.map((feature, index) => (
+                        {plan.features.map((feature: any, index: number) => (
                           <li key={index} className="flex items-center text-sm text-muted-foreground">
                             <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-500 mr-2 flex-shrink-0" />
                             {feature}
