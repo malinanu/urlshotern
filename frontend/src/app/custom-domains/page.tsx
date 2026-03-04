@@ -12,6 +12,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon,
   ShieldCheckIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 interface CustomDomain {
