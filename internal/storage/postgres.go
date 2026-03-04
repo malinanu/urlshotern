@@ -147,6 +147,30 @@ func (p *PostgresStorage) initTables() error {
 		`ALTER TABLE click_events ADD COLUMN IF NOT EXISTS is_unique BOOLEAN DEFAULT FALSE`,
 		`ALTER TABLE click_events ADD COLUMN IF NOT EXISTS ip_hash   VARCHAR(64)`,
 		`CREATE INDEX IF NOT EXISTS idx_click_events_is_bot ON click_events(is_bot)`,
+		// Fix: coupons.id was created without a sequence (BIGINT PRIMARY KEY, no default).
+		// GORM's autoIncrement omits id from INSERT, so we need the DB to supply a default.
+		`CREATE SEQUENCE IF NOT EXISTS coupons_id_seq`,
+		`DO $$ BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='coupons' AND column_name='id'
+				  AND column_default IS NOT NULL
+			) THEN
+				PERFORM setval('coupons_id_seq', COALESCE((SELECT MAX(id) FROM coupons), 0) + 1, false);
+				ALTER TABLE coupons ALTER COLUMN id SET DEFAULT nextval('coupons_id_seq');
+			END IF;
+		END $$`,
+		`CREATE SEQUENCE IF NOT EXISTS coupon_redemptions_id_seq`,
+		`DO $$ BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='coupon_redemptions' AND column_name='id'
+				  AND column_default IS NOT NULL
+			) THEN
+				PERFORM setval('coupon_redemptions_id_seq', COALESCE((SELECT MAX(id) FROM coupon_redemptions), 0) + 1, false);
+				ALTER TABLE coupon_redemptions ALTER COLUMN id SET DEFAULT nextval('coupon_redemptions_id_seq');
+			END IF;
+		END $$`,
 	}
 
 	for _, query := range queries {
