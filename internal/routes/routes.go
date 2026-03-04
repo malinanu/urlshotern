@@ -598,7 +598,8 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/analytics", "/profile", "/settings",
 		"/bulk", "/conversions", "/api-keys", "/admin",
 		"/billing", "/pages", "/custom-domains",
-		"/forgot-password", "/reset-password",  // Password reset pages
+		"/forgot-password", "/reset-password",
+		"/teams", "/ab-tests",
 	}
 
 	for _, route := range frontendRoutes {

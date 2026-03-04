@@ -546,6 +546,12 @@ func (bs *BillingService) RedeemFreeMonths(userID int64, planID string, coupon *
 			return err
 		}
 
+		// Update users.account_type so plan-gating middleware (which reads account_type
+		// from the JWT / users table) grants the correct feature access immediately.
+		if err := tx.Exec("UPDATE users SET account_type = ?, updated_at = NOW() WHERE id = ?", plan.ID, userID).Error; err != nil {
+			return err
+		}
+
 		// coupon_redemptions.subscription_id references subscriptions(id), not polar_subscriptions.
 		// For free-month coupons we bypass Polar entirely, so there is no subscriptions row.
 		// Pass nil — the column is nullable.
