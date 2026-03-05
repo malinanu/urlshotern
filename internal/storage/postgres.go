@@ -772,19 +772,22 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_brand_settings_user_id ON brand_settings(user_id)`,
 
-		// Teams
+		// Teams — CREATE TABLE handles fresh installs; ALTER TABLE adds columns
+		// that may be missing on existing DBs that ran migration 014_team_management_up.sql.
 		`CREATE TABLE IF NOT EXISTS teams (
 			id           BIGSERIAL PRIMARY KEY,
 			name         VARCHAR(100) UNIQUE NOT NULL,
-			display_name VARCHAR(255) NOT NULL,
+			display_name VARCHAR(255) NOT NULL DEFAULT '',
 			description  TEXT,
 			owner_id     BIGINT NOT NULL REFERENCES users(id),
 			is_active    BOOLEAN NOT NULL DEFAULT TRUE,
-			settings     TEXT,
 			created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			deleted_at   TIMESTAMPTZ
 		)`,
+		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NOT NULL DEFAULT ''`,
+		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
+		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
 		`CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id)`,
 
 		`CREATE TABLE IF NOT EXISTS team_members (
@@ -799,6 +802,9 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			UNIQUE(team_id, user_id)
 		)`,
+		`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'active'`,
+		`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`,
+		`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
 		`CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id)`,
 
@@ -808,12 +814,15 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 			email      VARCHAR(255) NOT NULL,
 			role       VARCHAR(50) NOT NULL DEFAULT 'team_member',
 			invited_by BIGINT NOT NULL REFERENCES users(id),
-			token      VARCHAR(255) UNIQUE NOT NULL,
+			token      VARCHAR(255) UNIQUE,
 			status     VARCHAR(50) NOT NULL DEFAULT 'pending',
 			expires_at TIMESTAMPTZ NOT NULL,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		)`,
+		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS token VARCHAR(255)`,
+		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'pending'`,
+		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_team_id ON team_invitations(team_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_token ON team_invitations(token)`,
 	}

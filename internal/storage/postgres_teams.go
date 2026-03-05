@@ -53,11 +53,11 @@ func RoleToModel(role string) *models.Role {
 // CreateTeam inserts a new team and populates team.ID from the RETURNING clause.
 func (p *PostgresStorage) CreateTeam(team *models.Team) error {
 	return p.QueryRow(`
-		INSERT INTO teams (name, display_name, description, owner_id, is_active, settings, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO teams (name, display_name, description, owner_id, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`, team.Name, team.DisplayName, team.Description, team.OwnerID,
-		team.IsActive, team.Settings, team.CreatedAt, team.UpdatedAt,
+		team.IsActive, team.CreatedAt, team.UpdatedAt,
 	).Scan(&team.ID)
 }
 
@@ -65,11 +65,11 @@ func (p *PostgresStorage) CreateTeam(team *models.Team) error {
 func (p *PostgresStorage) GetTeamByID(id int64) (*models.Team, error) {
 	t := &models.Team{}
 	err := p.QueryRow(`
-		SELECT id, name, display_name, description, owner_id, is_active, settings, created_at, updated_at, deleted_at
+		SELECT id, name, display_name, description, owner_id, is_active, created_at, updated_at, deleted_at
 		FROM teams WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&t.ID, &t.Name, &t.DisplayName, &t.Description, &t.OwnerID,
-		&t.IsActive, &t.Settings, &t.CreatedAt, &t.UpdatedAt, &t.DeletedAt,
+		&t.IsActive, &t.CreatedAt, &t.UpdatedAt, &t.DeletedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (p *PostgresStorage) UpdateTeamOwner(teamID, newOwnerID int64) error {
 func (p *PostgresStorage) GetUserTeams(userID int64) ([]*models.Team, []string, error) {
 	rows, err := p.Query(`
 		SELECT t.id, t.name, t.display_name, t.description, t.owner_id, t.is_active,
-		       t.settings, t.created_at, t.updated_at, t.deleted_at, tm.role
+		       t.created_at, t.updated_at, t.deleted_at, tm.role
 		FROM teams t
 		JOIN team_members tm ON t.id = tm.team_id AND tm.user_id = $1 AND tm.status = 'active'
 		WHERE t.deleted_at IS NULL AND t.is_active = TRUE
@@ -129,7 +129,7 @@ func (p *PostgresStorage) GetUserTeams(userID int64) ([]*models.Team, []string, 
 		var role string
 		if err := rows.Scan(
 			&t.ID, &t.Name, &t.DisplayName, &t.Description, &t.OwnerID,
-			&t.IsActive, &t.Settings, &t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &role,
+			&t.IsActive, &t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &role,
 		); err != nil {
 			return nil, nil, err
 		}
