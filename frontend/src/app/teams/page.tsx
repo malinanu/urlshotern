@@ -164,6 +164,15 @@ export default function TeamsPage() {
     await fetchMembers(teamId);
   };
 
+  const handleCancelInvitation = async (teamId: number, invitationId: number) => {
+    if (!confirm('Cancel this invitation?')) return;
+    await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/invitations/${invitationId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    await fetchMembers(teamId);
+  };
+
   if (!user) return null;
 
   if (!isPro) {
@@ -319,6 +328,13 @@ export default function TeamsPage() {
                                 <p className="text-xs text-muted-foreground">{roleLabel(inv.role)} · Invite pending</p>
                               </div>
                             </div>
+                            <button
+                              onClick={() => handleCancelInvitation(selectedTeam.id, inv.id)}
+                              className="p-1.5 text-destructive hover:bg-destructive/10 rounded transition-colors"
+                              title="Cancel invitation"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
                           </div>
                         ))}
                       </div>

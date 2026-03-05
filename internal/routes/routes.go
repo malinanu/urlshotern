@@ -555,6 +555,7 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 		teams.DELETE("/:id", handler.TeamHandlers.DeleteTeam)
 		teams.POST("/:id/invite", handler.TeamHandlers.InviteTeamMember)
 		teams.GET("/:id/invitations", handler.TeamHandlers.ListTeamInvitations)
+		teams.DELETE("/:id/invitations/:invitationID", handler.TeamHandlers.CancelTeamInvitation)
 		teams.PUT("/:id/members/:memberID", handler.TeamHandlers.UpdateTeamMember)
 		teams.DELETE("/:id/members/:memberID", handler.TeamHandlers.RemoveTeamMember)
 		teams.POST("/:id/leave", handler.TeamHandlers.LeaveTeam)
