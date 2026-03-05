@@ -22,14 +22,24 @@ import {
   VideoCameraIcon,
   DocumentTextIcon,
   ListBulletIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  RectangleGroupIcon,
+  ChartBarIcon,
+  Squares2X2Icon,
+  CursorArrowRaysIcon,
+  ChatBubbleLeftRightIcon,
+  QuestionMarkCircleIcon,
+  CurrencyDollarIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
+
+type BlockType = 'text' | 'image' | 'video' | 'form' | 'list' | 'html' | 'hero' | 'stats' | 'features' | 'cta' | 'testimonial' | 'faq' | 'pricing' | 'team';
 
 interface ContentBlock {
   id: number;
   name: string;
   identifier: string;
-  type: 'text' | 'image' | 'video' | 'form' | 'list' | 'html';
+  type: BlockType;
   content: string;
   is_active: boolean;
   sort_order: number;
@@ -39,7 +49,8 @@ interface ContentBlock {
 
 interface ContentBlockFormData {
   name: string;
-  type: 'text' | 'image' | 'video' | 'form' | 'list' | 'html';
+  identifier: string;
+  type: BlockType;
   content: string;
   is_active: boolean;
   sort_order: number;
@@ -47,11 +58,19 @@ interface ContentBlockFormData {
 
 const blockTypes = [
   { value: 'text', label: 'Text Content', icon: DocumentTextIcon },
+  { value: 'html', label: 'HTML Block', icon: CodeBracketIcon },
   { value: 'image', label: 'Image Block', icon: PhotoIcon },
   { value: 'video', label: 'Video Block', icon: VideoCameraIcon },
   { value: 'form', label: 'Form Block', icon: DocumentTextIcon },
   { value: 'list', label: 'List Block', icon: ListBulletIcon },
-  { value: 'html', label: 'HTML Block', icon: CodeBracketIcon }
+  { value: 'hero', label: 'Hero Section', icon: RectangleGroupIcon },
+  { value: 'stats', label: 'Stats Grid', icon: ChartBarIcon },
+  { value: 'features', label: 'Features Grid', icon: Squares2X2Icon },
+  { value: 'cta', label: 'Call to Action', icon: CursorArrowRaysIcon },
+  { value: 'testimonial', label: 'Testimonial', icon: ChatBubbleLeftRightIcon },
+  { value: 'faq', label: 'FAQ Block', icon: QuestionMarkCircleIcon },
+  { value: 'pricing', label: 'Pricing Block', icon: CurrencyDollarIcon },
+  { value: 'team', label: 'Team Block', icon: UsersIcon }
 ];
 
 export function ContentBlockManager() {
@@ -67,6 +86,7 @@ export function ContentBlockManager() {
   const [filterType, setFilterType] = useState('all');
   const [formData, setFormData] = useState<ContentBlockFormData>({
     name: '',
+    identifier: '',
     type: 'text',
     content: '',
     is_active: true,
@@ -159,6 +179,7 @@ export function ContentBlockManager() {
     setEditingBlock(block);
     setFormData({
       name: block.name,
+      identifier: block.identifier,
       type: block.type,
       content: block.content || '',
       is_active: block.is_active ?? true,
@@ -194,6 +215,7 @@ export function ContentBlockManager() {
   const handleDuplicate = async (block: ContentBlock) => {
     setFormData({
       name: `${block.name} (Copy)`,
+      identifier: '',
       type: block.type,
       content: block.content || '',
       is_active: block.is_active ?? true,
@@ -225,6 +247,7 @@ export function ContentBlockManager() {
   const resetForm = () => {
     setFormData({
       name: '',
+      identifier: '',
       type: 'text',
       content: '',
       is_active: true,
@@ -394,6 +417,25 @@ export function ContentBlockManager() {
                 required
                 placeholder="Enter block name"
               />
+            </div>
+
+            <div>
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+                Identifier {editingBlock ? <span className="text-gray-400 font-normal">(read-only)</span> : <span className="text-red-500">*</span>}
+              </label>
+              <Input
+                id="identifier"
+                type="text"
+                value={formData.identifier}
+                onChange={(e) => setFormData(prev => ({ ...prev, identifier: e.target.value }))}
+                required={!editingBlock}
+                readOnly={!!editingBlock}
+                placeholder="e.g. hero_home"
+                className={editingBlock ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}
+              />
+              {!editingBlock && (
+                <p className="text-xs text-gray-400 mt-1">Unique key used to reference this block in pages. Use snake_case.</p>
+              )}
             </div>
 
             <div>
