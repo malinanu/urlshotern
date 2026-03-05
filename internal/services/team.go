@@ -177,27 +177,24 @@ func (t *TeamService) DeleteTeam(teamID int64, deletedBy int64) error {
 
 // ─── Team Member Management ───────────────────────────────────────────────────
 
-// InviteTeamMember invites a user (by email) to join a team.
+// InviteTeamMember invites an email address to join a team.
+// If the email has no account yet the invitation is still created and the email
+// is sent so the recipient can sign up and then accept.
 func (t *TeamService) InviteTeamMember(teamID int64, req *models.InviteTeamMemberRequest, invitedBy int64) (*models.TeamInvitation, error) {
-	// Resolve email → userID to check membership
+	// If the email belongs to an existing user, make sure they're not already a member.
 	invitedUserID, err := t.db.GetUserIDByEmail(req.Email)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user not found")
+	if err == nil {
+		isMember, err := t.db.TeamMemberExists(teamID, invitedUserID)
+		if err != nil {
+			return nil, err
+		}
+		if isMember {
+			return nil, fmt.Errorf("user already member of team")
+		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to look up user: %w", err)
-	}
+	// err == sql.ErrNoRows → no account yet, proceed anyway
 
-	// Check existing membership
-	isMember, err := t.db.TeamMemberExists(teamID, invitedUserID)
-	if err != nil {
-		return nil, err
-	}
-	if isMember {
-		return nil, fmt.Errorf("user already member of team")
-	}
-
-	// Check for existing pending invitation
+	// Check for an existing pending invitation to the same email.
 	invExists, err := t.db.TeamInvitationExists(teamID, req.Email)
 	if err != nil {
 		return nil, err
