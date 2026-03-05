@@ -347,6 +347,14 @@ func (h *TeamHandlers) InviteTeamMember(c *gin.Context) {
 
 	invitation, err := h.teamService.InviteTeamMember(teamID, &req, userID.(int64))
 	if err != nil {
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error:   "user_not_found",
+				Message: "No account found with that email address",
+			})
+			return
+		}
+
 		if err.Error() == "user already member of team" {
 			c.JSON(http.StatusConflict, models.ErrorResponse{
 				Error:   "user_already_member",

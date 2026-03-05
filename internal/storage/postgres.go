@@ -824,6 +824,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS token VARCHAR(255)`,
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'pending'`,
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
+		`ALTER TABLE team_invitations ALTER COLUMN invitation_token DROP NOT NULL`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_team_id ON team_invitations(team_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_token ON team_invitations(token)`,
 	}
