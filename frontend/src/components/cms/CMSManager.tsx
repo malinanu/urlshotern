@@ -20,7 +20,6 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 interface StaticPage {
   id: number;
@@ -90,7 +89,7 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
       }
       params.append('limit', '50');
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/cms/pages?${params}`, {
+      const response = await fetch(`/api/v1/admin/cms/pages?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -126,8 +125,8 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
 
     try {
       const url = editingPage
-        ? `${API_BASE_URL}/api/v1/admin/cms/pages/${editingPage.id}`
-        : `${API_BASE_URL}/api/v1/admin/cms/pages`;
+        ? `/api/v1/admin/cms/pages/${editingPage.id}`
+        : '/api/v1/admin/cms/pages';
 
       const method = editingPage ? 'PUT' : 'POST';
 
@@ -175,9 +174,14 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
       slug: page.slug,
       title: page.title,
       content: page.content,
-      content_blocks: page.content_blocks
-        ? JSON.stringify(JSON.parse(page.content_blocks), null, 2)
-        : '',
+      content_blocks: (() => {
+        if (!page.content_blocks) return '';
+        try {
+          return JSON.stringify(JSON.parse(page.content_blocks), null, 2);
+        } catch {
+          return page.content_blocks;
+        }
+      })(),
       meta_description: page.meta_description || '',
       meta_keywords: page.meta_keywords || '',
       is_published: page.is_published,
@@ -194,7 +198,7 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/cms/pages/${pageId}`, {
+      const response = await fetch(`/api/v1/admin/cms/pages/${pageId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -216,7 +220,7 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/cms/pages/${page.id}`, {
+      const response = await fetch(`/api/v1/admin/cms/pages/${page.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

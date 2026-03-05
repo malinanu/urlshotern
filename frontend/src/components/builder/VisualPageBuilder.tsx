@@ -135,13 +135,16 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchContentBlocks();
-    fetchAllPages();
-    fetchPageTemplates();
-    if (initialPageId) loadPageById(initialPageId);
+    const init = async () => {
+      const available = await fetchContentBlocks();
+      fetchAllPages();
+      fetchPageTemplates();
+      if (initialPageId) loadPageById(initialPageId, available);
+    };
+    init();
   }, [initialPageId]);
 
-  const fetchContentBlocks = async () => {
+  const fetchContentBlocks = async (): Promise<ContentBlock[]> => {
     try {
       const response = await fetch('/api/v1/admin/content-blocks', {
         headers: {
@@ -153,7 +156,9 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const data = await response.json();
-          setContentBlocks(data.blocks || []);
+          const blocks = data.blocks || [];
+          setContentBlocks(blocks);
+          return blocks;
         } else {
           console.error('Expected JSON response but got:', contentType);
           toast.error('Invalid response format from server');
@@ -165,6 +170,34 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
     } catch (error) {
       console.error('Error fetching content blocks:', error);
     }
+    return [];
+  };
+
+  const mapContentBlocksIdentifiers = (
+    cbJson: string | undefined,
+    available: ContentBlock[]
+  ): BuilderBlock[] | null => {
+    if (!cbJson) return null;
+    try {
+      const ids = JSON.parse(cbJson);
+      if (!Array.isArray(ids) || ids.length === 0) return null;
+      const mapped = ids
+        .map((id: string | number) => {
+          const cb = typeof id === 'string'
+            ? available.find(b => b.identifier === id)
+            : available.find(b => b.id === id);
+          if (!cb) return null;
+          return {
+            id: generateBlockId(),
+            type: 'content-block' as const,
+            content: { blockId: cb.id },
+            styles: { ...defaultBlockStyles },
+            settings: { ...defaultBlockSettings },
+          };
+        })
+        .filter(Boolean) as BuilderBlock[];
+      return mapped.length > 0 ? mapped : null;
+    } catch { return null; }
   };
 
   const parsePageContent = (content: string): BuilderBlock[] => {
@@ -181,7 +214,7 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
     }];
   };
 
-  const loadPageById = async (id: number) => {
+  const loadPageById = async (id: number, availableBlocks?: ContentBlock[]) => {
     try {
       const res = await fetch(`/api/v1/admin/cms/pages/${id}`, {
         headers: { 'Authorization': `Bearer ${getAccessToken()}` },
@@ -191,7 +224,25 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
       const p = data.page;
       setPageId(p.id);
       setPageSettings({ title: p.title, slug: p.slug, template: p.template || 'default', isPublished: p.is_published });
-      setBlocks(parsePageContent(p.content));
+
+      // 1. Try content as BuilderBlocks JSON
+      const builderBlocks = (() => {
+        try {
+          const parsed = JSON.parse(p.content || '');
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type) return parsed as BuilderBlock[];
+        } catch {}
+        return null;
+      })();
+
+      if (builderBlocks) {
+        setBlocks(builderBlocks.map(b => ({ ...b, id: generateBlockId() })));
+      } else {
+        // 2. Try mapping content_blocks identifiers
+        const pool = availableBlocks ?? contentBlocks;
+        const fromIdentifiers = mapContentBlocksIdentifiers(p.content_blocks, pool);
+        setBlocks(fromIdentifiers ?? parsePageContent(p.content));
+      }
+
       setSelectedBlockId(null);
       toast.success(`Loaded: ${p.title}`);
     } catch { toast.error('Error loading page'); }
@@ -343,12 +394,18 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
         : '/api/v1/admin/cms/pages';
       const method = isUpdate ? 'PUT' : 'POST';
 
+      const cbIdentifiers = blocks
+        .filter(b => b.type === 'content-block' && b.content?.blockId)
+        .map(b => contentBlocks.find(cb => cb.id === b.content.blockId)?.identifier)
+        .filter((id): id is string => !!id);
+
       const pageData = {
         title: pageSettings.title,
         slug: pageSettings.slug,
         content: JSON.stringify(blocks),
         template: pageSettings.template,
         is_published: pageSettings.isPublished,
+        ...(cbIdentifiers.length > 0 && { content_blocks: JSON.stringify(cbIdentifiers) }),
       };
 
       const response = await fetch(url, {
@@ -987,9 +1044,18 @@ export function VisualPageBuilder({ initialPageId }: { initialPageId?: number | 
               value={pageSettings.template}
               onChange={(e) => setPageSettings(prev => ({ ...prev, template: e.target.value }))}
             >
-              <option value="default">Default</option>
-              <option value="landing">Landing Page</option>
-              <option value="blog">Blog</option>
+              {pageTemplates.length > 0
+                ? pageTemplates.map(t => (
+                    <option key={t.id} value={t.slug}>{t.name}</option>
+                  ))
+                : (
+                  <>
+                    <option value="default">Default</option>
+                    <option value="landing">Landing Page</option>
+                    <option value="blog">Blog</option>
+                  </>
+                )
+              }
             </Select>
           </div>
 
