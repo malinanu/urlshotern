@@ -485,6 +485,43 @@ func (h *TeamHandlers) RejectTeamInvitation(c *gin.Context) {
 	})
 }
 
+// CancelTeamInvitation cancels a pending invitation
+// DELETE /api/v1/teams/:id/invitations/:invitationID
+func (h *TeamHandlers) CancelTeamInvitation(c *gin.Context) {
+	teamIDStr := c.Param("id")
+	teamID, err := strconv.ParseInt(teamIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_team_id", Message: "Invalid team ID"})
+		return
+	}
+
+	invIDStr := c.Param("invitationID")
+	invID, err := strconv.ParseInt(invIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_invitation_id", Message: "Invalid invitation ID"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{Error: "unauthorized", Message: "Authentication required"})
+		return
+	}
+
+	canManage, err := h.teamService.UserCanManageTeam(userID.(int64), teamID)
+	if err != nil || !canManage {
+		c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "permission_denied", Message: "You don't have permission to cancel invitations"})
+		return
+	}
+
+	if err := h.teamService.CancelInvitation(teamID, invID); err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "cancel_failed", Message: "Failed to cancel invitation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Invitation cancelled"})
+}
+
 // ListTeamInvitations lists pending invitations for a team
 // GET /api/v1/teams/:id/invitations
 func (h *TeamHandlers) ListTeamInvitations(c *gin.Context) {

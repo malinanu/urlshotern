@@ -323,6 +323,11 @@ func (t *TeamService) GetTeamInvitations(teamID int64) ([]*models.TeamInvitation
 	return t.db.GetTeamInvitations(teamID)
 }
 
+// CancelInvitation cancels a pending invitation (must be called by team owner or admin).
+func (t *TeamService) CancelInvitation(teamID, invitationID int64) error {
+	return t.db.CancelTeamInvitation(teamID, invitationID)
+}
+
 // UpdateTeamMember changes a member's role or status.
 func (t *TeamService) UpdateTeamMember(teamID, memberID int64, req *models.UpdateTeamMemberRequest, updatedBy int64) (*models.TeamMember, error) {
 	member, err := t.db.GetTeamMember(teamID, memberID)

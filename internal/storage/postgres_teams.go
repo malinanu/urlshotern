@@ -286,6 +286,15 @@ func (p *PostgresStorage) GetTeamInvitations(teamID int64) ([]*models.TeamInvita
 	return invitations, rows.Err()
 }
 
+// CancelTeamInvitation marks an invitation as cancelled/expired.
+func (p *PostgresStorage) CancelTeamInvitation(teamID, invitationID int64) error {
+	_, err := p.Exec(
+		`UPDATE team_invitations SET status = 'expired', updated_at = NOW() WHERE id = $1 AND team_id = $2`,
+		invitationID, teamID,
+	)
+	return err
+}
+
 // UpdateTeamInvitationStatus sets the status of an invitation by its ID.
 func (p *PostgresStorage) UpdateTeamInvitationStatus(id int64, status string) error {
 	_, err := p.Exec(
