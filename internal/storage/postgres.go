@@ -788,6 +788,7 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
+		`ALTER TABLE teams ALTER COLUMN slug DROP NOT NULL`,
 		`CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id)`,
 
 		`CREATE TABLE IF NOT EXISTS team_members (
