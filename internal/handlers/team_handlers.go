@@ -550,7 +550,7 @@ func (h *TeamHandlers) UpdateTeamMember(c *gin.Context) {
 		return
 	}
 
-	memberIDStr := c.Param("user_id")
+	memberIDStr := c.Param("memberID")
 	memberID, err := strconv.ParseInt(memberIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
@@ -633,7 +633,7 @@ func (h *TeamHandlers) RemoveTeamMember(c *gin.Context) {
 		return
 	}
 
-	memberIDStr := c.Param("user_id")
+	memberIDStr := c.Param("memberID")
 	memberID, err := strconv.ParseInt(memberIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{

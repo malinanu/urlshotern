@@ -771,6 +771,51 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 			updated_at     TIMESTAMPTZ DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_brand_settings_user_id ON brand_settings(user_id)`,
+
+		// Teams
+		`CREATE TABLE IF NOT EXISTS teams (
+			id           BIGSERIAL PRIMARY KEY,
+			name         VARCHAR(100) UNIQUE NOT NULL,
+			display_name VARCHAR(255) NOT NULL,
+			description  TEXT,
+			owner_id     BIGINT NOT NULL REFERENCES users(id),
+			is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+			settings     TEXT,
+			created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			deleted_at   TIMESTAMPTZ
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id)`,
+
+		`CREATE TABLE IF NOT EXISTS team_members (
+			id         BIGSERIAL PRIMARY KEY,
+			team_id    BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+			user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			role       VARCHAR(50) NOT NULL DEFAULT 'team_member',
+			invited_by BIGINT REFERENCES users(id),
+			joined_at  TIMESTAMPTZ,
+			status     VARCHAR(50) NOT NULL DEFAULT 'active',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			UNIQUE(team_id, user_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id)`,
+
+		`CREATE TABLE IF NOT EXISTS team_invitations (
+			id         BIGSERIAL PRIMARY KEY,
+			team_id    BIGINT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+			email      VARCHAR(255) NOT NULL,
+			role       VARCHAR(50) NOT NULL DEFAULT 'team_member',
+			invited_by BIGINT NOT NULL REFERENCES users(id),
+			token      VARCHAR(255) UNIQUE NOT NULL,
+			status     VARCHAR(50) NOT NULL DEFAULT 'pending',
+			expires_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_team_invitations_team_id ON team_invitations(team_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_team_invitations_token ON team_invitations(token)`,
 	}
 
 	for _, query := range queries {
