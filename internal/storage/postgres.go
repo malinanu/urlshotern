@@ -1041,6 +1041,40 @@ func (p *PostgresStorage) GetUserByID(id int64) (*models.User, error) {
 	return user, nil
 }
 
+// SyncAccountTypeFromSubscription checks polar_subscriptions for an active paid plan
+// and updates users.account_type if the stored value is 'free'.
+// Returns (newPlanType, wasUpdated, error).
+func (p *PostgresStorage) SyncAccountTypeFromSubscription(userID int64) (string, bool, error) {
+	var planType string
+	err := p.QueryRow(`
+		SELECT plan_type FROM polar_subscriptions
+		WHERE user_id = $1
+		  AND status IN ('active', 'trialing')
+		  AND plan_type IN ('premium', 'enterprise')
+		  AND (current_period_end IS NULL OR current_period_end > NOW())
+		ORDER BY CASE plan_type WHEN 'enterprise' THEN 2 WHEN 'premium' THEN 1 END DESC
+		LIMIT 1
+	`, userID).Scan(&planType)
+
+	if err == sql.ErrNoRows {
+		return "free", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+
+	_, err = p.Exec(
+		"UPDATE users SET account_type = $1, updated_at = NOW() WHERE id = $2",
+		planType, userID,
+	)
+	if err != nil {
+		return "", false, err
+	}
+
+	log.Printf("[auth] auto-synced account_type to %q for user %d", planType, userID)
+	return planType, true, nil
+}
+
 // GetUserByEmail retrieves a user by email
 func (p *PostgresStorage) GetUserByEmail(email string) (*models.User, error) {
 	user := &models.User{}

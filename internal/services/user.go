@@ -202,7 +202,20 @@ func (u *UserService) AuthenticateUser(req *models.LoginRequest) (*models.User, 
 
 // GetUserByID retrieves user by ID
 func (u *UserService) GetUserByID(userID int64) (*models.User, error) {
-	return u.db.GetUserByID(userID)
+	user, err := u.db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Self-heal: if user is 'free' but has an active paid subscription, sync account_type.
+	// Fixes users who redeemed free_months coupons or subscribed before the webhook fix.
+	if user.AccountType == "free" {
+		if newPlan, updated, syncErr := u.db.SyncAccountTypeFromSubscription(userID); syncErr == nil && updated {
+			user.AccountType = newPlan
+		}
+	}
+
+	return user, nil
 }
 
 // GetUserByEmail retrieves user by email
