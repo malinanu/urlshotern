@@ -194,13 +194,30 @@ func (t *TeamService) InviteTeamMember(teamID int64, req *models.InviteTeamMembe
 	}
 	// err == sql.ErrNoRows → no account yet, proceed anyway
 
-	// Check for an existing pending invitation to the same email.
-	invExists, err := t.db.TeamInvitationExists(teamID, req.Email)
-	if err != nil {
-		return nil, err
+	// Normalize role: accept string alias from frontend ("admin","member","viewer")
+	if req.RoleID == 0 {
+		switch req.Role {
+		case "admin", "team_admin":
+			req.RoleID = 2
+		case "viewer", "team_viewer":
+			req.RoleID = 4
+		default:
+			req.RoleID = 3 // team_member
+		}
 	}
-	if invExists {
-		return nil, fmt.Errorf("user already invited to team")
+
+	// If a pending invitation already exists, resend the email and return it.
+	if existing, err := t.db.GetExistingInvitation(teamID, req.Email); err == nil {
+		if t.emailService != nil {
+			go func() {
+				team, _ := t.db.GetTeamByID(teamID)
+				inviter, _ := t.userService.GetUserByID(invitedBy)
+				if team != nil && inviter != nil {
+					t.emailService.SendTeamInvitation(req.Email, team.DisplayName, inviter.Name, existing.Token)
+				}
+			}()
+		}
+		return existing, nil
 	}
 
 	token, err := generateInvitationToken()

@@ -10,29 +10,49 @@ import {
   EnvelopeIcon,
   TrashIcon,
   XMarkIcon,
-  CheckCircleIcon,
   LockClosedIcon,
   SparklesIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-interface TeamMember {
+interface RoleObj {
   id: number;
-  user_id: number;
+  name: string;
+  display_name: string;
+}
+
+interface TeamMember {
+  id: string;         // user ID (int64 serialised as string)
   name: string;
   email: string;
-  role: string;
-  joined_at: string;
+  role: RoleObj | string;
+  status: string;
+  joined_at: string | null;
+}
+
+interface PendingInvitation {
+  id: number;
+  email: string;
+  role: RoleObj | string;
+  status: string;
+  expires_at: string;
 }
 
 interface Team {
   id: number;
   name: string;
+  display_name?: string;
   description?: string;
-  owner_id: number;
-  member_count: number;
+  owner_id: string; // int64 as string
   created_at: string;
+}
+
+function roleLabel(role: RoleObj | string | undefined): string {
+  if (!role) return 'Member';
+  if (typeof role === 'string') return role;
+  return role.display_name || role.name || 'Member';
 }
 
 export default function TeamsPage() {
@@ -40,6 +60,7 @@ export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -62,10 +83,9 @@ export default function TeamsPage() {
       const res = await fetch(`${API_BASE_URL}/api/v1/teams`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
-        setTeams(data.teams ?? []);
-        if (data.teams?.length > 0 && !selectedTeam) {
-          setSelectedTeam(data.teams[0]);
-        }
+        const list: Team[] = data.teams ?? [];
+        setTeams(list);
+        if (list.length > 0 && !selectedTeam) setSelectedTeam(list[0]);
       }
     } finally {
       setLoading(false);
@@ -80,7 +100,9 @@ export default function TeamsPage() {
     const res = await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}`, { headers: authHeaders() });
     if (res.ok) {
       const data = await res.json();
-      setMembers(data.members ?? []);
+      // API returns members at top-level AND nested in team
+      setMembers(data.members ?? data.team?.members ?? []);
+      setPendingInvites(data.pending_invitations ?? []);
     }
   }, [authHeaders]);
 
@@ -96,7 +118,7 @@ export default function TeamsPage() {
       const res = await fetch(`${API_BASE_URL}/api/v1/teams`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ name: teamName.trim(), description: teamDesc.trim() }),
+        body: JSON.stringify({ name: teamName.trim(), display_name: teamName.trim(), description: teamDesc.trim() }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message ?? 'Failed to create team'); return; }
@@ -113,24 +135,29 @@ export default function TeamsPage() {
     setSubmitting(true);
     setError('');
     try {
+      const roleIdMap: Record<string, number> = { admin: 2, member: 3, viewer: 4 };
       const res = await fetch(`${API_BASE_URL}/api/v1/teams/${selectedTeam.id}/invite`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          role_id: roleIdMap[inviteRole] ?? 3,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message ?? 'Failed to send invitation'); return; }
       setShowInviteModal(false);
       setInviteEmail('');
-      alert('Invitation sent!');
+      await fetchMembers(selectedTeam.id);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleRemoveMember = async (teamId: number, memberId: number) => {
+  const handleRemoveMember = async (teamId: number, userId: string) => {
     if (!confirm('Remove this member from the team?')) return;
-    await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/members/${memberId}`, {
+    await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/members/${userId}`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
@@ -156,7 +183,7 @@ export default function TeamsPage() {
               </div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Pro Feature</h2>
               <p className="text-muted-foreground mb-2 max-w-md mx-auto">
-                Invite up to 5 team members, assign roles, and collaborate on links together.
+                Invite team members, assign roles, and collaborate on links together.
               </p>
               <p className="text-sm text-muted-foreground mb-6">
                 Upgrade to <strong>Pro</strong> or <strong>Ultra</strong> to unlock teams.
@@ -202,7 +229,7 @@ export default function TeamsPage() {
 
           {loading ? (
             <div className="space-y-3">
-              {[1,2].map(i => <div key={i} className="h-20 bg-card border border-border rounded-lg animate-pulse" />)}
+              {[1, 2].map(i => <div key={i} className="h-20 bg-card border border-border rounded-lg animate-pulse" />)}
             </div>
           ) : teams.length === 0 ? (
             <div className="bg-card border border-border rounded-xl p-12 text-center">
@@ -230,8 +257,10 @@ export default function TeamsPage() {
                         : 'bg-card border-border hover:bg-muted'
                     }`}
                   >
-                    <p className="font-medium text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t.member_count ?? 0} members</p>
+                    <p className="font-medium text-foreground">{t.display_name || t.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {members.length + pendingInvites.length} members
+                    </p>
                   </button>
                 ))}
               </div>
@@ -240,7 +269,9 @@ export default function TeamsPage() {
               {selectedTeam && (
                 <div className="lg:col-span-2 bg-card border border-border rounded-lg p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-foreground">{selectedTeam.name}</h2>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      {selectedTeam.display_name || selectedTeam.name}
+                    </h2>
                     <button
                       onClick={() => setShowInviteModal(true)}
                       className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -250,16 +281,17 @@ export default function TeamsPage() {
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    {members.length === 0 ? (
+                  {/* Active members */}
+                  <div className="space-y-1 mb-4">
+                    {members.length === 0 && pendingInvites.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No members yet. Send an invitation.</p>
                     ) : members.map(m => (
                       <div key={m.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                         <div>
                           <p className="text-sm font-medium text-foreground">{m.name || m.email}</p>
-                          <p className="text-xs text-muted-foreground">{m.email} · {m.role}</p>
+                          <p className="text-xs text-muted-foreground">{m.email} · {roleLabel(m.role)}</p>
                         </div>
-                        {m.user_id !== selectedTeam.owner_id && (
+                        {m.id !== selectedTeam.owner_id && (
                           <button
                             onClick={() => handleRemoveMember(selectedTeam.id, m.id)}
                             className="p-1.5 text-destructive hover:bg-destructive/10 rounded transition-colors"
@@ -270,6 +302,28 @@ export default function TeamsPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Pending invitations */}
+                  {pendingInvites.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                        Pending Invitations
+                      </p>
+                      <div className="space-y-1">
+                        {pendingInvites.map(inv => (
+                          <div key={inv.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                            <div className="flex items-center space-x-2">
+                              <ClockIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <div>
+                                <p className="text-sm text-foreground">{inv.email}</p>
+                                <p className="text-xs text-muted-foreground">{roleLabel(inv.role)} · Invite pending</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -338,8 +392,8 @@ export default function TeamsPage() {
                 className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="member">Member</option>
-                <option value="editor">Editor</option>
                 <option value="admin">Admin</option>
+                <option value="viewer">Viewer</option>
               </select>
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>

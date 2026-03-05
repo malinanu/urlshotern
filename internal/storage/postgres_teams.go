@@ -295,6 +295,26 @@ func (p *PostgresStorage) UpdateTeamInvitationStatus(id int64, status string) er
 	return err
 }
 
+// GetExistingInvitation returns the pending, non-expired invitation for an email+team pair.
+func (p *PostgresStorage) GetExistingInvitation(teamID int64, email string) (*models.TeamInvitation, error) {
+	inv := &models.TeamInvitation{}
+	var role string
+	err := p.QueryRow(`
+		SELECT id, team_id, email, role, invited_by, token, status, expires_at, created_at, updated_at
+		FROM team_invitations
+		WHERE team_id = $1 AND email = $2 AND status = 'pending' AND expires_at > NOW()
+		ORDER BY created_at DESC LIMIT 1
+	`, teamID, email).Scan(
+		&inv.ID, &inv.TeamID, &inv.Email, &role, &inv.InvitedBy,
+		&inv.Token, &inv.Status, &inv.ExpiresAt, &inv.CreatedAt, &inv.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	inv.RoleID = roleNameToID(role)
+	return inv, nil
+}
+
 // TeamInvitationExists reports whether a pending, non-expired invitation exists for an email+team pair.
 func (p *PostgresStorage) TeamInvitationExists(teamID int64, email string) (bool, error) {
 	var exists bool

@@ -185,7 +185,8 @@ type UpdateTeamRequest struct {
 // InviteTeamMemberRequest represents team member invitation request
 type InviteTeamMemberRequest struct {
 	Email  string `json:"email" validate:"required,email"`
-	RoleID int64  `json:"role_id" validate:"required"`
+	RoleID int64  `json:"role_id"` // numeric; 1=owner 2=admin 3=member 4=viewer
+	Role   string `json:"role"`    // string alias accepted from frontend ("admin","member","viewer")
 }
 
 // UpdateTeamMemberRequest represents team member update request

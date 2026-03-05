@@ -124,8 +124,12 @@ func (h *TeamHandlers) GetTeam(c *gin.Context) {
 		return
 	}
 
+	invitations, _ := h.teamService.GetTeamInvitations(teamID)
+
 	c.JSON(http.StatusOK, gin.H{
-		"team": team,
+		"team":                team,
+		"members":             team.Members,
+		"pending_invitations": invitations,
 	})
 }
 
