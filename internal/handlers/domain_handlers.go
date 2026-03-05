@@ -527,7 +527,6 @@ func (h *DomainHandlers) GetDomainUsage(c *gin.Context) {
 // GetAllDomains retrieves all domains (admin only)
 // GET /api/v1/admin/domains
 func (h *DomainHandlers) GetAllDomains(c *gin.Context) {
-	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	status := c.Query("status")
@@ -539,18 +538,19 @@ func (h *DomainHandlers) GetAllDomains(c *gin.Context) {
 		limit = 20
 	}
 
-	// This would be implemented with proper database queries
-	// For now, return simulated data
-	domains := []*models.CustomDomain{}
-	total := 0
+	domains, total, err := h.domainService.GetAllDomainsAdmin(page, limit, status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch domains"})
+		return
+	}
+	if domains == nil {
+		domains = []*models.CustomDomain{}
+	}
 
-	// Calculate pagination info
 	totalPages := (total + limit - 1) / limit
 	if totalPages == 0 {
 		totalPages = 1
 	}
-	hasNext := page < totalPages
-	hasPrev := page > 1
 
 	c.JSON(http.StatusOK, gin.H{
 		"domains": domains,
@@ -559,8 +559,8 @@ func (h *DomainHandlers) GetAllDomains(c *gin.Context) {
 			"total_pages":    totalPages,
 			"total_items":    total,
 			"items_per_page": limit,
-			"has_next":       hasNext,
-			"has_previous":   hasPrev,
+			"has_next":       page < totalPages,
+			"has_previous":   page > 1,
 		},
 		"filters": gin.H{
 			"status": status,
@@ -571,15 +571,10 @@ func (h *DomainHandlers) GetAllDomains(c *gin.Context) {
 // GetDomainStats retrieves domain statistics (admin only)
 // GET /api/v1/admin/domains/stats
 func (h *DomainHandlers) GetDomainStats(c *gin.Context) {
-	// This would aggregate statistics from database
-	// For now, return simulated stats
-	stats := &models.DomainStats{
-		TotalDomains:    157,
-		ActiveDomains:   143,
-		VerifiedDomains: 139,
-		SSLDomains:      135,
-		PendingDomains:  8,
-		FailedDomains:   6,
+	stats, err := h.domainService.GetDomainStatsAdmin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch domain stats"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -485,6 +485,14 @@ func (a *AuthMiddleware) RequirePermission(permission string) gin.HandlerFunc {
 			return
 		}
 
+		// Check legacy is_admin flag (backward compatibility — mirrors RequireAdmin behavior)
+		if u, ok := c.Get("user"); ok {
+			if usr, ok := u.(*models.User); ok && usr.IsAdmin {
+				c.Next()
+				return
+			}
+		}
+
 		hasPermission, err := a.rbacService.UserHasPermission(userID.(int64), permission)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, models.ErrorResponse{

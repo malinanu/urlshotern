@@ -20,12 +20,14 @@ type AdminUser struct {
 	Name            string     `json:"name"`
 	Email           string     `json:"email"`
 	IsActive        bool       `json:"is_active"`
+	IsAdmin         bool       `json:"is_admin"`
 	IsEmailVerified bool       `json:"is_email_verified"`
 	AccountType     string     `json:"account_type"`
 	CreatedAt       time.Time  `json:"created_at"`
 	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
 	URLsCount       int64      `json:"urls_count"`
 	TotalClicks     int64      `json:"total_clicks"`
+	Roles           []string   `json:"roles"`
 }
 
 // UserListResponse represents paginated user list response

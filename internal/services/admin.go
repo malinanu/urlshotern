@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
@@ -70,14 +71,21 @@ func (s *AdminService) GetSystemStats() (*models.SystemStats, error) {
 func (s *AdminService) GetUserList(limit, offset int) ([]*models.AdminUser, error) {
 	query := `
 		SELECT
-			u.id, u.name, u.email, u.is_active, u.email_verified,
+			u.id, u.name, u.email, u.is_active, u.is_admin, u.email_verified,
 			u.account_type, u.created_at, u.last_login_at,
 			COUNT(DISTINCT url.id) as urls_count,
-			COALESCE(SUM(url.click_count), 0) as total_clicks
+			COALESCE(SUM(url.click_count), 0) as total_clicks,
+			COALESCE((
+				SELECT STRING_AGG(r.display_name, ',' ORDER BY r.display_name)
+				FROM user_roles ur
+				JOIN roles r ON r.id = ur.role_id
+				WHERE ur.user_id = u.id
+				  AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+			), '') as roles
 		FROM users u
 		LEFT JOIN url_mappings url ON url.user_id = u.id
 		WHERE u.deleted_at IS NULL
-		GROUP BY u.id, u.name, u.email, u.is_active, u.email_verified, u.account_type, u.created_at, u.last_login_at
+		GROUP BY u.id, u.name, u.email, u.is_active, u.is_admin, u.email_verified, u.account_type, u.created_at, u.last_login_at
 		ORDER BY u.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -92,18 +100,21 @@ func (s *AdminService) GetUserList(limit, offset int) ([]*models.AdminUser, erro
 	for rows.Next() {
 		user := &models.AdminUser{}
 		var lastLoginAt sql.NullTime
+		var rolesStr string
 
 		err := rows.Scan(
 			&user.ID,
 			&user.Name,
 			&user.Email,
 			&user.IsActive,
+			&user.IsAdmin,
 			&user.IsEmailVerified,
 			&user.AccountType,
 			&user.CreatedAt,
 			&lastLoginAt,
 			&user.URLsCount,
 			&user.TotalClicks,
+			&rolesStr,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user row: %w", err)
@@ -111,6 +122,12 @@ func (s *AdminService) GetUserList(limit, offset int) ([]*models.AdminUser, erro
 
 		if lastLoginAt.Valid {
 			user.LastLoginAt = &lastLoginAt.Time
+		}
+
+		if rolesStr != "" {
+			user.Roles = strings.Split(rolesStr, ",")
+		} else {
+			user.Roles = []string{}
 		}
 
 		users = append(users, user)

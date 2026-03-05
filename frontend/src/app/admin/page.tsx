@@ -52,12 +52,14 @@ interface User {
   name: string;
   email: string;
   is_active: boolean;
+  is_admin: boolean;
   is_email_verified: boolean;
   account_type: string;
   created_at: string;
   last_login_at?: string;
   urls_count: number;
   total_clicks: number;
+  roles: string[];
 }
 
 interface RecentActivity {
@@ -488,17 +490,24 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() => {
-                                setModalMode('view');
-                                setSelectedUserId(user.id);
-                                setSelectedUserName(user.name);
-                                setShowRolesModal(true);
-                              }}
-                              className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
-                            >
-                              View Roles
-                            </button>
+                            <div className="flex flex-wrap gap-1">
+                              {user.is_admin && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400">
+                                  Admin
+                                </span>
+                              )}
+                              {(user.roles ?? []).map((role) => (
+                                <span
+                                  key={role}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary"
+                                >
+                                  {role}
+                                </span>
+                              ))}
+                              {!user.is_admin && (user.roles ?? []).length === 0 && (
+                                <span className="text-xs text-muted-foreground italic">No roles</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-foreground">

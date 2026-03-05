@@ -384,6 +384,16 @@ func (d *DomainService) GetDomainStatus(domainID int64) (*models.DomainStatus, e
 // Account Management
 
 // CanAddDomain checks if a user can add another domain
+// GetAllDomainsAdmin returns all domains with pagination for admin use.
+func (d *DomainService) GetAllDomainsAdmin(page, limit int, status string) ([]*models.CustomDomain, int, error) {
+	return d.db.GetAllDomainsAdmin(page, limit, status)
+}
+
+// GetDomainStatsAdmin returns aggregate domain statistics for admin use.
+func (d *DomainService) GetDomainStatsAdmin() (*models.DomainStats, error) {
+	return d.db.GetDomainStatsAdmin()
+}
+
 func (d *DomainService) CanAddDomain(userID int64) (bool, error) {
 	user, err := d.userService.GetUserByID(userID)
 	if err != nil {

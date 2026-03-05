@@ -164,6 +164,82 @@ func (p *PostgresStorage) CountCustomDomainsByUser(userID int64) (int, error) {
 	return count, err
 }
 
+// GetAllDomainsAdmin returns all custom domains with pagination (admin use).
+func (p *PostgresStorage) GetAllDomainsAdmin(page, limit int, status string) ([]*models.CustomDomain, int, error) {
+	offset := (page - 1) * limit
+
+	whereClause := ""
+	args := []interface{}{}
+	argIdx := 1
+
+	if status != "" {
+		whereClause = " WHERE health_status = $1"
+		args = append(args, status)
+		argIdx++
+	}
+
+	var total int
+	if err := p.db.QueryRow("SELECT COUNT(*) FROM custom_domains"+whereClause, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count all domains: %w", err)
+	}
+
+	args = append(args, limit, offset)
+	rows, err := p.db.Query(`
+		SELECT id, user_id, domain, is_verified, verified_at,
+		       ssl_enabled, ssl_status, dns_status, health_status, is_active, created_at, updated_at
+		FROM custom_domains`+whereClause+
+		` ORDER BY created_at DESC LIMIT $`+fmt.Sprintf("%d", argIdx)+` OFFSET $`+fmt.Sprintf("%d", argIdx+1),
+		args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("query all domains: %w", err)
+	}
+	defer rows.Close()
+
+	var domains []*models.CustomDomain
+	for rows.Next() {
+		d := &models.CustomDomain{}
+		var verifiedAt sql.NullTime
+		if err := rows.Scan(
+			&d.ID, &d.UserID, &d.Domain,
+			&d.IsVerified, &verifiedAt,
+			&d.SSLEnabled, &d.SSLStatus, &d.DNSStatus, &d.HealthStatus,
+			&d.IsActive, &d.CreatedAt, &d.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if verifiedAt.Valid {
+			d.VerifiedAt = verifiedAt.Time
+		}
+		domains = append(domains, d)
+	}
+	return domains, total, rows.Err()
+}
+
+// GetDomainStatsAdmin returns aggregate domain statistics (admin use).
+func (p *PostgresStorage) GetDomainStatsAdmin() (*models.DomainStats, error) {
+	stats := &models.DomainStats{}
+	err := p.db.QueryRow(`
+		SELECT
+			COUNT(*),
+			COUNT(*) FILTER (WHERE is_active = TRUE),
+			COUNT(*) FILTER (WHERE is_verified = TRUE),
+			COUNT(*) FILTER (WHERE ssl_enabled = TRUE),
+			COUNT(*) FILTER (WHERE health_status = 'pending'),
+			COUNT(*) FILTER (WHERE health_status = 'failed')
+		FROM custom_domains`).Scan(
+		&stats.TotalDomains,
+		&stats.ActiveDomains,
+		&stats.VerifiedDomains,
+		&stats.SSLDomains,
+		&stats.PendingDomains,
+		&stats.FailedDomains,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get domain stats: %w", err)
+	}
+	return stats, nil
+}
+
 // ---- Brand Settings DB Methods ----
 
 // GetBrandSettings returns brand settings for a user, creating defaults if absent.
