@@ -19,6 +19,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Trunc - Professional URL Shortening Service",
   description: "Professional URL shortener with analytics, custom domains, and comprehensive dashboard. Track clicks, manage links, and get detailed insights.",
+  verification: {
+    google: "MOG-VaJKDXY7onFYmWU575nPDambyhU4onezpqkPB4I",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
