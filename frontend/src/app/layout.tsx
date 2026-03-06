@@ -6,6 +6,8 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "./globals.css";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,30 +18,69 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Trunc - Professional URL Shortening Service",
-  description: "Professional URL shortener with analytics, custom domains, and comprehensive dashboard. Track clicks, manage links, and get detailed insights.",
-  verification: {
-    google: "MOG-VaJKDXY7onFYmWU575nPDambyhU4onezpqkPB4I",
-  },
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Trunc"
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", type: "image/x-icon", sizes: "16x16" },
-      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" }
-    ],
-    apple: [
-      { url: "/icons/icon-152x152.png", sizes: "152x152" },
-      { url: "/icons/icon-144x144.png", sizes: "144x144" }
-    ]
+async function fetchSiteSettings(): Promise<Record<string, string>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/public/settings`, {
+      next: { revalidate: 3600 }, // cache for 1 hour
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    return data.settings ?? {};
+  } catch {
+    return {};
   }
-};
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await fetchSiteSettings();
+
+  const title = settings.site_title || "Trunc - Professional URL Shortening Service";
+  const description = settings.site_description || "Professional URL shortener with analytics, custom domains, and comprehensive dashboard.";
+  const keywords = settings.site_keywords || "url shortener, link shortener, custom links";
+  const ogImage = settings.og_image || undefined;
+  const twitterSite = settings.twitter_site || "@trunc";
+  const gaId = settings.google_analytics_id || undefined;
+  const gscVerification = settings.google_search_console_verification || "MOG-VaJKDXY7onFYmWU575nPDambyhU4onezpqkPB4I";
+
+  return {
+    title,
+    description,
+    keywords,
+    verification: {
+      google: gscVerification,
+    },
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Trunc",
+    },
+    icons: {
+      icon: [
+        { url: "/favicon.ico", type: "image/x-icon", sizes: "16x16" },
+        { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: [
+        { url: "/icons/icon-152x152.png", sizes: "152x152" },
+        { url: "/icons/icon-144x144.png", sizes: "144x144" },
+      ],
+    },
+    openGraph: {
+      title,
+      description,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: twitterSite,
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+    ...(gaId ? { other: { "google-analytics": gaId } } : {}),
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

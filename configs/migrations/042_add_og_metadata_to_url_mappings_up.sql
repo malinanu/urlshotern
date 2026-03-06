@@ -1,0 +1,5 @@
+ALTER TABLE url_mappings
+  ADD COLUMN IF NOT EXISTS og_title       VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS og_description TEXT,
+  ADD COLUMN IF NOT EXISTS og_image       VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS twitter_card   VARCHAR(50) DEFAULT 'summary';

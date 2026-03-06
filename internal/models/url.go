@@ -6,16 +6,20 @@ import (
 
 // URLMapping represents a URL mapping in the database
 type URLMapping struct {
-	ID           int64      `json:"id" db:"id"`
-	ShortCode    string     `json:"short_code" db:"short_code"`
-	OriginalURL  string     `json:"original_url" db:"original_url"`
-	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
-	ExpiresAt    *time.Time `json:"expires_at,omitempty" db:"expires_at"`
-	ClickCount   int64      `json:"click_count" db:"click_count"`
-	IsActive     bool       `json:"is_active" db:"is_active"`
-	CreatedByIP  string     `json:"created_by_ip,omitempty" db:"created_by_ip"`
-	UserID       *int64     `json:"user_id,omitempty" db:"user_id"`
-	PasswordHash *string    `json:"password_hash,omitempty" db:"password_hash"`
+	ID            int64      `json:"id" db:"id"`
+	ShortCode     string     `json:"short_code" db:"short_code"`
+	OriginalURL   string     `json:"original_url" db:"original_url"`
+	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty" db:"expires_at"`
+	ClickCount    int64      `json:"click_count" db:"click_count"`
+	IsActive      bool       `json:"is_active" db:"is_active"`
+	CreatedByIP   string     `json:"created_by_ip,omitempty" db:"created_by_ip"`
+	UserID        *int64     `json:"user_id,omitempty" db:"user_id"`
+	PasswordHash  *string    `json:"password_hash,omitempty" db:"password_hash"`
+	OGTitle       *string    `json:"og_title,omitempty" db:"og_title"`
+	OGDescription *string    `json:"og_description,omitempty" db:"og_description"`
+	OGImage       *string    `json:"og_image,omitempty" db:"og_image"`
+	TwitterCard   *string    `json:"twitter_card,omitempty" db:"twitter_card"`
 }
 
 // ClickEvent represents a click tracking event
@@ -34,10 +38,22 @@ type ClickEvent struct {
 
 // ShortenRequest represents the request payload for shortening URLs
 type ShortenRequest struct {
-	URL        string     `json:"url" binding:"required,url"`
-	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
-	CustomCode string     `json:"custom_code,omitempty"`
-	Password   string     `json:"password,omitempty"`
+	URL           string     `json:"url" binding:"required,url"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	CustomCode    string     `json:"custom_code,omitempty"`
+	Password      string     `json:"password,omitempty"`
+	OGTitle       string     `json:"og_title,omitempty"`
+	OGDescription string     `json:"og_description,omitempty"`
+	OGImage       string     `json:"og_image,omitempty"`
+	TwitterCard   string     `json:"twitter_card,omitempty"`
+}
+
+// UpdateOGRequest represents a request to update OG metadata for a URL
+type UpdateOGRequest struct {
+	OGTitle       *string `json:"og_title"`
+	OGDescription *string `json:"og_description"`
+	OGImage       *string `json:"og_image"`
+	TwitterCard   *string `json:"twitter_card"`
 }
 
 // ShortenResponse represents the response for URL shortening

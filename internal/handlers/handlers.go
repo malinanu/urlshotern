@@ -45,10 +45,11 @@ type Handler struct {
 	DomainHandlers         *DomainHandlers
 	BrandingHandlers       *BrandingHandler
 	TeamHandlers           *TeamHandlers
+	GlobalSettingsHandlers *GlobalSettingsHandlers
 }
 
 // NewHandler creates a new handler instance
-func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers, botDetector *services.BotDetectionService, aiInsightsService *services.AIInsightsService, domainService *services.DomainService, brandingService *services.BrandingService, teamHandlers *TeamHandlers) *Handler {
+func NewHandler(shortenerService *services.ShortenerService, analyticsService *services.AnalyticsService, advancedAnalyticsService *services.AdvancedAnalyticsService, conversionService *services.ConversionTrackingService, abTestService *services.ABTestingService, realtimeService *services.RealtimeAnalyticsService, attributionService *services.AttributionService, authHandlers *AuthHandlers, analyticsHandlers *AnalyticsHandlers, db *storage.PostgresStorage, gormDB *gorm.DB, config *configs.Config, adminRBACHandlers *AdminRBACHandlers, botDetector *services.BotDetectionService, aiInsightsService *services.AIInsightsService, domainService *services.DomainService, brandingService *services.BrandingService, teamHandlers *TeamHandlers, globalSettingsService *services.GlobalSettingsService) *Handler {
 	// Create API key service and handler
 	apiKeyService := services.NewAPIKeyService(db)
 
@@ -88,6 +89,12 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		DomainHandlers:         NewDomainHandlers(domainService),
 		BrandingHandlers:       NewBrandingHandler(brandingService),
 		TeamHandlers:           teamHandlers,
+		GlobalSettingsHandlers: func() *GlobalSettingsHandlers {
+			if globalSettingsService != nil {
+				return NewGlobalSettingsHandlers(globalSettingsService)
+			}
+			return nil
+		}(),
 	}
 }
 
@@ -281,8 +288,85 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 		return h.shortenerService.RecordClick(shortCode, clientIP, userAgent, referrer, isBot)
 	})
 
-	// Perform the redirect
+	// If OG metadata is set, serve an HTML page so social crawlers read OG tags
+	if mapping.OGTitle != nil || mapping.OGImage != nil || mapping.OGDescription != nil {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(buildOGPage(mapping)))
+		return
+	}
+
+	// Fast path: plain redirect
 	c.Redirect(http.StatusMovedPermanently, mapping.OriginalURL)
+}
+
+// buildOGPage generates a minimal HTML page with OG meta tags and a JS redirect.
+// Social crawlers (Facebook, Twitter, Slack) read the tags; real users get an
+// instant redirect via the <script> block.
+func buildOGPage(m *models.URLMapping) string {
+	title := m.OriginalURL
+	if m.OGTitle != nil && *m.OGTitle != "" {
+		title = *m.OGTitle
+	}
+	description := ""
+	if m.OGDescription != nil {
+		description = *m.OGDescription
+	}
+	image := ""
+	if m.OGImage != nil {
+		image = *m.OGImage
+	}
+	card := "summary"
+	if m.TwitterCard != nil && *m.TwitterCard != "" {
+		card = *m.TwitterCard
+	}
+
+	escaped := strings.NewReplacer(`"`, `&quot;`, `<`, `&lt;`, `>`, `&gt;`, `&`, `&amp;`).Replace
+	dest := strings.ReplaceAll(m.OriginalURL, `"`, `%22`)
+
+	return `<!DOCTYPE html><html><head>` +
+		`<meta charset="utf-8">` +
+		`<title>` + escaped(title) + `</title>` +
+		`<meta property="og:title" content="` + escaped(title) + `">` +
+		`<meta property="og:description" content="` + escaped(description) + `">` +
+		`<meta property="og:image" content="` + escaped(image) + `">` +
+		`<meta property="og:url" content="` + escaped(m.OriginalURL) + `">` +
+		`<meta name="twitter:card" content="` + escaped(card) + `">` +
+		`<meta name="twitter:title" content="` + escaped(title) + `">` +
+		`<meta name="twitter:description" content="` + escaped(description) + `">` +
+		`<meta name="twitter:image" content="` + escaped(image) + `">` +
+		`<script>window.location.href="` + dest + `";</script>` +
+		`</head><body><a href="` + escaped(m.OriginalURL) + `">Click here if not redirected.</a></body></html>`
+}
+
+// UpdateURLOGMetadata handles PATCH /api/v1/urls/:shortCode/og
+func (h *Handler) UpdateURLOGMetadata(c *gin.Context) {
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{Error: "authentication_required", Message: "Authentication required"})
+		return
+	}
+
+	shortCode := c.Param("shortCode")
+	if shortCode == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_request", Message: "Short code is required"})
+		return
+	}
+
+	var req models.UpdateOGRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_request", Message: err.Error()})
+		return
+	}
+
+	if err := h.db.UpdateURLOGMetadata(shortCode, userID, &req); err != nil {
+		if err == storage.ErrURLNotFound {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: "URL not found or not owned by you"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal_error", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "OG metadata updated successfully"})
 }
 
 // CheckPassword verifies a link password and returns the destination URL

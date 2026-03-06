@@ -121,6 +121,11 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
 		handler.ContactHandlers.SubmitContactForm,
 	)
+
+	// Public site settings (for frontend SEO metadata generation)
+	if handler.GlobalSettingsHandlers != nil {
+		router.GET("/api/v1/public/settings", handler.GlobalSettingsHandlers.GetPublicSettings)
+	}
 }
 
 // setupAuthRoutes configures authentication routes
@@ -234,6 +239,9 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	
 	// User analytics routes
 	setupUserAnalyticsRoutes(api, handler)
+
+	// OG metadata for individual URLs (authenticated)
+	api.PATCH("/urls/:shortCode/og", handler.UpdateURLOGMetadata)
 
 	// White-label branding (enterprise only)
 	api.GET("/branding",
@@ -440,6 +448,14 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	// Custom domain admin routes
 	admin.GET("/domains", handler.DomainHandlers.GetAllDomains)
 	admin.GET("/domains/stats", handler.DomainHandlers.GetDomainStats)
+
+	// Site-wide settings (SEO, GA, etc.)
+	if handler.GlobalSettingsHandlers != nil {
+		admin.GET("/settings", handler.GlobalSettingsHandlers.GetSettings)
+		admin.PUT("/settings", handler.GlobalSettingsHandlers.BulkUpdateSettings)
+		admin.GET("/settings/:key", handler.GlobalSettingsHandlers.GetSetting)
+		admin.PUT("/settings/:key", handler.GlobalSettingsHandlers.UpdateSetting)
+	}
 }
 
 // setupConversionTrackingRoutes configures conversion tracking routes

@@ -19,6 +19,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   SwatchIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -75,6 +76,12 @@ export default function SettingsPage() {
   });
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingMsg, setBrandingMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [seoForm, setSeoForm] = useState({
+    site_title: '', site_description: '', site_keywords: '',
+    og_image: '', twitter_site: '', google_analytics_id: '',
+  });
+  const [seoSaving, setSeoSaving] = useState(false);
+  const [seoMsg, setSeoMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
 
   // Profile form
@@ -327,6 +334,34 @@ export default function SettingsPage() {
     }
   };
 
+  // Load SEO settings for admin
+  useEffect(() => {
+    if (!user) return;
+    const token = getAccessToken();
+    fetch(`${API_BASE_URL}/api/v1/admin/settings?category=seo`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.settings) return;
+        const flat: Record<string, string> = {};
+        const list = Array.isArray(data.settings) ? data.settings : Object.values(data.settings).flat();
+        for (const s of list as Array<{ key: string; value: string }>) {
+          flat[s.key] = s.value ?? '';
+        }
+        setSeoForm({
+          site_title: flat.site_title ?? '',
+          site_description: flat.site_description ?? '',
+          site_keywords: flat.site_keywords ?? '',
+          og_image: flat.og_image ?? '',
+          twitter_site: flat.twitter_site ?? '',
+          google_analytics_id: flat.google_analytics_id ?? '',
+        });
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   if (isLoading || !isAuthenticated) {
     return (
       <Layout>
@@ -345,6 +380,7 @@ export default function SettingsPage() {
     { id: 'preferences', name: 'Preferences', icon: BellIcon },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon },
     ...(isEnterprise ? [{ id: 'branding', name: 'Branding', icon: SwatchIcon }] : []),
+    ...(isEnterprise ? [{ id: 'seo', name: 'SEO', icon: MagnifyingGlassIcon }] : []),
     { id: 'danger', name: 'Danger Zone', icon: ExclamationTriangleIcon },
   ];
 
@@ -838,6 +874,96 @@ export default function SettingsPage() {
                       className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                       {brandingSaving ? 'Saving...' : 'Save Branding'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'seo' && (
+                <div>
+                  <h2 className="text-lg font-medium text-foreground mb-1">Site-wide SEO Settings</h2>
+                  <p className="text-sm text-gray-500 mb-6">Control metadata, Open Graph tags, and analytics used across the site.</p>
+                  {seoMsg && (
+                    <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${seoMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {seoMsg.text}
+                    </div>
+                  )}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Site Title</label>
+                        <input type="text" value={seoForm.site_title}
+                          onChange={e => setSeoForm(f => ({ ...f, site_title: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="Trunc - Professional URL Shortener" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Twitter Handle</label>
+                        <input type="text" value={seoForm.twitter_site}
+                          onChange={e => setSeoForm(f => ({ ...f, twitter_site: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="@trunc" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Default OG Image URL</label>
+                        <input type="url" value={seoForm.og_image}
+                          onChange={e => setSeoForm(f => ({ ...f, og_image: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Google Analytics ID</label>
+                        <input type="text" value={seoForm.google_analytics_id}
+                          onChange={e => setSeoForm(f => ({ ...f, google_analytics_id: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          placeholder="G-XXXXXXXXXX" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Site Description</label>
+                      <textarea value={seoForm.site_description}
+                        onChange={e => setSeoForm(f => ({ ...f, site_description: e.target.value }))}
+                        rows={3}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        placeholder="Professional URL shortener with analytics, custom domains..." />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
+                      <input type="text" value={seoForm.site_keywords}
+                        onChange={e => setSeoForm(f => ({ ...f, site_keywords: e.target.value }))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        placeholder="url shortener, link shortener, custom links" />
+                    </div>
+                    <button
+                      disabled={seoSaving}
+                      onClick={async () => {
+                        setSeoSaving(true); setSeoMsg(null);
+                        try {
+                          const token = await getAccessToken();
+                          const res = await fetch(`${API_BASE_URL}/api/v1/admin/settings`, {
+                            method: 'PUT',
+                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              site_title: seoForm.site_title,
+                              site_description: seoForm.site_description,
+                              site_keywords: seoForm.site_keywords,
+                              og_image: seoForm.og_image,
+                              twitter_site: seoForm.twitter_site,
+                              google_analytics_id: seoForm.google_analytics_id,
+                            }),
+                          });
+                          if (res.ok) setSeoMsg({ type: 'success', text: 'SEO settings saved.' });
+                          else {
+                            const d = await res.json();
+                            setSeoMsg({ type: 'error', text: d.error ?? 'Failed to save SEO settings.' });
+                          }
+                        } finally {
+                          setSeoSaving(false);
+                        }
+                      }}
+                      className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {seoSaving ? 'Saving...' : 'Save SEO Settings'}
                     </button>
                   </div>
                 </div>

@@ -890,11 +890,12 @@ func (p *PostgresStorage) GetAIInsight(shortCode, insightType string) (*models.A
 // SaveURLMapping saves a URL mapping to the database
 func (p *PostgresStorage) SaveURLMapping(mapping *models.URLMapping) error {
 	query := `
-		INSERT INTO url_mappings (id, short_code, original_url, created_at, expires_at, created_by_ip, user_id, password_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO url_mappings (id, short_code, original_url, created_at, expires_at, created_by_ip, user_id, password_hash, og_title, og_description, og_image, twitter_card)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 	_, err := p.db.Exec(query, mapping.ID, mapping.ShortCode, mapping.OriginalURL,
-		mapping.CreatedAt, mapping.ExpiresAt, mapping.CreatedByIP, mapping.UserID, mapping.PasswordHash)
+		mapping.CreatedAt, mapping.ExpiresAt, mapping.CreatedByIP, mapping.UserID, mapping.PasswordHash,
+		mapping.OGTitle, mapping.OGDescription, mapping.OGImage, mapping.TwitterCard)
 
 	if err != nil {
 		return fmt.Errorf("failed to save URL mapping: %w", err)
@@ -913,7 +914,8 @@ func (p *PostgresStorage) CountURLsByIP(ip string) (int64, error) {
 // GetURLMappingByShortCode retrieves a URL mapping by its short code
 func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.URLMapping, error) {
 	query := `
-		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active, created_by_ip, user_id, password_hash
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active, created_by_ip, user_id, password_hash,
+		       og_title, og_description, og_image, twitter_card
 		FROM url_mappings
 		WHERE short_code = $1 AND is_active = TRUE
 	`
@@ -923,11 +925,13 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	var createdByIP sql.NullString
 	var userID sql.NullInt64
 	var passwordHash sql.NullString
+	var ogTitle, ogDescription, ogImage, twitterCard sql.NullString
 
 	err := p.db.QueryRow(query, shortCode).Scan(
 		&mapping.ID, &mapping.ShortCode, &mapping.OriginalURL,
 		&mapping.CreatedAt, &expiresAt, &mapping.ClickCount,
 		&mapping.IsActive, &createdByIP, &userID, &passwordHash,
+		&ogTitle, &ogDescription, &ogImage, &twitterCard,
 	)
 
 	if err != nil {
@@ -949,6 +953,18 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	if passwordHash.Valid {
 		mapping.PasswordHash = &passwordHash.String
 	}
+	if ogTitle.Valid {
+		mapping.OGTitle = &ogTitle.String
+	}
+	if ogDescription.Valid {
+		mapping.OGDescription = &ogDescription.String
+	}
+	if ogImage.Valid {
+		mapping.OGImage = &ogImage.String
+	}
+	if twitterCard.Valid {
+		mapping.TwitterCard = &twitterCard.String
+	}
 
 	// Check if URL has expired
 	if mapping.ExpiresAt != nil && mapping.ExpiresAt.Before(time.Now()) {
@@ -956,6 +972,27 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	}
 
 	return mapping, nil
+}
+
+// UpdateURLOGMetadata updates OG metadata fields for a URL mapping
+func (p *PostgresStorage) UpdateURLOGMetadata(shortCode string, userID int64, req *models.UpdateOGRequest) error {
+	query := `
+		UPDATE url_mappings
+		SET og_title = $1, og_description = $2, og_image = $3, twitter_card = $4
+		WHERE short_code = $5 AND user_id = $6
+	`
+	result, err := p.db.Exec(query, req.OGTitle, req.OGDescription, req.OGImage, req.TwitterCard, shortCode, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update OG metadata: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	if rows == 0 {
+		return ErrURLNotFound
+	}
+	return nil
 }
 
 // IncrementClickCount increments the click count for a URL mapping

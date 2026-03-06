@@ -117,17 +117,36 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 		passwordHashPtr = &h
 	}
 
+	// Build optional OG fields
+	var ogTitle, ogDescription, ogImage, twitterCard *string
+	if request.OGTitle != "" {
+		ogTitle = &request.OGTitle
+	}
+	if request.OGDescription != "" {
+		ogDescription = &request.OGDescription
+	}
+	if request.OGImage != "" {
+		ogImage = &request.OGImage
+	}
+	if request.TwitterCard != "" {
+		twitterCard = &request.TwitterCard
+	}
+
 	// Create URL mapping
 	mapping := &models.URLMapping{
-		ID:           id,
-		ShortCode:    shortCode,
-		OriginalURL:  request.URL,
-		CreatedAt:    time.Now(),
-		ExpiresAt:    request.ExpiresAt,
-		IsActive:     true,
-		CreatedByIP:  clientIP,
-		UserID:       userID,
-		PasswordHash: passwordHashPtr,
+		ID:            id,
+		ShortCode:     shortCode,
+		OriginalURL:   request.URL,
+		CreatedAt:     time.Now(),
+		ExpiresAt:     request.ExpiresAt,
+		IsActive:      true,
+		CreatedByIP:   clientIP,
+		UserID:        userID,
+		PasswordHash:  passwordHashPtr,
+		OGTitle:       ogTitle,
+		OGDescription: ogDescription,
+		OGImage:       ogImage,
+		TwitterCard:   twitterCard,
 	}
 
 	// Save to database

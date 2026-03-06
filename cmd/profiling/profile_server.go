@@ -89,7 +89,7 @@ func main() {
 	authHandlers := handlers.NewAuthHandlers(authService, adminService, smsService, emailService, config, nil, nil)
 	analyticsHandlers := handlers.NewAnalyticsHandlers(userAnalyticsService)
 	adminRBACHandlers := handlers.NewAdminRBACHandlers(adminService, rbacService)
-	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService)
+	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService, nil, nil)
 
 	// Setup Gin router with metrics middleware
 	gin.SetMode(gin.ReleaseMode)

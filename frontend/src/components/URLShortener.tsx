@@ -39,6 +39,9 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
   const [customCode, setCustomCode] = useState('');
   const [password, setPassword] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [ogTitle, setOgTitle] = useState('');
+  const [ogDescription, setOgDescription] = useState('');
+  const [ogImage, setOgImage] = useState('');
   const { user, getAccessToken, isAuthenticated, refreshToken } = useAuth();
 
   const isPro = user?.account_type === 'premium' || user?.account_type === 'enterprise';
@@ -71,6 +74,9 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
       const body: Record<string, string> = { url: data.url };
       if (isPro && customCode.trim()) body.custom_code = customCode.trim();
       if (isPro && password.trim()) body.password = password.trim();
+      if (isPro && ogTitle.trim()) body.og_title = ogTitle.trim();
+      if (isPro && ogDescription.trim()) body.og_description = ogDescription.trim();
+      if (isPro && ogImage.trim()) body.og_image = ogImage.trim();
 
       const response = await fetch(API_ENDPOINTS.urls.shorten, {
         method: 'POST',
@@ -126,6 +132,9 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
       reset();
       setCustomCode('');
       setPassword('');
+      setOgTitle('');
+      setOgDescription('');
+      setOgImage('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -196,31 +205,72 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                 {showAdvanced ? '▲ Hide options' : '▼ Advanced options (custom code, password)'}
               </button>
               {showAdvanced && (
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-foreground mb-1">
-                      Custom short code <span className="text-muted-foreground">(optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={customCode}
-                      onChange={(e) => setCustomCode(e.target.value)}
-                      placeholder="e.g. my-link"
-                      maxLength={20}
-                      className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        Custom short code <span className="text-muted-foreground">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customCode}
+                        onChange={(e) => setCustomCode(e.target.value)}
+                        placeholder="e.g. my-link"
+                        maxLength={20}
+                        className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        Password protect <span className="text-muted-foreground">(optional)</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Set a password"
+                        className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-foreground mb-1">
-                      Password protect <span className="text-muted-foreground">(optional)</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Set a password"
-                      className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                  <p className="text-xs text-muted-foreground font-medium">Open Graph / Social preview</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        OG Title <span className="text-muted-foreground">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={ogTitle}
+                        onChange={(e) => setOgTitle(e.target.value)}
+                        placeholder="Custom preview title"
+                        className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        OG Image URL <span className="text-muted-foreground">(optional)</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={ogImage}
+                        onChange={(e) => setOgImage(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        OG Description <span className="text-muted-foreground">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={ogDescription}
+                        onChange={(e) => setOgDescription(e.target.value)}
+                        placeholder="Custom preview description"
+                        className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
