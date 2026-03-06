@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Get Started Free - Trunc",
@@ -14,6 +15,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RegisterLayout({ children }: { children: React.ReactNode }) {
-  return children;
+export default function RegisterLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }

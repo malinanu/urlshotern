@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Pricing - Trunc URL Shortener",
@@ -14,6 +15,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingLayout({ children }: { children: React.ReactNode }) {
-  return children;
+export default function PricingLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }
