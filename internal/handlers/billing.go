@@ -268,28 +268,40 @@ func (bh *BillingHandler) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	if subscription.Status == "cancelled" {
+	if subscription.Status == "cancelled" || subscription.CancelAtPeriodEnd {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Subscription is already cancelled",
 		})
 		return
 	}
 
-	err = bh.billingService.UpdateSubscription(userID, map[string]interface{}{
-		"cancel_at_end": true,
-		"status": "cancelled",
-	})
+	// Cancel on Polar's side if there's a real Polar subscription ID
+	if subscription.PolarSubscriptionID != nil && *subscription.PolarSubscriptionID != "" {
+		if err = bh.billingService.GetPolarService().CancelSubscription(*subscription.PolarSubscriptionID, true); err != nil {
+			log.Printf("Warning: failed to cancel on Polar: %v", err)
+			// Continue — update local DB regardless so UI reflects intent
+		}
+	}
+
+	// Update local polar_subscriptions record
+	now := time.Now()
+	err = bh.billingService.GetDB().Model(&models.PolarSubscription{}).
+		Where("user_id = ?", userID).
+		Updates(map[string]interface{}{
+			"cancel_at_period_end": true,
+			"cancelled_at":         now,
+		}).Error
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to cancel subscription",
+			"error":   "Failed to cancel subscription",
 			"details": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Subscription has been cancelled and will not renew",
+		"message":            "Subscription has been cancelled and will not renew",
 		"current_period_end": subscription.CurrentPeriodEnd,
 	})
 }
