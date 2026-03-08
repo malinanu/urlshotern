@@ -621,6 +621,8 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/billing", "/pages", "/custom-domains",
 		"/forgot-password", "/reset-password",
 		"/teams", "/ab-tests",
+		"/team-invite",
+		"/not-found",
 	}
 
 	for _, route := range frontendRoutes {
@@ -688,7 +690,10 @@ func setupStaticRoutes(router *gin.Engine) {
 			// Check if it's a short code (single segment, no extension)
 			pathSegments := strings.Split(strings.Trim(c.Request.URL.Path, "/"), "/")
 			if len(pathSegments) == 1 && !strings.Contains(pathSegments[0], ".") {
-				// Let short code 404 naturally
+				if strings.Contains(c.GetHeader("Accept"), "text/html") {
+					c.Redirect(http.StatusFound, "/not-found")
+					return
+				}
 				c.JSON(404, gin.H{"error": "Short URL not found"})
 				return
 			}

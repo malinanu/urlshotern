@@ -254,9 +254,15 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 	// Get original URL
 	mapping, err := h.shortenerService.GetOriginalURL(shortCode)
 	if err != nil {
+		// Browser request → redirect to 404 page
+		if strings.Contains(c.GetHeader("Accept"), "text/html") {
+			c.Redirect(http.StatusFound, "/not-found")
+			return
+		}
+		// API/curl request → keep JSON response
 		statusCode := http.StatusNotFound
 		errorType := "not_found"
-		
+
 		if err == storage.ErrURLExpired {
 			statusCode = http.StatusGone
 			errorType = "url_expired"
