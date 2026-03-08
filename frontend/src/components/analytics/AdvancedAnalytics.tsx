@@ -343,8 +343,9 @@ const ChartSkeleton = () => (
 // Geographic Analytics Component
 function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic'] }) {
   // Compute chart data from the geographic data
-  const topCountriesForChart = data?.countries?.slice(0, 10) || [];
-  const topCountriesForPie = data?.countries?.slice(0, 8) || [];
+  const countries = data?.countries ?? [];
+  const topCountriesForChart = countries.slice(0, 10);
+  const topCountriesForPie = countries.slice(0, 8);
   const chartColors = topCountriesForPie.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
 
   return (
@@ -365,7 +366,7 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
                 <Tooltip
                   formatter={(value: number, name: string) => [formatNumber(value), 'Clicks']}
                   labelFormatter={(label: string) => {
-                    const country = data.countries.find(c => c.country_code === label);
+                    const country = countries.find(c => c.country_code === label);
                     return country?.country_name || label;
                   }}
                 />
@@ -431,7 +432,7 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {data.countries.map((country, index) => (
+              {countries.map((country, index) => (
                 <tr key={country.country_code} className={index % 2 === 0 ? 'bg-card' : 'bg-muted/30'}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -465,8 +466,10 @@ function GeographicAnalytics({ data }: { data: AdvancedAnalyticsData['geographic
 // Time Analytics Component
 function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics'] }) {
   // Convert hourly data for 24-hour display
+  const hourlyPattern = data?.hourly_pattern ?? [];
+  const weeklyPattern = data?.weekly_pattern ?? [];
   const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-    const found = data.hourly_pattern.find(h => h.hour === hour);
+    const found = hourlyPattern.find(h => h.hour === hour);
     return {
       hour: `${hour.toString().padStart(2, '0')}:00`,
       clicks: found?.clicks || 0,
@@ -476,6 +479,7 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
   return (
     <div className="space-y-6">
       {/* Peak Times Summary */}
+      {data?.peak_times && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
           <div className="text-sm font-medium text-primary">Peak Hour</div>
@@ -496,6 +500,7 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
           </div>
         </div>
       </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -534,7 +539,7 @@ function TimeAnalytics({ data }: { data: AdvancedAnalyticsData['time_analytics']
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.weekly_pattern}>
+              <BarChart data={weeklyPattern}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
                 <YAxis />
@@ -657,6 +662,10 @@ function ReferrerAnalytics({ data }: { data: AdvancedAnalyticsData['referrers'] 
 
 // Device Analytics Component
 function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analytics'] }) {
+  const deviceTypes = data?.device_types ?? [];
+  const browsers = data?.browsers ?? [];
+  const operatingSystems = data?.operating_systems ?? [];
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -667,7 +676,7 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.device_types}
+                  data={deviceTypes}
                   cx="50%"
                   cy="50%"
                   innerRadius={40}
@@ -675,7 +684,7 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
                   paddingAngle={2}
                   dataKey="clicks"
                 >
-                  {data.device_types.map((entry, index) => (
+                  {deviceTypes.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
@@ -689,7 +698,7 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
         <div>
           <h3 className="text-lg font-medium text-foreground mb-4">Top Browsers</h3>
           <div className="space-y-3">
-            {data.browsers.slice(0, 5).map((browser, index) => (
+            {browsers.slice(0, 5).map((browser, index) => (
               <div key={`${browser.browser_name}-${browser.browser_version}`} className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {browser.browser_name} {browser.browser_version}
@@ -714,7 +723,7 @@ function DeviceAnalytics({ data }: { data: AdvancedAnalyticsData['device_analyti
         <div>
           <h3 className="text-lg font-medium text-foreground mb-4">Operating Systems</h3>
           <div className="space-y-3">
-            {data.operating_systems.slice(0, 5).map((os, index) => (
+            {operatingSystems.slice(0, 5).map((os, index) => (
               <div key={`${os.os_name}-${os.os_version}`} className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {os.os_name} {os.os_version}

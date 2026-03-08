@@ -620,6 +620,15 @@ func (s *ShortenerService) UpdateUserURL(userID int64, shortCode string, req *mo
 		argIndex++
 	}
 
+	if req.OriginalURL != nil {
+		if err := s.validateURL(*req.OriginalURL); err != nil {
+			return nil, err
+		}
+		updates = append(updates, fmt.Sprintf("original_url = $%d", argIndex))
+		args = append(args, *req.OriginalURL)
+		argIndex++
+	}
+
 	if req.TeamID != nil {
 		if *req.TeamID == 0 {
 			// Remove URL from team (set NULL)

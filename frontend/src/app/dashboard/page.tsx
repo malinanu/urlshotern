@@ -64,6 +64,7 @@ export default function DashboardPage() {
   const [loadingStats, setLoadingStats] = useState(getCached('dashboard:stats') === null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [editingUrl, setEditingUrl] = useState<URLData | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [qrModalUrl, setQrModalUrl] = useState<URLData | null>(null);
   const [userTeams, setUserTeams] = useState<Team[]>([]);
   const router = useRouter();
@@ -253,7 +254,14 @@ export default function DashboardPage() {
     }
   };
 
-  const updateURL = async (shortCode: string, updates: { title?: string; description?: string; is_public?: boolean; team_id?: number | null }) => {
+  const updateURL = async (shortCode: string, updates: {
+    original_url?: string;
+    title?: string;
+    description?: string;
+    expires_at?: string | null;
+    is_public?: boolean;
+    team_id?: number | null;
+  }) => {
     const token = getAccessToken();
     if (!token) return;
 
@@ -278,13 +286,14 @@ export default function DashboardPage() {
         ));
 
         setEditingUrl(null);
+        setEditError(null);
       } else {
-        console.error('Failed to update URL:', response.status);
-        alert('Failed to update URL. Please try again.');
+        const errData = await response.json().catch(() => null);
+        setEditError(errData?.error || errData?.message || 'Failed to update URL. Please try again.');
       }
     } catch (error) {
       console.error('Error updating URL:', error);
-      alert('Error updating URL. Please try again.');
+      setEditError('Network error. Please try again.');
     }
   };
 
