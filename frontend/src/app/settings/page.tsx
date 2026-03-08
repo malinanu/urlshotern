@@ -30,7 +30,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be less than 100 characters'),
   email: z.string().email('Please enter a valid email address'),
-  phone: z.string().optional(),
+  phone: z.string().min(10, 'Phone number must be at least 10 digits').max(20, 'Phone number is too long'),
 });
 
 const passwordSchema = z.object({
@@ -198,7 +198,7 @@ export default function SettingsPage() {
     try {
       const payload = {
         name: data.name,
-        ...(data.phone && data.phone.trim() !== '' ? { phone: data.phone } : {}),
+        phone: data.phone.trim(),
       };
 
       const token = getAccessToken();
@@ -482,7 +482,7 @@ export default function SettingsPage() {
 
                     <div>
                       <label htmlFor="phone" className="block text-sm font-medium text-foreground">
-                        Phone Number (Optional)
+                        Phone Number
                       </label>
                       <input
                         {...profileForm.register('phone')}
@@ -490,6 +490,9 @@ export default function SettingsPage() {
                         className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         placeholder="+1 (555) 123-4567"
                       />
+                      {profileForm.formState.errors.phone && (
+                        <p className="mt-1 text-sm text-destructive">{profileForm.formState.errors.phone.message}</p>
+                      )}
                     </div>
 
                     <div className="flex justify-end">
