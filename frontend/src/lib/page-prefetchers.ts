@@ -26,3 +26,15 @@ export function prefetchSettings(token: string, apiBase: string) {
 export function prefetchApiKeys(token: string, apiBase: string) {
   prefetch('apikeys:list', () => authedFetch(`${apiBase}/api/v1/api-keys`, token));
 }
+
+export function prefetchTeams(token: string, apiBase: string) {
+  prefetch('teams:list', () => authedFetch(`${apiBase}/api/v1/teams`, token));
+}
+
+export function prefetchCustomDomains(token: string, apiBase: string) {
+  prefetch('domains:list', () => authedFetch(`${apiBase}/api/v1/custom-domains/`, token));
+}
+
+export function prefetchBulk(token: string, apiBase: string) {
+  prefetch('bulk:urls', () => authedFetch(`${apiBase}/api/v1/my-urls?limit=100`, token));
+}

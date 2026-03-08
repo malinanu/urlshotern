@@ -112,6 +112,10 @@ export default function RootLayout({
           __html: `(function(){try{var t=localStorage.getItem('theme');var r=document.documentElement;r.classList.remove('light','dark');if(t==='dark'){r.classList.add('dark')}else if(t==='light'){r.classList.add('light')}else{if(window.matchMedia('(prefers-color-scheme: dark)').matches){r.classList.add('dark')}else{r.classList.add('light')}}}catch(e){}})();`
         }} />
 
+        {/* ContentSquare session recording */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="https://t.contentsquare.net/uxa/0ac352c074f83.js" async />
+
         {/* Service Worker Registration */}
         <script dangerouslySetInnerHTML={{
           __html: `

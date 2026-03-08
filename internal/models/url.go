@@ -119,6 +119,7 @@ type UpdateURLRequest struct {
 	Description *string    `json:"description,omitempty"`
 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 	IsPublic    *bool      `json:"is_public,omitempty"`
+	TeamID      *int64     `json:"team_id,omitempty"` // null = no change, 0 = remove from team, positive = assign to team
 }
 
 // UserURLResponse represents a URL in the user's URL list

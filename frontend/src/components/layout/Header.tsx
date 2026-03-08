@@ -12,6 +12,9 @@ import {
   prefetchBilling,
   prefetchSettings,
   prefetchApiKeys,
+  prefetchTeams,
+  prefetchCustomDomains,
+  prefetchBulk,
 } from '@/lib/page-prefetchers';
 
 export default function Header() {
@@ -27,11 +30,14 @@ export default function Header() {
     const token = getAccessToken();
     if (!token) return;
     const prefetchers: Record<string, () => void> = {
-      '/dashboard': () => prefetchDashboard(token, API_BASE_URL),
-      '/analytics':  () => prefetchAnalytics(token, API_BASE_URL),
-      '/billing':    () => prefetchBilling(token, API_BASE_URL),
-      '/settings':   () => prefetchSettings(token, API_BASE_URL),
-      '/api-keys':   () => prefetchApiKeys(token, API_BASE_URL),
+      '/dashboard':      () => prefetchDashboard(token, API_BASE_URL),
+      '/analytics':      () => prefetchAnalytics(token, API_BASE_URL),
+      '/billing':        () => prefetchBilling(token, API_BASE_URL),
+      '/settings':       () => prefetchSettings(token, API_BASE_URL),
+      '/api-keys':       () => prefetchApiKeys(token, API_BASE_URL),
+      '/teams':          () => prefetchTeams(token, API_BASE_URL),
+      '/custom-domains': () => prefetchCustomDomains(token, API_BASE_URL),
+      '/bulk':           () => prefetchBulk(token, API_BASE_URL),
     };
     prefetchers[href]?.();
   };
@@ -132,6 +138,7 @@ export default function Header() {
                       href="/bulk"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/bulk')}
                     >
                       Bulk Operations
                     </Link>
@@ -147,6 +154,7 @@ export default function Header() {
                       href="/custom-domains"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/custom-domains')}
                     >
                       Custom Domains
                     </Link>
@@ -154,6 +162,7 @@ export default function Header() {
                       href="/teams"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/teams')}
                     >
                       Teams
                     </Link>
@@ -252,6 +261,7 @@ export default function Header() {
                       href="/bulk"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/bulk')}
                     >
                       Bulk Operations
                     </Link>
@@ -267,6 +277,7 @@ export default function Header() {
                       href="/custom-domains"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/custom-domains')}
                     >
                       Custom Domains
                     </Link>
@@ -274,6 +285,7 @@ export default function Header() {
                       href="/teams"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/teams')}
                     >
                       Teams
                     </Link>

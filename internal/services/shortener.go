@@ -620,6 +620,24 @@ func (s *ShortenerService) UpdateUserURL(userID int64, shortCode string, req *mo
 		argIndex++
 	}
 
+	if req.TeamID != nil {
+		if *req.TeamID == 0 {
+			// Remove URL from team (set NULL)
+			updates = append(updates, fmt.Sprintf("team_id = $%d", argIndex))
+			args = append(args, nil)
+			argIndex++
+		} else {
+			// Verify user is a member of the target team
+			isMember, err := s.db.TeamMemberExists(*req.TeamID, userID)
+			if err != nil || !isMember {
+				return nil, &ServiceError{Message: "you are not a member of this team"}
+			}
+			updates = append(updates, fmt.Sprintf("team_id = $%d", argIndex))
+			args = append(args, *req.TeamID)
+			argIndex++
+		}
+	}
+
 	if len(updates) == 0 {
 		// No updates requested, return current data
 		if expiresAt.Valid {

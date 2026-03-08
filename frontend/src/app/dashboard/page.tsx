@@ -6,7 +6,7 @@ import Layout from '@/components/layout/Layout';
 import URLShortener from '@/components/URLShortener';
 import { useAuth } from '@/contexts/AuthContext';
 import { QRCodeModal } from '@/components/QRCode';
-import { getCached, setCached } from '@/lib/prefetch-cache';
+import { getCached, setCached, prefetch } from '@/lib/prefetch-cache';
 import {
   ChartBarIcon,
   LinkIcon,
@@ -36,6 +36,13 @@ interface URLData {
   title?: string;
   description?: string;
   expires_at?: string;
+  team_id?: number;
+}
+
+interface Team {
+  id: number;
+  name: string;
+  display_name?: string;
 }
 
 interface DashboardStats {
@@ -58,6 +65,7 @@ export default function DashboardPage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [editingUrl, setEditingUrl] = useState<URLData | null>(null);
   const [qrModalUrl, setQrModalUrl] = useState<URLData | null>(null);
+  const [userTeams, setUserTeams] = useState<Team[]>([]);
   const router = useRouter();
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -150,6 +158,19 @@ export default function DashboardPage() {
     };
   }, [isAuthenticated, user, getAccessToken]);
 
+  // Fetch user's teams for the edit modal
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const token = getAccessToken();
+    if (!token) return;
+    fetch(`${API_BASE_URL}/api/v1/teams`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => setUserTeams(data.teams ?? data ?? []))
+      .catch(() => {});
+  }, [isAuthenticated, getAccessToken]);
+
   // Callback for when a new URL is created
   const handleUrlCreated = async (newUrl: any) => {
     // Add the new URL to the existing list immediately for instant feedback
@@ -232,7 +253,7 @@ export default function DashboardPage() {
     }
   };
 
-  const updateURL = async (shortCode: string, updates: { title?: string; description?: string; is_public?: boolean }) => {
+  const updateURL = async (shortCode: string, updates: { title?: string; description?: string; is_public?: boolean; team_id?: number | null }) => {
     const token = getAccessToken();
     if (!token) return;
 
@@ -491,6 +512,17 @@ export default function DashboardPage() {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => router.push(`/analytics?shortCode=${url.short_code}`)}
+                              onMouseEnter={() => {
+                                router.prefetch('/analytics');
+                                const token = getAccessToken();
+                                if (token) {
+                                  prefetch(`analytics:url:${url.short_code}`, () =>
+                                    fetch(`${API_BASE_URL}/api/v1/analytics/${url.short_code}`, {
+                                      headers: { Authorization: `Bearer ${token}` },
+                                    }).then(r => r.ok ? r.json() : Promise.reject(r.status))
+                                  );
+                                }
+                              }}
                               className="text-primary hover:text-primary/80 text-sm font-medium"
                             >
                               Analytics
@@ -544,10 +576,12 @@ export default function DashboardPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
+                const teamIdRaw = formData.get('team_id') as string;
                 const updates = {
                   title: formData.get('title') as string || undefined,
                   description: formData.get('description') as string || undefined,
                   is_public: formData.get('is_public') === 'on',
+                  team_id: teamIdRaw === '' ? null : Number(teamIdRaw) === 0 ? 0 : Number(teamIdRaw),
                 };
                 updateURL(editingUrl.short_code, updates);
               }}
@@ -590,6 +624,24 @@ export default function DashboardPage() {
                     Make this URL publicly visible
                   </label>
                 </div>
+
+                {userTeams.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Assign to team
+                    </label>
+                    <select
+                      name="team_id"
+                      defaultValue={editingUrl.team_id ?? ''}
+                      className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="0">No team</option>
+                      {userTeams.map(t => (
+                        <option key={t.id} value={t.id}>{t.display_name || t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 mt-6">
