@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CookieConsent } from "@/components/CookieConsent";
 import "./globals.css";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -142,6 +143,7 @@ export default function RootLayout({
             <AuthProvider>
               {children}
               <PWAInstallPrompt />
+              <CookieConsent />
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>
