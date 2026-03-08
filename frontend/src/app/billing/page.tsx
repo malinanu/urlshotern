@@ -15,6 +15,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { getProducts, PolarProduct, formatPrice } from '@/lib/polar';
+import { getPlanDisplayName } from '@/lib/plan-utils';
 
 interface Plan {
   id: string;
@@ -401,8 +402,8 @@ function BillingContent() {
                     <div>
                       <h2 className="text-xl font-semibold text-foreground">Current Plan</h2>
                       <div className="flex items-center mt-1">
-                        <span className="text-2xl font-bold text-primary capitalize">
-                          {billingData.plan.name}
+                        <span className="text-2xl font-bold text-primary">
+                          {getPlanDisplayName(billingData.subscription.plan_type, polarProducts)}
                         </span>
                         {billingData.subscription.plan_type !== 'free' && (
                           <span className="ml-2 text-muted-foreground">
@@ -599,7 +600,9 @@ function BillingContent() {
                         }`}
                     >
                       <div className="text-center mb-6">
-                        <h3 className="text-xl font-semibold text-foreground">{plan.name}</h3>
+                        <h3 className="text-xl font-semibold text-foreground">
+                          {polarProducts.find((p: any) => p.plan_type === plan.id && p.is_recurring && !p.name.toLowerCase().includes('yearly'))?.name ?? plan.name}
+                        </h3>
                         <p className="text-muted-foreground mt-1">{plan.description}</p>
                         <div className="mt-4">
                           <span className="text-3xl font-bold text-foreground">

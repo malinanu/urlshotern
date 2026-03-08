@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/lib/api-config';
+import { getPlanDisplayName } from '@/lib/plan-utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,6 +84,13 @@ export default function SettingsPage() {
   });
   const [seoSaving, setSeoSaving] = useState(false);
   const [seoMsg, setSeoMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
+  const [otpSuccess, setOtpSuccess] = useState<string | null>(null);
   const router = useRouter();
 
   // Profile form
@@ -710,7 +719,7 @@ export default function SettingsPage() {
               )}
 
               {activeTab === 'security' && (
-                <div>
+                <>
                   <h2 className="text-lg font-medium text-foreground mb-4">Security & Privacy</h2>
                   <div className="space-y-6">
                     <div className="bg-muted p-4 rounded-lg">
@@ -750,7 +759,7 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Account Type</span>
-                          <span className="text-sm text-foreground font-medium capitalize">{user?.account_type}</span>
+                          <span className="text-sm text-foreground font-medium">{getPlanDisplayName(user?.account_type ?? '')}</span>
                         </div>
                       </div>
                     </div>
@@ -771,19 +780,155 @@ export default function SettingsPage() {
                       )}
 
                       {user?.phone && !user?.phone_verified && (
-                        <button className="w-full text-left p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg hover:bg-yellow-500/20 transition-colors">
+                        <button
+                          disabled={otpSending}
+                          onClick={async () => {
+                            const token = getAccessToken();
+                            setOtpSending(true);
+                            setOtpError(null);
+                            setOtpSuccess(null);
+                            try {
+                              const res = await fetch(API_ENDPOINTS.auth.sendOtp, {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                              });
+                              const data = await res.json();
+                              if (!res.ok) {
+                                setOtpError(data.error || 'Failed to send OTP');
+                              } else {
+                                setOtpExpiresAt(data.expires_at ?? null);
+                                setOtpCode('');
+                                setOtpModalOpen(true);
+                              }
+                            } catch {
+                              setOtpError('Network error. Please try again.');
+                            } finally {
+                              setOtpSending(false);
+                            }
+                          }}
+                          className="w-full text-left p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg hover:bg-yellow-500/20 transition-colors disabled:opacity-60"
+                        >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="text-sm font-medium dark:text-yellow-500 text-yellow-600">Verify Phone Number</h4>
+                              <h4 className="text-sm font-medium dark:text-yellow-500 text-yellow-600">
+                                {otpSending ? 'Sending OTP…' : 'Verify Phone Number'}
+                              </h4>
                               <p className="text-sm dark:text-yellow-500/80 text-yellow-600/80">Add extra security with phone verification</p>
                             </div>
                             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
                           </div>
                         </button>
                       )}
+
+                      {otpError && (
+                        <p className="text-sm text-destructive mt-1">{otpError}</p>
+                      )}
+                      {otpSuccess && (
+                        <p className="text-sm text-green-600 mt-1">{otpSuccess}</p>
+                      )}
                     </div>
                   </div>
-                </div>
+
+                {/* OTP Verification Modal */}
+                {otpModalOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-card border border-border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+                      <h3 className="text-lg font-semibold text-foreground mb-1">Verify Phone Number</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Enter the 6-digit code sent to <span className="font-medium text-foreground">{user?.phone}</span>.
+                        {otpExpiresAt && (
+                          <span className="block mt-1">Expires at {new Date(otpExpiresAt).toLocaleTimeString()}</span>
+                        )}
+                      </p>
+
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => {
+                          setOtpCode(e.target.value.replace(/\D/g, ''));
+                          setOtpError(null);
+                        }}
+                        placeholder="000000"
+                        className="w-full border border-input rounded-lg px-4 py-3 text-center text-2xl font-mono tracking-widest bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+                      />
+
+                      {otpError && (
+                        <p className="text-sm text-destructive mb-3">{otpError}</p>
+                      )}
+
+                      <button
+                        disabled={otpVerifying || otpCode.length !== 6}
+                        onClick={async () => {
+                          if (!user) return;
+                          setOtpVerifying(true);
+                          setOtpError(null);
+                          try {
+                            const res = await fetch(API_ENDPOINTS.auth.otp.verify, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ user_id: user.id, otp: otpCode }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) {
+                              setOtpError(data.error || 'Invalid code. Please try again.');
+                            } else {
+                              updateUser({ ...user, phone_verified: true });
+                              setOtpModalOpen(false);
+                              setOtpSuccess('Phone number verified successfully.');
+                            }
+                          } catch {
+                            setOtpError('Network error. Please try again.');
+                          } finally {
+                            setOtpVerifying(false);
+                          }
+                        }}
+                        className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 mb-2"
+                      >
+                        {otpVerifying ? 'Verifying…' : 'Verify'}
+                      </button>
+
+                      <div className="flex items-center justify-between mt-1">
+                        <button
+                          disabled={otpSending}
+                          onClick={async () => {
+                            const token = getAccessToken();
+                            setOtpSending(true);
+                            setOtpError(null);
+                            try {
+                              const res = await fetch(API_ENDPOINTS.auth.sendOtp, {
+                                method: 'POST',
+                                headers: { Authorization: `Bearer ${token}` },
+                              });
+                              const data = await res.json();
+                              if (!res.ok) {
+                                setOtpError(data.error || 'Failed to resend OTP');
+                              } else {
+                                setOtpExpiresAt(data.expires_at ?? null);
+                                setOtpCode('');
+                              }
+                            } catch {
+                              setOtpError('Network error.');
+                            } finally {
+                              setOtpSending(false);
+                            }
+                          }}
+                          className="text-sm text-primary hover:underline disabled:opacity-50"
+                        >
+                          {otpSending ? 'Sending…' : 'Resend code'}
+                        </button>
+                        <button
+                          onClick={() => { setOtpModalOpen(false); setOtpError(null); }}
+                          className="text-sm text-muted-foreground hover:text-foreground"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
 
               {activeTab === 'branding' && (

@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     resendEmail: `${API_BASE_URL}/api/v1/auth/resend-email`,
     google: `${API_BASE_URL}/api/v1/auth/google`,
     googleCallback: `${API_BASE_URL}/api/v1/auth/google/callback`,
+    sendOtp: `${API_BASE_URL}/api/v1/auth/send-otp`,
     otp: {
       send: `${API_BASE_URL}/api/v1/auth/otp/send`,
       verify: `${API_BASE_URL}/api/v1/auth/otp/verify`,
