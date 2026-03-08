@@ -76,6 +76,7 @@ export const API_ENDPOINTS = {
     paymentMethod: `${API_BASE_URL}/api/v1/billing/payment-method`,
     history: `${API_BASE_URL}/api/v1/billing/history`,
     validateCoupon: `${API_BASE_URL}/api/v1/billing/coupons/validate`,
+    refreshSubscription: `${API_BASE_URL}/api/v1/billing/refresh-subscription`,
   },
 
   // Admin endpoints (temporarily disabled in backend)

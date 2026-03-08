@@ -421,8 +421,45 @@ func (pwh *PolarWebhookHandler) handleSubscriptionUpdated(data json.RawMessage) 
 		return fmt.Errorf("subscription not found: %w", err)
 	}
 
+	// Re-derive plan_type and billing_cycle if product/price changed
+	newPlanType := polarSub.PlanType
+	newBillingCycle := polarSub.BillingCycle
+
+	if subscription.ProductID != "" && subscription.ProductID != polarSub.PolarProductID {
+		// Product changed (tier upgrade/downgrade) — re-derive plan type and billing cycle
+		product, err := pwh.polarService.GetProduct(subscription.ProductID)
+		if err == nil {
+			if pt, ok := product.Metadata["plan_type"].(string); ok && pt != "" {
+				newPlanType = pt
+			}
+			if subscription.PriceID != nil {
+				for _, price := range product.Prices {
+					if price.ID == *subscription.PriceID {
+						newBillingCycle = price.RecurringInterval
+						break
+					}
+				}
+			}
+		}
+	} else if subscription.PriceID != nil && (polarSub.PolarPriceID == nil || *subscription.PriceID != *polarSub.PolarPriceID) {
+		// Same product, different price (monthly → yearly switch)
+		product, err := pwh.polarService.GetProduct(subscription.ProductID)
+		if err == nil {
+			for _, price := range product.Prices {
+				if price.ID == *subscription.PriceID {
+					newBillingCycle = price.RecurringInterval
+					break
+				}
+			}
+		}
+	}
+
 	// Update fields
 	polarSub.Status = subscription.Status
+	polarSub.PolarProductID = subscription.ProductID
+	polarSub.PolarPriceID = subscription.PriceID
+	polarSub.PlanType = newPlanType
+	polarSub.BillingCycle = newBillingCycle
 	polarSub.CurrentPeriodStart = subscription.CurrentPeriodStart
 	polarSub.CurrentPeriodEnd = subscription.CurrentPeriodEnd
 	polarSub.CancelAtPeriodEnd = subscription.CancelAtPeriodEnd

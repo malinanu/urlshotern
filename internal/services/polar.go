@@ -583,3 +583,57 @@ func stringValue(s *string) string {
 	}
 	return *s
 }
+
+// SyncUserSubscriptionFromPolar fetches the active subscription from Polar API
+// and updates the local polar_subscriptions row with the latest product/price/cycle info.
+func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
+	// 1. Find local subscription record
+	var localSub models.PolarSubscription
+	if err := ps.db.Where("user_id = ? AND status IN ?", userID, []string{"active", "trialing"}).
+		Order("created_at DESC").First(&localSub).Error; err != nil {
+		return fmt.Errorf("no active subscription found locally: %w", err)
+	}
+	if localSub.PolarSubscriptionID == nil {
+		return fmt.Errorf("no polar_subscription_id stored")
+	}
+
+	// 2. Fetch subscription from Polar API
+	polarSub, err := ps.GetSubscription(*localSub.PolarSubscriptionID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch subscription from Polar: %w", err)
+	}
+
+	// 3. Derive billing_cycle from product prices
+	var billingCycle *string
+	if polarSub.PriceID != nil {
+		product, err := ps.GetProduct(polarSub.ProductID)
+		if err == nil {
+			for _, price := range product.Prices {
+				if price.ID == *polarSub.PriceID {
+					billingCycle = price.RecurringInterval
+					break
+				}
+			}
+		}
+	}
+
+	// 4. Derive plan_type (prefer metadata, fall back to existing)
+	planType := localSub.PlanType
+	if product, err := ps.GetProduct(polarSub.ProductID); err == nil {
+		if pt, ok := product.Metadata["plan_type"].(string); ok && pt != "" {
+			planType = pt
+		}
+	}
+
+	// 5. Update local DB
+	return ps.db.Model(&localSub).Updates(map[string]interface{}{
+		"polar_product_id":      polarSub.ProductID,
+		"polar_price_id":        polarSub.PriceID,
+		"status":                polarSub.Status,
+		"plan_type":             planType,
+		"billing_cycle":         billingCycle,
+		"current_period_start":  polarSub.CurrentPeriodStart,
+		"current_period_end":    polarSub.CurrentPeriodEnd,
+		"updated_at":            time.Now(),
+	}).Error
+}

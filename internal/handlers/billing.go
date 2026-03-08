@@ -639,3 +639,18 @@ func (bh *BillingHandler) ValidateCouponHandler(c *gin.Context) {
 		"description":    coupon.Description,
 	})
 }
+
+// RefreshSubscription syncs the user's subscription data from Polar API into the local DB.
+func (bh *BillingHandler) RefreshSubscription(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	if err := bh.billingService.GetPolarService().SyncUserSubscriptionFromPolar(userID); err != nil {
+		log.Printf("[billing] refresh failed for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to refresh subscription", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}

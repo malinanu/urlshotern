@@ -537,6 +537,9 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	// Admin: Manual product sync (for debugging)
 	billing.POST("/sync-products", handler.BillingHandlers.SyncProducts)
 
+	// Sync subscription data from Polar (fixes stale billing_cycle after monthly→yearly upgrade)
+	billing.POST("/refresh-subscription", handler.BillingHandlers.RefreshSubscription)
+
 	// Payment methods
 	billing.POST("/payment-method", handler.BillingHandlers.UpdatePaymentMethod)
 	billing.GET("/history", handler.BillingHandlers.GetBillingHistory)

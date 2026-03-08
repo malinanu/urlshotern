@@ -135,6 +135,12 @@ function BillingContent() {
     try {
       setLoading(true);
 
+      // Silently sync subscription from Polar (fixes stale billing_cycle after plan upgrade)
+      fetch(API_ENDPOINTS.billing.refreshSubscription, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }).catch(() => {});
+
       // Fetch subscription, usage data, plans, and polar products concurrently
       const [usageResponse, plansResponse, products] = await Promise.all([
         fetch(API_ENDPOINTS.billing.usage, {
