@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import URLShortener from '@/components/URLShortener';
@@ -65,6 +65,8 @@ export default function DashboardPage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [editingUrl, setEditingUrl] = useState<URLData | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editExpiresAt, setEditExpiresAt] = useState<string>('');
+  const expiresAtRef = useRef<HTMLInputElement>(null);
   const [qrModalUrl, setQrModalUrl] = useState<URLData | null>(null);
   const [userTeams, setUserTeams] = useState<Team[]>([]);
   const router = useRouter();
@@ -545,7 +547,11 @@ export default function DashboardPage() {
                               <QrCodeIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => { setEditingUrl(url); setEditError(null); }}
+                              onClick={() => {
+                                setEditingUrl(url);
+                                setEditError(null);
+                                setEditExpiresAt(url.expires_at ? new Date(url.expires_at).toISOString().slice(0, 16) : '');
+                              }}
                               aria-label="Edit URL"
                               className="p-1 text-primary hover:text-primary/80 transition-colors"
                               title="Edit URL"
@@ -596,7 +602,6 @@ export default function DashboardPage() {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const originalUrl = formData.get('original_url') as string;
-                const expiresAtRaw = formData.get('expires_at') as string;
                 const teamIdRaw = formData.get('team_id') as string;
 
                 if (!originalUrl || (!originalUrl.startsWith('http://') && !originalUrl.startsWith('https://'))) {
@@ -609,7 +614,7 @@ export default function DashboardPage() {
                   title: (formData.get('title') as string) || undefined,
                   description: (formData.get('description') as string) || undefined,
                   is_public: formData.get('is_public') === 'on',
-                  expires_at: expiresAtRaw ? new Date(expiresAtRaw).toISOString() : null,
+                  expires_at: editExpiresAt ? new Date(editExpiresAt).toISOString() : null,
                   ...(userTeams.length > 0 && {
                     team_id: teamIdRaw === '' ? null : Number(teamIdRaw),
                   }),
@@ -663,20 +668,37 @@ export default function DashboardPage() {
 
                 {/* Expiry date */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Expiry date (optional)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-foreground">
+                      Expiry date (optional)
+                    </label>
+                    {editExpiresAt && (
+                      <button
+                        type="button"
+                        onClick={() => setEditExpiresAt('')}
+                        className="text-xs text-destructive hover:text-destructive/80 font-medium"
+                      >
+                        Clear expiry
+                      </button>
+                    )}
+                  </div>
                   <input
+                    ref={expiresAtRef}
                     type="datetime-local"
                     name="expires_at"
-                    defaultValue={
-                      editingUrl.expires_at
-                        ? new Date(editingUrl.expires_at).toISOString().slice(0, 16)
-                        : ''
-                    }
-                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={editExpiresAt}
+                    onChange={(e) => setEditExpiresAt(e.target.value)}
+                    onClick={() => expiresAtRef.current?.showPicker?.()}
+                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Leave blank to never expire.</p>
+                  {!editExpiresAt && (
+                    <p className="text-xs text-muted-foreground mt-1">No expiry — link will never expire.</p>
+                  )}
+                  {editExpiresAt && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Link will expire on {new Date(editExpiresAt).toLocaleString()}.
+                    </p>
+                  )}
                 </div>
 
                 {/* Is Public */}
@@ -724,7 +746,7 @@ export default function DashboardPage() {
               <div className="px-6 pb-6 pt-4 border-t border-border shrink-0 flex space-x-3">
                 <button
                   type="button"
-                  onClick={() => { setEditingUrl(null); setEditError(null); }}
+                  onClick={() => { setEditingUrl(null); setEditError(null); setEditExpiresAt(''); }}
                   className="flex-1 px-4 py-2 border border-input text-foreground rounded-md hover:bg-muted"
                 >
                   Cancel
