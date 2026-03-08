@@ -211,3 +211,7 @@ jspm_packages/
 dist
 # Claude Code local settings
 .claude/settings.local.json
+
+# Postman collections (local dev tooling)
+*.postman_collection.json
+*.postman_environment.json
