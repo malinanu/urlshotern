@@ -264,11 +264,17 @@ func (e *EmailService) SendTeamInvitation(emailAddr, teamName, inviterName, toke
 	// Build invitation URL
 	inviteURL := fmt.Sprintf("%s/team-invite?token=%s", e.config.BaseURL, token)
 
+	log.Printf("INFO [EMAIL] Sending team invitation to %s for team %q — accept URL: %s", emailAddr, teamName, inviteURL)
+
 	// Generate email template
 	template := email.TeamInvitationEmailTemplate(inviteURL, teamName, inviterName, emailAddr)
 
 	// Send email using provider
-	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	err := e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	if err != nil {
+		log.Printf("ERROR [EMAIL] Failed to send team invitation email to %s: %v", emailAddr, err)
+	}
+	return err
 }
 
 // sendEmail sends verification email using the provider

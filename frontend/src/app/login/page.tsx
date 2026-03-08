@@ -63,8 +63,8 @@ function LoginForm() {
     try {
       await login(data.email, data.password, data.rememberMe);
 
-      // Redirect to dashboard (for now, redirect to home)
-      router.push('/');
+      const returnTo = searchParams.get('returnTo');
+      router.push(returnTo ? decodeURIComponent(returnTo) : '/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password. Please try again.');
     }
