@@ -377,12 +377,9 @@ func (h *DomainHandlers) VerifyDomain(c *gin.Context) {
 
 	err = h.domainService.VerifyDomain(domainID, userID.(int64))
 	if err != nil {
-		// Return a generic message — the exact reason (DNS record missing,
-		// token mismatch, etc.) is intentionally not forwarded to the client
-		// to avoid leaking internal verification logic.
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "verification_failed",
-			Message: "Domain verification failed. Please check that the DNS TXT record has been set correctly and propagated, then try again.",
+			Message: err.Error(),
 		})
 		return
 	}

@@ -48,6 +48,7 @@ export default function CustomDomainsPage() {
   const [selectedDomain, setSelectedDomain] = useState<CustomDomain | null>(null);
   const [newDomain, setNewDomain] = useState('');
   const [error, setError] = useState('');
+  const [verifyError, setVerifyError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const authHeaders = useCallback(
@@ -116,21 +117,28 @@ export default function CustomDomainsPage() {
   };
 
   const handleVerify = async (id: number) => {
-    const res = await fetch(API_ENDPOINTS.domains.verify(id), {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.message ?? 'Verification failed');
-    } else {
-      alert('Domain verified!');
-      setModal(null);
-      await fetchDomains();
+    setVerifyError('');
+    setSubmitting(true);
+    try {
+      const res = await fetch(API_ENDPOINTS.domains.verify(id), {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setVerifyError(data.message ?? 'Verification failed. Please try again.');
+      } else {
+        setModal(null);
+        setVerifyError('');
+        await fetchDomains();
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const openVerifyModal = async (domain: CustomDomain) => {
+    setVerifyError('');
     // Fetch full domain details (including verification_key) from the dedicated endpoint
     try {
       const res = await fetch(API_ENDPOINTS.domains.verification(domain.id), { headers: authHeaders() });
@@ -404,9 +412,15 @@ export default function CustomDomainsPage() {
                 </p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mb-5">
+            <p className="text-xs text-muted-foreground mb-4">
               DNS changes can take up to 48 hours to propagate. Click &quot;Check Now&quot; once the record is set.
             </p>
+            {verifyError && (
+              <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2.5 mb-4">
+                <ExclamationTriangleIcon className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive">{verifyError}</p>
+              </div>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => setModal(null)}
@@ -416,9 +430,10 @@ export default function CustomDomainsPage() {
               </button>
               <button
                 onClick={() => handleVerify(selectedDomain.id)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
-                Check Now
+                {submitting ? 'Checking...' : 'Check Now'}
               </button>
             </div>
           </div>

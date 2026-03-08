@@ -297,13 +297,14 @@ func (d *DomainService) VerifyDomain(domainID int64, userID int64) error {
 		return nil // Already verified
 	}
 
-	// Try different verification methods
-	verified := d.verifyDNSRecord(domain.Domain, domain.VerificationKey) ||
-		d.verifyHTTPFile(domain.Domain, domain.VerificationKey) ||
-		d.verifyHTMLFile(domain.Domain, domain.VerificationKey)
-
-	if !verified {
-		return fmt.Errorf("domain verification failed: DNS TXT record or HTTP file not found")
+	// Try DNS verification first and capture a diagnostic message.
+	dnsOK, dnsDetail := d.checkDNSRecord(domain.Domain, domain.VerificationKey)
+	if !dnsOK {
+		// Fall back to HTTP-based verification methods.
+		if !d.verifyHTTPFile(domain.Domain, domain.VerificationKey) &&
+			!d.verifyHTMLFile(domain.Domain, domain.VerificationKey) {
+			return fmt.Errorf("%s", dnsDetail)
+		}
 	}
 
 	// Persist verification to DB
@@ -544,19 +545,32 @@ func (d *DomainService) createVerificationRecords(domainID int64, key string) er
 
 // Verification methods
 
-func (d *DomainService) verifyDNSRecord(domain, key string) bool {
-	// Check for TXT record at _urlshortener-verify subdomain
-	txtRecords, err := net.LookupTXT("_urlshortener-verify." + domain)
+// checkDNSRecord looks up the TXT record and returns (matched, diagnosticMessage).
+func (d *DomainService) checkDNSRecord(domain, key string) (bool, string) {
+	host := "_urlshortener-verify." + domain
+	txtRecords, err := net.LookupTXT(host)
 	if err != nil {
-		return false
+		return false, fmt.Sprintf(
+			"No TXT record found at %s — make sure you added the record and DNS has propagated (can take up to 48 h). Lookup error: %v",
+			host, err,
+		)
 	}
-
+	if len(txtRecords) == 0 {
+		return false, fmt.Sprintf(
+			"TXT record at %s exists but is empty. Add the verification value as the record content.",
+			host,
+		)
+	}
 	for _, record := range txtRecords {
 		if record == key {
-			return true
+			return true, ""
 		}
 	}
-	return false
+	return false, fmt.Sprintf(
+		"TXT record found at %s but the value does not match. Found: %q — Expected: %q. "+
+			"Copy the exact token from the Verify modal and set it as the record content.",
+		host, txtRecords[0], key,
+	)
 }
 
 func (d *DomainService) verifyHTTPFile(domain, key string) bool {
