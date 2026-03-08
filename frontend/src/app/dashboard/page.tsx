@@ -404,9 +404,12 @@ export default function DashboardPage() {
                 </div>
               </a>
             ) : (
-              <div className="bg-card border border-border rounded-lg p-5 flex items-start space-x-4 opacity-60">
-                <div className="p-2 bg-muted rounded-lg shrink-0">
-                  <SwatchIcon className="h-6 w-6 text-muted-foreground" />
+              <a
+                href="/billing"
+                className="bg-card border border-border rounded-lg p-5 flex items-start space-x-4 hover:border-primary/50 hover:shadow-md transition-all group"
+              >
+                <div className="p-2 bg-muted rounded-lg shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <SwatchIcon className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
@@ -417,7 +420,7 @@ export default function DashboardPage() {
                     Customize colors, logo, and company name
                   </p>
                 </div>
-              </div>
+              </a>
             )}
           </div>
 
