@@ -67,6 +67,15 @@ services:
       # AI Insights (OpenRouter — required for Ultra-plan AI features)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
 
+      # SMS — text.lk (Sri Lankan numbers)
+      - TEXTLK_API_KEY=${TEXTLK_API_KEY:-}
+      - TEXTLK_SENDER_ID=${TEXTLK_SENDER_ID:-TRUNC}
+
+      # SMS — Twilio (international numbers)
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_FROM_NUMBER=${TWILIO_FROM_NUMBER:-}
+
       # Admin Routes Configuration
       - ENABLE_ADMIN_ROUTES=true
 

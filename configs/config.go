@@ -72,6 +72,15 @@ type Config struct {
 	// AI Configuration (OpenRouter)
 	OpenRouterAPIKey string
 
+	// SMS — text.lk (Sri Lankan numbers, +94)
+	TextLKAPIKey   string
+	TextLKSenderID string
+
+	// SMS — Twilio (international numbers)
+	TwilioAccountSID  string
+	TwilioAuthToken   string
+	TwilioFromNumber  string
+
 	// Admin Panel Control
 	EnableAdminRoutes bool // Enable admin routes at /api/v1/admin/* (default: false for security)
 }
@@ -136,6 +145,15 @@ func LoadConfig() (*Config, error) {
 
 		// AI Configuration (OpenRouter)
 		OpenRouterAPIKey: getEnv("OPENROUTER_API_KEY", ""),
+
+		// SMS — text.lk (Sri Lankan numbers)
+		TextLKAPIKey:   getEnv("TEXTLK_API_KEY", ""),
+		TextLKSenderID: getEnv("TEXTLK_SENDER_ID", "TRUNC"),
+
+		// SMS — Twilio (international numbers)
+		TwilioAccountSID: getEnv("TWILIO_ACCOUNT_SID", ""),
+		TwilioAuthToken:  getEnv("TWILIO_AUTH_TOKEN", ""),
+		TwilioFromNumber: getEnv("TWILIO_FROM_NUMBER", ""),
 
 		// Admin Panel Control (default: false for security)
 		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
