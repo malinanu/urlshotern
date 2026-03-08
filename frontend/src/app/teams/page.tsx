@@ -13,6 +13,7 @@ import {
   LockClosedIcon,
   SparklesIcon,
   ClockIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -49,6 +50,16 @@ interface Team {
   created_at: string;
 }
 
+interface TeamLink {
+  id: number;
+  short_code: string;
+  short_url: string;
+  original_url: string;
+  click_count: number;
+  created_by?: number;
+  created_at: string;
+}
+
 function roleLabel(role: RoleObj | string | undefined): string {
   if (!role) return 'Member';
   if (typeof role === 'string') return role;
@@ -70,6 +81,8 @@ export default function TeamsPage() {
   const [inviteRole, setInviteRole] = useState('member');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [teamLinks, setTeamLinks] = useState<TeamLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(false);
 
   const isPro = user?.account_type === 'premium' || user?.account_type === 'enterprise';
 
@@ -109,6 +122,25 @@ export default function TeamsPage() {
   useEffect(() => {
     if (selectedTeam) fetchMembers(selectedTeam.id);
   }, [selectedTeam, fetchMembers]);
+
+  const fetchTeamLinks = useCallback(async (teamId: number) => {
+    setLinksLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/teams/${teamId}/links`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setTeamLinks(data.links ?? []);
+      } else {
+        setTeamLinks([]);
+      }
+    } finally {
+      setLinksLoading(false);
+    }
+  }, [authHeaders]);
+
+  useEffect(() => {
+    if (selectedTeam) fetchTeamLinks(selectedTeam.id);
+  }, [selectedTeam, fetchTeamLinks]);
 
   const handleCreateTeam = async () => {
     if (!teamName.trim()) return;
@@ -340,6 +372,63 @@ export default function TeamsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Shared Links */}
+                  <div className="mt-6 border-t border-border pt-4">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Shared Links
+                      </p>
+                    </div>
+                    {linksLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2].map(i => <div key={i} className="h-10 bg-muted rounded animate-pulse" />)}
+                      </div>
+                    ) : teamLinks.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No shared links yet. Create a link and assign it to this team.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-xs text-muted-foreground border-b border-border">
+                              <th className="text-left pb-2 font-medium">Short URL</th>
+                              <th className="text-left pb-2 font-medium hidden sm:table-cell">Destination</th>
+                              <th className="text-right pb-2 font-medium">Clicks</th>
+                              <th className="text-right pb-2 font-medium hidden sm:table-cell">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {teamLinks.map(link => (
+                              <tr key={link.id} className="border-b border-border last:border-0">
+                                <td className="py-2 pr-3">
+                                  <a
+                                    href={`/${link.short_code}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline font-mono text-xs"
+                                  >
+                                    /{link.short_code}
+                                  </a>
+                                </td>
+                                <td className="py-2 pr-3 hidden sm:table-cell max-w-[160px]">
+                                  <p className="truncate text-xs text-muted-foreground" title={link.original_url}>
+                                    {link.original_url}
+                                  </p>
+                                </td>
+                                <td className="py-2 text-right text-xs font-medium">{link.click_count}</td>
+                                <td className="py-2 text-right text-xs text-muted-foreground hidden sm:table-cell">
+                                  {new Date(link.created_at).toLocaleDateString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -242,7 +242,7 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 // RedirectURL handles URL redirection
 func (h *Handler) RedirectURL(c *gin.Context) {
 	shortCode := c.Param("shortCode")
-	
+
 	if shortCode == "" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_short_code",
@@ -251,8 +251,15 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 		return
 	}
 
-	// Get original URL
-	mapping, err := h.shortenerService.GetOriginalURL(shortCode)
+	// Check if request came in via a custom domain
+	var mapping *models.URLMapping
+	var err error
+	if domainHost, exists := c.Get("custom_domain_host"); exists {
+		mapping, err = h.shortenerService.GetOriginalURLByDomain(shortCode, domainHost.(string))
+	} else {
+		mapping, err = h.shortenerService.GetOriginalURL(shortCode)
+	}
+
 	if err != nil {
 		// Browser request → redirect to 404 page
 		if strings.Contains(c.GetHeader("Accept"), "text/html") {

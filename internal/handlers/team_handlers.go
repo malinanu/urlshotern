@@ -3,25 +3,41 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/URLshorter/url-shortener/internal/storage"
 )
+
+// TeamLinkResponse represents a URL in a team's shared link list.
+type TeamLinkResponse struct {
+	ID          int64      `json:"id"`
+	ShortCode   string     `json:"short_code"`
+	ShortURL    string     `json:"short_url"`
+	OriginalURL string     `json:"original_url"`
+	ClickCount  int64      `json:"click_count"`
+	CreatedBy   *int64     `json:"created_by,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+}
 
 type TeamHandlers struct {
 	teamService *services.TeamService
 	rbacService *services.RBACService
 	userService *services.UserService
+	db          *storage.PostgresStorage
 }
 
 // NewTeamHandlers creates new team handlers
-func NewTeamHandlers(teamService *services.TeamService, rbacService *services.RBACService, userService *services.UserService) *TeamHandlers {
+func NewTeamHandlers(teamService *services.TeamService, rbacService *services.RBACService, userService *services.UserService, db *storage.PostgresStorage) *TeamHandlers {
 	return &TeamHandlers{
 		teamService: teamService,
 		rbacService: rbacService,
 		userService: userService,
+		db:          db,
 	}
 }
 
@@ -869,5 +885,66 @@ func (h *TeamHandlers) TransferTeamOwnership(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Team ownership transferred successfully",
 		"team":    team,
+	})
+}
+
+// GetTeamLinks returns the shared URLs assigned to a team.
+// GET /api/v1/teams/:id/links
+func (h *TeamHandlers) GetTeamLinks(c *gin.Context) {
+	teamIDStr := c.Param("id")
+	teamID, err := strconv.ParseInt(teamIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_team_id", Message: "Invalid team ID"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{Error: "unauthorized", Message: "Authentication required"})
+		return
+	}
+
+	canAccess, err := h.teamService.UserCanAccessTeam(userID.(int64), teamID)
+	if err != nil || !canAccess {
+		c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "team_access_denied", Message: "You don't have access to this team"})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	links, total, err := h.db.GetTeamLinks(teamID, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "internal_error", Message: "Failed to fetch team links"})
+		return
+	}
+
+	result := make([]TeamLinkResponse, 0, len(links))
+	for _, m := range links {
+		result = append(result, TeamLinkResponse{
+			ID:          m.ID,
+			ShortCode:   m.ShortCode,
+			ShortURL:    c.Request.Host + "/" + m.ShortCode, // relative — frontend will prefix
+			OriginalURL: m.OriginalURL,
+			ClickCount:  m.ClickCount,
+			CreatedBy:   m.UserID,
+			CreatedAt:   m.CreatedAt,
+			ExpiresAt:   m.ExpiresAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"links":       result,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+		"total_pages": (total + int64(limit) - 1) / int64(limit),
 	})
 }

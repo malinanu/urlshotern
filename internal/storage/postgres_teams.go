@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 )
@@ -346,6 +347,60 @@ func (p *PostgresStorage) TeamMemberExists(teamID, userID int64) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+// GetTeamLinks returns url_mappings assigned to a team, paginated.
+func (p *PostgresStorage) GetTeamLinks(teamID int64, limit, offset int) ([]*models.URLMapping, int64, error) {
+	rows, err := p.Query(`
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
+		       created_by_ip, user_id, password_hash, og_title, og_description, og_image, twitter_card,
+		       custom_domain_id, team_id
+		FROM url_mappings
+		WHERE team_id = $1 AND is_active = TRUE
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`, teamID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get team links: %w", err)
+	}
+	defer rows.Close()
+
+	var links []*models.URLMapping
+	for rows.Next() {
+		m := &models.URLMapping{}
+		var expiresAt sql.NullTime
+		var createdByIP, passwordHash, ogTitle, ogDescription, ogImage, twitterCard sql.NullString
+		var userID, customDomainID, teamIDNull sql.NullInt64
+		if err := rows.Scan(
+			&m.ID, &m.ShortCode, &m.OriginalURL, &m.CreatedAt, &expiresAt, &m.ClickCount, &m.IsActive,
+			&createdByIP, &userID, &passwordHash, &ogTitle, &ogDescription, &ogImage, &twitterCard,
+			&customDomainID, &teamIDNull,
+		); err != nil {
+			return nil, 0, err
+		}
+		if expiresAt.Valid {
+			m.ExpiresAt = &expiresAt.Time
+		}
+		if createdByIP.Valid {
+			m.CreatedByIP = createdByIP.String
+		}
+		if userID.Valid {
+			m.UserID = &userID.Int64
+		}
+		if customDomainID.Valid {
+			m.CustomDomainID = &customDomainID.Int64
+		}
+		if teamIDNull.Valid {
+			m.TeamID = &teamIDNull.Int64
+		}
+		links = append(links, m)
+	}
+
+	var total int64
+	if err := p.QueryRow(`SELECT COUNT(*) FROM url_mappings WHERE team_id = $1 AND is_active = TRUE`, teamID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	return links, total, nil
 }
 
 // GetUserByEmail is exposed here as a thin wrapper so team service can resolve email → userID.

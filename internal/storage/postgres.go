@@ -180,8 +180,22 @@ func (p *PostgresStorage) initTables() error {
 	}
 
 	// Initialize enhanced analytics tables (depends on url_mappings and users)
+	// custom_domains and teams tables are created here
 	if err := p.initAdvancedAnalyticsTables(); err != nil {
 		return fmt.Errorf("failed to initialize advanced analytics tables: %w", err)
+	}
+
+	// Add custom_domain_id and team_id to url_mappings after custom_domains and teams exist
+	p6Queries := []string{
+		`ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS custom_domain_id INTEGER REFERENCES custom_domains(id) ON DELETE SET NULL`,
+		`ALTER TABLE url_mappings ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL`,
+		`CREATE INDEX IF NOT EXISTS idx_url_mappings_custom_domain ON url_mappings(custom_domain_id, short_code)`,
+		`CREATE INDEX IF NOT EXISTS idx_url_mappings_team ON url_mappings(team_id)`,
+	}
+	for _, q := range p6Queries {
+		if _, err := p.db.Exec(q); err != nil {
+			return fmt.Errorf("failed to execute p6 migration %s: %w", q, err)
+		}
 	}
 
 	// Initialize CMS tables (depends on users and media_files)
@@ -895,12 +909,13 @@ func (p *PostgresStorage) GetAIInsight(shortCode, insightType string) (*models.A
 // SaveURLMapping saves a URL mapping to the database
 func (p *PostgresStorage) SaveURLMapping(mapping *models.URLMapping) error {
 	query := `
-		INSERT INTO url_mappings (id, short_code, original_url, created_at, expires_at, created_by_ip, user_id, password_hash, og_title, og_description, og_image, twitter_card)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO url_mappings (id, short_code, original_url, created_at, expires_at, created_by_ip, user_id, password_hash, og_title, og_description, og_image, twitter_card, custom_domain_id, team_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err := p.db.Exec(query, mapping.ID, mapping.ShortCode, mapping.OriginalURL,
 		mapping.CreatedAt, mapping.ExpiresAt, mapping.CreatedByIP, mapping.UserID, mapping.PasswordHash,
-		mapping.OGTitle, mapping.OGDescription, mapping.OGImage, mapping.TwitterCard)
+		mapping.OGTitle, mapping.OGDescription, mapping.OGImage, mapping.TwitterCard,
+		mapping.CustomDomainID, mapping.TeamID)
 
 	if err != nil {
 		return fmt.Errorf("failed to save URL mapping: %w", err)
@@ -920,7 +935,7 @@ func (p *PostgresStorage) CountURLsByIP(ip string) (int64, error) {
 func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.URLMapping, error) {
 	query := `
 		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active, created_by_ip, user_id, password_hash,
-		       og_title, og_description, og_image, twitter_card
+		       og_title, og_description, og_image, twitter_card, custom_domain_id, team_id
 		FROM url_mappings
 		WHERE short_code = $1 AND is_active = TRUE
 	`
@@ -931,12 +946,14 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	var userID sql.NullInt64
 	var passwordHash sql.NullString
 	var ogTitle, ogDescription, ogImage, twitterCard sql.NullString
+	var customDomainID, teamID sql.NullInt64
 
 	err := p.db.QueryRow(query, shortCode).Scan(
 		&mapping.ID, &mapping.ShortCode, &mapping.OriginalURL,
 		&mapping.CreatedAt, &expiresAt, &mapping.ClickCount,
 		&mapping.IsActive, &createdByIP, &userID, &passwordHash,
 		&ogTitle, &ogDescription, &ogImage, &twitterCard,
+		&customDomainID, &teamID,
 	)
 
 	if err != nil {
@@ -970,8 +987,87 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	if twitterCard.Valid {
 		mapping.TwitterCard = &twitterCard.String
 	}
+	if customDomainID.Valid {
+		mapping.CustomDomainID = &customDomainID.Int64
+	}
+	if teamID.Valid {
+		mapping.TeamID = &teamID.Int64
+	}
 
 	// Check if URL has expired
+	if mapping.ExpiresAt != nil && mapping.ExpiresAt.Before(time.Now()) {
+		return nil, ErrURLExpired
+	}
+
+	return mapping, nil
+}
+
+// GetURLMappingByDomain retrieves a URL mapping by short code and custom domain hostname.
+// Used when the Host header indicates a custom domain request.
+func (p *PostgresStorage) GetURLMappingByDomain(shortCode, hostname string) (*models.URLMapping, error) {
+	query := `
+		SELECT um.id, um.short_code, um.original_url, um.created_at, um.expires_at, um.click_count,
+		       um.is_active, um.created_by_ip, um.user_id, um.password_hash,
+		       um.og_title, um.og_description, um.og_image, um.twitter_card, um.custom_domain_id, um.team_id
+		FROM url_mappings um
+		JOIN custom_domains cd ON um.custom_domain_id = cd.id
+		WHERE um.short_code = $1 AND cd.domain = $2 AND um.is_active = TRUE
+	`
+
+	mapping := &models.URLMapping{}
+	var expiresAt sql.NullTime
+	var createdByIP sql.NullString
+	var userID sql.NullInt64
+	var passwordHash sql.NullString
+	var ogTitle, ogDescription, ogImage, twitterCard sql.NullString
+	var customDomainID, teamID sql.NullInt64
+
+	err := p.db.QueryRow(query, shortCode, hostname).Scan(
+		&mapping.ID, &mapping.ShortCode, &mapping.OriginalURL,
+		&mapping.CreatedAt, &expiresAt, &mapping.ClickCount,
+		&mapping.IsActive, &createdByIP, &userID, &passwordHash,
+		&ogTitle, &ogDescription, &ogImage, &twitterCard,
+		&customDomainID, &teamID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrURLNotFound
+		}
+		return nil, fmt.Errorf("failed to get URL mapping by domain: %w", err)
+	}
+
+	if expiresAt.Valid {
+		mapping.ExpiresAt = &expiresAt.Time
+	}
+	if createdByIP.Valid {
+		mapping.CreatedByIP = createdByIP.String
+	}
+	if userID.Valid {
+		mapping.UserID = &userID.Int64
+	}
+	if passwordHash.Valid {
+		mapping.PasswordHash = &passwordHash.String
+	}
+	if ogTitle.Valid {
+		mapping.OGTitle = &ogTitle.String
+	}
+	if ogDescription.Valid {
+		mapping.OGDescription = &ogDescription.String
+	}
+	if ogImage.Valid {
+		mapping.OGImage = &ogImage.String
+	}
+	if twitterCard.Valid {
+		mapping.TwitterCard = &twitterCard.String
+	}
+	if customDomainID.Valid {
+		mapping.CustomDomainID = &customDomainID.Int64
+	}
+	if teamID.Valid {
+		mapping.TeamID = &teamID.Int64
+	}
+
 	if mapping.ExpiresAt != nil && mapping.ExpiresAt.Before(time.Now()) {
 		return nil, ErrURLExpired
 	}

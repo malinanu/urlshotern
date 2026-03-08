@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +27,19 @@ func SetupRoutes(
 	router.Use(middleware.CORSMiddleware())
 	router.Use(middleware.RequestIDMiddleware())
 	router.Use(middleware.LoggingMiddleware())
+
+	// Custom domain middleware — detects requests via custom hostnames
+	baseHost := extractBaseHost(config.BaseURL)
+	router.Use(func(c *gin.Context) {
+		host := c.Request.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		if host != baseHost && host != "localhost" && host != "" {
+			c.Set("custom_domain_host", host)
+		}
+		c.Next()
+	})
 
 	// Handle HEAD requests by converting them to GET requests
 	// This allows Next.js prefetching to work correctly
@@ -580,6 +595,7 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 		teams.DELETE("/:id/members/:memberID", handler.TeamHandlers.RemoveTeamMember)
 		teams.POST("/:id/leave", handler.TeamHandlers.LeaveTeam)
 		teams.POST("/:id/transfer-ownership", handler.TeamHandlers.TransferTeamOwnership)
+		teams.GET("/:id/links", handler.TeamHandlers.GetTeamLinks)
 	}
 	// Team invitation acceptance (public — token-based)
 	api.POST("/teams/invitations/accept", handler.TeamHandlers.AcceptTeamInvitation)
@@ -711,6 +727,15 @@ func setupStaticRoutes(router *gin.Engine) {
 			c.JSON(404, gin.H{"error": "API endpoint not found"})
 		}
 	})
+}
+
+// extractBaseHost parses a base URL and returns just the hostname (without port).
+func extractBaseHost(baseURL string) string {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return baseURL
+	}
+	return parsed.Hostname()
 }
 
 // setupUserAnalyticsRoutes configures user analytics routes

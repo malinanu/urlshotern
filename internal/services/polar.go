@@ -395,7 +395,7 @@ func (ps *PolarService) SyncProductsFromPolar() error {
 		}
 
 		// Determine plan type using multi-strategy detection
-		planType := ps.determinePlanType(product)
+		planType := ps.DeterminePlanType(product)
 
 		localProduct := models.PolarProduct{
 			ID:             product.ID,
@@ -422,8 +422,8 @@ func (ps *PolarService) SyncProductsFromPolar() error {
 	return nil
 }
 
-// determinePlanType uses multiple strategies to determine the plan type from a Polar product
-func (ps *PolarService) determinePlanType(product PolarProduct) string {
+// DeterminePlanType uses multiple strategies to determine the plan type from a Polar product
+func (ps *PolarService) DeterminePlanType(product PolarProduct) string {
 	// Strategy 1: Check metadata.plan_type (most reliable if set)
 	if product.Metadata != nil {
 		if planType, ok := product.Metadata["plan_type"].(string); ok && planType != "" {
@@ -617,16 +617,14 @@ func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
 		}
 	}
 
-	// 4. Derive plan_type (prefer metadata, fall back to existing)
+	// 4. Derive plan_type using full strategy chain (metadata → ID → name → price)
 	planType := localSub.PlanType
 	if product, err := ps.GetProduct(polarSub.ProductID); err == nil {
-		if pt, ok := product.Metadata["plan_type"].(string); ok && pt != "" {
-			planType = pt
-		}
+		planType = ps.DeterminePlanType(*product)
 	}
 
 	// 5. Update local DB
-	return ps.db.Model(&localSub).Updates(map[string]interface{}{
+	if err := ps.db.Model(&localSub).Updates(map[string]interface{}{
 		"polar_product_id":      polarSub.ProductID,
 		"polar_price_id":        polarSub.PriceID,
 		"status":                polarSub.Status,
@@ -635,5 +633,11 @@ func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
 		"current_period_start":  polarSub.CurrentPeriodStart,
 		"current_period_end":    polarSub.CurrentPeriodEnd,
 		"updated_at":            time.Now(),
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+
+	// 6. Sync account_type on users table
+	ps.db.Exec("UPDATE users SET account_type = $1, updated_at = NOW() WHERE id = $2", planType, userID)
+	return nil
 }

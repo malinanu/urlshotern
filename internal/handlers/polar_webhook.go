@@ -259,14 +259,15 @@ func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventD
 	}
 
 	// Determine plan type from product metadata or default mapping
-	planType := "premium" // default
+	planType := "premium" // fallback if product fetch fails
 	productID := checkout.ProductID
-	// You can add logic here to map product IDs to plan types
 
-	// Get product to extract benefits
+	// Get product to extract benefits and determine plan type
 	product, err := pwh.polarService.GetProduct(productID)
 	if err != nil {
 		log.Printf("Warning: failed to fetch product: %v", err)
+	} else {
+		planType = pwh.polarService.DeterminePlanType(*product)
 	}
 
 	// Convert benefits
@@ -346,10 +347,8 @@ func (pwh *PolarWebhookHandler) handleSubscriptionCreated(data json.RawMessage) 
 	benefits := make([]models.PolarBenefit, 0)
 
 	product, err := pwh.polarService.GetProduct(subscription.ProductID)
-	if err == nil && product.Metadata != nil {
-		if pt, ok := product.Metadata["plan_type"].(string); ok {
-			planType = pt
-		}
+	if err == nil {
+		planType = pwh.polarService.DeterminePlanType(*product)
 
 		// Extract benefits
 		for _, b := range product.Benefits {

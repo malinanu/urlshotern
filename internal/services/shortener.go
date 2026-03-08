@@ -132,21 +132,57 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 		twitterCard = &request.TwitterCard
 	}
 
+	// Validate and resolve custom domain if provided
+	shortURLBase := s.config.BaseURL
+	var customDomainID *int64
+	if request.DomainID != nil {
+		if userID == nil {
+			return nil, &ServiceError{Message: "authentication required to use custom domain"}
+		}
+		domain, err := s.db.GetCustomDomainByID(*request.DomainID)
+		if err != nil {
+			return nil, &ServiceError{Message: "custom domain not found"}
+		}
+		if domain.UserID != *userID {
+			return nil, &ServiceError{Message: "you do not own this domain"}
+		}
+		if !domain.IsVerified || !domain.IsActive {
+			return nil, &ServiceError{Message: "domain must be verified and active before use"}
+		}
+		shortURLBase = "https://" + domain.Domain
+		customDomainID = &domain.ID
+	}
+
+	// Validate team membership if provided
+	var teamID *int64
+	if request.TeamID != nil {
+		if userID == nil {
+			return nil, &ServiceError{Message: "authentication required to assign to a team"}
+		}
+		isMember, err := s.db.TeamMemberExists(*request.TeamID, *userID)
+		if err != nil || !isMember {
+			return nil, &ServiceError{Message: "you are not a member of this team"}
+		}
+		teamID = request.TeamID
+	}
+
 	// Create URL mapping
 	mapping := &models.URLMapping{
-		ID:            id,
-		ShortCode:     shortCode,
-		OriginalURL:   request.URL,
-		CreatedAt:     time.Now(),
-		ExpiresAt:     request.ExpiresAt,
-		IsActive:      true,
-		CreatedByIP:   clientIP,
-		UserID:        userID,
-		PasswordHash:  passwordHashPtr,
-		OGTitle:       ogTitle,
-		OGDescription: ogDescription,
-		OGImage:       ogImage,
-		TwitterCard:   twitterCard,
+		ID:             id,
+		ShortCode:      shortCode,
+		OriginalURL:    request.URL,
+		CreatedAt:      time.Now(),
+		ExpiresAt:      request.ExpiresAt,
+		IsActive:       true,
+		CreatedByIP:    clientIP,
+		UserID:         userID,
+		PasswordHash:   passwordHashPtr,
+		OGTitle:        ogTitle,
+		OGDescription:  ogDescription,
+		OGImage:        ogImage,
+		TwitterCard:    twitterCard,
+		CustomDomainID: customDomainID,
+		TeamID:         teamID,
 	}
 
 	// Save to database
@@ -162,19 +198,24 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 			cacheTTL = timeUntilExpiry
 		}
 	}
-	
+
 	s.redis.SetURLMapping(shortCode, mapping, cacheTTL)
 
 	// Create response
 	response := &models.ShortenResponse{
 		ShortCode:   shortCode,
-		ShortURL:    fmt.Sprintf("%s/%s", s.config.BaseURL, shortCode),
+		ShortURL:    fmt.Sprintf("%s/%s", shortURLBase, shortCode),
 		OriginalURL: request.URL,
 		CreatedAt:   mapping.CreatedAt,
 		ExpiresAt:   mapping.ExpiresAt,
 	}
 
 	return response, nil
+}
+
+// GetOriginalURLByDomain retrieves a URL mapping by short code and custom domain hostname.
+func (s *ShortenerService) GetOriginalURLByDomain(shortCode, hostname string) (*models.URLMapping, error) {
+	return s.db.GetURLMappingByDomain(shortCode, hostname)
 }
 
 // GetOriginalURL retrieves the original URL for a short code

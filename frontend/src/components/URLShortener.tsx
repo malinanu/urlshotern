@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,6 +30,21 @@ interface URLShortenerProps {
   onUrlCreated?: (url: ShortenedURL) => void;
 }
 
+interface CustomDomain {
+  id: number;
+  domain: string;
+  is_verified: boolean;
+  is_active: boolean;
+}
+
+interface Team {
+  id: number;
+  name: string;
+  display_name?: string;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
   const [shortenedURL, setShortenedURL] = useState<ShortenedURL | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +57,34 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
   const [ogTitle, setOgTitle] = useState('');
   const [ogDescription, setOgDescription] = useState('');
   const [ogImage, setOgImage] = useState('');
+  const [domains, setDomains] = useState<CustomDomain[]>([]);
+  const [selectedDomainID, setSelectedDomainID] = useState<number | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamID, setSelectedTeamID] = useState<number | null>(null);
   const { user, getAccessToken, isAuthenticated, refreshToken } = useAuth();
 
   const isPro = user?.account_type === 'premium' || user?.account_type === 'enterprise';
+
+  useEffect(() => {
+    if (!isPro) return;
+    const token = getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    // Fetch verified custom domains
+    fetch(`${API_BASE_URL}/api/v1/custom-domains/`, { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.domains) {
+          setDomains((data.domains as CustomDomain[]).filter(d => d.is_verified && d.is_active));
+        }
+      })
+      .catch(() => {});
+    // Fetch teams
+    fetch(`${API_BASE_URL}/api/v1/teams`, { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.teams) setTeams(data.teams as Team[]); })
+      .catch(() => {});
+  }, [isPro, getAccessToken]);
 
   const {
     register,
@@ -71,12 +111,14 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const body: Record<string, string> = { url: data.url };
+      const body: Record<string, unknown> = { url: data.url };
       if (isPro && customCode.trim()) body.custom_code = customCode.trim();
       if (isPro && password.trim()) body.password = password.trim();
       if (isPro && ogTitle.trim()) body.og_title = ogTitle.trim();
       if (isPro && ogDescription.trim()) body.og_description = ogDescription.trim();
       if (isPro && ogImage.trim()) body.og_image = ogImage.trim();
+      if (isPro && selectedDomainID) body.domain_id = selectedDomainID;
+      if (isPro && selectedTeamID) body.team_id = selectedTeamID;
 
       const response = await fetch(API_ENDPOINTS.urls.shorten, {
         method: 'POST',
@@ -135,6 +177,8 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
       setOgTitle('');
       setOgDescription('');
       setOgImage('');
+      setSelectedDomainID(null);
+      setSelectedTeamID(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -232,6 +276,40 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                         className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
                     </div>
+                    {domains.length > 0 && (
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          Custom domain <span className="text-muted-foreground">(optional)</span>
+                        </label>
+                        <select
+                          value={selectedDomainID ?? ''}
+                          onChange={(e) => setSelectedDomainID(e.target.value ? Number(e.target.value) : null)}
+                          className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value="">Default (trunc.site)</option>
+                          {domains.map(d => (
+                            <option key={d.id} value={d.id}>{d.domain}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {teams.length > 0 && (
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          Assign to team <span className="text-muted-foreground">(optional)</span>
+                        </label>
+                        <select
+                          value={selectedTeamID ?? ''}
+                          onChange={(e) => setSelectedTeamID(e.target.value ? Number(e.target.value) : null)}
+                          className="w-full px-3 py-2 text-sm border border-input bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value="">No team</option>
+                          {teams.map(t => (
+                            <option key={t.id} value={t.id}>{t.display_name || t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground font-medium">Open Graph / Social preview</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
