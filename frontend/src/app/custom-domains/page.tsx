@@ -136,8 +136,14 @@ export default function CustomDomainsPage() {
       const res = await fetch(API_ENDPOINTS.domains.verification(domain.id), { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
-        // Merge the verification key into the selected domain object
-        setSelectedDomain({ ...domain, verification_key: data.verification_key ?? data.key });
+        // Merge the verification key into the selected domain object.
+        // Root-level verification_key added in backend; fall back to DNS method value.
+        const key =
+          data.verification_key ??
+          data.key ??
+          (data.verification_methods as { type: string; value: string }[] | undefined)
+            ?.find((m) => m.type === 'dns')?.value;
+        setSelectedDomain({ ...domain, verification_key: key });
       } else {
         setSelectedDomain(domain);
       }

@@ -274,6 +274,7 @@ func (d *DomainService) GetDomainVerificationInfo(domainID int64) (*models.Domai
 
 	return &models.DomainVerificationResponse{
 		Domain:              domain.Domain,
+		VerificationKey:     domain.VerificationKey,
 		Status:              "pending",
 		Instructions:        "Complete one of the verification methods below",
 		VerificationMethods: methods,

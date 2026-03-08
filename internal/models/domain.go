@@ -85,10 +85,11 @@ type UpdateDomainRequest struct {
 
 // DomainVerificationResponse represents domain verification instructions
 type DomainVerificationResponse struct {
-	Domain            string                    `json:"domain"`
-	VerificationMethods []VerificationMethod    `json:"verification_methods"`
-	Status            string                    `json:"status"`
-	Instructions      string                    `json:"instructions"`
+	Domain              string               `json:"domain"`
+	VerificationKey     string               `json:"verification_key"`
+	VerificationMethods []VerificationMethod `json:"verification_methods"`
+	Status              string               `json:"status"`
+	Instructions        string               `json:"instructions"`
 }
 
 // VerificationMethod represents a domain verification method
