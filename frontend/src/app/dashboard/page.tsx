@@ -545,7 +545,7 @@ export default function DashboardPage() {
                               <QrCodeIcon className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => setEditingUrl(url)}
+                              onClick={() => { setEditingUrl(url); setEditError(null); }}
                               aria-label="Edit URL"
                               className="p-1 text-primary hover:text-primary/80 transition-colors"
                               title="Edit URL"
@@ -579,23 +579,61 @@ export default function DashboardPage() {
       {/* Edit URL Modal */}
       {editingUrl && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Edit URL</h3>
+          <div className="bg-card border border-border rounded-lg w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Edit URL</h3>
+                <span className="text-xs font-mono bg-muted px-2 py-1 rounded text-muted-foreground">
+                  {editingUrl.short_code}
+                </span>
+              </div>
+            </div>
+
             <form
+              className="flex flex-col flex-1 min-h-0"
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
+                const originalUrl = formData.get('original_url') as string;
+                const expiresAtRaw = formData.get('expires_at') as string;
                 const teamIdRaw = formData.get('team_id') as string;
+
+                if (!originalUrl || (!originalUrl.startsWith('http://') && !originalUrl.startsWith('https://'))) {
+                  setEditError('Destination URL must start with http:// or https://');
+                  return;
+                }
+
                 const updates = {
-                  title: formData.get('title') as string || undefined,
-                  description: formData.get('description') as string || undefined,
+                  original_url: originalUrl,
+                  title: (formData.get('title') as string) || undefined,
+                  description: (formData.get('description') as string) || undefined,
                   is_public: formData.get('is_public') === 'on',
-                  team_id: teamIdRaw === '' ? null : Number(teamIdRaw) === 0 ? 0 : Number(teamIdRaw),
+                  expires_at: expiresAtRaw ? new Date(expiresAtRaw).toISOString() : null,
+                  ...(userTeams.length > 0 && {
+                    team_id: teamIdRaw === '' ? null : Number(teamIdRaw),
+                  }),
                 };
                 updateURL(editingUrl.short_code, updates);
               }}
             >
-              <div className="space-y-4">
+              <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+                {/* Destination URL */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Destination URL <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    name="original_url"
+                    required
+                    defaultValue={editingUrl.original_url}
+                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="https://example.com/your-page"
+                  />
+                </div>
+
+                {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     Title (optional)
@@ -609,6 +647,7 @@ export default function DashboardPage() {
                   />
                 </div>
 
+                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     Description (optional)
@@ -616,24 +655,45 @@ export default function DashboardPage() {
                   <textarea
                     name="description"
                     defaultValue={editingUrl.description || ''}
-                    rows={3}
+                    rows={2}
                     className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter a description for your URL"
                   />
                 </div>
 
+                {/* Expiry date */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    Expiry date (optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="expires_at"
+                    defaultValue={
+                      editingUrl.expires_at
+                        ? new Date(editingUrl.expires_at).toISOString().slice(0, 16)
+                        : ''
+                    }
+                    className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Leave blank to never expire.</p>
+                </div>
+
+                {/* Is Public */}
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     name="is_public"
+                    id="edit-is-public"
                     defaultChecked={editingUrl.is_public}
                     className="mr-2 border-input text-primary bg-background focus:ring-primary"
                   />
-                  <label className="text-sm text-foreground">
+                  <label htmlFor="edit-is-public" className="text-sm text-foreground">
                     Make this URL publicly visible
                   </label>
                 </div>
 
+                {/* Team */}
                 {userTeams.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
@@ -641,7 +701,7 @@ export default function DashboardPage() {
                     </label>
                     <select
                       name="team_id"
-                      defaultValue={editingUrl.team_id ?? ''}
+                      defaultValue={editingUrl.team_id ?? '0'}
                       className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="0">No team</option>
@@ -651,12 +711,20 @@ export default function DashboardPage() {
                     </select>
                   </div>
                 )}
+
+                {/* Inline error */}
+                {editError && (
+                  <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                    {editError}
+                  </p>
+                )}
               </div>
 
-              <div className="flex space-x-3 mt-6">
+              {/* Footer */}
+              <div className="px-6 pb-6 pt-4 border-t border-border shrink-0 flex space-x-3">
                 <button
                   type="button"
-                  onClick={() => setEditingUrl(null)}
+                  onClick={() => { setEditingUrl(null); setEditError(null); }}
                   className="flex-1 px-4 py-2 border border-input text-foreground rounded-md hover:bg-muted"
                 >
                   Cancel
@@ -665,7 +733,7 @@ export default function DashboardPage() {
                   type="submit"
                   className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
                 >
-                  Update
+                  Save changes
                 </button>
               </div>
             </form>
