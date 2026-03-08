@@ -98,7 +98,7 @@ var PredefinedPlans = map[string]Plan{
 	},
 	"premium": {
 		ID:          "premium",
-		Name:        "Pro",
+		Name:        "Premium",
 		Description: "For professionals and small teams",
 		Price:       9.99,
 		Currency:    "usd",
@@ -131,7 +131,7 @@ var PredefinedPlans = map[string]Plan{
 	},
 	"enterprise": {
 		ID:          "enterprise",
-		Name:        "Ultra",
+		Name:        "Enterprise",
 		Description: "For large organizations",
 		Price:       49.99,
 		Currency:    "usd",
