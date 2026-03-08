@@ -753,6 +753,11 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 			created_at          TIMESTAMPTZ DEFAULT NOW(),
 			updated_at          TIMESTAMPTZ DEFAULT NOW()
 		)`,
+		// ALTER TABLE ensures columns added after migration 016 exist on older DBs.
+		`ALTER TABLE custom_domains ADD COLUMN IF NOT EXISTS ssl_status    VARCHAR(20) DEFAULT 'pending'`,
+		`ALTER TABLE custom_domains ADD COLUMN IF NOT EXISTS dns_status    VARCHAR(20) DEFAULT 'pending'`,
+		`ALTER TABLE custom_domains ADD COLUMN IF NOT EXISTS health_status VARCHAR(20) DEFAULT 'unknown'`,
+		`ALTER TABLE custom_domains ADD COLUMN IF NOT EXISTS last_health_check TIMESTAMPTZ`,
 		`CREATE INDEX IF NOT EXISTS idx_custom_domains_user_id ON custom_domains(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_custom_domains_domain  ON custom_domains(domain)`,
 		`CREATE INDEX IF NOT EXISTS idx_custom_domains_verified ON custom_domains(is_verified)`,

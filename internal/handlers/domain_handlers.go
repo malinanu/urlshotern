@@ -47,26 +47,31 @@ func (h *DomainHandlers) CreateDomain(c *gin.Context) {
 
 	domain, err := h.domainService.CreateDomain(&req, userID.(int64))
 	if err != nil {
-		if err.Error() == "domain already exists" {
+		switch err.Error() {
+		case "domain already exists":
 			c.JSON(http.StatusConflict, models.ErrorResponse{
 				Error:   "domain_exists",
 				Message: "Domain is already registered",
 			})
-			return
-		}
-
-		if err.Error() == "domain limit reached for your account type" {
+		case "domain limit reached for your account type":
 			c.JSON(http.StatusForbidden, models.ErrorResponse{
 				Error:   "domain_limit_reached",
 				Message: "You have reached the domain limit for your account type",
 			})
-			return
+		case "invalid domain length", "IP addresses are not allowed as custom domains",
+			"invalid domain format", "domain must include at least one dot (e.g. links.example.com)",
+			"invalid domain label length", "domain uses a reserved or internal TLD",
+			"localhost is not allowed as a custom domain":
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error:   "invalid_domain",
+				Message: err.Error(),
+			})
+		default:
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error:   "create_domain_failed",
+				Message: "Failed to create domain",
+			})
 		}
-
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error:   "create_domain_failed",
-			Message: "Failed to create domain",
-		})
 		return
 	}
 

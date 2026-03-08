@@ -583,7 +583,7 @@ export default function ContactPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground/50 font-semibold px-8 py-6 text-lg backdrop-blur-sm transition-all duration-300"
+                className="bg-transparent border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground/50 hover:text-primary-foreground font-semibold px-8 py-6 text-lg backdrop-blur-sm transition-all duration-300"
                 asChild
               >
                 <a href={ctaBottom.cta_secondary.url}>{ctaBottom.cta_secondary.text}</a>
