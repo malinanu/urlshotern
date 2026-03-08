@@ -54,6 +54,7 @@ func SetupRoutes(
 	commonStaticFiles := []string{
 		"/manifest.json", "/robots.txt", "/sitemap.xml",
 		"/favicon.ico", "/sw.js", "/apple-touch-icon.png",
+		"/google26c27f314cce952a.html",
 	}
 	for _, file := range commonStaticFiles {
 		filePath := file // Capture for closure
