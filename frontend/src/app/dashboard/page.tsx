@@ -6,6 +6,7 @@ import Layout from '@/components/layout/Layout';
 import URLShortener from '@/components/URLShortener';
 import { useAuth } from '@/contexts/AuthContext';
 import { QRCodeModal } from '@/components/QRCode';
+import { getCached, setCached } from '@/lib/prefetch-cache';
 import {
   ChartBarIcon,
   LinkIcon,
@@ -47,10 +48,13 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading, getAccessToken, refreshToken } = useAuth();
-  const [urls, setUrls] = useState<URLData[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loadingUrls, setLoadingUrls] = useState(true);
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [urls, setUrls] = useState<URLData[]>(() => {
+    const cached = getCached<{ urls: URLData[] }>('dashboard:urls');
+    return cached?.urls ?? [];
+  });
+  const [stats, setStats] = useState<DashboardStats | null>(() => getCached<DashboardStats>('dashboard:stats'));
+  const [loadingUrls, setLoadingUrls] = useState(getCached('dashboard:urls') === null);
+  const [loadingStats, setLoadingStats] = useState(getCached('dashboard:stats') === null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [editingUrl, setEditingUrl] = useState<URLData | null>(null);
   const [qrModalUrl, setQrModalUrl] = useState<URLData | null>(null);
@@ -100,8 +104,8 @@ export default function DashboardPage() {
     };
 
     try {
-      setLoadingUrls(true);
-      setLoadingStats(true);
+      if (getCached('dashboard:urls') === null) setLoadingUrls(true);
+      if (getCached('dashboard:stats') === null) setLoadingStats(true);
 
       // Fetch user's URLs from backend
       const urlsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/my-urls`);
@@ -109,6 +113,7 @@ export default function DashboardPage() {
       if (urlsResponse && urlsResponse.ok) {
         const urlsData = await urlsResponse.json();
         setUrls(urlsData.urls || []);
+        setCached('dashboard:urls', urlsData);
       } else if (urlsResponse) {
         console.error('Failed to fetch URLs:', urlsResponse.status);
       }
@@ -119,6 +124,7 @@ export default function DashboardPage() {
       if (statsResponse && statsResponse.ok) {
         const statsData = await statsResponse.json();
         setStats(statsData);
+        setCached('dashboard:stats', statsData);
       } else if (statsResponse) {
         console.error('Failed to fetch stats:', statsResponse.status);
       }

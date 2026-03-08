@@ -6,12 +6,35 @@ import { useRouter } from 'next/navigation';
 import { Bars3Icon, XMarkIcon, LinkIcon, ChevronDownIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import ThemeToggle from '@/components/ThemeToggle';
+import {
+  prefetchDashboard,
+  prefetchAnalytics,
+  prefetchBilling,
+  prefetchSettings,
+  prefetchApiKeys,
+} from '@/lib/page-prefetchers';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const { user, isAuthenticated, logout, isLoading, getAccessToken } = useAuth();
   const router = useRouter();
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+  const handlePrefetch = (href: string) => {
+    router.prefetch(href);
+    const token = getAccessToken();
+    if (!token) return;
+    const prefetchers: Record<string, () => void> = {
+      '/dashboard': () => prefetchDashboard(token, API_BASE_URL),
+      '/analytics':  () => prefetchAnalytics(token, API_BASE_URL),
+      '/billing':    () => prefetchBilling(token, API_BASE_URL),
+      '/settings':   () => prefetchSettings(token, API_BASE_URL),
+      '/api-keys':   () => prefetchApiKeys(token, API_BASE_URL),
+    };
+    prefetchers[href]?.();
+  };
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const navigation = [
@@ -93,6 +116,7 @@ export default function Header() {
                       href="/dashboard"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/dashboard')}
                     >
                       Dashboard
                     </Link>
@@ -100,6 +124,7 @@ export default function Header() {
                       href="/analytics"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/analytics')}
                     >
                       Analytics
                     </Link>
@@ -114,6 +139,7 @@ export default function Header() {
                       href="/api-keys"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/api-keys')}
                     >
                       API Keys
                     </Link>
@@ -135,6 +161,7 @@ export default function Header() {
                       href="/settings"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
                       onClick={() => setIsProfileMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/settings')}
                     >
                       Settings
                     </Link>
@@ -209,6 +236,7 @@ export default function Header() {
                       href="/dashboard"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/dashboard')}
                     >
                       Dashboard
                     </Link>
@@ -216,6 +244,7 @@ export default function Header() {
                       href="/analytics"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/analytics')}
                     >
                       Analytics
                     </Link>
@@ -230,6 +259,7 @@ export default function Header() {
                       href="/api-keys"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/api-keys')}
                     >
                       API Keys
                     </Link>
@@ -251,6 +281,7 @@ export default function Header() {
                       href="/settings"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
                       onClick={() => setIsMenuOpen(false)}
+                      onMouseEnter={() => handlePrefetch('/settings')}
                     >
                       Settings
                     </Link>

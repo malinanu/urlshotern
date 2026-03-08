@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { getProducts, PolarProduct, formatPrice } from '@/lib/polar';
 import { getPlanDisplayName } from '@/lib/plan-utils';
+import { getCached, setCached } from '@/lib/prefetch-cache';
 
 interface Plan {
   id: string;
@@ -74,9 +75,12 @@ interface BillingData {
 function BillingContent() {
   const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const searchParams = useSearchParams();
-  const [billingData, setBillingData] = useState<BillingData | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [billingData, setBillingData] = useState<BillingData | null>(() => getCached<BillingData>('billing:sub'));
+  const [plans, setPlans] = useState<Plan[]>(() => {
+    const cached = getCached<{ plans: Plan[] }>('billing:products');
+    return cached?.plans ?? [];
+  });
+  const [loading, setLoading] = useState(getCached('billing:sub') === null);
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>(
@@ -134,7 +138,7 @@ function BillingContent() {
     if (!token) return;
 
     try {
-      setLoading(true);
+      if (getCached('billing:sub') === null) setLoading(true);
 
       // Silently sync subscription from Polar (fixes stale billing_cycle after plan upgrade)
       fetch(API_ENDPOINTS.billing.refreshSubscription, {
@@ -162,11 +166,13 @@ function BillingContent() {
       if (usageResponse.ok) {
         const usageData = await usageResponse.json();
         setBillingData(usageData);
+        setCached('billing:sub', usageData);
       }
 
       if (plansResponse.ok) {
         const plansData = await plansResponse.json();
         setPlans(plansData.plans || []);
+        setCached('billing:products', plansData);
       }
 
       setPolarProducts(products);

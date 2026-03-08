@@ -7,6 +7,7 @@ import RealTimeAnalytics from '@/components/analytics/RealTimeAnalytics';
 import AdvancedAnalytics from '@/components/analytics/AdvancedAnalytics';
 import { AIInsightsPanel } from '@/components/analytics/AIInsightsPanel';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCached, setCached } from '@/lib/prefetch-cache';
 import {
   ChartBarIcon,
   PresentationChartLineIcon,
@@ -18,8 +19,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 function AnalyticsContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [selectedShortCode, setSelectedShortCode] = useState<string>('');
-  const [userUrls, setUserUrls] = useState<any[]>([]);
+  const [userUrls, setUserUrls] = useState<any[]>(() => {
+    const cached = getCached<{ urls: any[] }>('analytics:urls');
+    return cached?.urls ?? [];
+  });
+  const [selectedShortCode, setSelectedShortCode] = useState<string>(() => {
+    const cached = getCached<{ urls: any[] }>('analytics:urls');
+    return cached?.urls?.[0]?.short_code ?? '';
+  });
   const [activeView, setActiveView] = useState<'realtime' | 'advanced' | 'ai'>('realtime');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,6 +63,7 @@ function AnalyticsContent() {
         if (response.ok) {
           const data = await response.json();
           setUserUrls(data.urls || []);
+          setCached('analytics:urls', data);
 
           // If no shortCode selected and we have URLs, select the first one
           if (!selectedShortCode && data.urls && data.urls.length > 0) {
