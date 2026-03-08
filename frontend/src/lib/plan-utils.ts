@@ -8,6 +8,6 @@ export function getPlanDisplayName(planType: string, polarProducts?: any[]): str
     );
     if (match) return match.name;
   }
-  const fallback: Record<string, string> = { premium: 'Pro', enterprise: 'Ultra', free: 'Free' };
+  const fallback: Record<string, string> = { premium: 'Premium', enterprise: 'Enterprise', free: 'Free' };
   return fallback[planType] ?? planType;
 }

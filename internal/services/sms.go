@@ -14,6 +14,7 @@ import (
 	"github.com/URLshorter/url-shortener/configs"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
+	"github.com/google/uuid"
 )
 
 type SMSService struct {
@@ -38,6 +39,7 @@ func (s *SMSService) SendOTP(userID int64, phone string) (*models.PhoneVerificat
 	}
 
 	verification := &models.PhoneVerification{
+		ID:        uuid.New(),
 		UserID:    userID,
 		Phone:     phone,
 		OTPCode:   otp,
@@ -254,10 +256,11 @@ func (s *SMSService) generateOTP() (string, error) {
 // ── DB methods ────────────────────────────────────────────────────────────────
 
 func (s *SMSService) CreatePhoneVerification(verification *models.PhoneVerification) error {
-	query := `INSERT INTO phone_verifications (user_id, phone, otp_code, attempts, expires_at, created_at)
-	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
-	return s.db.QueryRow(query, verification.UserID, verification.Phone, verification.OTPCode,
-		verification.Attempts, verification.ExpiresAt, verification.CreatedAt).Scan(&verification.ID)
+	query := `INSERT INTO phone_verifications (id, user_id, phone, otp_code, attempts, expires_at, created_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := s.db.Exec(query, verification.ID, verification.UserID, verification.Phone, verification.OTPCode,
+		verification.Attempts, verification.ExpiresAt, verification.CreatedAt)
+	return err
 }
 
 func (s *SMSService) GetLatestPhoneVerification(userID int64) (*models.PhoneVerification, error) {
