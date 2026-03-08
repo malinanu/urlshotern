@@ -23,20 +23,19 @@ interface Coupon {
 function discountLabel(coupon: Coupon): string {
     if (coupon.discount_type === 'percentage') return `${coupon.discount_value}% off`;
     if (coupon.discount_type === 'fixed') return `$${coupon.discount_value} off`;
-    if (coupon.discount_type === 'free_months') return `${coupon.discount_value} month${coupon.discount_value !== 1 ? 's' : ''} free`;
     return String(coupon.discount_value);
 }
 
 function valueLabel(type: string): string {
     if (type === 'percentage') return 'Percentage (1–100, e.g. 20 = 20% off)';
     if (type === 'fixed') return 'Amount in USD (e.g. 5 = $5 off)';
-    return 'Number of months free';
+    return 'Value';
 }
 
 function valuePlaceholder(type: string): string {
     if (type === 'percentage') return 'e.g. 20';
     if (type === 'fixed') return 'e.g. 5';
-    return 'e.g. 3';
+    return 'e.g. 10';
 }
 
 export default function AdminCouponsPage() {
@@ -234,7 +233,6 @@ export default function AdminCouponsPage() {
                                     >
                                         <option value="percentage">Percentage Off — synced to Polar</option>
                                         <option value="fixed">Fixed Amount Off (USD) — synced to Polar</option>
-                                        <option value="free_months">Free Months — handled locally</option>
                                     </select>
                                 </div>
                                 <div>
@@ -294,9 +292,7 @@ export default function AdminCouponsPage() {
                                         {discountLabel(coupon)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {coupon.discount_type === 'free_months' ? (
-                                            <span className="text-xs text-muted-foreground">Local only</span>
-                                        ) : coupon.polar_discount_id ? (
+                                        {coupon.polar_discount_id ? (
                                             <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
                                                 <CheckCircleIcon className="h-3.5 w-3.5" />
                                                 Synced

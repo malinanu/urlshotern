@@ -12,7 +12,7 @@ type Coupon struct {
 	Code               string         `json:"code" gorm:"uniqueIndex;not null;type:varchar(50)"`
 	Name               string         `json:"name" gorm:"not null;type:varchar(100)"`
 	Description        string         `json:"description" gorm:"type:text"`
-	DiscountType       string         `json:"discount_type" gorm:"not null;type:varchar(20)"` // free_months, percentage, fixed
+	DiscountType       string         `json:"discount_type" gorm:"not null;type:varchar(20)"` // percentage, fixed
 	DiscountValue      int            `json:"discount_value" gorm:"not null"` // number of months, percentage (1-100), or fixed amount in cents
 	Currency           string         `json:"currency" gorm:"default:'usd';type:varchar(3)"`
 	MaxRedemptions     *int           `json:"max_redemptions,omitempty"`

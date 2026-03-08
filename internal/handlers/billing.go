@@ -212,26 +212,7 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 			return
 		}
 
-		if coupon.DiscountType == "free_months" {
-			// Bypass Polar checkout
-			err := bh.billingService.RedeemFreeMonths(userID, planType, coupon)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":   "Failed to redeem discount code",
-					"details": err.Error(),
-				})
-				return
-			}
-
-			// Return the success URL as the checkout URL so the frontend redirects there
-			c.JSON(http.StatusOK, gin.H{
-				"checkout_url": req.SuccessURL,
-				"is_free_bypass": true,
-			})
-			return
-		}
-
-		// For percentage or fixed discounts, pass the polar ID
+		// Pass the polar discount ID for percentage or fixed discounts
 		if coupon.PolarDiscountID != nil && *coupon.PolarDiscountID != "" {
 			polarDiscountID = coupon.PolarDiscountID
 		}

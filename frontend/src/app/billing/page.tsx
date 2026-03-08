@@ -71,7 +71,7 @@ interface BillingData {
 }
 
 function BillingContent() {
-  const { user, isAuthenticated, isLoading, getAccessToken, refreshToken } = useAuth();
+  const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const searchParams = useSearchParams();
   const [billingData, setBillingData] = useState<BillingData | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -294,12 +294,7 @@ function BillingContent() {
 
       if (response.ok) {
         const data = await response.json();
-        // Check if bypass was successful
-        if (data.is_free_bypass) {
-          // Refresh JWT so the new account_type is embedded before redirect
-          await refreshToken();
-          window.location.href = data.checkout_url; // which maps to successURL
-        } else if (data.checkout_url) {
+        if (data.checkout_url) {
           window.location.href = data.checkout_url;
         } else {
           console.error('Failed to create checkout session, no URL returned');

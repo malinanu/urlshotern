@@ -32,7 +32,7 @@ func (h *AdminCouponHandlers) ListCoupons(c *gin.Context) {
 }
 
 // buildPolarPayload constructs the Polar CreateDiscountPayload from a coupon.
-// Returns nil if the coupon type doesn't require Polar sync (e.g. free_months).
+// Returns nil for unrecognised discount types.
 func buildPolarPayload(coupon *models.Coupon) *services.CreateDiscountPayload {
 	if coupon.DiscountType != "percentage" && coupon.DiscountType != "fixed" {
 		return nil
@@ -109,7 +109,7 @@ func (h *AdminCouponHandlers) SyncToPolar(c *gin.Context) {
 
 	payload := buildPolarPayload(&coupon)
 	if payload == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Coupon type 'free_months' does not sync to Polar"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Coupon type does not support Polar sync"})
 		return
 	}
 
