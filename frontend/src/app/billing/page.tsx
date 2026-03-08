@@ -226,6 +226,13 @@ function BillingContent() {
 
     setUpgrading(planId);
 
+    // Downgrading to Free = cancelling the active subscription, not a checkout
+    if (planId === 'free' || planId.startsWith('free')) {
+      setUpgrading(null);
+      await handleCancelSubscription();
+      return;
+    }
+
     try {
       const basePlanType = planId.replace('_yearly', '');
 
