@@ -673,9 +673,11 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">Receive important updates about your account</p>
                         </div>
                         <input
-                          {...preferencesForm.register('emailNotifications')}
+                          id="emailNotifications"
                           type="checkbox"
-                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
+                          checked={preferencesForm.watch('emailNotifications')}
+                          onChange={(e) => preferencesForm.setValue('emailNotifications', e.target.checked, { shouldDirty: true })}
+                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded cursor-pointer"
                         />
                       </div>
 
@@ -687,9 +689,11 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">Receive product updates and promotional content</p>
                         </div>
                         <input
-                          {...preferencesForm.register('marketingEmails')}
+                          id="marketingEmails"
                           type="checkbox"
-                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
+                          checked={preferencesForm.watch('marketingEmails')}
+                          onChange={(e) => preferencesForm.setValue('marketingEmails', e.target.checked, { shouldDirty: true })}
+                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded cursor-pointer"
                         />
                       </div>
 
@@ -701,9 +705,11 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">Allow others to view click statistics for your URLs</p>
                         </div>
                         <input
-                          {...preferencesForm.register('analyticsPublic')}
+                          id="analyticsPublic"
                           type="checkbox"
-                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
+                          checked={preferencesForm.watch('analyticsPublic')}
+                          onChange={(e) => preferencesForm.setValue('analyticsPublic', e.target.checked, { shouldDirty: true })}
+                          className="h-4 w-4 text-primary focus:ring-primary border-input rounded cursor-pointer"
                         />
                       </div>
                     </div>
