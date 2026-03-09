@@ -103,7 +103,15 @@ export function SEOToolsManager() {
 
       if (response.ok) {
         const data = await response.json();
-        setAnalyses(data.analyses || []);
+        // Normalize array fields — API may return null for any of these
+        const normalized = (data.analyses || []).map((a: SEOAnalysis) => ({
+          ...a,
+          issues: Array.isArray(a.issues) ? a.issues : [],
+          h1_tags: Array.isArray(a.h1_tags) ? a.h1_tags : [],
+          h2_tags: Array.isArray(a.h2_tags) ? a.h2_tags : [],
+          recommendations: Array.isArray(a.recommendations) ? a.recommendations : [],
+        }));
+        setAnalyses(normalized);
       }
     } catch (error) {
       console.error('Error fetching SEO analyses:', error);
@@ -159,11 +167,11 @@ export function SEOToolsManager() {
       });
 
       if (response.ok) {
-        const analysis = await response.json();
+        await response.json();
         toast.success('SEO analysis completed');
         setShowAnalysisForm(false);
         setAnalysisUrl('');
-        fetchAnalyses();
+        fetchAnalyses(); // re-fetch so normalization is applied
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to analyze URL');
