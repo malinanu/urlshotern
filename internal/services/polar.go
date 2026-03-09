@@ -597,41 +597,121 @@ func stringValue(s *string) string {
 	return *s
 }
 
-// SyncUserSubscriptionFromPolar fetches the active subscription from Polar API
-// and updates the local polar_subscriptions row with the latest product/price/cycle info.
-// If the local subscription ID is stale (e.g. plan was upgraded and a new Polar subscription
-// was created but the webhook was missed), it falls back to searching by polar_customer_id.
+// planTier maps plan types to a numeric tier for comparison.
+var planTier = map[string]int{"free": 0, "premium": 1, "enterprise": 2}
+
+// SyncUserSubscriptionFromPolar fetches the active subscriptions from Polar for the user's
+// customer ID, picks the highest-tier one (handles simultaneous active subscriptions during
+// an upgrade), upserts it locally, and syncs users.account_type.
 func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
-	// 1. Find local subscription record (most recent active/trialing)
-	var localSub models.PolarSubscription
-	if err := ps.db.Where("user_id = ? AND status IN ?", userID, []string{"active", "trialing"}).
-		Order("created_at DESC").First(&localSub).Error; err != nil {
-		// No active local row — try to discover subscription via customer ID
-		return ps.syncByCustomerID(userID)
-	}
-	if localSub.PolarSubscriptionID == nil {
-		return ps.syncByCustomerID(userID)
+	// 1. Get polar_customer_id from any local row (newest first)
+	var anyLocalSub models.PolarSubscription
+	if err := ps.db.Where("user_id = ?", userID).Order("created_at DESC").First(&anyLocalSub).Error; err != nil {
+		return fmt.Errorf("no local subscription row for user %d: %w", userID, err)
 	}
 
-	// 2. Fetch the subscription from Polar by the stored ID
+	customerID := anyLocalSub.PolarCustomerID
+	if customerID == "" || strings.HasPrefix(customerID, "free_user_") {
+		// Free user with no real Polar customer — nothing to sync
+		return nil
+	}
+
+	// 2. Fetch all active subscriptions for this customer from Polar
+	subs, err := ps.ListSubscriptionsByCustomer(customerID)
+	if err != nil || len(subs) == 0 {
+		// Polar unreachable or no active subs — fall back to syncing by stored subscription ID
+		log.Printf("[SyncPolar] Customer lookup returned 0 subs or error for user %d: %v — trying stored ID", userID, err)
+		return ps.syncByStoredID(userID, &anyLocalSub)
+	}
+
+	// 3. Among all active subscriptions, pick the highest-tier one.
+	// After a plan upgrade Polar may keep both the old and new subscription active
+	// simultaneously until the old billing period ends.
+	bestSub := subs[0]
+	bestPlan := "free"
+	if product, err := ps.GetProduct(bestSub.ProductID); err == nil {
+		bestPlan = ps.DeterminePlanType(*product)
+	}
+	for _, s := range subs[1:] {
+		product, err := ps.GetProduct(s.ProductID)
+		if err != nil {
+			continue
+		}
+		pt := ps.DeterminePlanType(*product)
+		if planTier[pt] > planTier[bestPlan] {
+			bestSub = s
+			bestPlan = pt
+		}
+	}
+
+	log.Printf("[SyncPolar] Best active subscription for user %d: sub=%s plan=%s", userID, bestSub.ID, bestPlan)
+
+	// 4. Derive billing_cycle
+	var billingCycle *string
+	if bestSub.PriceID != nil {
+		if product, err := ps.GetProduct(bestSub.ProductID); err == nil {
+			for _, price := range product.Prices {
+				if price.ID == *bestSub.PriceID {
+					billingCycle = price.RecurringInterval
+					break
+				}
+			}
+		}
+	}
+
+	// 5. Upsert: find or create a local row for this Polar subscription ID
+	subID := bestSub.ID
+	var existing models.PolarSubscription
+	findErr := ps.db.Where("polar_subscription_id = ?", subID).First(&existing).Error
+	if findErr != nil {
+		newSub := models.PolarSubscription{
+			UserID:              userID,
+			PolarCustomerID:     customerID,
+			PolarSubscriptionID: &subID,
+			PolarProductID:      bestSub.ProductID,
+			PolarPriceID:        bestSub.PriceID,
+			Status:              bestSub.Status,
+			PlanType:            bestPlan,
+			BillingCycle:        billingCycle,
+			CurrentPeriodStart:  bestSub.CurrentPeriodStart,
+			CurrentPeriodEnd:    bestSub.CurrentPeriodEnd,
+			CancelAtPeriodEnd:   bestSub.CancelAtPeriodEnd,
+		}
+		if err := ps.db.Create(&newSub).Error; err != nil {
+			return fmt.Errorf("failed to create subscription row: %w", err)
+		}
+		log.Printf("[SyncPolar] Created new row for user %d (sub %s, plan %s)", userID, subID, bestPlan)
+	} else {
+		if err := ps.db.Model(&existing).Updates(map[string]interface{}{
+			"polar_product_id":     bestSub.ProductID,
+			"polar_price_id":       bestSub.PriceID,
+			"status":               bestSub.Status,
+			"plan_type":            bestPlan,
+			"billing_cycle":        billingCycle,
+			"current_period_start": bestSub.CurrentPeriodStart,
+			"current_period_end":   bestSub.CurrentPeriodEnd,
+			"updated_at":           time.Now(),
+		}).Error; err != nil {
+			return fmt.Errorf("failed to update subscription row: %w", err)
+		}
+		log.Printf("[SyncPolar] Updated row for user %d (sub %s, plan %s)", userID, subID, bestPlan)
+	}
+
+	// 6. Sync account_type
+	ps.db.Exec("UPDATE users SET account_type = $1, updated_at = NOW() WHERE id = $2", bestPlan, userID)
+	return nil
+}
+
+// syncByStoredID is the fallback: sync using the locally stored polar_subscription_id.
+func (ps *PolarService) syncByStoredID(userID int64, localSub *models.PolarSubscription) error {
+	if localSub.PolarSubscriptionID == nil {
+		return fmt.Errorf("no polar_subscription_id stored for user %d", userID)
+	}
 	polarSub, err := ps.GetSubscription(*localSub.PolarSubscriptionID)
 	if err != nil {
-		log.Printf("[SyncPolar] GetSubscription failed for user %d (sub %s): %v — falling back to customer search",
-			userID, *localSub.PolarSubscriptionID, err)
-		return ps.syncByCustomerID(userID)
+		return fmt.Errorf("GetSubscription failed for user %d: %w", userID, err)
 	}
 
-	// 3. If Polar says this subscription is no longer active, search by customer for a newer one
-	if polarSub.Status != "active" && polarSub.Status != "trialing" {
-		log.Printf("[SyncPolar] Stored subscription %s has status %s — searching for newer active subscription",
-			*localSub.PolarSubscriptionID, polarSub.Status)
-		if err2 := ps.syncByCustomerID(userID); err2 == nil {
-			return nil
-		}
-		// If customer search also fails, continue updating with the stale subscription below
-	}
-
-	// 4. Derive billing_cycle from product prices
 	var billingCycle *string
 	if polarSub.PriceID != nil {
 		if product, err := ps.GetProduct(polarSub.ProductID); err == nil {
@@ -644,14 +724,12 @@ func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
 		}
 	}
 
-	// 5. Derive plan_type
 	planType := localSub.PlanType
 	if product, err := ps.GetProduct(polarSub.ProductID); err == nil {
 		planType = ps.DeterminePlanType(*product)
 	}
 
-	// 6. Update local DB
-	if err := ps.db.Model(&localSub).Updates(map[string]interface{}{
+	if err := ps.db.Model(localSub).Updates(map[string]interface{}{
 		"polar_product_id":     polarSub.ProductID,
 		"polar_price_id":       polarSub.PriceID,
 		"status":               polarSub.Status,
@@ -663,98 +741,6 @@ func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
 	}).Error; err != nil {
 		return err
 	}
-
-	// 7. Sync account_type on users table
-	ps.db.Exec("UPDATE users SET account_type = $1, updated_at = NOW() WHERE id = $2", planType, userID)
-	return nil
-}
-
-// syncByCustomerID queries Polar for the most recent active subscription for the user's
-// polar_customer_id and upserts it locally. This heals the case where a plan upgrade
-// created a new Polar subscription but the webhook was missed.
-func (ps *PolarService) syncByCustomerID(userID int64) error {
-	// Find any local row to get the polar_customer_id
-	var anyLocalSub models.PolarSubscription
-	if err := ps.db.Where("user_id = ?", userID).Order("created_at DESC").First(&anyLocalSub).Error; err != nil {
-		return fmt.Errorf("no local subscription row for user %d: %w", userID, err)
-	}
-
-	customerID := anyLocalSub.PolarCustomerID
-	if customerID == "" || strings.HasPrefix(customerID, "free_user_") {
-		return fmt.Errorf("user %d has no real Polar customer ID", userID)
-	}
-
-	subs, err := ps.ListSubscriptionsByCustomer(customerID)
-	if err != nil {
-		return fmt.Errorf("ListSubscriptionsByCustomer failed for customer %s: %w", customerID, err)
-	}
-	if len(subs) == 0 {
-		return fmt.Errorf("no active Polar subscriptions found for customer %s", customerID)
-	}
-
-	// Take the first (most recent) active subscription
-	polarSub := subs[0]
-	subID := polarSub.ID
-
-	// Derive billing_cycle
-	var billingCycle *string
-	if polarSub.PriceID != nil {
-		if product, err := ps.GetProduct(polarSub.ProductID); err == nil {
-			for _, price := range product.Prices {
-				if price.ID == *polarSub.PriceID {
-					billingCycle = price.RecurringInterval
-					break
-				}
-			}
-		}
-	}
-
-	// Derive plan_type
-	planType := "premium"
-	if product, err := ps.GetProduct(polarSub.ProductID); err == nil {
-		planType = ps.DeterminePlanType(*product)
-	}
-
-	// Upsert: check if this Polar subscription ID already exists locally
-	var existing models.PolarSubscription
-	findErr := ps.db.Where("polar_subscription_id = ?", subID).First(&existing).Error
-	if findErr != nil {
-		// Create a new row for this newly discovered subscription
-		newSub := models.PolarSubscription{
-			UserID:              userID,
-			PolarCustomerID:     customerID,
-			PolarSubscriptionID: &subID,
-			PolarProductID:      polarSub.ProductID,
-			PolarPriceID:        polarSub.PriceID,
-			Status:              polarSub.Status,
-			PlanType:            planType,
-			BillingCycle:        billingCycle,
-			CurrentPeriodStart:  polarSub.CurrentPeriodStart,
-			CurrentPeriodEnd:    polarSub.CurrentPeriodEnd,
-			CancelAtPeriodEnd:   polarSub.CancelAtPeriodEnd,
-		}
-		if err := ps.db.Create(&newSub).Error; err != nil {
-			return fmt.Errorf("failed to create new subscription row: %w", err)
-		}
-		log.Printf("[SyncPolar] Created new subscription row for user %d (sub %s, plan %s)", userID, subID, planType)
-	} else {
-		// Update the existing row
-		if err := ps.db.Model(&existing).Updates(map[string]interface{}{
-			"polar_product_id":     polarSub.ProductID,
-			"polar_price_id":       polarSub.PriceID,
-			"status":               polarSub.Status,
-			"plan_type":            planType,
-			"billing_cycle":        billingCycle,
-			"current_period_start": polarSub.CurrentPeriodStart,
-			"current_period_end":   polarSub.CurrentPeriodEnd,
-			"updated_at":           time.Now(),
-		}).Error; err != nil {
-			return fmt.Errorf("failed to update subscription row: %w", err)
-		}
-		log.Printf("[SyncPolar] Updated existing subscription row for user %d (sub %s, plan %s)", userID, subID, planType)
-	}
-
-	// Sync account_type
 	ps.db.Exec("UPDATE users SET account_type = $1, updated_at = NOW() WHERE id = $2", planType, userID)
 	return nil
 }
