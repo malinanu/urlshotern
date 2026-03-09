@@ -63,7 +63,7 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export default function SettingsPage() {
-  const { user, updateUser, isAuthenticated, isLoading, getAccessToken } = useAuth();
+  const { user, updateUser, isAuthenticated, isLoading, getAccessToken, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -342,9 +342,9 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        showSuccessMessage('Account deletion initiated. You will be logged out.');
+        showSuccessMessage('Account deleted. You will be logged out.');
         setTimeout(() => {
-          // logout();
+          logout();
           router.push('/');
         }, 2000);
       } else {
