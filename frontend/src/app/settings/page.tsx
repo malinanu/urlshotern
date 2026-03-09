@@ -22,6 +22,7 @@ import {
   ExclamationTriangleIcon,
   SwatchIcon,
   MagnifyingGlassIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -63,7 +64,7 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export default function SettingsPage() {
-  const { user, updateUser, isAuthenticated, isLoading, getAccessToken, logout } = useAuth();
+  const { user, updateUser, refreshUserProfile, isAuthenticated, isLoading, getAccessToken, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -142,6 +143,13 @@ export default function SettingsPage() {
       router.push('/login');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Refresh user profile from API so account_type reflects the latest plan
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshUserProfile();
+    }
+  }, [isAuthenticated, refreshUserProfile]);
 
   // Update form defaults when user data loads
   useEffect(() => {
@@ -402,6 +410,7 @@ export default function SettingsPage() {
     { id: 'profile', name: 'Profile', icon: UserCircleIcon },
     { id: 'password', name: 'Password', icon: KeyIcon },
     { id: 'preferences', name: 'Preferences', icon: BellIcon },
+    { id: 'billing', name: 'Billing', icon: CreditCardIcon },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon },
     ...(isEnterprise ? [{ id: 'branding', name: 'Branding', icon: SwatchIcon }] : []),
     ...(isEnterprise ? [{ id: 'seo', name: 'SEO', icon: MagnifyingGlassIcon }] : []),
@@ -740,6 +749,40 @@ export default function SettingsPage() {
                     </div>
                   </form>
                 </div>
+              )}
+
+              {activeTab === 'billing' && (
+                <>
+                  <h2 className="text-lg font-medium text-foreground mb-4">Billing & Subscription</h2>
+                  <div className="space-y-6">
+                    <div className="bg-muted p-4 rounded-lg">
+                      <h3 className="text-md font-medium text-foreground mb-2">Current Plan</h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{getPlanDisplayName(user?.account_type ?? '')}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {user?.account_type === 'free' ? 'Basic features included' : 'Full access to all plan features'}
+                          </p>
+                        </div>
+                        <span className={clsx(
+                          'px-2 py-1 rounded-full text-xs font-medium',
+                          user?.account_type === 'enterprise' ? 'bg-purple-500/20 text-purple-400' :
+                          user?.account_type === 'premium' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-muted-foreground/20 text-muted-foreground'
+                        )}>
+                          {getPlanDisplayName(user?.account_type ?? '')}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push('/billing')}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                    >
+                      <CreditCardIcon className="h-5 w-5" />
+                      Manage Subscription
+                    </button>
+                  </div>
+                </>
               )}
 
               {activeTab === 'security' && (

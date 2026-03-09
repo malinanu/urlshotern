@@ -39,6 +39,7 @@ interface AuthResponse {
 interface AuthContextType {
   user: User | null;
   updateUser: (user: User | null) => void;
+  refreshUserProfile: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthResponse>;
@@ -108,6 +109,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }).catch((error) => {
         logger.error('Logout endpoint error:', error);
       });
+    }
+  }, []);
+
+  // Fetch fresh user profile from the API and update state + localStorage
+  const refreshUserProfile = useCallback(async (): Promise<void> => {
+    const token = getStoredAccessToken();
+    if (!token) return;
+    try {
+      const response = await fetch(API_ENDPOINTS.auth.profile, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      const freshUser: User = data.user ?? data;
+      localStorage.setItem('user_data', JSON.stringify(freshUser));
+      setUser(freshUser);
+    } catch (err) {
+      logger.error('Failed to refresh user profile:', err);
     }
   }, []);
 
@@ -478,6 +497,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     updateUser,
+    refreshUserProfile,
     isAuthenticated,
     isLoading,
     login,
