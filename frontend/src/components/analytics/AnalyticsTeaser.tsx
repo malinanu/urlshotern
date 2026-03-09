@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 
 type TeaserVariant = 'unauthenticated' | 'upgrade-pro' | 'upgrade-ultra';
 
@@ -20,14 +21,14 @@ const teaserContent: Record<TeaserVariant, { heading: string; body: string; cta:
   },
   'upgrade-pro': {
     heading: 'Unlock advanced analytics',
-    body: 'City-level geo, heatmaps, UTM campaigns, real-time feed and more with Pro.',
-    cta: 'Upgrade to Pro',
+    body: `City-level geo, heatmaps, UTM campaigns, real-time feed and more with ${PLAN_NAMES.premium}.`,
+    cta: `Upgrade to ${PLAN_NAMES.premium}`,
     href: '/billing',
   },
   'upgrade-ultra': {
     heading: 'Unlock AI-powered insights',
-    body: 'Performance summaries, anomaly detection, recommendations and audience intelligence with Ultra.',
-    cta: 'Upgrade to Ultra',
+    body: `Performance summaries, anomaly detection, recommendations and audience intelligence with ${PLAN_NAMES.enterprise}.`,
+    cta: `Upgrade to ${PLAN_NAMES.enterprise}`,
     href: '/billing',
   },
 };

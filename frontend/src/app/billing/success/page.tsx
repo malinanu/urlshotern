@@ -4,13 +4,35 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircleIcon, ArrowRightIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function BillingSuccessPage() {
   const router = useRouter();
   const [countdown, setCountdown] = useState(5);
+  const [activating, setActivating] = useState(true);
+  const { refreshToken, getAccessToken } = useAuth();
 
   useEffect(() => {
-    // Countdown timer
+    const activatePlan = async () => {
+      const token = getAccessToken();
+      if (token) {
+        // Force-sync subscription from Polar API
+        await fetch('/api/v1/billing/refresh-subscription', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+
+        // Refresh JWT so account_type reflects the new plan immediately
+        await refreshToken().catch(() => {});
+      }
+      setActivating(false);
+    };
+    activatePlan();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (activating) return;
+    // Countdown timer — starts only after plan is activated
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -23,7 +45,18 @@ export default function BillingSuccessPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [router]);
+  }, [activating, router]);
+
+  if (activating) {
+    return (
+      <div className="min-h-[80vh] bg-background flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Activating your plan...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] bg-background flex items-center justify-center px-4">

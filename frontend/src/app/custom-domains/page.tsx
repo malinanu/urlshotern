@@ -18,6 +18,7 @@ import {
   SparklesIcon,
   ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 
 interface CustomDomain {
   id: number;
@@ -122,7 +123,7 @@ export default function CustomDomainsPage() {
       if (!res.ok) {
         setAddError(
           res.status === 403
-            ? 'Custom domains require a Pro or Ultra plan. Please upgrade your plan.'
+            ? `Custom domains require a ${PLAN_NAMES.premium} or ${PLAN_NAMES.enterprise} plan. Please upgrade your plan.`
             : (data.message ?? 'Failed to add domain')
         );
         return;
@@ -209,14 +210,14 @@ export default function CustomDomainsPage() {
               <div className="mx-auto w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <LockClosedIcon className="h-7 w-7 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Pro Feature</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-2">{PLAN_NAMES.premium} Feature</h2>
               <p className="text-muted-foreground mb-2 max-w-md mx-auto">
                 Custom domains let you use your own branded URL (e.g.{' '}
                 <span className="font-mono text-foreground">links.yourcompany.com</span>) for all
                 shortened links.
               </p>
               <p className="text-sm text-muted-foreground mb-6">
-                Upgrade to <strong>Pro</strong> or <strong>Ultra</strong> to unlock this feature.
+                Upgrade to <strong>{PLAN_NAMES.premium}</strong> or <strong>{PLAN_NAMES.enterprise}</strong> to unlock this feature.
               </p>
               <Link
                 href="/billing"

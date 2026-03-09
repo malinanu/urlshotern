@@ -35,6 +35,7 @@ import { SEOToolsManager } from '@/components/seo/SEOToolsManager';
 import { VisualPageBuilder } from '@/components/builder/VisualPageBuilder';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { UserRolesModal } from '@/components/admin/UserRolesModal';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 
 interface SystemStats {
   total_users: number;
@@ -654,7 +655,7 @@ export default function AdminPage() {
                       {(['free', 'premium', 'enterprise'] as const).map(plan => {
                         const count = users.filter(u => u.account_type === plan).length;
                         const pct = users.length > 0 ? Math.round((count / users.length) * 100) : 0;
-                        const displayName = plan === 'free' ? 'Free' : plan === 'premium' ? 'Pro' : 'Ultra';
+                        const displayName = plan === 'free' ? PLAN_NAMES.free : plan === 'premium' ? PLAN_NAMES.premium : PLAN_NAMES.enterprise;
                         return (
                           <div key={plan} className="flex items-center gap-3">
                             <span className="w-10 text-muted-foreground">{displayName}</span>

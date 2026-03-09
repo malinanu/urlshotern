@@ -327,6 +327,38 @@ func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventD
 	return nil
 }
 
+// resolveUserIDFromSubscription extracts userID via 3 fallbacks:
+// 1. subscription.Metadata["user_id"] (usually empty — Polar doesn't propagate checkout metadata to subscriptions)
+// 2. existing polar_subscriptions row for the same customer (populated by handleCheckoutConfirmed)
+// 3. Polar customer API (GetOrCreatePolarCustomer always sets metadata.user_id on the customer object)
+func (pwh *PolarWebhookHandler) resolveUserIDFromSubscription(sub *SubscriptionEventData) (int64, error) {
+	// 1. Check subscription metadata
+	if sub.Metadata != nil {
+		if v, ok := sub.Metadata["user_id"].(float64); ok && v > 0 {
+			return int64(v), nil
+		}
+	}
+
+	// 2. Look up existing polar_subscriptions row by customer_id
+	var existing models.PolarSubscription
+	if err := pwh.db.Where("polar_customer_id = ?", sub.CustomerID).
+		Order("created_at DESC").First(&existing).Error; err == nil && existing.UserID > 0 {
+		return existing.UserID, nil
+	}
+
+	// 3. Fetch customer from Polar API and read metadata
+	customer, err := pwh.polarService.GetCustomer(sub.CustomerID)
+	if err != nil {
+		return 0, fmt.Errorf("user_id not found in subscription metadata and customer lookup failed: %w", err)
+	}
+	if customer.Metadata != nil {
+		if v, ok := customer.Metadata["user_id"].(float64); ok && v > 0 {
+			return int64(v), nil
+		}
+	}
+	return 0, fmt.Errorf("user_id not resolvable for customer %s", sub.CustomerID)
+}
+
 func (pwh *PolarWebhookHandler) handleSubscriptionCreated(data json.RawMessage) error {
 	var subscription SubscriptionEventData
 	if err := json.Unmarshal(data, &subscription); err != nil {
@@ -335,12 +367,11 @@ func (pwh *PolarWebhookHandler) handleSubscriptionCreated(data json.RawMessage) 
 
 	log.Printf("Subscription created: %s, customer: %s", subscription.ID, subscription.CustomerID)
 
-	// Extract user ID from metadata
-	userIDFloat, ok := subscription.Metadata["user_id"].(float64)
-	if !ok {
-		return fmt.Errorf("user_id not found in subscription metadata")
+	// Resolve user ID via metadata → existing subscription row → Polar customer API
+	userID, err := pwh.resolveUserIDFromSubscription(&subscription)
+	if err != nil {
+		return err
 	}
-	userID := int64(userIDFloat)
 
 	// Get product to determine plan type and benefits
 	planType := "premium"

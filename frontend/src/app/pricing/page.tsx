@@ -6,6 +6,7 @@ import Layout from '@/components/layout/Layout';
 import { CheckIcon, XMarkIcon, StarIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { getProducts, type PolarProduct, formatPrice } from '@/lib/polar';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 
 export default function PricingPage() {
   const { isAuthenticated, getAccessToken } = useAuth();
@@ -178,7 +179,7 @@ export default function PricingPage() {
 
   const plans = [
     {
-      name: 'Free',
+      name: PLAN_NAMES.free,
       ...getPriceDisplay('free'),
       description: 'Perfect for getting started',
       features: [
@@ -198,7 +199,7 @@ export default function PricingPage() {
       planType: 'free'
     },
     {
-      name: 'Pro',
+      name: PLAN_NAMES.premium,
       ...getPriceDisplay('premium'),
       description: 'For growing businesses',
       features: [
@@ -213,12 +214,12 @@ export default function PricingPage() {
         { name: 'API access', included: true },
         { name: 'Password protection', included: true }
       ],
-      cta: 'Start Pro Plan',
+      cta: `Start ${PLAN_NAMES.premium} Plan`,
       popular: true,
       planType: 'premium'
     },
     {
-      name: 'Ultra',
+      name: PLAN_NAMES.enterprise,
       ...getPriceDisplay('enterprise'),
       description: 'For enterprises & power users',
       features: [
@@ -233,7 +234,7 @@ export default function PricingPage() {
         { name: 'Unlimited API access', included: true },
         { name: 'Password protection', included: true }
       ],
-      cta: 'Choose Ultra',
+      cta: `Choose ${PLAN_NAMES.enterprise}`,
       popular: false,
       planType: 'enterprise'
     }
@@ -258,11 +259,11 @@ export default function PricingPage() {
     },
     {
       question: 'Can I use my own domain?',
-      answer: 'Custom domains are available on Pro and Enterprise plans. You can use your own branded short domain.'
+      answer: `Custom domains are available on ${PLAN_NAMES.premium} and ${PLAN_NAMES.enterprise} plans. You can use your own branded short domain.`
     },
     {
       question: 'What kind of support do you provide?',
-      answer: 'Free users get community support. Pro users get priority email support. Enterprise users get 24/7 phone and email support.'
+      answer: `${PLAN_NAMES.free} users get community support. ${PLAN_NAMES.premium} users get priority email support. ${PLAN_NAMES.enterprise} users get 24/7 phone and email support.`
     }
   ];
 
@@ -420,9 +421,9 @@ export default function PricingPage() {
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Feature</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Free</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Pro</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Ultra</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">{PLAN_NAMES.free}</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">{PLAN_NAMES.premium}</th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">{PLAN_NAMES.enterprise}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

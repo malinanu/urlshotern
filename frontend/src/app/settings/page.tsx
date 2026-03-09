@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_ENDPOINTS } from '@/lib/api-config';
-import { getPlanDisplayName } from '@/lib/plan-utils';
+import { getPlanDisplayName, PLAN_NAMES } from '@/lib/plan-utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -943,7 +943,7 @@ export default function SettingsPage() {
               {activeTab === 'branding' && (
                 <div>
                   <h2 className="text-lg font-medium text-foreground mb-1">White-Label Branding</h2>
-                  <p className="text-sm text-gray-500 mb-6">Customize the appearance of your branded short links (Enterprise only).</p>
+                  <p className="text-sm text-gray-500 mb-6">Customize the appearance of your branded short links ({PLAN_NAMES.enterprise} only).</p>
                   {brandingMsg && (
                     <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${brandingMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                       {brandingMsg.text}

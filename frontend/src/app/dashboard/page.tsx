@@ -21,6 +21,7 @@ import {
   SwatchIcon,
   ArrowRightIcon,
 } from '@heroicons/react/24/outline';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -414,7 +415,7 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-foreground">White-Label Branding</h3>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">Ultra</span>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{PLAN_NAMES.enterprise}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     Customize colors, logo, and company name

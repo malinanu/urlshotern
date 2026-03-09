@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 import {
   Role,
   CreateUserRequest,
@@ -276,9 +277,9 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: Props) {
                   onChange={(e) => setFormData({ ...formData, account_type: e.target.value as any })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="free">Free</option>
-                  <option value="premium">Premium</option>
-                  <option value="enterprise">Enterprise</option>
+                  <option value="free">{PLAN_NAMES.free}</option>
+                  <option value="premium">{PLAN_NAMES.premium}</option>
+                  <option value="enterprise">{PLAN_NAMES.enterprise}</option>
                 </select>
               </div>
 

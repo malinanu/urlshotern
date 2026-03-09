@@ -15,6 +15,7 @@ import {
   ClockIcon,
   LinkIcon,
 } from '@heroicons/react/24/outline';
+import { PLAN_NAMES } from '@/lib/plan-utils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -222,12 +223,12 @@ export default function TeamsPage() {
               <div className="mx-auto w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <LockClosedIcon className="h-7 w-7 text-primary" />
               </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Pro Feature</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-2">{PLAN_NAMES.premium} Feature</h2>
               <p className="text-muted-foreground mb-2 max-w-md mx-auto">
                 Invite team members, assign roles, and collaborate on links together.
               </p>
               <p className="text-sm text-muted-foreground mb-6">
-                Upgrade to <strong>Pro</strong> or <strong>Ultra</strong> to unlock teams.
+                Upgrade to <strong>{PLAN_NAMES.premium}</strong> or <strong>{PLAN_NAMES.enterprise}</strong> to unlock teams.
               </p>
               <Link
                 href="/billing"
