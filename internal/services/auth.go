@@ -721,56 +721,50 @@ func (a *AuthService) DeleteAccount(userID int64) error {
 	}
 	defer tx.Rollback()
 
-	// Delete analytics rows that reference url_mappings for this user
-	analyticsSubquery := `(SELECT id FROM url_mappings WHERE user_id = $1)`
-	for _, table := range []string{
-		"geographic_analytics",
-		"device_analytics",
-		"time_analytics",
-		"referrer_analytics",
-		"click_events",
-	} {
-		if _, err := tx.Exec(`DELETE FROM `+table+` WHERE link_id IN `+analyticsSubquery, userID); err != nil {
-			return fmt.Errorf("failed to delete %s: %w", table, err)
-		}
+	// click_events references short_code with no FK cascade — delete before url_mappings
+	if _, err := tx.Exec(`DELETE FROM click_events WHERE short_code IN (SELECT short_code FROM url_mappings WHERE user_id = $1)`, userID); err != nil {
+		return fmt.Errorf("failed to delete click_events: %w", err)
 	}
 
-	// Delete AI insights by short_code
+	// ai_insights references short_code with no FK cascade
 	if _, err := tx.Exec(`DELETE FROM ai_insights WHERE short_code IN (SELECT short_code FROM url_mappings WHERE user_id = $1)`, userID); err != nil {
 		return fmt.Errorf("failed to delete ai_insights: %w", err)
 	}
 
-	// Delete URL mappings
+	// url_mappings — ON DELETE CASCADE propagates to geographic/device/time/referrer analytics
 	if _, err := tx.Exec(`DELETE FROM url_mappings WHERE user_id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete url_mappings: %w", err)
 	}
 
-	// Delete polar subscriptions
+	// polar_subscriptions
 	if _, err := tx.Exec(`DELETE FROM polar_subscriptions WHERE user_id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete polar_subscriptions: %w", err)
 	}
 
-	// Delete custom domains
+	// custom_domains
 	if _, err := tx.Exec(`DELETE FROM custom_domains WHERE user_id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete custom_domains: %w", err)
 	}
 
-	// Delete brand settings
+	// brand_settings
 	if _, err := tx.Exec(`DELETE FROM brand_settings WHERE user_id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete brand_settings: %w", err)
 	}
 
-	// Delete team memberships
-	if _, err := tx.Exec(`DELETE FROM team_members WHERE user_id = $1`, userID); err != nil {
-		return fmt.Errorf("failed to delete team_members: %w", err)
+	// team_invitations.invited_by references users(id) without cascade
+	if _, err := tx.Exec(`DELETE FROM team_invitations WHERE invited_by = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete team_invitations: %w", err)
 	}
 
-	// Delete teams owned by the user
+	// teams.owner_id references users(id) without cascade;
+	// ON DELETE CASCADE propagates to team_members and team_invitations
 	if _, err := tx.Exec(`DELETE FROM teams WHERE owner_id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete teams: %w", err)
 	}
 
-	// Delete the user row
+	// Delete user — cascades to: user_sessions, user_preferences, email_verifications,
+	// phone_verifications, password_resets, api_keys (→ api_key_usage), team_members,
+	// audit_logs (SET NULL)
 	if _, err := tx.Exec(`DELETE FROM users WHERE id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
