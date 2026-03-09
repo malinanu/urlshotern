@@ -29,7 +29,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -61,7 +61,12 @@ function LoginForm() {
     setError(null);
 
     try {
-      await login(data.email, data.password, data.rememberMe);
+      const result = await login(data.email, data.password, data.rememberMe);
+
+      if (!result.user?.email_verified) {
+        router.push('/verify-email');
+        return;
+      }
 
       const returnTo = searchParams.get('returnTo');
       router.push(returnTo ? decodeURIComponent(returnTo) : '/');

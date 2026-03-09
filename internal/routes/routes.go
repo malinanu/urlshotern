@@ -171,7 +171,6 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 	
 	// Email verification routes
 	auth.GET("/verify-email", authHandlers.VerifyEmail)
-	auth.POST("/resend-email", authHandlers.SendEmailVerification)
 
 	// Password reset routes
 	auth.POST("/forgot-password", authHandlers.ForgotPassword)
@@ -189,6 +188,7 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 		protected.POST("/logout", authHandlers.Logout)
 		protected.POST("/send-otp", authHandlers.SendOTP) // For authenticated users
 		protected.DELETE("/delete-account", authHandlers.DeleteAccount)
+		protected.POST("/resend-email", authHandlers.SendEmailVerification)
 	}
 }
 
@@ -636,7 +636,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/analytics", "/profile", "/settings",
 		"/bulk", "/conversions", "/api-keys", "/admin",
 		"/billing", "/pages", "/custom-domains",
-		"/forgot-password", "/reset-password",
+		"/forgot-password", "/reset-password", "/verify-email",
 		"/teams", "/ab-tests",
 		"/team-invite",
 		"/not-found",

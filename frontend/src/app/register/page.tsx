@@ -108,11 +108,15 @@ export default function RegisterPage() {
 
       // Check if we got immediate auth tokens or need verification
       if (result.access_token) {
-        // User was automatically logged in, redirect to home
-        router.push('/');
+        // User was automatically logged in — redirect to verify-email if not yet verified
+        if (!result.user?.email_verified) {
+          router.push('/verify-email');
+        } else {
+          router.push('/');
+        }
       } else {
-        // Need verification, show success message
-        setSuccess(true);
+        // No token returned, go to verify-email page
+        router.push('/verify-email');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');

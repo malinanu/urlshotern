@@ -91,7 +91,22 @@ export default function SettingsPage() {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
   const [otpSuccess, setOtpSuccess] = useState<string | null>(null);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
   const router = useRouter();
+
+  const handleSendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      const res = await fetch(API_ENDPOINTS.auth.resendEmail, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getAccessToken()}` },
+      });
+      if (res.ok) setVerificationSent(true);
+    } finally {
+      setSendingVerification(false);
+    }
+  };
 
   // Profile form
   const profileForm = useForm<ProfileFormData>({
@@ -777,13 +792,23 @@ export default function SettingsPage() {
                       <h3 className="text-md font-medium text-foreground">Security Actions</h3>
 
                       {!user?.email_verified && (
-                        <button className="w-full text-left p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg hover:bg-yellow-500/20 transition-colors">
+                        <button
+                          onClick={handleSendVerification}
+                          disabled={sendingVerification || verificationSent}
+                          className="w-full text-left p-4 border border-yellow-500/20 bg-yellow-500/10 rounded-lg hover:bg-yellow-500/20 transition-colors disabled:opacity-60"
+                        >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="text-sm font-medium dark:text-yellow-500 text-yellow-600">Verify Email Address</h4>
+                              <h4 className="text-sm font-medium dark:text-yellow-500 text-yellow-600">
+                                {verificationSent ? 'Verification email sent!' : sendingVerification ? 'Sending…' : 'Verify Email Address'}
+                              </h4>
                               <p className="text-sm dark:text-yellow-500/80 text-yellow-600/80">Complete email verification to secure your account</p>
                             </div>
-                            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+                            {verificationSent ? (
+                              <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+                            )}
                           </div>
                         </button>
                       )}
