@@ -113,6 +113,21 @@ export default function AdminPage() {
   const [builderPageId, setBuilderPageId] = useState<number | null>(null);
   const router = useRouter();
 
+  // Restore active tab from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) setActiveTab(tab);
+  }, []);
+
+  // Sync tab changes to URL (no navigation, just updates the address bar)
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    window.history.replaceState({}, '', url.toString());
+  };
+
   // Check if user is admin
   const isAdmin = user?.is_admin === true;
 
@@ -299,60 +314,118 @@ export default function AdminPage() {
     return null; // Will redirect
   }
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: ChartBarIcon },
-    { id: 'users', name: 'Users', icon: UserGroupIcon },
-    { id: 'analytics', name: 'Analytics', icon: LinkIcon },
-    { id: 'domains', name: 'Domains', icon: GlobeAltIcon },
-    { id: 'cms', name: 'Content', icon: DocumentTextIcon },
-    { id: 'builder', name: 'Page Builder', icon: CubeIcon },
-    { id: 'seo', name: 'SEO Tools', icon: MagnifyingGlassIcon },
-    { id: 'api-keys', name: 'API Keys', icon: KeyIcon },
-    { id: 'coupons', name: 'Coupons', icon: TicketIcon },
-    { id: 'activity', name: 'Activity', icon: ClockIcon },
-    { id: 'system', name: 'System', icon: ServerIcon },
+  const sidebarGroups = [
+    {
+      label: 'Monitor',
+      tabs: [
+        { id: 'overview', name: 'Overview', icon: ChartBarIcon },
+        { id: 'analytics', name: 'Analytics', icon: LinkIcon },
+        { id: 'activity', name: 'Activity', icon: ClockIcon },
+      ],
+    },
+    {
+      label: 'Manage',
+      tabs: [
+        { id: 'users', name: 'Users', icon: UserGroupIcon },
+        { id: 'domains', name: 'Domains', icon: GlobeAltIcon },
+        { id: 'coupons', name: 'Coupons', icon: TicketIcon },
+      ],
+    },
+    {
+      label: 'Content',
+      tabs: [
+        { id: 'cms', name: 'Content', icon: DocumentTextIcon },
+        { id: 'builder', name: 'Page Builder', icon: CubeIcon },
+        { id: 'seo', name: 'SEO Tools', icon: MagnifyingGlassIcon },
+      ],
+    },
+    {
+      label: 'System',
+      tabs: [
+        { id: 'api-keys', name: 'API Keys', icon: KeyIcon },
+        { id: 'system', name: 'System', icon: ServerIcon },
+      ],
+    },
   ];
+
+  const allTabs = sidebarGroups.flatMap(g => g.tabs);
 
   return (
     <Layout>
       <div className="min-h-[80vh] bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <ShieldCheckIcon className="h-8 w-8 text-destructive" />
-              <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          <div className="mb-8 flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <ShieldCheckIcon className="h-7 w-7 text-destructive" />
+                <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+              </div>
+              <p className="text-muted-foreground text-sm ml-10">
+                Manage users, monitor activity, and control system settings.
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              Manage system users, monitor activity, and view system statistics.
-            </p>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
+              <ShieldCheckIcon className="h-3.5 w-3.5" />
+              Admin
+            </span>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="bg-card rounded-lg shadow-sm border border-border mb-6">
-            <div className="border-b border-border">
-              <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+          {/* Mobile tab chips */}
+          <div className="lg:hidden mb-4 overflow-x-auto">
+            <div className="flex gap-1 min-w-max pb-1">
+              {allTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Sidebar + Content */}
+          <div className="flex gap-6 items-start">
+            {/* Sidebar — desktop only */}
+            <aside className="hidden lg:flex flex-col w-52 shrink-0 gap-0.5">
+              {sidebarGroups.map((group, gi) => (
+                <div key={group.label} className={gi > 0 ? 'mt-3' : ''}>
+                  <p className="px-3 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {group.label}
+                  </p>
+                  {group.tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => handleTabChange(tab.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                          activeTab === tab.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                         }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{tab.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {tab.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </aside>
 
-          {/* Tab Content */}
+            {/* Tab Content */}
+            <div className="flex-1 min-w-0">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {/* System Stats Cards */}
@@ -797,7 +870,7 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'cms' && (
-            <CMSManager onEditInBuilder={(id) => { setBuilderPageId(id); setActiveTab('builder'); }} />
+            <CMSManager onEditInBuilder={(id) => { setBuilderPageId(id); handleTabChange('builder'); }} />
           )}
 
           {activeTab === 'builder' && (
@@ -870,6 +943,8 @@ export default function AdminPage() {
               )}
             </div>
           )}
+            </div>{/* end flex-1 content */}
+          </div>{/* end flex sidebar+content */}
         </div>
       </div>
 
