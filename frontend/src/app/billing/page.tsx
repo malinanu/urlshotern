@@ -607,7 +607,7 @@ function BillingContent() {
                     >
                       <div className="text-center mb-6">
                         <h3 className="text-xl font-semibold text-foreground">
-                          {PLAN_NAMES[plan.id as keyof typeof PLAN_NAMES] ?? plan.name}
+                          {PLAN_NAMES[plan.id.replace('_yearly', '') as keyof typeof PLAN_NAMES] ?? plan.name}
                         </h3>
                         <p className="text-muted-foreground mt-1">{plan.description}</p>
                         <div className="mt-4">

@@ -67,10 +67,16 @@ type BillingUsage struct {
 	PeriodEnd    time.Time `json:"period_end"`
 }
 
+const (
+	PlanNameFree       = "Free"
+	PlanNamePremium    = "Premium"
+	PlanNameEnterprise = "Enterprise"
+)
+
 var PredefinedPlans = map[string]Plan{
 	"free": {
 		ID:          "free",
-		Name:        "Free",
+		Name:        PlanNameFree,
 		Description: "Perfect for personal use",
 		Price:       0,
 		Currency:    "usd",
@@ -98,7 +104,7 @@ var PredefinedPlans = map[string]Plan{
 	},
 	"premium": {
 		ID:          "premium",
-		Name:        "Premium",
+		Name:        PlanNamePremium,
 		Description: "For professionals and small teams",
 		Price:       9.99,
 		Currency:    "usd",
@@ -131,7 +137,7 @@ var PredefinedPlans = map[string]Plan{
 	},
 	"enterprise": {
 		ID:          "enterprise",
-		Name:        "Enterprise",
+		Name:        PlanNameEnterprise,
 		Description: "For large organizations",
 		Price:       49.99,
 		Currency:    "usd",
@@ -165,7 +171,7 @@ var PredefinedPlans = map[string]Plan{
 	},
 	"premium_yearly": {
 		ID:          "premium_yearly",
-		Name:        "Pro (Yearly)",
+		Name:        PlanNamePremium + " (Yearly)",
 		Description: "For professionals and small teams (2 months free)",
 		Price:       99.90,
 		Currency:    "usd",
@@ -198,7 +204,7 @@ var PredefinedPlans = map[string]Plan{
 	},
 	"enterprise_yearly": {
 		ID:          "enterprise_yearly",
-		Name:        "Ultra (Yearly)",
+		Name:        PlanNameEnterprise + " (Yearly)",
 		Description: "For large organizations (2 months free)",
 		Price:       499.90,
 		Currency:    "usd",
