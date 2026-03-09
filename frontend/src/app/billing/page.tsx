@@ -82,6 +82,8 @@ function BillingContent() {
   });
   const [loading, setLoading] = useState(getCached('billing:sub') === null);
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>(
     (searchParams?.get('interval') as 'month' | 'year') || 'month'
@@ -140,11 +142,13 @@ function BillingContent() {
     try {
       if (getCached('billing:sub') === null) setLoading(true);
 
-      // Silently sync subscription from Polar (fixes stale billing_cycle after plan upgrade)
-      fetch(API_ENDPOINTS.billing.refreshSubscription, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      }).catch(() => {});
+      // Await sync so the billing data fetch reflects the latest plan from Polar
+      try {
+        await fetch(API_ENDPOINTS.billing.refreshSubscription, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+      } catch (_) {}
 
       // Fetch subscription, usage data, plans, and polar products concurrently
       const [usageResponse, plansResponse, products] = await Promise.all([
@@ -186,6 +190,30 @@ function BillingContent() {
   useEffect(() => {
     fetchBillingData();
   }, [isAuthenticated, user]);
+
+  const handleSyncWithPolar = async () => {
+    const token = getAccessToken();
+    if (!token || syncing) return;
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch(API_ENDPOINTS.billing.refreshSubscription, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        await fetchBillingData();
+        setSyncMessage({ text: 'Plan synced successfully.', ok: true });
+      } else {
+        setSyncMessage({ text: 'Sync failed. Try again later.', ok: false });
+      }
+    } catch (_) {
+      setSyncMessage({ text: 'Sync failed. Try again later.', ok: false });
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMessage(null), 4000);
+    }
+  };
 
   const handleValidateDiscount = async () => {
     if (!discountCode) {
@@ -524,7 +552,7 @@ function BillingContent() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="mt-6 flex space-x-4">
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
                     {billingData.subscription.plan_type !== 'free' && !billingData.subscription.cancel_at_period_end && (
                       <button
                         onClick={handleCancelSubscription}
@@ -532,6 +560,21 @@ function BillingContent() {
                       >
                         Cancel Subscription
                       </button>
+                    )}
+
+                    <button
+                      onClick={handleSyncWithPolar}
+                      disabled={syncing}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm border border-border rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Syncing…' : 'Sync with Polar'}
+                    </button>
+
+                    {syncMessage && (
+                      <span className={`text-sm ${syncMessage.ok ? 'text-green-600 dark:text-green-500' : 'text-destructive'}`}>
+                        {syncMessage.text}
+                      </span>
                     )}
 
                     {billingData.subscription.current_period_end && (
