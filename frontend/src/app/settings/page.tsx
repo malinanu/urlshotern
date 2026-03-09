@@ -406,71 +406,134 @@ export default function SettingsPage() {
 
   const isEnterprise = user?.account_type === 'enterprise';
 
-  const tabs = [
+  const mainTabs = [
     { id: 'profile', name: 'Profile', icon: UserCircleIcon },
     { id: 'password', name: 'Password', icon: KeyIcon },
     { id: 'preferences', name: 'Preferences', icon: BellIcon },
     { id: 'billing', name: 'Billing', icon: CreditCardIcon },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon },
-    ...(isEnterprise ? [{ id: 'branding', name: 'Branding', icon: SwatchIcon }] : []),
-    ...(isEnterprise ? [{ id: 'seo', name: 'SEO', icon: MagnifyingGlassIcon }] : []),
-    { id: 'danger', name: 'Danger Zone', icon: ExclamationTriangleIcon },
   ];
+  const enterpriseTabs = isEnterprise ? [
+    { id: 'branding', name: 'Branding', icon: SwatchIcon },
+    { id: 'seo', name: 'SEO', icon: MagnifyingGlassIcon },
+  ] : [];
+  const dangerTab = { id: 'danger', name: 'Danger Zone', icon: ExclamationTriangleIcon };
+  const allTabs = [...mainTabs, ...enterpriseTabs, dangerTab];
 
   return (
     <Layout>
       <div className="min-h-screen bg-background py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-            <p className="mt-2 text-muted-foreground">
-              Manage your account settings and preferences.
-            </p>
+            <p className="mt-2 text-muted-foreground">Manage your account settings and preferences.</p>
           </div>
 
           {/* Success/Error Messages */}
           {updateSuccess && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center space-x-2">
-              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-500" />
-              <span className="text-green-700 dark:text-green-400">{updateSuccess}</span>
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+              <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-500 shrink-0" />
+              <span className="text-green-700 dark:text-green-400 text-sm">{updateSuccess}</span>
             </div>
           )}
-
           {updateError && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center space-x-2">
-              <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
-              <span className="text-destructive font-medium">{updateError}</span>
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
+              <ExclamationTriangleIcon className="h-5 w-5 text-destructive shrink-0" />
+              <span className="text-destructive text-sm font-medium">{updateError}</span>
             </div>
           )}
 
-          <div className="bg-card shadow-sm border border-border rounded-lg">
-            {/* Tab Navigation */}
-            <div className="border-b border-border">
-              <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={clsx(
-                        'flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors',
-                        activeTab === tab.id
-                          ? 'border-primary-500 text-primary-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      )}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{tab.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
+          {/* Mobile tab bar */}
+          <div className="lg:hidden mb-4 overflow-x-auto">
+            <div className="flex gap-1 min-w-max pb-1">
+              {allTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={clsx(
+                      'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors',
+                      activeTab === tab.id
+                        ? 'bg-primary text-primary-foreground'
+                        : tab.id === 'danger'
+                          ? 'text-destructive hover:bg-destructive/10'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {tab.name}
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            {/* Tab Content */}
-            <div className="p-6">
+          {/* Sidebar + Content */}
+          <div className="flex gap-6 items-start">
+            {/* Sidebar nav — desktop only */}
+            <aside className="hidden lg:flex flex-col w-52 shrink-0 gap-1">
+              {mainTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={clsx(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left',
+                      activeTab === tab.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+              {enterpriseTabs.length > 0 && (
+                <>
+                  <div className="my-2 border-t border-border" />
+                  <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Enterprise</p>
+                  {enterpriseTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={clsx(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left',
+                          activeTab === tab.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {tab.name}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+              <div className="my-2 border-t border-border" />
+              <button
+                onClick={() => setActiveTab('danger')}
+                className={clsx(
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left',
+                  activeTab === 'danger'
+                    ? 'bg-destructive text-destructive-foreground'
+                    : 'text-destructive/70 hover:text-destructive hover:bg-destructive/10'
+                )}
+              >
+                <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
+                Danger Zone
+              </button>
+            </aside>
+
+            {/* Content panel */}
+            <div className="flex-1 min-w-0 bg-card border border-border rounded-xl shadow-sm">
+              <div className="p-6 sm:p-8">
               {activeTab === 'profile' && (
                 <div>
                   <h2 className="text-lg font-medium text-foreground mb-4">Profile Information</h2>
@@ -1011,92 +1074,94 @@ export default function SettingsPage() {
               {activeTab === 'branding' && (
                 <div>
                   <h2 className="text-lg font-medium text-foreground mb-1">White-Label Branding</h2>
-                  <p className="text-sm text-gray-500 mb-6">Customize the appearance of your branded short links ({PLAN_NAMES.enterprise} only).</p>
+                  <p className="text-sm text-muted-foreground mb-6">Customize the appearance of your branded short links ({PLAN_NAMES.enterprise} only).</p>
                   {brandingMsg && (
-                    <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${brandingMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className={clsx('mb-4 px-4 py-3 rounded-lg text-sm', brandingMsg.type === 'success' ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20')}>
                       {brandingMsg.text}
                     </div>
                   )}
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Company Name</label>
                         <input type="text" value={brandingForm.company_name}
                           onChange={e => setBrandingForm(f => ({ ...f, company_name: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Acme Corp" />
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Acme Corp" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Logo URL</label>
                         <input type="url" value={brandingForm.logo_url}
                           onChange={e => setBrandingForm(f => ({ ...f, logo_url: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Primary Color</label>
                         <div className="flex items-center gap-2">
                           <input type="color" value={brandingForm.primary_color}
                             onChange={e => setBrandingForm(f => ({ ...f, primary_color: e.target.value }))}
-                            className="h-9 w-14 border border-gray-300 rounded cursor-pointer" />
+                            className="h-9 w-14 border border-input rounded cursor-pointer bg-background" />
                           <input type="text" value={brandingForm.primary_color}
                             onChange={e => setBrandingForm(f => ({ ...f, primary_color: e.target.value }))}
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono" />
+                            className="flex-1 border border-input rounded-lg px-3 py-2 text-sm font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Accent Color</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Accent Color</label>
                         <div className="flex items-center gap-2">
                           <input type="color" value={brandingForm.accent_color}
                             onChange={e => setBrandingForm(f => ({ ...f, accent_color: e.target.value }))}
-                            className="h-9 w-14 border border-gray-300 rounded cursor-pointer" />
+                            className="h-9 w-14 border border-input rounded cursor-pointer bg-background" />
                           <input type="text" value={brandingForm.accent_color}
                             onChange={e => setBrandingForm(f => ({ ...f, accent_color: e.target.value }))}
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono" />
+                            className="flex-1 border border-input rounded-lg px-3 py-2 text-sm font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Favicon URL</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Favicon URL</label>
                         <input type="url" value={brandingForm.favicon_url}
                           onChange={e => setBrandingForm(f => ({ ...f, favicon_url: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="https://..." />
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Custom CSS</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">Custom CSS</label>
                       <textarea value={brandingForm.custom_css}
                         onChange={e => setBrandingForm(f => ({ ...f, custom_css: e.target.value }))}
                         rows={4}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                        className="w-full border border-input rounded-lg px-3 py-2 text-sm font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="/* custom styles */" />
                     </div>
-                    <button
-                      disabled={brandingSaving}
-                      onClick={async () => {
-                        setBrandingSaving(true); setBrandingMsg(null);
-                        try {
-                          const token = await getAccessToken();
-                          const res = await fetch(`${API_BASE_URL}/api/v1/branding`, {
-                            method: 'PUT',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              company_name: brandingForm.company_name,
-                              logo_url: brandingForm.logo_url,
-                              primary_color: brandingForm.primary_color,
-                              accent_color: brandingForm.accent_color,
-                              custom_css: brandingForm.custom_css,
-                              favicon_url: brandingForm.favicon_url,
-                            }),
-                          });
-                          const data = await res.json();
-                          if (res.ok) setBrandingMsg({ type: 'success', text: 'Branding saved successfully.' });
-                          else setBrandingMsg({ type: 'error', text: data.error ?? 'Failed to save branding.' });
-                        } finally {
-                          setBrandingSaving(false);
-                        }
-                      }}
-                      className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {brandingSaving ? 'Saving...' : 'Save Branding'}
-                    </button>
+                    <div className="flex justify-end">
+                      <button
+                        disabled={brandingSaving}
+                        onClick={async () => {
+                          setBrandingSaving(true); setBrandingMsg(null);
+                          try {
+                            const token = await getAccessToken();
+                            const res = await fetch(`${API_BASE_URL}/api/v1/branding`, {
+                              method: 'PUT',
+                              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                company_name: brandingForm.company_name,
+                                logo_url: brandingForm.logo_url,
+                                primary_color: brandingForm.primary_color,
+                                accent_color: brandingForm.accent_color,
+                                custom_css: brandingForm.custom_css,
+                                favicon_url: brandingForm.favicon_url,
+                              }),
+                            });
+                            const data = await res.json();
+                            if (res.ok) setBrandingMsg({ type: 'success', text: 'Branding saved successfully.' });
+                            else setBrandingMsg({ type: 'error', text: data.error ?? 'Failed to save branding.' });
+                          } finally {
+                            setBrandingSaving(false);
+                          }
+                        }}
+                        className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      >
+                        {brandingSaving ? 'Saving...' : 'Save Branding'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1104,89 +1169,91 @@ export default function SettingsPage() {
               {activeTab === 'seo' && (
                 <div>
                   <h2 className="text-lg font-medium text-foreground mb-1">Site-wide SEO Settings</h2>
-                  <p className="text-sm text-gray-500 mb-6">Control metadata, Open Graph tags, and analytics used across the site.</p>
+                  <p className="text-sm text-muted-foreground mb-6">Control metadata, Open Graph tags, and analytics used across the site.</p>
                   {seoMsg && (
-                    <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${seoMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className={clsx('mb-4 px-4 py-3 rounded-lg text-sm', seoMsg.type === 'success' ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20')}>
                       {seoMsg.text}
                     </div>
                   )}
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Site Title</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Site Title</label>
                         <input type="text" value={seoForm.site_title}
                           onChange={e => setSeoForm(f => ({ ...f, site_title: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           placeholder="Trunc - Professional URL Shortener" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Twitter Handle</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Twitter Handle</label>
                         <input type="text" value={seoForm.twitter_site}
                           onChange={e => setSeoForm(f => ({ ...f, twitter_site: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           placeholder="@trunc" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Default OG Image URL</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Default OG Image URL</label>
                         <input type="url" value={seoForm.og_image}
                           onChange={e => setSeoForm(f => ({ ...f, og_image: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           placeholder="https://..." />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Google Analytics ID</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Google Analytics ID</label>
                         <input type="text" value={seoForm.google_analytics_id}
                           onChange={e => setSeoForm(f => ({ ...f, google_analytics_id: e.target.value }))}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           placeholder="G-XXXXXXXXXX" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Site Description</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">Site Description</label>
                       <textarea value={seoForm.site_description}
                         onChange={e => setSeoForm(f => ({ ...f, site_description: e.target.value }))}
                         rows={3}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="Professional URL shortener with analytics, custom domains..." />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">Keywords</label>
                       <input type="text" value={seoForm.site_keywords}
                         onChange={e => setSeoForm(f => ({ ...f, site_keywords: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                         placeholder="url shortener, link shortener, custom links" />
                     </div>
-                    <button
-                      disabled={seoSaving}
-                      onClick={async () => {
-                        setSeoSaving(true); setSeoMsg(null);
-                        try {
-                          const token = await getAccessToken();
-                          const res = await fetch(`${API_BASE_URL}/api/v1/admin/settings`, {
-                            method: 'PUT',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              site_title: seoForm.site_title,
-                              site_description: seoForm.site_description,
-                              site_keywords: seoForm.site_keywords,
-                              og_image: seoForm.og_image,
-                              twitter_site: seoForm.twitter_site,
-                              google_analytics_id: seoForm.google_analytics_id,
-                            }),
-                          });
-                          if (res.ok) setSeoMsg({ type: 'success', text: 'SEO settings saved.' });
-                          else {
-                            const d = await res.json();
-                            setSeoMsg({ type: 'error', text: d.error ?? 'Failed to save SEO settings.' });
+                    <div className="flex justify-end">
+                      <button
+                        disabled={seoSaving}
+                        onClick={async () => {
+                          setSeoSaving(true); setSeoMsg(null);
+                          try {
+                            const token = await getAccessToken();
+                            const res = await fetch(`${API_BASE_URL}/api/v1/admin/settings`, {
+                              method: 'PUT',
+                              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                site_title: seoForm.site_title,
+                                site_description: seoForm.site_description,
+                                site_keywords: seoForm.site_keywords,
+                                og_image: seoForm.og_image,
+                                twitter_site: seoForm.twitter_site,
+                                google_analytics_id: seoForm.google_analytics_id,
+                              }),
+                            });
+                            if (res.ok) setSeoMsg({ type: 'success', text: 'SEO settings saved.' });
+                            else {
+                              const d = await res.json();
+                              setSeoMsg({ type: 'error', text: d.error ?? 'Failed to save SEO settings.' });
+                            }
+                          } finally {
+                            setSeoSaving(false);
                           }
-                        } finally {
-                          setSeoSaving(false);
-                        }
-                      }}
-                      className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {seoSaving ? 'Saving...' : 'Save SEO Settings'}
-                    </button>
+                        }}
+                        className="px-5 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      >
+                        {seoSaving ? 'Saving...' : 'Save SEO Settings'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1217,6 +1284,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
