@@ -1362,6 +1362,23 @@ func (h *AuthHandlers) GoogleCallback(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectURL)
 }
 
+// DeleteAccount permanently deletes the authenticated user's account and all their data.
+func (h *AuthHandlers) DeleteAccount(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	if err := h.authService.DeleteAccount(userID); err != nil {
+		log.Printf("[auth] DeleteAccount failed for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete account. Please try again."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully."})
+}
+
 // EmailHealthCheck checks email service configuration and status
 func (h *AuthHandlers) EmailHealthCheck(c *gin.Context) {
 	// Get email service health info

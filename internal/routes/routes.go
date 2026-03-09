@@ -188,6 +188,7 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 		protected.PUT("/change-password", authHandlers.ChangePassword)
 		protected.POST("/logout", authHandlers.Logout)
 		protected.POST("/send-otp", authHandlers.SendOTP) // For authenticated users
+		protected.DELETE("/delete-account", authHandlers.DeleteAccount)
 	}
 }
 

@@ -712,3 +712,68 @@ func (a *AuthService) resetPasswordWithToken(token, newPassword string) error {
 
 	return nil
 }
+
+// DeleteAccount permanently deletes a user and all associated data.
+func (a *AuthService) DeleteAccount(userID int64) error {
+	tx, err := a.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Delete analytics rows that reference url_mappings for this user
+	analyticsSubquery := `(SELECT id FROM url_mappings WHERE user_id = $1)`
+	for _, table := range []string{
+		"geographic_analytics",
+		"device_analytics",
+		"time_analytics",
+		"referrer_analytics",
+		"click_events",
+	} {
+		if _, err := tx.Exec(`DELETE FROM `+table+` WHERE link_id IN `+analyticsSubquery, userID); err != nil {
+			return fmt.Errorf("failed to delete %s: %w", table, err)
+		}
+	}
+
+	// Delete AI insights by short_code
+	if _, err := tx.Exec(`DELETE FROM ai_insights WHERE short_code IN (SELECT short_code FROM url_mappings WHERE user_id = $1)`, userID); err != nil {
+		return fmt.Errorf("failed to delete ai_insights: %w", err)
+	}
+
+	// Delete URL mappings
+	if _, err := tx.Exec(`DELETE FROM url_mappings WHERE user_id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete url_mappings: %w", err)
+	}
+
+	// Delete polar subscriptions
+	if _, err := tx.Exec(`DELETE FROM polar_subscriptions WHERE user_id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete polar_subscriptions: %w", err)
+	}
+
+	// Delete custom domains
+	if _, err := tx.Exec(`DELETE FROM custom_domains WHERE user_id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete custom_domains: %w", err)
+	}
+
+	// Delete brand settings
+	if _, err := tx.Exec(`DELETE FROM brand_settings WHERE user_id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete brand_settings: %w", err)
+	}
+
+	// Delete team memberships
+	if _, err := tx.Exec(`DELETE FROM team_members WHERE user_id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete team_members: %w", err)
+	}
+
+	// Delete teams owned by the user
+	if _, err := tx.Exec(`DELETE FROM teams WHERE owner_id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete teams: %w", err)
+	}
+
+	// Delete the user row
+	if _, err := tx.Exec(`DELETE FROM users WHERE id = $1`, userID); err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return tx.Commit()
+}
