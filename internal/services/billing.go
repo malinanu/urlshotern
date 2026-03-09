@@ -406,9 +406,10 @@ func (bs *BillingService) CreateCheckoutSession(userID int64, email string, prod
 		return nil, fmt.Errorf("failed to get/create customer: %w", err)
 	}
 
-	// Create metadata
+	// Create metadata — store user_id as string to avoid float64 precision loss
+	// when Polar echoes it back in webhooks (Snowflake IDs exceed 2^53)
 	metadata := map[string]interface{}{
-		"user_id":    userID,
+		"user_id":    fmt.Sprintf("%d", userID),
 		"product_id": productID,
 	}
 

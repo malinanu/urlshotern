@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
@@ -245,12 +246,20 @@ func (pwh *PolarWebhookHandler) handleCheckoutUpdated(data json.RawMessage) erro
 }
 
 func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventData) error {
-	// Extract user ID from metadata
-	userIDFloat, ok := checkout.Metadata["user_id"].(float64)
-	if !ok {
+	// Extract user ID from metadata — string-first (new), float64 fallback (legacy)
+	var userID int64
+	if s, ok := checkout.Metadata["user_id"].(string); ok && s != "" {
+		parsed, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid user_id string in checkout metadata: %w", err)
+		}
+		userID = parsed
+	} else if f, ok := checkout.Metadata["user_id"].(float64); ok {
+		userID = int64(f)
+	}
+	if userID == 0 {
 		return fmt.Errorf("user_id not found in checkout metadata")
 	}
-	userID := int64(userIDFloat)
 
 	// Fetch the subscription from Polar
 	subscription, err := pwh.polarService.GetSubscription(*checkout.SubscriptionID)
@@ -332,9 +341,13 @@ func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventD
 // 2. existing polar_subscriptions row for the same customer (populated by handleCheckoutConfirmed)
 // 3. Polar customer API (GetOrCreatePolarCustomer always sets metadata.user_id on the customer object)
 func (pwh *PolarWebhookHandler) resolveUserIDFromSubscription(sub *SubscriptionEventData) (int64, error) {
-	// 1. Check subscription metadata
+	// 1. Check subscription metadata — string-first (new), float64 fallback (legacy)
 	if sub.Metadata != nil {
-		if v, ok := sub.Metadata["user_id"].(float64); ok && v > 0 {
+		if s, ok := sub.Metadata["user_id"].(string); ok && s != "" {
+			if v, err := strconv.ParseInt(s, 10, 64); err == nil && v > 0 {
+				return v, nil
+			}
+		} else if v, ok := sub.Metadata["user_id"].(float64); ok && v > 0 {
 			return int64(v), nil
 		}
 	}
@@ -352,7 +365,11 @@ func (pwh *PolarWebhookHandler) resolveUserIDFromSubscription(sub *SubscriptionE
 		return 0, fmt.Errorf("user_id not found in subscription metadata and customer lookup failed: %w", err)
 	}
 	if customer.Metadata != nil {
-		if v, ok := customer.Metadata["user_id"].(float64); ok && v > 0 {
+		if s, ok := customer.Metadata["user_id"].(string); ok && s != "" {
+			if v, err := strconv.ParseInt(s, 10, 64); err == nil && v > 0 {
+				return v, nil
+			}
+		} else if v, ok := customer.Metadata["user_id"].(float64); ok && v > 0 {
 			return int64(v), nil
 		}
 	}

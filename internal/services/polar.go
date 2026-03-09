@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -350,6 +351,21 @@ func (ps *PolarService) GetOrder(orderID string) (*PolarOrder, error) {
 	return &order, nil
 }
 
+// FindCustomerByEmail looks up a Polar customer by email address
+func (ps *PolarService) FindCustomerByEmail(email string) (*PolarCustomer, error) {
+	type Resp struct {
+		Items []PolarCustomer `json:"items"`
+	}
+	var r Resp
+	if err := ps.makeRequest("GET", "/customers?email="+url.QueryEscape(email)+"&limit=1", nil, &r); err != nil {
+		return nil, err
+	}
+	if len(r.Items) == 0 {
+		return nil, fmt.Errorf("no Polar customer for email %s", email)
+	}
+	return &r.Items[0], nil
+}
+
 // Database Operations
 
 // GetOrCreatePolarCustomer gets or creates a Polar customer for a user
@@ -357,7 +373,7 @@ func (ps *PolarService) GetOrCreatePolarCustomer(userID int64, email string, nam
 	// Check if user already has a Polar subscription with customer ID
 	var subscription models.PolarSubscription
 	err := ps.db.Where("user_id = ?", userID).Order("created_at DESC").First(&subscription).Error
-	if err == nil && subscription.PolarCustomerID != "" {
+	if err == nil && subscription.PolarCustomerID != "" && !strings.HasPrefix(subscription.PolarCustomerID, "free_user_") {
 		return subscription.PolarCustomerID, nil
 	}
 
@@ -612,8 +628,17 @@ func (ps *PolarService) SyncUserSubscriptionFromPolar(userID int64) error {
 
 	customerID := anyLocalSub.PolarCustomerID
 	if customerID == "" || strings.HasPrefix(customerID, "free_user_") {
-		// Free user with no real Polar customer — nothing to sync
-		return nil
+		// Look up real Polar customer by the user's email
+		var user models.User
+		if err := ps.db.Where("id = ?", userID).First(&user).Error; err != nil {
+			return fmt.Errorf("user %d not found: %w", userID, err)
+		}
+		customer, err := ps.FindCustomerByEmail(user.Email)
+		if err != nil {
+			log.Printf("[SyncPolar] No real Polar customer for user %d (%s): %v", userID, user.Email, err)
+			return nil // genuinely free, nothing to sync
+		}
+		customerID = customer.ID
 	}
 
 	// 2. Fetch all active subscriptions for this customer from Polar
