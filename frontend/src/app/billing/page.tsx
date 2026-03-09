@@ -15,7 +15,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { getProducts, PolarProduct, formatPrice } from '@/lib/polar';
-import { getPlanDisplayName } from '@/lib/plan-utils';
+import { getPlanDisplayName, PLAN_NAMES } from '@/lib/plan-utils';
 import { getCached, setCached } from '@/lib/prefetch-cache';
 
 interface Plan {
@@ -607,7 +607,7 @@ function BillingContent() {
                     >
                       <div className="text-center mb-6">
                         <h3 className="text-xl font-semibold text-foreground">
-                          {polarProducts.find((p: any) => p.plan_type === plan.id && p.is_recurring && !p.name.toLowerCase().includes('yearly'))?.name ?? plan.name}
+                          {PLAN_NAMES[plan.id as keyof typeof PLAN_NAMES] ?? plan.name}
                         </h3>
                         <p className="text-muted-foreground mt-1">{plan.description}</p>
                         <div className="mt-4">
