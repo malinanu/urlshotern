@@ -177,8 +177,10 @@ export function storeAuthTokens(
 
     // Also store token in a cookie so nginx auth_request can forward it
     // to the backend for server-side route protection (e.g. /admin).
+    // Only set Secure flag on HTTPS — omitting it on localhost so dev works.
     const maxAge = Math.floor(expiresIn);
-    document.cookie = `access_token=${accessToken}; Max-Age=${maxAge}; Path=/; SameSite=Strict; Secure`;
+    const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `access_token=${accessToken}; Max-Age=${maxAge}; Path=/; SameSite=Strict${secureFlag}`;
   } catch (error) {
     console.error('[TokenValidation] Error storing tokens:', error);
     throw new Error('Failed to store tokens in localStorage');
@@ -258,7 +260,8 @@ export function clearAuthTokens(): void {
     localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY_AT);
 
     // Expire the auth cookie set for nginx auth_request
-    document.cookie = 'access_token=; Max-Age=0; Path=/; SameSite=Strict; Secure';
+    const secureFlag = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `access_token=; Max-Age=0; Path=/; SameSite=Strict${secureFlag}`;
   } catch (error) {
     console.error('[TokenValidation] Error clearing auth tokens:', error);
   }
