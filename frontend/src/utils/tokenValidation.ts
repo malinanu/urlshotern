@@ -174,6 +174,11 @@ export function storeAuthTokens(
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY_AT, expiryAt.toString());
+
+    // Also store token in a cookie so nginx auth_request can forward it
+    // to the backend for server-side route protection (e.g. /admin).
+    const maxAge = Math.floor(expiresIn);
+    document.cookie = `access_token=${accessToken}; Max-Age=${maxAge}; Path=/; SameSite=Strict; Secure`;
   } catch (error) {
     console.error('[TokenValidation] Error storing tokens:', error);
     throw new Error('Failed to store tokens in localStorage');
@@ -251,6 +256,9 @@ export function clearAuthTokens(): void {
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER_DATA);
     localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY_AT);
+
+    // Expire the auth cookie set for nginx auth_request
+    document.cookie = 'access_token=; Max-Age=0; Path=/; SameSite=Strict; Secure';
   } catch (error) {
     console.error('[TokenValidation] Error clearing auth tokens:', error);
   }

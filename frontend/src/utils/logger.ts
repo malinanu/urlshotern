@@ -24,12 +24,14 @@ class Logger {
   private config: LoggerConfig;
 
   constructor(config?: Partial<LoggerConfig>) {
+    // Logging is only ever active in development. In production builds,
+    // NEXT_PUBLIC_* env vars are baked into the bundle, so we hard-gate
+    // on NODE_ENV rather than a runtime toggle to prevent info leakage.
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const isDebugEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_LOGS === 'true';
 
     this.config = {
-      enabled: isDevelopment || isDebugEnabled,
-      level: (process.env.NEXT_PUBLIC_LOG_LEVEL as LogLevel) || 'info',
+      enabled: isDevelopment,
+      level: isDevelopment ? 'debug' : 'error',
       prefix: config?.prefix,
       ...config,
     };
