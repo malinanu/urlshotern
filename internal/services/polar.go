@@ -383,6 +383,15 @@ func (ps *PolarService) GetOrCreatePolarCustomer(userID int64, email string, nam
 	}
 	customer, err := ps.CreateCustomer(email, name, metadata)
 	if err != nil {
+		// If the customer already exists in Polar (e.g. after switching orgs),
+		// fall back to looking them up by email.
+		if strings.Contains(err.Error(), "already exists") {
+			existing, lookupErr := ps.FindCustomerByEmail(email)
+			if lookupErr != nil {
+				return "", fmt.Errorf("failed to get/create customer: %w (lookup also failed: %v)", err, lookupErr)
+			}
+			return existing.ID, nil
+		}
 		return "", err
 	}
 
