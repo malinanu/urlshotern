@@ -308,3 +308,22 @@ func (r *RedisStorage) IsTokenBlacklisted(token string) (bool, error) {
 	}
 	return exists > 0, nil
 }
+
+// SetForceLogout marks that all tokens for userID issued before now are invalid.
+func (r *RedisStorage) SetForceLogout(userID int64) error {
+	key := fmt.Sprintf("force_logout:%d", userID)
+	return r.client.Set(r.ctx, key, time.Now().Unix(), 24*time.Hour).Err()
+}
+
+// GetForceLogout returns the force-logout timestamp for userID, or zero time if not set.
+func (r *RedisStorage) GetForceLogout(userID int64) (time.Time, error) {
+	key := fmt.Sprintf("force_logout:%d", userID)
+	val, err := r.client.Get(r.ctx, key).Int64()
+	if err == redis.Nil {
+		return time.Time{}, nil
+	}
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(val, 0), nil
+}

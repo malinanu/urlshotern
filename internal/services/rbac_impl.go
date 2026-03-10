@@ -738,6 +738,21 @@ func (s *RBACServiceImpl) RemoveRoleFromUser(userID, roleID, removedBy int64) er
 	// Invalidate user permission cache
 	s.invalidateUserCache(userID)
 
+	// If an admin role was removed, check whether the user still has any admin roles.
+	// If not: clear the legacy is_admin flag and force-logout all active sessions.
+	var roleName string
+	_ = s.db.QueryRow("SELECT name FROM roles WHERE id = $1", roleID).Scan(&roleName)
+	if roleName == models.RoleAdmin || roleName == models.RoleSuperAdmin {
+		stillAdmin, _ := s.UserHasAnyRole(userID, []string{models.RoleAdmin, models.RoleSuperAdmin})
+		if !stillAdmin {
+			_, _ = s.db.Exec("UPDATE users SET is_admin = FALSE WHERE id = $1", userID)
+			_ = s.db.DeleteUserSessions(userID)
+			if s.redis != nil {
+				_ = s.redis.SetForceLogout(userID)
+			}
+		}
+	}
+
 	return nil
 }
 

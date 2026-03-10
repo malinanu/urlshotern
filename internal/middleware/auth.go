@@ -18,9 +18,10 @@ type AuthMiddleware struct {
 	redis       RedisStorage
 }
 
-// RedisStorage interface for token blacklisting
+// RedisStorage interface for token blacklisting and session revocation
 type RedisStorage interface {
 	IsTokenBlacklisted(token string) (bool, error)
+	GetForceLogout(userID int64) (time.Time, error)
 }
 
 func NewAuthMiddleware(jwtService *services.JWTService, userService *services.UserService, rbacService *services.RBACServiceImpl, redis RedisStorage) *AuthMiddleware {
@@ -105,6 +106,19 @@ func (a *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			})
 			c.Abort()
 			return
+		}
+
+		// Reject tokens issued before a force-logout was set (e.g. after role removal)
+		forceLogoutAt, flErr := a.redis.GetForceLogout(claims.UserID)
+		if flErr == nil && !forceLogoutAt.IsZero() && claims.IssuedAt != nil {
+			if claims.IssuedAt.Time.Before(forceLogoutAt) {
+				c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+					Error:   "session_revoked",
+					Message: "Your session has been revoked. Please log in again.",
+				})
+				c.Abort()
+				return
+			}
 		}
 
 		// Set user context

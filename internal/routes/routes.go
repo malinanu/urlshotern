@@ -293,6 +293,12 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	admin.Use(authMiddleware.RequireAdmin())
 	admin.Use(middleware.RateLimitMiddleware(middleware.DefaultRateLimit))
 
+	// Lightweight admin-verify endpoint used by nginx auth_request.
+	// Returns 200 only if the caller is authenticated AND has admin access.
+	admin.GET("/verify", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
 	// Admin analytics
 	admin.GET("/stats", handler.AuthHandlers.GetAdminStats)
 	admin.GET("/activity", handler.AuthHandlers.GetRecentActivity)
