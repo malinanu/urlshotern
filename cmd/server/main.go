@@ -42,6 +42,12 @@ func main() {
 		log.Printf("Warning: failed to seed default static pages: %v", err)
 	}
 
+	// Reconcile stale is_admin flags — clears the legacy flag for any user whose
+	// admin/super_admin RBAC role was removed without the flag being updated.
+	if err := db.ReconcileAdminFlags(); err != nil {
+		log.Printf("Warning: failed to reconcile admin flags: %v", err)
+	}
+
 	// Initialize GORM database for billing and Polar integration
 	sslMode := config.DBSSLMode
 	if sslMode == "" {

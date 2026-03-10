@@ -1384,6 +1384,31 @@ func (p *PostgresStorage) DeleteUserSessions(userID int64) error {
 	return err
 }
 
+// ReconcileAdminFlags clears the legacy is_admin flag for any user who no longer
+// holds an admin or super_admin RBAC role. Called at startup to fix stale state.
+func (p *PostgresStorage) ReconcileAdminFlags() error {
+	query := `
+		UPDATE users
+		SET is_admin = FALSE
+		WHERE is_admin = TRUE
+		  AND id NOT IN (
+			SELECT DISTINCT ur.user_id
+			FROM user_roles ur
+			JOIN roles r ON r.id = ur.role_id
+			WHERE r.name IN ('admin', 'super_admin')
+			  AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+		  )
+	`
+	res, err := p.Exec(query)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		log.Printf("⚠️  ReconcileAdminFlags: cleared is_admin for %d user(s) with no admin RBAC role", n)
+	}
+	return err
+}
+
 // Email verification methods
 
 // CreateEmailVerification creates an email verification record

@@ -131,8 +131,9 @@ func (a *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	}
 }
 
-// RequireAdmin middleware ensures user is an admin
-// Updated for backward compatibility: checks both is_admin flag AND RBAC roles
+// RequireAdmin middleware ensures user has an admin or super_admin RBAC role.
+// The legacy is_admin flag is no longer trusted as a standalone gate — RBAC is
+// the authoritative source so that role removals take effect immediately.
 func (a *AuthMiddleware) RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, exists := c.Get("user")
@@ -155,30 +156,28 @@ func (a *AuthMiddleware) RequireAdmin() gin.HandlerFunc {
 			return
 		}
 
-		// Check legacy is_admin flag first (backward compatibility)
-		if u.IsAdmin {
-			c.Next()
-			return
-		}
-
-		// Check RBAC roles (admin or super_admin)
+		// Always check RBAC — is_admin alone is not sufficient.
 		hasAdminRole, err := a.rbacService.UserHasAnyRole(u.ID, []string{models.RoleAdmin, models.RoleSuperAdmin})
 		if err != nil {
-			// Log error but continue with is_admin check
 			LogError(c, err, "Failed to check RBAC roles")
-		}
-
-		if hasAdminRole {
-			c.Next()
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error:   "admin_check_failed",
+				Message: "Failed to verify admin access",
+			})
+			c.Abort()
 			return
 		}
 
-		// Neither is_admin nor RBAC admin role
-		c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "admin_required",
-			Message: "Admin access required",
-		})
-		c.Abort()
+		if !hasAdminRole {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Error:   "admin_required",
+				Message: "Admin access required",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
 	}
 }
 
