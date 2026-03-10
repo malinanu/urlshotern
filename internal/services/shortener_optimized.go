@@ -399,9 +399,22 @@ func (s *OptimizedShortenerService) validateCustomCode(code string) error {
 		return ErrInvalidCustomCodeCharacters
 	}
 
-	reservedWords := []string{"api", "admin", "www", "health", "analytics"}
+	reservedWords := []string{
+		// System / infrastructure
+		"api", "health", "www", "cdn", "static", "assets", "sw.js", "manifest",
+		// App routes
+		"admin", "dashboard", "settings", "analytics", "billing", "login",
+		"register", "signup", "logout", "auth", "oauth", "callback",
+		"teams", "ab-tests", "audience", "custom-domains", "conversions",
+		// Content / marketing pages
+		"features", "pricing", "about", "contact", "privacy", "terms",
+		"blog", "docs", "help", "support", "status",
+		// Short-link system paths
+		"p", "s", "r", "go", "l",
+	}
+	codeLower := strings.ToLower(code)
 	for _, reserved := range reservedWords {
-		if strings.ToLower(code) == reserved {
+		if codeLower == reserved {
 			return ErrReservedCustomCode
 		}
 	}

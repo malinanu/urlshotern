@@ -763,21 +763,15 @@ func (h *Handler) GetUserDashboardStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-// getClientIP extracts the real client IP from the request
+// getClientIP extracts the real client IP from the request.
+// When behind Cloudflare, CF-Connecting-IP is the only trustworthy source —
+// it cannot be spoofed by end users. X-Forwarded-For and X-Real-IP are
+// user-controlled and must not be used for security decisions (rate limiting, etc.).
 func getClientIP(c *gin.Context) string {
-	// Check X-Forwarded-For header first (for load balancers/proxies)
-	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
-		// Get the first IP from the comma-separated list
-		if ips := strings.Split(xff, ","); len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
-		}
+	// CF-Connecting-IP is set by Cloudflare and cannot be spoofed by clients.
+	if cfIP := c.GetHeader("CF-Connecting-IP"); cfIP != "" {
+		return strings.TrimSpace(cfIP)
 	}
-	
-	// Check X-Real-IP header
-	if xri := c.GetHeader("X-Real-IP"); xri != "" {
-		return xri
-	}
-	
-	// Fall back to RemoteAddr
+	// Fall back to Gin's ClientIP which respects SetTrustedProxies.
 	return c.ClientIP()
 }

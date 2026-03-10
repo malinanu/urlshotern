@@ -50,7 +50,12 @@ func RateLimitMiddleware(config RateLimitConfig) gin.HandlerFunc {
 	go cleanupVisitors()
 
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
+		// Prefer CF-Connecting-IP (cannot be spoofed through Cloudflare).
+		// Fallback to Gin's ClientIP which respects SetTrustedProxies.
+		ip := c.GetHeader("CF-Connecting-IP")
+		if ip == "" {
+			ip = c.ClientIP()
+		}
 		
 		v, exists := visitors[ip]
 		if !exists {
