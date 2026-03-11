@@ -472,12 +472,18 @@ func (ps *PolarService) DeterminePlanType(product PolarProduct) string {
 
 	// Strategy 2: Match against known product IDs
 	switch product.ID {
-	case "1216afa1-650c-4dda-95cd-7010dbb03404":
+	case "01a91192-1240-4735-9ac8-55a41988ba2c", // Premium (monthly)
+		"c4009092-2fae-40f3-bf93-ab4eec754d72": // Premium Yearly
 		log.Printf("[Polar] Plan type for %s matched by ID: premium", product.Name)
 		return "premium"
-	case "f5ffabdf-e116-4aba-99f3-cdebe0f09486":
+	case "ba93fc32-a360-4929-aaeb-d35fef1ae6ed", // Enterprise (monthly)
+		"ece4b9ae-fe9b-4021-b207-9d063d0b3c52": // Enterprise Yearly
 		log.Printf("[Polar] Plan type for %s matched by ID: enterprise", product.Name)
 		return "enterprise"
+	case "8a0a6d12-cc54-4af6-a5f5-74098d49fd6a", // Free (monthly)
+		"9f4fa80f-969d-4546-a9ad-86b0457fcf84": // Free Yearly
+		log.Printf("[Polar] Plan type for %s matched by ID: free", product.Name)
+		return "free"
 	}
 
 	// Strategy 3: Infer from product name
