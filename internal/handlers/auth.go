@@ -1362,6 +1362,61 @@ func (h *AuthHandlers) GoogleCallback(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectURL)
 }
 
+// GithubLogin initiates GitHub OAuth flow
+func (h *AuthHandlers) GithubLogin(c *gin.Context) {
+	state, err := h.authService.GenerateOAuthState()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to generate OAuth state")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate GitHub login"})
+		return
+	}
+	authURL := h.authService.GetGithubAuthURL(state)
+	c.Redirect(http.StatusFound, authURL)
+}
+
+// GithubCallback handles the callback from GitHub OAuth
+func (h *AuthHandlers) GithubCallback(c *gin.Context) {
+	code := c.Query("code")
+	state := c.Query("state")
+	frontendURL := h.config.BaseURL
+
+	if code == "" || state == "" {
+		c.Redirect(http.StatusFound, frontendURL+"/login?error=missing_params")
+		return
+	}
+
+	if !h.authService.ValidateOAuthState(state) {
+		c.Redirect(http.StatusFound, frontendURL+"/login?error=invalid_state")
+		return
+	}
+
+	response, err := h.authService.HandleGithubCallback(code, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		middleware.LogError(c, err, "GitHub OAuth callback failed")
+		c.Redirect(http.StatusFound, frontendURL+"/login?error=github_auth_failed")
+		return
+	}
+
+	go func() {
+		_ = h.adminService.LogActivity(
+			&response.User.ID,
+			response.User.Name,
+			"user_github_login",
+			fmt.Sprintf("User logged in via GitHub from %s", c.ClientIP()),
+			c.ClientIP(),
+			c.Request.UserAgent(),
+		)
+	}()
+
+	redirectURL := fmt.Sprintf("%s/?access_token=%s&refresh_token=%s&expires_in=%d",
+		frontendURL,
+		url.QueryEscape(response.AccessToken),
+		url.QueryEscape(response.RefreshToken),
+		response.ExpiresIn,
+	)
+	c.Redirect(http.StatusFound, redirectURL)
+}
+
 // DeleteAccount permanently deletes the authenticated user's account and all their data.
 func (h *AuthHandlers) DeleteAccount(c *gin.Context) {
 	userID := c.GetInt64("user_id")

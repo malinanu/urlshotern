@@ -155,6 +155,19 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 	auth.GET("/google", authHandlers.GoogleLogin)
 	auth.GET("/google/callback", authHandlers.GoogleCallback)
 
+	// Top-level /callback alias — handles Google OAuth redirects when
+	// GOOGLE_REDIRECT_URL is set to https://trunc.site/callback (Google Console)
+	// Must be a static route so Gin matches it before the /:shortCode wildcard.
+	router.GET("/callback", authHandlers.GoogleCallback)
+
+	// GitHub OAuth
+	auth.GET("/github", authHandlers.GithubLogin)
+	auth.GET("/github/callback", authHandlers.GithubCallback)
+
+	// Top-level /github-callback alias — handles GitHub OAuth redirects when
+	// GITHUB_REDIRECT_URL is set to https://trunc.site/github-callback
+	router.GET("/github-callback", authHandlers.GithubCallback)
+
 	// Registration and login
 	auth.POST("/register", authHandlers.Register)
 	auth.POST("/login", authHandlers.Login)
