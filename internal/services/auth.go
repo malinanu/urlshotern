@@ -12,7 +12,10 @@ import (
 	"net/http"
 	"time"
 
+	"strconv"
+
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 
 	"github.com/URLshorter/url-shortener/configs"
@@ -31,6 +34,7 @@ type AuthService struct {
 	redis        *storage.RedisStorage
 	config       *configs.Config
 	googleConfig *oauth2.Config
+	githubConfig *oauth2.Config
 }
 
 // NewAuthService creates a new authentication service
@@ -53,6 +57,15 @@ func NewAuthService(
 		Endpoint:     google.Endpoint,
 	}
 
+	// Setup GitHub OAuth config
+	githubConfig := &oauth2.Config{
+		ClientID:     config.GithubClientID,
+		ClientSecret: config.GithubClientSecret,
+		RedirectURL:  config.GithubRedirectURL,
+		Scopes:       []string{"read:user", "user:email"},
+		Endpoint:     github.Endpoint,
+	}
+
 	return &AuthService{
 		userService:  userService,
 		jwtService:   jwtService,
@@ -62,6 +75,7 @@ func NewAuthService(
 		redis:        redis,
 		config:       config,
 		googleConfig: googleConfig,
+		githubConfig: githubConfig,
 	}
 }
 
@@ -366,6 +380,20 @@ type googleUserInfo struct {
 	Picture       string `json:"picture"`
 }
 
+type githubUserInfo struct {
+	ID        int64  `json:"id"`
+	Login     string `json:"login"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type githubEmail struct {
+	Email    string `json:"email"`
+	Primary  bool   `json:"primary"`
+	Verified bool   `json:"verified"`
+}
+
 // GenerateOAuthState generates a random state for CSRF protection and stores it in Redis
 func (a *AuthService) GenerateOAuthState() (string, error) {
 	bytes := make([]byte, 16)
@@ -399,6 +427,11 @@ func (a *AuthService) ValidateOAuthState(state string) bool {
 // GetGoogleAuthURL returns Google OAuth authorization URL
 func (a *AuthService) GetGoogleAuthURL(state string) string {
 	return a.googleConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+}
+
+// GetGithubAuthURL returns GitHub OAuth authorization URL
+func (a *AuthService) GetGithubAuthURL(state string) string {
+	return a.githubConfig.AuthCodeURL(state)
 }
 
 // HandleGoogleCallback exchanges the authorization code for tokens, fetches user info,
@@ -540,6 +573,181 @@ func (a *AuthService) HandleGoogleCallback(code string, ipAddress, userAgent str
 		map[string]interface{}{
 			"email":      user.Email,
 			"provider":   "google",
+			"session_id": sessionID.String(),
+		}, ipAddress, userAgent)
+
+	return &models.AuthResponse{
+		User:         user.ToPublic(),
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresIn:    int64(tokenPair.ExpiresAt.Sub(time.Now()).Seconds()),
+	}, nil
+}
+
+// HandleGithubCallback exchanges the authorization code for tokens, fetches user info,
+// and finds or creates the user in the database
+func (a *AuthService) HandleGithubCallback(code string, ipAddress, userAgent string) (*models.AuthResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	token, err := a.githubConfig.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange code: %w", err)
+	}
+
+	client := a.githubConfig.Client(ctx, token)
+
+	// Fetch user info from GitHub
+	resp, err := client.Get("https://api.github.com/user")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("github userinfo returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read user info response: %w", err)
+	}
+
+	var ghUser githubUserInfo
+	if err := json.Unmarshal(body, &ghUser); err != nil {
+		return nil, fmt.Errorf("failed to parse user info: %w", err)
+	}
+
+	// GitHub users can hide their email — fetch via /user/emails if empty
+	if ghUser.Email == "" {
+		emailResp, err := client.Get("https://api.github.com/user/emails")
+		if err == nil {
+			defer emailResp.Body.Close()
+			emailBody, _ := io.ReadAll(emailResp.Body)
+			var emails []githubEmail
+			if json.Unmarshal(emailBody, &emails) == nil {
+				for _, e := range emails {
+					if e.Primary && e.Verified {
+						ghUser.Email = e.Email
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if ghUser.Email == "" {
+		return nil, fmt.Errorf("no email received from GitHub")
+	}
+
+	// Name fallback to login if name is not set
+	if ghUser.Name == "" {
+		ghUser.Name = ghUser.Login
+	}
+
+	providerID := strconv.FormatInt(ghUser.ID, 10)
+
+	// Try to find existing user by email
+	user, err := a.db.GetUserByEmail(ghUser.Email)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, fmt.Errorf("failed to look up user: %w", err)
+	}
+
+	if user != nil {
+		// Existing user: update provider info if they were a local user
+		if user.Provider == "local" || user.Provider == "email" {
+			user.Provider = "github"
+			user.ProviderID = &providerID
+			if ghUser.AvatarURL != "" {
+				user.AvatarURL = &ghUser.AvatarURL
+			}
+			user.EmailVerified = true
+			if err := a.db.UpdateUser(user); err != nil {
+				log.Printf("WARN [AUTH] Failed to update user provider info: %v", err)
+			}
+		}
+	} else {
+		// New user: create account
+		userID, err := utils.GenerateSnowflakeID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate user ID: %w", err)
+		}
+
+		user = &models.User{
+			ID:            userID,
+			Name:          ghUser.Name,
+			Email:         ghUser.Email,
+			PasswordHash:  nil,
+			EmailVerified: true,
+			Provider:      "github",
+			ProviderID:    &providerID,
+			AvatarURL:     &ghUser.AvatarURL,
+			AccountType:   "free",
+			IsActive:      true,
+			IsAdmin:       false,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+
+		if err := a.db.CreateUser(user); err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+
+		// Create default preferences
+		preferences := &models.UserPreferences{
+			UserID:             user.ID,
+			AnalyticsPublic:    false,
+			EmailNotifications: true,
+			MarketingEmails:    false,
+			Timezone:           "UTC",
+			Theme:              "light",
+		}
+		if err := a.db.CreateUserPreferences(preferences); err != nil {
+			log.Printf("WARN [AUTH] Failed to create user preferences: %v", err)
+		}
+
+		// Log registration
+		a.logAuditEvent(&user.ID, "user_registered", "user", fmt.Sprintf("%d", user.ID),
+			map[string]interface{}{
+				"email":    user.Email,
+				"provider": "github",
+			}, ipAddress, userAgent)
+	}
+
+	// Create session
+	sessionID := uuid.New()
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	session := &models.UserSession{
+		ID:        sessionID,
+		UserID:    user.ID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+	if ipAddress != "" {
+		session.IPAddress = &ipAddress
+	}
+	if userAgent != "" {
+		session.UserAgent = &userAgent
+	}
+
+	if err := a.db.CreateSession(session); err != nil {
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	// Update last login
+	_ = a.db.UpdateUserLastLogin(user.ID, time.Now())
+
+	// Generate JWT tokens
+	tokenPair, err := a.jwtService.GenerateTokenPair(user, sessionID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate tokens: %w", err)
+	}
+
+	// Log successful login
+	a.logAuditEvent(&user.ID, "login_success", "authentication", fmt.Sprintf("%d", user.ID),
+		map[string]interface{}{
+			"email":      user.Email,
+			"provider":   "github",
 			"session_id": sessionID.String(),
 		}, ipAddress, userAgent)
 
