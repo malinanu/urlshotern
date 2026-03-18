@@ -9,7 +9,6 @@ linters:
     - gosec
     - bodyclose
     - noctx
-    - exportloopref
 
 linters-settings:
   revive:
