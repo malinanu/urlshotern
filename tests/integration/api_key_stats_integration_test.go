@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -188,11 +189,11 @@ func TestAPIKeyStatsEndpoint_AllFailures(t *testing.T) {
 
 func getTestConfig() *configs.Config {
 	return &configs.Config{
-		DBHost:              "localhost",
-		DBPort:              "5432",
-		DBUser:              "urlshortener",
-		DBPassword:          "password",
-		DBName:              "urlshortener_db",
+		DBHost:     getEnvOrDefault("DB_HOST", "localhost"),
+		DBPort:     getEnvOrDefault("DB_PORT", "5432"),
+		DBUser:     getEnvOrDefault("DB_USER", "urlshortener"),
+		DBPassword: getEnvOrDefault("DB_PASSWORD", "password"),
+		DBName:     getEnvOrDefault("DB_NAME", "urlshortener_db"),
 		DBMaxConns:          10,
 		DBMaxIdleConns:      5,
 		DBConnMaxLifetime:   300,
@@ -321,3 +322,10 @@ func recordAPIKeyUsage(t *testing.T, db *storage.PostgresStorage, apiKeyID uuid.
 // ✓ Authorization (users can only view own keys)
 // ✓ Edge cases (0% success rate, all failures)
 // ✓ HTTP 200 response for new keys (not 500)
+
+func getEnvOrDefault(key, defaultValue string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultValue
+}

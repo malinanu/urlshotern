@@ -8,7 +8,7 @@ on:
 
 env:
   GO_VERSION: '1.24'
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -80,8 +80,14 @@ jobs:
 
     - name: Run Go tests
       env:
-        DATABASE_URL: postgres://test:test@localhost:5432/urlshortener_test?sslmode=disable
-        REDIS_URL: redis://localhost:6379
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: test
+        DB_PASSWORD: test
+        DB_NAME: urlshortener_test
+        DB_SSLMODE: disable
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
         JWT_SECRET: test-secret
       run: |
         go test -v -race -coverprofile=coverage.out ./...
