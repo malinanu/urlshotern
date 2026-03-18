@@ -1,3 +1,11 @@
+# Frontend build stage
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN NODE_ENV=production npm run build
+
 # Multi-stage build for production
 FROM golang:1.23-alpine AS builder
 
@@ -35,6 +43,7 @@ COPY --from=builder /app/url-shortener .
 COPY --from=builder /app/configs ./configs
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/docker/entrypoint-prod.sh ./entrypoint.sh
+COPY --from=frontend-builder /app/frontend/out ./static
 RUN chmod +x ./entrypoint.sh ./scripts/run-migrations.sh
 
 # Change ownership to appuser
