@@ -6,7 +6,13 @@ version: '3.8'
 
 services:
   app:
-    image: ghcr.io/malinanu/urlshotern:main
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        - NEXT_PUBLIC_API_URL=${BASE_URL:-https://trunc.site}
+        - BASE_URL=${BASE_URL:-https://trunc.site}
+        - NODE_ENV=production
     container_name: urlshortener-app
     ports:
       - "8082:8080"
