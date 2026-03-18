@@ -255,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (accessToken && refreshTokenValue && expiresIn) {
       logger.info('OAuth tokens detected in URL, storing...');
+      const returnTo = params.get('returnTo') || '/dashboard';
       try {
         storeAuthTokens(accessToken, refreshTokenValue, parseInt(expiresIn, 10));
 
@@ -264,9 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
           .then(res => res.json())
           .then(data => {
-            if (data.user) {
-              localStorage.setItem('user_data', JSON.stringify(data.user));
-              setUser(data.user);
+            const user = data.user || data;
+            if (user && user.id) {
+              localStorage.setItem('user_data', JSON.stringify(user));
+              setUser(user);
+              window.location.href = returnTo;
             }
           })
           .catch(err => logger.error('Failed to fetch user profile after OAuth:', err));
