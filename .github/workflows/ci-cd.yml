@@ -213,8 +213,8 @@ jobs:
         cd frontend
         npm ci
         npm run build
-        cp -r .next/static ./static/
-        cp .next/server/app/page.js ./static/index.js 2>/dev/null || true
+        mkdir -p static
+        cp -r out/* static/
 
     - name: Build Go application
       run: |
