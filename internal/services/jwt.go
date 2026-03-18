@@ -203,7 +203,7 @@ func (j *JWTService) IsTokenExpired(tokenString string) bool {
 		return true
 	}
 
-	return claims.ExpiresAt.Before(time.Now())
+	return claims.ExpiresAt.Time.Before(time.Now())
 }
 
 // GetTokenRemainingTime returns the remaining time until token expires
@@ -213,7 +213,7 @@ func (j *JWTService) GetTokenRemainingTime(tokenString string) (time.Duration, e
 		return 0, err
 	}
 
-	remaining := claims.ExpiresAt.Sub(time.Now())
+	remaining := claims.ExpiresAt.Time.Sub(time.Now())
 	if remaining < 0 {
 		return 0, ErrExpiredToken
 	}
