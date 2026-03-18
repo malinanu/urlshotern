@@ -105,7 +105,7 @@ jobs:
           runs: 3
 
       - name: Upload Lighthouse results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: lighthouse-results
@@ -231,7 +231,7 @@ jobs:
           k6 run --out json=performance-results.json tests/performance/api-performance.js
 
       - name: Upload K6 results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: k6-results
@@ -331,7 +331,7 @@ jobs:
           ./run-benchmarks.sh
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: database-benchmark-results
@@ -370,7 +370,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Setup Python for analysis
         uses: actions/setup-python@v4
@@ -419,7 +419,7 @@ jobs:
           EOF
 
       - name: Upload trend data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-trends
           path: performance-trends/
@@ -448,7 +448,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download current results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Get baseline performance data
         run: |

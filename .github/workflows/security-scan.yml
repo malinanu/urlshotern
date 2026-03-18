@@ -358,7 +358,7 @@ jobs:
         echo "- Compliance Scan: ${{ needs.compliance-scan.result }}" >> security-report.md
 
     - name: Upload Security Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-report
         path: security-report.md
