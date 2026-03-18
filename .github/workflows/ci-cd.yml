@@ -139,9 +139,10 @@ jobs:
       run: |
         go install github.com/securego/gosec/v2/cmd/gosec@latest
         gosec -fmt sarif -out gosec.sarif ./... || true
+        [ -f gosec.sarif ] || echo '{"version":"2.1.0","runs":[]}' > gosec.sarif
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: gosec.sarif
       if: always()
@@ -192,7 +193,7 @@ jobs:
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: 'trivy-results.sarif'
       if: always()

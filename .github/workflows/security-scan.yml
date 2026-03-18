@@ -45,23 +45,23 @@ jobs:
         args: '-fmt sarif -out gosec-results.sarif ./...'
 
     - name: Upload Gosec SARIF file
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: gosec-results.sarif
       if: always()
 
     # CodeQL Analysis
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v4
       with:
         languages: go, javascript
         queries: security-extended,security-and-quality
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+      uses: github/codeql-action/autobuild@v4
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{matrix.language}}"
 
@@ -82,7 +82,7 @@ jobs:
         generateSarif: "1"
 
     - name: Upload Semgrep SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: semgrep.sarif
       if: always()
@@ -101,7 +101,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload ESLint SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: eslint-results.sarif
       if: always()
@@ -149,7 +149,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload Snyk SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: snyk-results.sarif
       if: always()
@@ -211,7 +211,7 @@ jobs:
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: 'trivy-results.sarif'
 
@@ -225,7 +225,7 @@ jobs:
         severity-cutoff: high
 
     - name: Upload Anchore scan SARIF report
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ steps.scan.outputs.sarif }}
 
@@ -240,7 +240,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload Docker Scout SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: scout-results.sarif
       if: always()
@@ -263,7 +263,7 @@ jobs:
         quiet: true
 
     - name: Upload Checkov Terraform SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: checkov-terraform.sarif
       if: always()
@@ -279,7 +279,7 @@ jobs:
         quiet: true
 
     - name: Upload Checkov Kubernetes SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: checkov-k8s.sarif
       if: always()
@@ -330,7 +330,7 @@ jobs:
         out: 'owasp-dependency-check.sarif'
 
     - name: Upload OWASP Dependency Check SARIF
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: 'owasp-dependency-check.sarif'
       if: always()
