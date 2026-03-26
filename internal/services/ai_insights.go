@@ -18,31 +18,36 @@ import (
 
 const (
 	openRouterURL    = "https://openrouter.ai/api/v1/chat/completions"
-	// meta-llama/llama-3.2-3b-instruct:free supports the system role and is highly available
-	openRouterModel  = "meta-llama/llama-3.2-3b-instruct:free"
-	insightCacheTTL  = time.Hour
-	insightMaxTokens = 512
-	openRouterMaxRetries = 4            // Increased max retries for rate-limiting (429)
-	openRouterRetryBaseDelay = 2 * time.Second
+	// google/gemma-3-4b-it:free — free tier model.
+	// NOTE: Gemma does NOT support the system role; system prompt is merged into user message.
+	openRouterModel      = "google/gemma-3-4b-it:free"
+	insightCacheTTL      = time.Hour
+	insightMaxTokens     = 512
+	openRouterMaxRetries = 3
+	openRouterRetryBaseDelay = 3 * time.Second
 )
 
 // AIInsightsService generates AI-powered insights for short links using OpenRouter.
 type AIInsightsService struct {
-	apiKey    string
-	db        *storage.PostgresStorage
-	redis     *storage.RedisStorage
-	analytics *AdvancedAnalyticsService
+	apiKey     string
+	db         *storage.PostgresStorage
+	redis      *storage.RedisStorage
+	analytics  *AdvancedAnalyticsService
 	httpClient *http.Client
+	// sem serialises OpenRouter calls to 1-at-a-time to avoid rate-limiting when
+	// the dashboard fires 5 insight requests simultaneously.
+	sem chan struct{}
 }
 
 // NewAIInsightsService creates a new AIInsightsService.
 func NewAIInsightsService(apiKey string, db *storage.PostgresStorage, redis *storage.RedisStorage, analytics *AdvancedAnalyticsService) *AIInsightsService {
 	return &AIInsightsService{
-		apiKey:    apiKey,
-		db:        db,
-		redis:     redis,
-		analytics: analytics,
-		httpClient: &http.Client{Timeout: 35 * time.Second},
+		apiKey:     apiKey,
+		db:         db,
+		redis:      redis,
+		analytics:  analytics,
+		httpClient: &http.Client{Timeout: 60 * time.Second},
+		sem:        make(chan struct{}, 1), // only 1 concurrent OpenRouter call
 	}
 }
 
@@ -240,12 +245,26 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 		return "", fmt.Errorf("OPENROUTER_API_KEY not configured")
 	}
 
+	// ── Acquire semaphore ────────────────────────────────────────────────────
+	// Serialises all OpenRouter calls to 1-at-a-time.  The dashboard fires 5
+	// requests concurrently; without this they all hit the free-tier rate limit.
+	select {
+	case s.sem <- struct{}{}:
+		defer func() { <-s.sem }()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+
+	// ── Build payload ────────────────────────────────────────────────────────
+	// Gemma models do not support the "system" role (400 INVALID_ARGUMENT).
+	// Merge system instructions into the user message instead.
+	mergedUser := system + "\n\n" + userPrompt
+
 	payload := openRouterRequest{
 		Model:     openRouterModel,
 		MaxTokens: insightMaxTokens,
 		Messages: []chatMessage{
-			{Role: "system", Content: system},
-			{Role: "user", Content: userPrompt},
+			{Role: "user", Content: mergedUser},
 		},
 	}
 
@@ -263,7 +282,6 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 			jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
 			delay := (openRouterRetryBaseDelay * time.Duration(attempt)) + jitter
 			log.Printf("[AI Insights] Retry %d after rate-limit... waiting %v", attempt, delay)
-			
 			select {
 			case <-time.After(delay):
 			case <-ctx.Done():
@@ -304,7 +322,7 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 
 		var result openRouterResponse
 		if err := json.Unmarshal(respBody, &result); err != nil {
-			return "", fmt.Errorf("failed to parse response: %w", err)
+			return "", fmt.Errorf("failed to parse response: %w\nbody: %s", err, string(respBody))
 		}
 
 		if result.Error != nil {
