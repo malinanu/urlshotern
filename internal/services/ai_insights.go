@@ -182,14 +182,34 @@ func (s *AIInsightsService) cacheInsight(key string, insight *models.AIInsight) 
 
 // ─── Core generation ──────────────────────────────────────────────────────────
 
+// stripCodeFences removes markdown code-fence wrappers (```json ... ```) that
+// LLMs sometimes add even when told not to.
+func stripCodeFences(s string) string {
+	s = strings.TrimSpace(s)
+	// Remove leading ```json or ``` fence
+	for _, prefix := range []string{"```json", "```JSON", "```"} {
+		if strings.HasPrefix(s, prefix) {
+			s = strings.TrimPrefix(s, prefix)
+			break
+		}
+	}
+	// Remove trailing ```
+	if strings.HasSuffix(s, "```") {
+		s = strings.TrimSuffix(s, "```")
+	}
+	return strings.TrimSpace(s)
+}
+
 func (s *AIInsightsService) generateAndSave(shortCode string, userID int64, insightType, system, userPrompt string, clickCount int64) (*models.AIInsight, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// 120s to account for semaphore queue (up to 4 prior requests × ~20s each)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	content, err := s.callOpenRouter(ctx, system, userPrompt)
+	raw, err := s.callOpenRouter(ctx, system, userPrompt)
 	if err != nil {
 		return nil, err
 	}
+	content := stripCodeFences(raw)
 
 	now := time.Now()
 	expires := now.Add(24 * time.Hour)
@@ -379,21 +399,19 @@ func (s *AIInsightsService) buildAnomalyPrompt(a *models.AdvancedAnalyticsRespon
 	if len(a.Referrers) > 0 {
 		topReferrer = a.Referrers[0].Referrer
 	}
-	return fmt.Sprintf(`Analyze these link metrics for anomalies:
-- Total clicks (30 days): %d
-- Average clicks/hour (30-day rolling): %.2f
+	topCountry := "Unknown"
+	if len(a.Geographic.Countries) > 0 {
+		topCountry = a.Geographic.Countries[0].CountryName
+	}
+	return fmt.Sprintf(`Link metrics (last 30 days):
+- Total clicks: %d
+- Avg clicks/hour: %.2f
 - Top country: %s
 - Top referrer: %s
 
-Respond with JSON only.`,
-		a.TotalClicks, avgPerHour,
-		func() string {
-			if len(a.Geographic.Countries) > 0 {
-				return a.Geographic.Countries[0].CountryName
-			}
-			return "Unknown"
-		}(),
-		topReferrer,
+Output ONLY a raw JSON object (no markdown, no explanation outside JSON):
+{"detected":true/false,"severity":"low|medium|high","explanation":"one sentence","possible_cause":"one sentence"}`,
+		a.TotalClicks, avgPerHour, topCountry, topReferrer,
 	)
 }
 
@@ -415,19 +433,14 @@ func (s *AIInsightsService) buildRecommendationsPrompt(a *models.AdvancedAnalyti
 	if len(a.Referrers) > 0 {
 		topReferrer = a.Referrers[0].Referrer
 	}
-
-	var lines []string
-	lines = append(lines, "Link performance data for optimisation advice:")
-	lines = append(lines, fmt.Sprintf("- Total clicks: %d", a.TotalClicks))
-	lines = append(lines, fmt.Sprintf("- Top country: %s", topCountry))
-	lines = append(lines, fmt.Sprintf("- Mobile visitors: %.1f%%", mobilePct))
-	lines = append(lines, fmt.Sprintf("- Desktop visitors: %.1f%%", desktopPct))
-	lines = append(lines, fmt.Sprintf("- Top referrer: %s", topReferrer))
+	peakInfo := ""
 	if a.TimeData.PeakTimes.MaxClicks > 0 {
-		lines = append(lines, fmt.Sprintf("- Best posting hour: %d:00", a.TimeData.PeakTimes.PeakHour))
-		lines = append(lines, fmt.Sprintf("- Best posting day: %s", a.TimeData.PeakTimes.PeakDay))
+		peakInfo = fmt.Sprintf("\n- Best time: %s at %d:00", a.TimeData.PeakTimes.PeakDay, a.TimeData.PeakTimes.PeakHour)
 	}
-	return strings.Join(lines, "\n")
+	return fmt.Sprintf(`Link stats (30 days): clicks=%d, country=%s, mobile=%.0f%%, desktop=%.0f%%, referrer=%s%s
+
+Give EXACTLY 3 short bullet points (one sentence each, no sub-bullets) to improve click-through rate. Use "- " prefix. No intro, no conclusion.`,
+		a.TotalClicks, topCountry, mobilePct, desktopPct, topReferrer, peakInfo)
 }
 
 func (s *AIInsightsService) buildForecastPrompt(a *models.AdvancedAnalyticsResponse, dailyClicks []int64) string {
@@ -451,30 +464,17 @@ func (s *AIInsightsService) buildForecastPrompt(a *models.AdvancedAnalyticsRespo
 		}
 	}
 
-	// Format last 14 daily values for the prompt
-	show := dailyClicks
-	if len(show) > 14 {
-		show = show[len(show)-14:]
-	}
-	var dataStr strings.Builder
-	for i, c := range show {
-		dataStr.WriteString(fmt.Sprintf("Day %d: %d clicks\n", len(dailyClicks)-len(show)+i+1, c))
-	}
+	return fmt.Sprintf(`Traffic data: total clicks=%d over 30 days.
+Linear projection: next 7 days=%v, next 30-day total=%d.
 
-	return fmt.Sprintf(`Click trend data for the last 30 days (last 14 shown):
-%s
-Server-computed linear projection:
-- Next 7 days: %v
-- Projected 30-day total: %d
-
-Write a brief forecast narrative with specific numbers.`,
-		dataStr.String(), projected, projected30)
+Write 2 sentences: one summarising the trend, one giving the 30-day projection. Use specific numbers. No bullet points, no headers.`,
+		a.TotalClicks, projected, projected30)
 }
 
 func (s *AIInsightsService) buildAudiencePrompt(a *models.AdvancedAnalyticsResponse, referrers []models.ReferrerStat) string {
 	var sb strings.Builder
-	sb.WriteString("Top referrer domains by clicks:\n")
-	limit := 10
+	sb.WriteString("Referrer domains by clicks:\n")
+	limit := 8
 	if len(referrers) < limit {
 		limit = len(referrers)
 	}
@@ -482,9 +482,12 @@ func (s *AIInsightsService) buildAudiencePrompt(a *models.AdvancedAnalyticsRespo
 		sb.WriteString(fmt.Sprintf("- %s: %d clicks\n", r.Referrer, r.Clicks))
 	}
 	if limit == 0 {
-		sb.WriteString("- (no referrer data yet)\n")
+		sb.WriteString("- (no referrer data)\n")
 	}
-	sb.WriteString("\nClassify these domains into audience segments. Respond with JSON only.")
+	sb.WriteString(`
+Output ONLY a raw JSON array (no markdown fences, no explanation):
+[{"category":"...","percentage":0,"top_domains":["..."]}]
+Use 2-4 segments. percentages must sum to 100.`)
 	return sb.String()
 }
 
