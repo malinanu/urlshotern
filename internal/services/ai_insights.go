@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -21,8 +22,8 @@ const (
 	openRouterModel  = "meta-llama/llama-3.2-3b-instruct:free"
 	insightCacheTTL  = time.Hour
 	insightMaxTokens = 512
-	openRouterMaxRetries = 2            // retry on 429 rate-limit
-	openRouterRetryDelay = 2 * time.Second
+	openRouterMaxRetries = 4            // Increased max retries for rate-limiting (429)
+	openRouterRetryBaseDelay = 2 * time.Second
 )
 
 // AIInsightsService generates AI-powered insights for short links using OpenRouter.
@@ -258,9 +259,13 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 	var lastErr error
 	for attempt := 0; attempt < openRouterMaxRetries; attempt++ {
 		if attempt > 0 {
-			log.Printf("[AI Insights] Retry %d after rate-limit...", attempt)
+			// Exponential backoff with jitter to help when 5 requests hit at once
+			jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
+			delay := (openRouterRetryBaseDelay * time.Duration(attempt)) + jitter
+			log.Printf("[AI Insights] Retry %d after rate-limit... waiting %v", attempt, delay)
+			
 			select {
-			case <-time.After(openRouterRetryDelay):
+			case <-time.After(delay):
 			case <-ctx.Done():
 				return "", ctx.Err()
 			}
