@@ -17,8 +17,8 @@ import (
 
 const (
 	openRouterURL    = "https://openrouter.ai/api/v1/chat/completions"
-	// mistral-7b-instruct:free supports the system role; gemma-3-4b-it does not (returns 400 INVALID_ARGUMENT).
-	openRouterModel  = "mistralai/mistral-7b-instruct:free"
+	// meta-llama/llama-3.2-3b-instruct:free supports the system role and is highly available
+	openRouterModel  = "meta-llama/llama-3.2-3b-instruct:free"
 	insightCacheTTL  = time.Hour
 	insightMaxTokens = 512
 	openRouterMaxRetries = 2            // retry on 429 rate-limit
