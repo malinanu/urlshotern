@@ -27,6 +27,9 @@ services:
       - ENVIRONMENT=production
       - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}
       - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-}
+
+      # AI Insights (OpenRouter — required for AI features)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
     depends_on:
       - redis
     networks:

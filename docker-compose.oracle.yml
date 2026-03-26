@@ -65,7 +65,7 @@ services:
       - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL:-}
 
       # AI Insights (OpenRouter — required for Ultra-plan AI features)
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 
       # SMS — text.lk (Sri Lankan numbers)
       - TEXTLK_API_KEY=${TEXTLK_API_KEY:-}
