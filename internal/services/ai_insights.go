@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -231,6 +232,7 @@ type openRouterResponse struct {
 
 func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userPrompt string) (string, error) {
 	if s.apiKey == "" {
+		log.Println("[AI Insights] ERROR: OPENROUTER_API_KEY is empty")
 		return "", fmt.Errorf("OPENROUTER_API_KEY not configured")
 	}
 
@@ -257,8 +259,11 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 	req.Header.Set("HTTP-Referer", "https://trunc.site")
 	req.Header.Set("X-Title", "URLshortn AI Insights")
 
+	log.Printf("[AI Insights] Calling OpenRouter model=%s", openRouterModel)
+
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
+		log.Printf("[AI Insights] HTTP error: %v", err)
 		return "", fmt.Errorf("openrouter request failed: %w", err)
 	}
 	defer resp.Body.Close()
@@ -268,16 +273,20 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
+	log.Printf("[AI Insights] OpenRouter HTTP status=%d body=%s", resp.StatusCode, string(respBody))
+
 	var result openRouterResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if result.Error != nil {
+		log.Printf("[AI Insights] OpenRouter API error: %s", result.Error.Message)
 		return "", fmt.Errorf("openrouter error: %s", result.Error.Message)
 	}
 
 	if len(result.Choices) == 0 {
+		log.Printf("[AI Insights] No choices returned. Full body: %s", string(respBody))
 		return "", fmt.Errorf("no choices in openrouter response")
 	}
 
