@@ -19,6 +19,31 @@ interface AIInsight {
   generated_at: string;
 }
 
+/** Lightweight markdown → HTML converter (no external deps). */
+function parseMarkdown(md: string): string {
+  return md
+    // Bold **text** or __text__
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+    // Italic *text* or _text_  (only standalone, not inside words)
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    // Unordered list items: lines starting with - or *
+    .replace(/^[\-\*] (.+)$/gm, '<li>$1</li>')
+    // Numbered list items: lines starting with "1. "
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> groups in <ul>
+    .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, (match) => `<ul class="list-disc list-inside space-y-1 my-1">${match}</ul>`)
+    // Section headers ### / ##
+    .replace(/^###\s(.+)$/gm, '<p class="font-semibold text-xs text-foreground mt-2 mb-0.5">$1</p>')
+    .replace(/^##\s(.+)$/gm, '<p class="font-semibold text-sm text-foreground mt-3 mb-1">$1</p>')
+    // Double newline → paragraph break
+    .replace(/\n\n/g, '</p><p class="mt-2">')
+    // Single newline → <br>
+    .replace(/\n/g, '<br/>')
+    // Wrap entire output in a paragraph
+    .replace(/^([\s\S]+)$/, '<p>$1</p>');
+}
+
 export function AIInsightCard({ shortCode, insightType, title, description, icon }: AIInsightCardProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [insight, setInsight] = useState<AIInsight | null>(null);
@@ -98,9 +123,10 @@ export function AIInsightCard({ shortCode, insightType, title, description, icon
 
       {state === 'done' && insight && (
         <div className="flex flex-col gap-1 flex-1">
-          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-            {insight.content}
-          </p>
+          <div
+            className="text-sm text-foreground leading-relaxed [&_ul]:mt-1 [&_ul]:mb-1 [&_li]:ml-4 [&_strong]:font-semibold [&_em]:italic [&_p]:mb-1"
+            dangerouslySetInnerHTML={{ __html: parseMarkdown(insight.content) }}
+          />
           <p className="text-xs text-muted-foreground mt-auto pt-2">
             Generated {new Date(insight.generated_at).toLocaleString()}
           </p>
