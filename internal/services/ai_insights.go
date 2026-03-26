@@ -17,9 +17,12 @@ import (
 
 const (
 	openRouterURL    = "https://openrouter.ai/api/v1/chat/completions"
-	openRouterModel  = "google/gemma-3-4b-it:free"
+	// mistral-7b-instruct:free supports the system role; gemma-3-4b-it does not (returns 400 INVALID_ARGUMENT).
+	openRouterModel  = "mistralai/mistral-7b-instruct:free"
 	insightCacheTTL  = time.Hour
 	insightMaxTokens = 512
+	openRouterMaxRetries = 2            // retry on 429 rate-limit
+	openRouterRetryDelay = 2 * time.Second
 )
 
 // AIInsightsService generates AI-powered insights for short links using OpenRouter.
@@ -250,47 +253,69 @@ func (s *AIInsightsService) callOpenRouter(ctx context.Context, system, userProm
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, openRouterURL, bytes.NewReader(body))
-	if err != nil {
-		return "", fmt.Errorf("failed to build request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.apiKey)
-	req.Header.Set("HTTP-Referer", "https://trunc.site")
-	req.Header.Set("X-Title", "URLshortn AI Insights")
-
 	log.Printf("[AI Insights] Calling OpenRouter model=%s", openRouterModel)
 
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		log.Printf("[AI Insights] HTTP error: %v", err)
-		return "", fmt.Errorf("openrouter request failed: %w", err)
+	var lastErr error
+	for attempt := 0; attempt < openRouterMaxRetries; attempt++ {
+		if attempt > 0 {
+			log.Printf("[AI Insights] Retry %d after rate-limit...", attempt)
+			select {
+			case <-time.After(openRouterRetryDelay):
+			case <-ctx.Done():
+				return "", ctx.Err()
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, openRouterURL, bytes.NewReader(body))
+		if err != nil {
+			return "", fmt.Errorf("failed to build request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+s.apiKey)
+		req.Header.Set("HTTP-Referer", "https://trunc.site")
+		req.Header.Set("X-Title", "URLshortn AI Insights")
+
+		resp, err := s.httpClient.Do(req)
+		if err != nil {
+			log.Printf("[AI Insights] HTTP error: %v", err)
+			lastErr = fmt.Errorf("openrouter request failed: %w", err)
+			continue
+		}
+
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return "", fmt.Errorf("failed to read response: %w", err)
+		}
+
+		log.Printf("[AI Insights] OpenRouter HTTP status=%d", resp.StatusCode)
+
+		// Retry on 429 rate-limit
+		if resp.StatusCode == http.StatusTooManyRequests {
+			log.Printf("[AI Insights] Rate-limited (429), will retry. Body: %s", string(respBody))
+			lastErr = fmt.Errorf("openrouter rate-limited")
+			continue
+		}
+
+		var result openRouterResponse
+		if err := json.Unmarshal(respBody, &result); err != nil {
+			return "", fmt.Errorf("failed to parse response: %w", err)
+		}
+
+		if result.Error != nil {
+			log.Printf("[AI Insights] OpenRouter API error (status=%d): %s | raw: %s", resp.StatusCode, result.Error.Message, string(respBody))
+			return "", fmt.Errorf("openrouter error: %s", result.Error.Message)
+		}
+
+		if len(result.Choices) == 0 {
+			log.Printf("[AI Insights] No choices returned. Full body: %s", string(respBody))
+			return "", fmt.Errorf("no choices in openrouter response")
+		}
+
+		return strings.TrimSpace(result.Choices[0].Message.Content), nil
 	}
-	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	log.Printf("[AI Insights] OpenRouter HTTP status=%d body=%s", resp.StatusCode, string(respBody))
-
-	var result openRouterResponse
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if result.Error != nil {
-		log.Printf("[AI Insights] OpenRouter API error: %s", result.Error.Message)
-		return "", fmt.Errorf("openrouter error: %s", result.Error.Message)
-	}
-
-	if len(result.Choices) == 0 {
-		log.Printf("[AI Insights] No choices returned. Full body: %s", string(respBody))
-		return "", fmt.Errorf("no choices in openrouter response")
-	}
-
-	return strings.TrimSpace(result.Choices[0].Message.Content), nil
+	return "", lastErr
 }
 
 // ─── Prompt builders ──────────────────────────────────────────────────────────
