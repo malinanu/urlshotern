@@ -8,7 +8,7 @@ export default function Footer() {
     product: [
       { name: 'Features', href: '/features' },
       { name: 'Pricing', href: '/pricing' },
-      { name: 'API Documentation', href: '/api' },
+      { name: 'API Documentation', href: '/api-docs' },
       { name: 'Analytics', href: '/analytics' },
     ],
     company: [
