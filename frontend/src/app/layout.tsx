@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CookieConsent } from "@/components/CookieConsent";
+import { JsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -36,8 +37,8 @@ async function fetchSiteSettings(): Promise<Record<string, string>> {
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await fetchSiteSettings();
 
-  const title = settings.site_title || "Trunc - Professional URL Shortening Service";
-  const description = settings.site_description || "Professional URL shortener with analytics, custom domains, and comprehensive dashboard.";
+  const title = settings.site_title || "Free URL Shortener — Shorten Links & Track Clicks | Trunc";
+  const description = settings.site_description || "Shorten URLs for free with Trunc. Get click analytics, custom domains, QR codes, and A/B testing. No credit card required. Start in 10 seconds.";
   const keywords = settings.site_keywords || "url shortener, link shortener, custom links";
   const ogImage = settings.og_image || undefined;
   const twitterSite = settings.twitter_site || "@trunc";
@@ -50,6 +51,9 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords,
     verification: {
       google: gscVerification,
+    },
+    alternates: {
+      canonical: 'https://trunc.site',
     },
     manifest: "/manifest.json",
     appleWebApp: {
@@ -71,14 +75,14 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      images: [{ url: ogImage || 'https://trunc.site/og_mage_127sh0127sh0127s.webp', width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       site: twitterSite,
       title,
       description,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      images: [ogImage || 'https://trunc.site/og_mage_127sh0127sh0127s.webp'],
     },
     ...(gaId ? { other: { "google-analytics": gaId } } : {}),
   };
@@ -127,6 +131,56 @@ export default function RootLayout({
             gtag('config', 'G-KERP09FSLV');
           `,
         }} />
+
+        {/* Structured Data — WebSite, Organization, SoftwareApplication */}
+        <JsonLd data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "Trunc",
+          "url": "https://trunc.site",
+          "description": "Free URL shortener with advanced analytics, custom domains, QR codes, and AI insights.",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://trunc.site/?url={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }} />
+        <JsonLd data={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "Trunc",
+          "url": "https://trunc.site",
+          "logo": "https://trunc.site/icons/icon-512x512.png",
+          "description": "Free URL shortener with advanced analytics, custom domains, and enterprise-grade security.",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "url": "https://trunc.site/contact"
+          }
+        }} />
+        <JsonLd data={{
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "Trunc URL Shortener",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "Web",
+          "url": "https://trunc.site",
+          "description": "Free URL shortener with click analytics, custom domains, QR codes, A/B testing, and AI insights.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Free plan available with no credit card required"
+          },
+          "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access"
+        }} />
+
+        {/* Ahrefs Analytics */}
+        <Script
+          src="https://analytics.ahrefs.com/analytics.js"
+          data-key="wh1b55CvCXjzUDz3SMYYWw"
+          strategy="afterInteractive"
+        />
 
         {/* ContentSquare session recording */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}

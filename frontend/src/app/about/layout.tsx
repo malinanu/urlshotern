@@ -4,12 +4,15 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   title: "About Trunc - Our Story & Mission",
   description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses. Discover our mission and team.",
+  alternates: {
+    canonical: 'https://trunc.site/about',
+  },
   openGraph: {
     title: "About Trunc - Our Story & Mission",
     description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses.",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "About Trunc - Our Story & Mission",
     description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses.",
   },

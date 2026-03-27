@@ -37,16 +37,16 @@ export default function HomePage() {
   // Fetch page content from CMS with fallback
   const { content: page, loading, usedCMS } = useCMSPage('home', {
     slug: 'home',
-    title: 'Shorten URLs. Track Everything.',
-    content: 'Transform your long URLs into short, trackable links with powerful analytics.',
+    title: 'Free URL Shortener — Shorten Links & Track Clicks',
+    content: 'Transform long URLs into short, trackable links with powerful analytics.',
   });
 
   // Extract content blocks from CMS or use fallback
   const hero = getContentBlock(page, 'hero', {
     badge: '✨ New: Advanced Analytics Dashboard',
-    title: 'Shorten URLs. Track Everything.',
-    title_highlight: 'Track Everything',
-    tagline: 'Transform your long URLs into short, trackable links with powerful analytics. Perfect for marketing campaigns, social media, and more.',
+    title: 'Free URL Shortener — Shorten Links & Track Clicks',
+    title_highlight: 'Shorten Links & Track Clicks',
+    tagline: 'Transform long URLs into short, trackable links with powerful analytics. Perfect for marketing campaigns, social media, and more. No credit card required.',
   });
 
   const socialProof = getContentBlock(page, 'social_proof', {
@@ -166,6 +166,7 @@ export default function HomePage() {
                     <feature.icon className="h-8 w-8 text-primary" />
                   </div>
                   <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                    {feature.name}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

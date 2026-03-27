@@ -18,7 +18,7 @@ export default function Footer() {
       { name: 'Terms of Service', href: '/terms' },
     ],
     resources: [
-      { name: 'API Documentation', href: '/api-docs' },
+      { name: 'Blog', href: '/blog' },
       { name: 'Conversions', href: '/conversions' },
     ],
   };

@@ -2,16 +2,19 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Features - Trunc URL Shortener",
-  description: "Explore Trunc's powerful features: advanced analytics, custom domains, QR codes, A/B testing, AI insights, and more. Everything you need to manage your links.",
+  title: "URL Shortener Features — Analytics, Custom Domains & QR Codes | Trunc",
+  description: "Trunc URL shortener features: real-time click analytics, custom branded domains, QR code generation, A/B link testing, AI insights, and team collaboration. Everything you need to manage your links.",
+  alternates: {
+    canonical: 'https://trunc.site/features',
+  },
   openGraph: {
-    title: "Features - Trunc URL Shortener",
-    description: "Explore Trunc's powerful features: advanced analytics, custom domains, QR codes, A/B testing, AI insights, and more.",
+    title: "URL Shortener Features — Analytics, Custom Domains & QR Codes | Trunc",
+    description: "Trunc URL shortener features: real-time click analytics, custom branded domains, QR code generation, A/B link testing, AI insights, and team collaboration.",
   },
   twitter: {
-    card: "summary",
-    title: "Features - Trunc URL Shortener",
-    description: "Explore Trunc's powerful features: advanced analytics, custom domains, QR codes, A/B testing, AI insights, and more.",
+    card: "summary_large_image",
+    title: "URL Shortener Features — Analytics, Custom Domains & QR Codes | Trunc",
+    description: "Trunc URL shortener features: real-time click analytics, custom branded domains, QR code generation, A/B link testing, AI insights, and team collaboration.",
   },
 };
 

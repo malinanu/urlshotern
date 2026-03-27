@@ -12,6 +12,10 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: ['/dashboard', '/admin', '/settings'],
       },
+      { userAgent: 'GPTBot',        allow: '/' },
+      { userAgent: 'OAI-SearchBot', allow: '/' },
+      { userAgent: 'ClaudeBot',     allow: '/' },
+      { userAgent: 'PerplexityBot', allow: '/' },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

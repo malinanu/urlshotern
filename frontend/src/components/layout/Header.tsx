@@ -47,7 +47,7 @@ export default function Header() {
     { name: 'Home', href: '/' },
     { name: 'Features', href: '/features' },
     { name: 'Pricing', href: '/pricing' },
-    { name: 'API Docs', href: '/api-docs' },
+    { name: 'Blog', href: '/blog' },
   ];
 
   const handleLogout = () => {
