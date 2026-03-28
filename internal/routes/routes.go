@@ -659,6 +659,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/teams", "/ab-tests",
 		"/team-invite",
 		"/not-found",
+		"/blog",
 	}
 
 	for _, route := range frontendRoutes {
