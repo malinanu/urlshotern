@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     canonical: 'https://trunc.site/terms',
   },
   openGraph: {
+    type: 'website',
+    url: 'https://trunc.site/terms',
+    siteName: 'Trunc',
     title: "Terms of Service - Trunc",
     description: "Read the Trunc Terms of Service to understand the rules and guidelines for using our platform.",
   },

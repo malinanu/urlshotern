@@ -105,6 +105,8 @@ __tests__/
 *.jpeg
 *.gif
 *.webp
+# Allow the production OG image
+!frontend/public/og-image.webp
 
 # Temporary and test files
 dummy

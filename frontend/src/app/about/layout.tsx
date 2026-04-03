@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     canonical: 'https://trunc.site/about',
   },
   openGraph: {
+    type: 'website',
+    url: 'https://trunc.site/about',
+    siteName: 'Trunc',
     title: "About Trunc - Our Story & Mission",
     description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses.",
   },

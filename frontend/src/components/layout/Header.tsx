@@ -101,7 +101,10 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
             {isLoading ? (
-              <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-14 bg-muted rounded animate-pulse"></div>
+                <div className="h-9 w-28 bg-muted rounded-lg animate-pulse"></div>
+              </div>
             ) : isAuthenticated && user ? (
               <div className="relative" ref={profileMenuRef}>
                 <button

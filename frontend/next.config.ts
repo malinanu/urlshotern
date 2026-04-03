@@ -6,6 +6,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig: NextConfig = {
+  // Enforce no trailing slashes — /blog/ redirects to /blog
+  trailingSlash: false,
+
   // Note: In Next.js 16, eslint config is no longer in next.config.ts
   // Use SKIP_LINT=true or configure via package.json scripts instead
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface CMSPage {
   id?: number;
@@ -23,47 +23,38 @@ export interface UseCMSPageResult {
 }
 
 /**
- * Custom hook to fetch CMS page content with fallback support
+ * Custom hook to fetch CMS page content with fallback support.
  *
- * @param slug - The page slug to fetch (e.g., 'home', 'about', 'contact')
- * @param fallbackContent - Fallback content to use if CMS fetch fails
- * @returns Object containing content, loading state, error, and whether CMS was used
- *
- * @example
- * ```tsx
- * const { content, loading, usedCMS } = useCMSPage('home', {
- *   slug: 'home',
- *   title: 'Fallback Title',
- *   content: 'Fallback content...'
- * });
- *
- * if (loading) return <div>Loading...</div>;
- *
- * return (
- *   <div>
- *     <h1>{content?.title}</h1>
- *     {usedCMS && <div className="text-xs text-gray-500">Content from CMS</div>}
- *   </div>
- * );
- * ```
+ * Renders fallback content immediately (loading: false) so the static export
+ * always bakes in real content for crawlers. The CMS fetch runs client-side
+ * after hydration and updates the content silently if it succeeds.
  */
 export function useCMSPage(
   slug: string,
   fallbackContent: Partial<CMSPage> = {}
 ): UseCMSPageResult {
-  const [content, setContent] = useState<CMSPage | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const buildFallback = (): CMSPage => ({
+    slug,
+    title: '',
+    content: '',
+    ...fallbackContent,
+  } as CMSPage);
+
+  // Start with fallback content and loading:false so the pre-rendered HTML
+  // always contains real content (H1, body copy) rather than a spinner.
+  const [content, setContent] = useState<CMSPage | null>(buildFallback);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [usedCMS, setUsedCMS] = useState<boolean>(false);
+
+  // Keep fallback stable across renders so the effect dep array doesn't change.
+  const fallbackRef = useRef(fallbackContent);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchPage = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
         const response = await fetch(`/api/v1/pages/${slug}`);
 
         if (!response.ok) {
@@ -71,12 +62,9 @@ export function useCMSPage(
         }
 
         const data = await response.json();
-
-        // Handle both direct page object and wrapped response
         const pageData = data.page || data;
 
         if (isMounted && pageData) {
-          // Parse content_blocks if it's a JSON string (backend returns *string)
           if (pageData.content_blocks && typeof pageData.content_blocks === 'string') {
             try {
               pageData.content_blocks = JSON.parse(pageData.content_blocks);
@@ -94,23 +82,9 @@ export function useCMSPage(
           const errorObj = err instanceof Error ? err : new Error('Unknown error');
           setError(errorObj);
           setUsedCMS(false);
-
-          // Use fallback content on error
-          setContent({
-            slug,
-            title: '',
-            content: '',
-            ...fallbackContent,
-          } as CMSPage);
-
-          // Log error in development
           if (process.env.NODE_ENV === 'development') {
             console.warn(`[useCMSPage] Failed to fetch CMS content for "${slug}", using fallback:`, errorObj);
           }
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
         }
       }
     };
@@ -120,24 +94,13 @@ export function useCMSPage(
     return () => {
       isMounted = false;
     };
-  }, [slug]); // Remove fallbackContent from dependencies to prevent infinite loop
+  }, [slug]);
 
   return { content, loading, error, usedCMS };
 }
 
 /**
- * Helper function to safely access nested content blocks
- *
- * @param page - CMS page object
- * @param path - Dot-notation path to the content block (e.g., 'hero.title')
- * @param defaultValue - Default value if path not found
- * @returns The content at the specified path or default value
- *
- * @example
- * ```tsx
- * const heroTitle = getContentBlock(page, 'hero.title', 'Default Title');
- * const stats = getContentBlock(page, 'social_proof.stats', []);
- * ```
+ * Helper function to safely access nested content blocks.
  */
 export function getContentBlock<T = any>(
   page: CMSPage | null,
@@ -162,17 +125,7 @@ export function getContentBlock<T = any>(
 }
 
 /**
- * Helper function to get custom field value
- *
- * @param page - CMS page object
- * @param key - Field key
- * @param defaultValue - Default value if key not found
- * @returns The field value or default value
- *
- * @example
- * ```tsx
- * const inquiryTypes = getCustomField(page, 'inquiry_types', []);
- * ```
+ * Helper function to get custom field value.
  */
 export function getCustomField<T = any>(
   page: CMSPage | null,

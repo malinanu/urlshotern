@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     canonical: 'https://trunc.site/pricing',
   },
   openGraph: {
+    type: 'website',
+    url: 'https://trunc.site/pricing',
+    siteName: 'Trunc',
     title: "Pricing - Trunc URL Shortener",
     description: "Simple, transparent pricing for every team. Start free, upgrade when you need more.",
   },

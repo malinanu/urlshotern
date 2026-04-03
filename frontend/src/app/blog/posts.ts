@@ -11,10 +11,19 @@ export type ContentSection =
 export interface BlogPost {
   slug: string;
   title: string;
+  /** Shorter title for the <title> tag (aim for ≤52 chars so "… | Trunc" fits in ~60). */
+  seoTitle?: string;
   description: string;
   publishedAt: string;
+  /** ISO date of last content update — used for dateModified in Article schema. */
+  updatedAt?: string;
   readTime: number;
   category: string;
+  /** Absolute path from /public, e.g. /blog/how-to-shorten-a-url.svg */
+  image?: string;
+  imageAlt?: string;
+  author: string;
+  authorSlug: string;
   content: ContentSection[];
 }
 
@@ -22,10 +31,16 @@ export const posts: BlogPost[] = [
   {
     slug: 'how-to-shorten-a-url',
     title: 'How to Shorten a URL: The Complete Step-by-Step Guide (2026)',
+    seoTitle: 'How to Shorten a URL: Step-by-Step Guide (2026)',
     description: 'Learn how to shorten a URL in seconds using Trunc. Free URL shortener with click analytics, custom domains, and QR codes. No account required to start.',
     publishedAt: '2026-03-20',
+    updatedAt: '2026-03-28',
     readTime: 5,
     category: 'Guide',
+    image: '/blog/how-to-shorten-a-url.svg',
+    imageAlt: 'Step-by-step guide to shortening a URL with Trunc — paste, shorten, share',
+    author: 'Malin Jayaweera',
+    authorSlug: 'malin-jayaweera',
     content: [
       { type: 'p', text: 'URL shortening converts a long web address into a compact, shareable link. When someone clicks the short link, a URL shortener like Trunc looks up the original URL in its database and instantly redirects the visitor — the whole process takes under 50 milliseconds. Short links are easier to share on social media, in emails, and in print materials, and they come with built-in click tracking so you can see exactly how many people used your link.' },
       { type: 'h2', text: 'How to Shorten a URL with Trunc (3 Steps)' },
@@ -59,10 +74,16 @@ export const posts: BlogPost[] = [
   {
     slug: 'trunc-vs-bitly-tinyurl',
     title: 'Trunc vs Bitly vs TinyURL: Which URL Shortener is Best in 2026?',
+    seoTitle: 'Trunc vs Bitly vs TinyURL: Best URL Shortener 2026',
     description: 'Honest comparison of Trunc, Bitly, and TinyURL. We compare pricing, analytics, custom domains, and AI features to help you choose the best URL shortener for your needs.',
     publishedAt: '2026-03-15',
+    updatedAt: '2026-03-28',
     readTime: 8,
     category: 'Comparison',
+    image: '/blog/trunc-vs-bitly-tinyurl.svg',
+    imageAlt: 'Side-by-side comparison of Trunc, Bitly, and TinyURL URL shorteners in 2026',
+    author: 'Malin Jayaweera',
+    authorSlug: 'malin-jayaweera',
     content: [
       { type: 'p', text: 'Choosing the right URL shortener affects your analytics, your brand, and your budget. Bitly is the household name, TinyURL is the oldest free option, and Trunc is the new generation — built with AI insights, real-time analytics, and A/B testing from day one. Here is an honest, feature-by-feature breakdown to help you pick the right tool.' },
       { type: 'h2', text: 'At a Glance: Trunc vs Bitly vs TinyURL' },
@@ -108,10 +129,16 @@ export const posts: BlogPost[] = [
   {
     slug: 'best-url-shorteners-2026',
     title: '7 Best URL Shorteners in 2026: Ranked and Reviewed',
+    seoTitle: '7 Best URL Shorteners in 2026: Ranked & Reviewed',
     description: 'We tested 7 URL shorteners in 2026 and ranked them on analytics, pricing, custom domains, and ease of use. See which URL shortener is right for you.',
     publishedAt: '2026-03-25',
+    updatedAt: '2026-03-28',
     readTime: 10,
     category: 'Roundup',
+    image: '/blog/best-url-shorteners-2026.svg',
+    imageAlt: '7 best URL shorteners of 2026 ranked by analytics, pricing, and features',
+    author: 'Malin Jayaweera',
+    authorSlug: 'malin-jayaweera',
     content: [
       { type: 'p', text: 'URL shorteners have evolved from simple redirect tools into full marketing analytics platforms. The best ones in 2026 offer real-time click data, custom branded domains, QR code generation, A/B testing, and — increasingly — AI-powered insights. We tested seven of the most popular options across these dimensions and ranked them for different use cases.' },
       { type: 'h2', text: '1. Trunc — Best Overall for Analytics and AI Features' },

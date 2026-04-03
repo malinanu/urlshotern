@@ -37,8 +37,12 @@ async function fetchSiteSettings(): Promise<Record<string, string>> {
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await fetchSiteSettings();
 
-  const title = settings.site_title || "Free URL Shortener — Shorten Links & Track Clicks | Trunc";
-  const description = settings.site_description || "Shorten URLs for free with Trunc. Get click analytics, custom domains, QR codes, and A/B testing. No credit card required. Start in 10 seconds.";
+  // Guard against short/generic admin-configured values that would harm SEO.
+  // A meaningful site title should describe what the product does, not just name it.
+  const titleFallback = "Free URL Shortener — Shorten Links & Track Clicks | Trunc";
+  const descFallback = "Shorten URLs for free with Trunc. Get click analytics, custom domains, QR codes, and A/B testing. No credit card required. Start in 10 seconds.";
+  const title = (settings.site_title && settings.site_title.length > 20) ? settings.site_title : titleFallback;
+  const description = (settings.site_description && settings.site_description.length > 60) ? settings.site_description : descFallback;
   const keywords = settings.site_keywords || "url shortener, link shortener, custom links";
   const ogImage = settings.og_image || undefined;
   const twitterSite = settings.twitter_site || "@trunc";
@@ -73,16 +77,19 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
     },
     openGraph: {
+      type: 'website',
+      url: 'https://trunc.site',
+      siteName: 'Trunc',
       title,
       description,
-      images: [{ url: ogImage || 'https://trunc.site/og_mage_127sh0127sh0127s.webp', width: 1200, height: 630 }],
+      images: [{ url: ogImage || 'https://trunc.site/og-image.webp', width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       site: twitterSite,
       title,
       description,
-      images: [ogImage || 'https://trunc.site/og_mage_127sh0127sh0127s.webp'],
+      images: [ogImage || 'https://trunc.site/og-image.webp'],
     },
     ...(gaId ? { other: { "google-analytics": gaId } } : {}),
   };

@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     canonical: 'https://trunc.site/privacy',
   },
   openGraph: {
+    type: 'website',
+    url: 'https://trunc.site/privacy',
+    siteName: 'Trunc',
     title: "Privacy Policy - Trunc",
     description: "Read Trunc's privacy policy to understand how we collect, use, and protect your data.",
   },

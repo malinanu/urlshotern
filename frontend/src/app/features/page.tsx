@@ -159,16 +159,6 @@ export default function FeaturesPage() {
     icon: feature.icon && typeof feature.icon === 'string' ? (iconMap[feature.icon] || CheckCircleIcon) : feature.icon || CheckCircleIcon
   }));
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
       {/* Hero Section - Using CMS Content */}
