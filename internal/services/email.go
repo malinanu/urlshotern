@@ -304,7 +304,7 @@ func (e *EmailService) SendSupportInquiryEmail(name, emailAddr, subject, issue s
 	template := email.SupportInquiryEmailTemplate(name, emailAddr, subject, issue)
 
 	// Send to support email
-	supportEmail := "support@trunc.site"
+	supportEmail := "hello@trunc.site"
 	return e.provider.SendEmail(supportEmail, template.Subject, template.HTMLBody, template.TextBody)
 }
 

@@ -164,7 +164,7 @@ export default function PrivacyPage() {
             </div>
 
             <p class="text-muted-foreground mt-6">
-              To exercise these rights, please contact us at <a href="mailto:privacy@3logiq.com" class="text-primary hover:underline">privacy@3logiq.com</a>. 
+              To exercise these rights, please contact us at <a href="mailto:hello@trunc.site" class="text-primary hover:underline">hello@trunc.site</a>. 
               We will respond to your request within 30 days.
             </p>
           </section>
@@ -243,7 +243,7 @@ export default function PrivacyPage() {
               please contact us:
             </p>
             <div class="space-y-2 text-muted-foreground">
-              <p><strong>Email:</strong> <a href="mailto:privacy@3logiq.com" class="text-primary hover:underline">privacy@3logiq.com</a></p>
+              <p><strong>Email:</strong> <a href="mailto:hello@trunc.site" class="text-primary hover:underline">hello@trunc.site</a></p>
               <p><strong>Address:</strong> 3logiq Technologies, 123 Tech Boulevard, San Francisco, CA 94105</p>
               <p><strong>Phone:</strong> <a href="tel:+1-555-0123" class="text-primary hover:underline">+1 (555) 012-3456</a></p>
             </div>

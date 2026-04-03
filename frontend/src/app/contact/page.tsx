@@ -35,7 +35,7 @@ const fallbackContactMethods = [
     icon: 'EnvelopeIcon',
     title: 'Email Support',
     description: 'Get detailed help via email',
-    contact: 'hello@urlshorter.com',
+    contact: 'hello@trunc.site',
     responseTime: 'Within 24 hours',
     color: 'text-primary'
   },
