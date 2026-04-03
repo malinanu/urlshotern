@@ -65,6 +65,23 @@ func SetupRoutes(
 	// Email service health check (for monitoring)
 	router.GET("/health/email", handler.AuthHandlers.EmailHealthCheck)
 
+	// Middleware: serve root-level static files (any path with a file extension) directly from
+	// ./static/ BEFORE /:shortCode can intercept them. This prevents og-image.webp,
+	// icons, and other public assets from being treated as URL short codes.
+	router.Use(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		base := filepath.Base(path)
+		if strings.Contains(base, ".") {
+			staticPath := filepath.Join("./static", path)
+			if info, err := os.Stat(staticPath); err == nil && !info.IsDir() {
+				c.File(staticPath)
+				c.Abort()
+				return
+			}
+		}
+		c.Next()
+	})
+
 	// Serve common static files BEFORE /:shortCode route to prevent them from being treated as short codes
 	commonStaticFiles := []string{
 		"/manifest.json", "/robots.txt", "/sitemap.xml",
