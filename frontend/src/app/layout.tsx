@@ -44,7 +44,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = (settings.site_title && settings.site_title.length > 20) ? settings.site_title : titleFallback;
   const description = (settings.site_description && settings.site_description.length > 60) ? settings.site_description : descFallback;
   const keywords = settings.site_keywords || "url shortener, link shortener, custom links";
-  const ogImage = settings.og_image || undefined;
+  // Reject any DB-stored OG image that is the old corrupted filename or is not a full URL.
+  const ogImageRaw = settings.og_image || '';
+  const ogImage = (ogImageRaw && !ogImageRaw.includes('og_mage_') && ogImageRaw.startsWith('http'))
+    ? ogImageRaw
+    : 'https://trunc.site/og-image.webp';
   const twitterSite = settings.twitter_site || "@trunc";
   const gaId = settings.google_analytics_id || undefined;
   const gscVerification = settings.google_search_console_verification || "MOG-VaJKDXY7onFYmWU575nPDambyhU4onezpqkPB4I";
@@ -82,14 +86,14 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: 'Trunc',
       title,
       description,
-      images: [{ url: ogImage || 'https://trunc.site/og-image.webp', width: 1200, height: 630 }],
+      images: [{ url: ogImage, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       site: twitterSite,
       title,
       description,
-      images: [ogImage || 'https://trunc.site/og-image.webp'],
+      images: [ogImage],
     },
     ...(gaId ? { other: { "google-analytics": gaId } } : {}),
   };

@@ -105,8 +105,9 @@ __tests__/
 *.jpeg
 *.gif
 *.webp
-# Allow the production OG image
+# Allow production OG image and blog hero images
 !frontend/public/og-image.webp
+!frontend/public/blog/*.webp
 
 # Temporary and test files
 dummy
