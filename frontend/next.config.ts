@@ -23,7 +23,11 @@ const nextConfig: NextConfig = {
   },
 
   // Image optimization
+  // With output: 'export' the /_next/image optimization API doesn't exist at runtime.
+  // Set unoptimized: true in production so <Image> renders plain <img> tags with
+  // the original /blog/*.webp paths, which the Go static-file middleware serves directly.
   images: {
+    unoptimized: process.env.NODE_ENV === 'production',
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000, // 1 year
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
