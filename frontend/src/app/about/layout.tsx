@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "About Trunc - Our Story & Mission",
-  description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses. Discover our mission and team.",
+  title: "About Trunc — Free URL Shortener Built for Marketers & Developers",
+  description: "Trunc is a free URL shortener with real-time analytics, custom domains, QR codes, and AI insights. Built for marketers, developers, and businesses of all sizes.",
+  keywords: "about trunc, url shortener company, free url shortener, custom url shortener, url shortener with analytics",
   alternates: {
     canonical: 'https://trunc.site/about',
   },
@@ -11,13 +12,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://trunc.site/about',
     siteName: 'Trunc',
-    title: "About Trunc - Our Story & Mission",
-    description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses.",
+    title: "About Trunc — Free URL Shortener Built for Marketers & Developers",
+    description: "Trunc is a free URL shortener with real-time analytics, custom domains, QR codes, and AI insights. Built for marketers, developers, and businesses of all sizes.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Trunc - Our Story & Mission",
-    description: "Learn about Trunc, the professional URL shortening platform built for marketers, developers, and businesses.",
+    title: "About Trunc — Free URL Shortener Built for Marketers & Developers",
+    description: "Trunc is a free URL shortener with real-time analytics, custom domains, QR codes, and AI insights.",
   },
 };
 

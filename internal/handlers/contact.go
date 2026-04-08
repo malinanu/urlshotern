@@ -35,7 +35,7 @@ func (h *ContactHandlers) SubmitContactForm(c *gin.Context) {
 		return
 	}
 
-	err := h.emailService.SendContactFormEmail(req.Name, req.Email, req.Message)
+	err := h.emailService.SendContactFormEmail(req.Name, req.Email, req.Subject, req.Message)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to send your message. Please try again later.",

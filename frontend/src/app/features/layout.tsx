@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "URL Shortener Features — Analytics, Custom Domains & QR Codes | Trunc",
-  description: "Trunc features: real-time click analytics, custom domains, QR codes, A/B link testing, AI insights, and team collaboration — all in one URL shortener.",
+  title: "URL Shortener Features — Analytics, Custom Domains, QR Codes & More | Trunc",
+  description: "Explore Trunc's free URL shortener features: real-time click analytics, custom domains, QR code generator, A/B link testing, AI insights, and team collaboration. Better than Bitly, free forever.",
+  keywords: "url shortener with analytics dashboard, url shortener with qr code, custom url shortener, free url shortener with analytics, url shortener features",
   alternates: {
     canonical: 'https://trunc.site/features',
   },
@@ -11,13 +12,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://trunc.site/features',
     siteName: 'Trunc',
-    title: "URL Shortener Features — Analytics, Custom Domains & QR Codes | Trunc",
-    description: "Trunc features: real-time click analytics, custom domains, QR codes, A/B link testing, AI insights, and team collaboration — all in one URL shortener.",
+    title: "URL Shortener Features — Analytics, Custom Domains, QR Codes & More | Trunc",
+    description: "Explore Trunc's free URL shortener features: real-time click analytics, custom domains, QR code generator, A/B link testing, AI insights, and team collaboration.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "URL Shortener Features — Analytics, Custom Domains & QR Codes | Trunc",
-    description: "Trunc features: real-time click analytics, custom domains, QR codes, A/B link testing, AI insights, and team collaboration — all in one URL shortener.",
+    title: "URL Shortener Features — Analytics, Custom Domains, QR Codes & More | Trunc",
+    description: "Explore Trunc's free URL shortener features: real-time click analytics, custom domains, QR code generator, A/B link testing, and AI insights.",
   },
 };
 

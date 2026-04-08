@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a"/>
+      <stop offset="100%" style="stop-color:#2563eb"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.04"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="1050" cy="100" r="200" fill="#ffffff" fill-opacity="0.04"/>
+  <circle cx="150" cy="530" r="150" fill="#ffffff" fill-opacity="0.04"/>
+
+  <!-- URL bar illustration -->
+  <rect x="80" y="200" width="580" height="52" rx="8" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="100" y="233" font-family="monospace" font-size="14" fill="#93c5fd">https://www.example.com/very/long/path/that/is/hard/to/share?ref=email</text>
+
+  <!-- Arrow -->
+  <text x="690" y="233" font-family="sans-serif" font-size="28" fill="#60a5fa">→</text>
+
+  <!-- Short link result -->
+  <rect x="740" y="200" width="200" height="52" rx="8" fill="#ffffff" fill-opacity="0.15" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="760" y="233" font-family="monospace" font-size="16" font-weight="bold" fill="#ffffff">trunc.site/abc</text>
+
+  <!-- Category badge -->
+  <rect x="80" y="140" width="68" height="28" rx="14" fill="#ffffff" fill-opacity="0.15"/>
+  <text x="114" y="159" font-family="sans-serif" font-size="13" font-weight="600" fill="#93c5fd" text-anchor="middle">GUIDE</text>
+
+  <!-- Main heading -->
+  <text x="80" y="320" font-family="sans-serif" font-size="44" font-weight="800" fill="#ffffff">How to Shorten a URL</text>
+  <text x="80" y="375" font-family="sans-serif" font-size="44" font-weight="800" fill="#ffffff">Step-by-Step Guide (2026)</text>
+
+  <!-- Subtext -->
+  <text x="80" y="430" font-family="sans-serif" font-size="20" fill="#93c5fd">Paste · Shorten · Share · Track clicks in real time</text>
+
+  <!-- Branding -->
+  <text x="80" y="570" font-family="sans-serif" font-size="22" font-weight="700" fill="#ffffff">trunc.site</text>
+  <text x="1120" y="570" font-family="sans-serif" font-size="14" fill="#93c5fd" text-anchor="end">Free URL Shortener</text>
+</svg>

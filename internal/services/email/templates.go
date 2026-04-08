@@ -296,20 +296,24 @@ trunc.site Team
 }
 
 // ContactFormEmailTemplate generates contact form submission template
-func ContactFormEmailTemplate(name, email, message string) EmailTemplate {
-	subject := fmt.Sprintf("New Contact Form Submission from %s", name)
+func ContactFormEmailTemplate(name, email, subject, message string) EmailTemplate {
+	emailSubject := fmt.Sprintf("New Contact Form Submission from %s", name)
+	if subject != "" {
+		emailSubject = fmt.Sprintf("[Contact] %s", subject)
+	}
 
 	textBody := fmt.Sprintf(`New contact form submission received:
 
 Name: %s
 Email: %s
+Subject: %s
 
 Message:
 %s
 
 ---
 This email was sent from the trunc.site contact form.
-`, name, email, message)
+`, name, email, subject, message)
 
 	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
 <html>
@@ -342,6 +346,9 @@ This email was sent from the trunc.site contact form.
                                 <p style="color: #333333; margin: 0 0 10px; font-size: 16px;">
                                     <strong>Email:</strong> <a href="mailto:%s" style="color: #1e9df1; text-decoration: none;">%s</a>
                                 </p>
+                                <p style="color: #333333; margin: 0; font-size: 16px;">
+                                    <strong>Subject:</strong> %s
+                                </p>
                             </div>
 
                             <h3 style="color: #333333; margin: 30px 0 15px; font-size: 18px;">Message:</h3>
@@ -368,10 +375,10 @@ This email was sent from the trunc.site contact form.
         </tr>
     </table>
 </body>
-</html>`, name, email, email, message)
+</html>`, name, email, email, subject, message)
 
 	return EmailTemplate{
-		Subject:  subject,
+		Subject:  emailSubject,
 		HTMLBody: htmlBody,
 		TextBody: textBody,
 	}

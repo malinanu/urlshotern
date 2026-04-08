@@ -653,8 +653,18 @@ func setupStaticRoutes(router *gin.Engine) {
 	// Serve static files from the /static directory
 	router.Static("/static", "./static")
 
-	// Serve frontend assets (_next directory for Next.js)
-	router.StaticFS("/_next", http.Dir("./static/_next"))
+	// Serve frontend assets (_next directory for Next.js) with long-term caching.
+	// Next.js content-hashes all chunk filenames, so these are safe to cache for 1 year.
+	router.GET("/_next/*filepath", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		filePath := c.Param("filepath")
+		c.File(filepath.Join("./static/_next", filePath))
+	})
+	router.HEAD("/_next/*filepath", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		filePath := c.Param("filepath")
+		c.File(filepath.Join("./static/_next", filePath))
+	})
 
 	// Serve index.html for root path
 	rootHandler := func(c *gin.Context) {

@@ -289,9 +289,9 @@ func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 }
 
 // SendContactFormEmail sends contact form submission email
-func (e *EmailService) SendContactFormEmail(name, emailAddr, message string) error {
+func (e *EmailService) SendContactFormEmail(name, emailAddr, subject, message string) error {
 	// Generate email template
-	template := email.ContactFormEmailTemplate(name, emailAddr, message)
+	template := email.ContactFormEmailTemplate(name, emailAddr, subject, message)
 
 	// Send to contact email
 	contactEmail := "contact@trunc.site"

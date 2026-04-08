@@ -99,11 +99,16 @@ export default function AboutPage() {
     items: fallbackValues,
   });
 
-  const team = getContentBlock(page, 'team', {
-    badge: 'Our Team',
-    heading: 'Global Remote Team',
-    description: 'Our diverse team of engineers, designers, and product experts work from around the world to bring you the best URL shortening experience.',
-    cta: { text: 'View Open Positions', url: '/careers' },
+  const builtWith = getContentBlock(page, 'built_with', {
+    badge: 'How We Build',
+    heading: 'Built for Speed, Built to Last',
+    description: 'Trunc is built with a focus on reliability, performance, and simplicity. Every feature is designed to solve a real problem — no bloat, no noise. Just fast short links and the analytics you actually need.',
+    principles: [
+      { title: '50ms Redirects', description: 'Links resolve in under 50 milliseconds globally, so your audience never notices the redirect.' },
+      { title: '99.9% Uptime', description: 'Redundant infrastructure means your links keep working even when traffic spikes unexpectedly.' },
+      { title: 'Privacy First', description: 'We collect only the data needed to power your analytics. No selling data. No third-party tracking.' },
+      { title: 'Open API', description: 'Everything you can do in the dashboard you can automate via the REST API. No features locked behind the UI.' },
+    ],
   });
 
   const achievementsBlock = getContentBlock(page, 'achievements', {
@@ -281,35 +286,36 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team Section */}
+      {/* Built With Purpose Section */}
       <section className="py-20 lg:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <Badge variant="outline" className="text-primary-600 border-primary-200">
-              {team.badge}
+              {builtWith.badge}
             </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
-              {team.heading}
+              {builtWith.heading}
             </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              {builtWith.description}
+            </p>
           </div>
 
-          <Card className="bg-gradient-to-br from-primary-50 to-white border-primary-100 text-center">
-            <CardContent className="p-12">
-              <div className="space-y-6">
-                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center">
-                  <UsersIcon className="h-10 w-10 text-primary-600" />
-                </div>
-                <div className="space-y-4">
-                  <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                    {team.description}
-                  </p>
-                  <Button variant="outline" size="lg" className="border-primary-200 text-primary-700 hover:bg-primary-50" asChild>
-                    <a href={team.cta.url}>{team.cta.text}</a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {(builtWith.principles || []).map((principle: any, index: number) => (
+              <Card key={index} className="bg-gradient-to-br from-primary/5 to-background border-primary/10 text-center hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="space-y-3">
+                  <div className="mx-auto w-12 h-12 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl flex items-center justify-center">
+                    <ShieldCheckIcon className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg font-bold text-gray-900">{principle.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-gray-600 leading-relaxed">{principle.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
 

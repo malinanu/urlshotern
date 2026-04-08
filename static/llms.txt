@@ -1,0 +1,12 @@
+# Trunc
+
+> Free URL shortener with advanced analytics, custom domains, QR codes, A/B testing, and AI-powered insights. Shorten links, track clicks, and optimize performance. No credit card required.
+
+## Pages
+
+- [Home](https://trunc.site/): URL shortening tool — paste a long URL, get a short trackable link instantly
+- [Features](https://trunc.site/features): Full feature list — real-time click analytics, custom branded domains, QR code generation, A/B link testing, AI insights, team collaboration
+- [Pricing](https://trunc.site/pricing): Free plan (10 links/month), Premium (1,000 links, custom domains, advanced analytics), Enterprise (unlimited links and team members)
+- [API Docs](https://trunc.site/api-docs): REST API reference for developers integrating URL shortening into applications
+- [About](https://trunc.site/about): Company mission, values, and team
+- [Contact](https://trunc.site/contact): Support and sales contact

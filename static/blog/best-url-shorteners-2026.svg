@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a"/>
+      <stop offset="100%" style="stop-color:#2563eb"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1100" cy="90" r="230" fill="#ffffff" fill-opacity="0.04"/>
+  <circle cx="100" cy="550" r="170" fill="#ffffff" fill-opacity="0.04"/>
+
+  <!-- Category badge -->
+  <rect x="80" y="140" width="88" height="28" rx="14" fill="#ffffff" fill-opacity="0.15"/>
+  <text x="124" y="159" font-family="sans-serif" font-size="13" font-weight="600" fill="#93c5fd" text-anchor="middle">ROUNDUP</text>
+
+  <!-- Main heading -->
+  <text x="80" y="240" font-family="sans-serif" font-size="52" font-weight="800" fill="#ffffff">7 Best URL Shorteners</text>
+  <text x="80" y="300" font-family="sans-serif" font-size="52" font-weight="800" fill="#ffffff">in 2026</text>
+  <text x="80" y="356" font-family="sans-serif" font-size="26" font-weight="500" fill="#93c5fd">Ranked by analytics, pricing, custom domains &amp; AI features</text>
+
+  <!-- Ranked list preview -->
+  <text x="80" y="415" font-family="sans-serif" font-size="17" fill="#ffffff">🥇 Trunc  ·  🥈 Bitly  ·  🥉 Rebrandly  ·  4. Short.io  ·  5. TinyURL  ·  6. T2M  ·  7. BL.INK</text>
+
+  <!-- Branding -->
+  <text x="80" y="570" font-family="sans-serif" font-size="22" font-weight="700" fill="#ffffff">trunc.site</text>
+  <text x="1120" y="570" font-family="sans-serif" font-size="14" fill="#93c5fd" text-anchor="end">Free URL Shortener</text>
+</svg>

@@ -4,8 +4,9 @@ import { PLAN_NAMES } from '@/lib/plan-utils';
 import { JsonLd } from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Pricing - Trunc URL Shortener",
-  description: `Simple, transparent pricing for every team. Start free, upgrade when you need more. Compare Trunc plans: ${PLAN_NAMES.free}, ${PLAN_NAMES.premium}, and ${PLAN_NAMES.enterprise}.`,
+  title: "Pricing — Free URL Shortener Plans | Trunc",
+  description: `Free URL shortener with no credit card required. Compare Trunc plans: ${PLAN_NAMES.free}, ${PLAN_NAMES.premium}, and ${PLAN_NAMES.enterprise}. Get analytics, custom domains, and QR codes. Cancel anytime.`,
+  keywords: "free url shortener, url shortener pricing, free url shortener no sign up, best free url shortener, custom url shortener free",
   alternates: {
     canonical: 'https://trunc.site/pricing',
   },
@@ -13,13 +14,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://trunc.site/pricing',
     siteName: 'Trunc',
-    title: "Pricing - Trunc URL Shortener",
-    description: "Simple, transparent pricing for every team. Start free, upgrade when you need more.",
+    title: "Pricing — Free URL Shortener Plans | Trunc",
+    description: "Free URL shortener with no credit card required. Get analytics, custom domains, and QR codes. Cancel anytime.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pricing - Trunc URL Shortener",
-    description: "Simple, transparent pricing for every team. Start free, upgrade when you need more.",
+    title: "Pricing — Free URL Shortener Plans | Trunc",
+    description: "Free URL shortener with no credit card required. Get analytics, custom domains, and QR codes. Cancel anytime.",
   },
 };
 

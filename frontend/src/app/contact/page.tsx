@@ -41,11 +41,12 @@ const fallbackContactMethods = [
   },
   {
     icon: 'ChatBubbleLeftRightIcon',
-    title: 'Live Chat',
-    description: 'Instant help when you need it',
-    contact: 'Start Chat',
-    responseTime: 'Immediate',
-    color: 'text-green-500'
+    title: 'API Documentation',
+    description: 'Answers to common questions and developer guides',
+    contact: 'Browse Docs',
+    responseTime: 'Self-service',
+    color: 'text-primary',
+    url: '/api-docs',
   }
 ];
 
@@ -53,16 +54,8 @@ const fallbackInquiryTypes = [
   { value: 'general', label: 'General Inquiry' },
   { value: 'technical', label: 'Technical Support' },
   { value: 'billing', label: 'Billing Question' },
-  { value: 'sales', label: 'Sales Inquiry' },
   { value: 'partnership', label: 'Partnership' },
   { value: 'feedback', label: 'Feedback' }
-];
-
-const fallbackPriorityLevels = [
-  { value: 'low', label: 'Low Priority' },
-  { value: 'medium', label: 'Medium Priority' },
-  { value: 'high', label: 'High Priority' },
-  { value: 'urgent', label: 'Urgent' }
 ];
 
 const iconMap: Record<string, any> = {
@@ -111,7 +104,7 @@ export default function ContactPage() {
         icon: 'UserIcon',
         title: 'Documentation',
         description: 'Find answers in our comprehensive guides',
-        cta: { text: 'Browse Documentation', url: '/docs' },
+        cta: { text: 'Browse Documentation', url: '/api-docs' },
       },
     ],
   });
@@ -126,7 +119,6 @@ export default function ContactPage() {
 
   // Extract custom fields
   const inquiryTypes = getCustomField(page, 'inquiry_types', fallbackInquiryTypes);
-  const priorityLevels = getCustomField(page, 'priority_levels', fallbackPriorityLevels);
 
   // Map icon names to actual components
   const contactMethods = (contactMethodsBlock.methods || fallbackContactMethods).map((method: any) => ({
@@ -146,7 +138,7 @@ export default function ContactPage() {
     subject: '',
     message: '',
     inquiryType: 'general',
-    priority: 'medium'
+    priority: '',
   });
   const [formStatus, setFormStatus] = useState<FormStatus>('idle');
   const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
@@ -286,14 +278,31 @@ export default function ContactPage() {
                       {method.responseTime}
                     </Badge>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-primary/20 text-primary hover:bg-primary/10"
-                  >
-                    <method.icon className="h-4 w-4 mr-2" />
-                    Connect Now
-                  </Button>
+                  {method.url ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-primary/20 text-primary hover:bg-primary/10"
+                      asChild
+                    >
+                      <a href={method.url}>
+                        <method.icon className="h-4 w-4 mr-2" />
+                        {method.contact}
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-primary/20 text-primary hover:bg-primary/10"
+                      asChild
+                    >
+                      <a href={`mailto:${method.contact}`}>
+                        <method.icon className="h-4 w-4 mr-2" />
+                        Send Email
+                      </a>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -394,46 +403,24 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label htmlFor="inquiryType" className="text-sm font-semibold text-foreground">
-                        Inquiry Type
-                      </label>
-                      <select
-                        id="inquiryType"
-                        name="inquiryType"
-                        value={formData.inquiryType}
-                        onChange={handleInputChange}
-                        disabled={formStatus === 'sending'}
-                        className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
-                      >
-                        {inquiryTypes.map(type => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label htmlFor="priority" className="text-sm font-semibold text-foreground">
-                        Priority
-                      </label>
-                      <select
-                        id="priority"
-                        name="priority"
-                        value={formData.priority}
-                        onChange={handleInputChange}
-                        disabled={formStatus === 'sending'}
-                        className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
-                      >
-                        {priorityLevels.map(level => (
-                          <option key={level.value} value={level.value}>
-                            {level.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className="space-y-2">
+                    <label htmlFor="inquiryType" className="text-sm font-semibold text-foreground">
+                      Inquiry Type
+                    </label>
+                    <select
+                      id="inquiryType"
+                      name="inquiryType"
+                      value={formData.inquiryType}
+                      onChange={handleInputChange}
+                      disabled={formStatus === 'sending'}
+                      className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                    >
+                      {inquiryTypes.map(type => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-2">

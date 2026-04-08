@@ -14,13 +14,6 @@ const STATIC_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
-// API endpoints that should be cached
-const API_ENDPOINTS = [
-  '/api/v1/user/profile',
-  '/api/v1/user/urls',
-  '/api/v1/analytics'
-];
-
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Install event');
