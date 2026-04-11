@@ -332,7 +332,6 @@ export const posts: BlogPost[] = [
       { type: 'cta', text: 'Shorten your Amazon affiliate links for free with Trunc. Click tracking, custom codes, and analytics included — no credit card required.', href: 'https://trunc.site/register', label: 'Start Free' },
     ],
   },
-];
 
   {
     slug: 'url-shortener-for-instagram',
