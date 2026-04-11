@@ -6,7 +6,7 @@ export const dynamic = 'force-static';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://trunc.site';
 
-async function fetchCMSPages(): Promise<Array<{ slug: string; updated_at?: string }>> {
+async function fetchCMSPages(): Promise<Array<{ slug: string; updated_at?: string; status?: string }>> {
   try {
     // Uses the internal API key or server-side access if configured
     const apiKey = process.env.SITEMAP_API_KEY;
@@ -28,16 +28,16 @@ async function fetchCMSPages(): Promise<Array<{ slug: string; updated_at?: strin
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, lastModified: new Date('2026-04-03'), changeFrequency: 'weekly', priority: 1.0 },
-    { url: `${SITE_URL}/features`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/`, lastModified: new Date('2026-04-12'), changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${SITE_URL}/features`, lastModified: new Date('2026-04-12'), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/pricing`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/about`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/contact`, lastModified: new Date('2026-03-20'), changeFrequency: 'yearly', priority: 0.5 },
     { url: `${SITE_URL}/api-docs`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/privacy`, lastModified: new Date('2026-03-20'), changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified: new Date('2026-03-20'), changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${SITE_URL}/blog`, lastModified: new Date('2026-03-28'), changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${SITE_URL}/blog/authors/malin-jayaweera`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/blog`, lastModified: new Date('2026-04-12'), changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/blog/authors/malin-jayaweera`, lastModified: new Date('2026-04-12'), changeFrequency: 'monthly', priority: 0.6 },
     ...posts.map((post) => ({
       url: `${SITE_URL}/blog/${post.slug}`,
       lastModified: new Date(post.updatedAt ?? post.publishedAt),
@@ -48,7 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const cmsPages = await fetchCMSPages();
   const dynamicRoutes: MetadataRoute.Sitemap = cmsPages
-    .filter((p) => p.slug && p.slug !== '_placeholder')
+    .filter((p) => p.slug && p.slug !== '_placeholder' && p.status === 'published')
     .map((p) => ({
       url: `${SITE_URL}/pages/${p.slug}`,
       lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),

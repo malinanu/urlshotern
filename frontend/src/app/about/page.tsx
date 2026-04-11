@@ -89,7 +89,7 @@ export default function AboutPage() {
     heading: 'Connecting Every Digital Experience',
     description: 'We envision a world where every URL is intelligent, every click tells a story, and every connection drives meaningful outcomes. Trunc isn\'t just a tool—it\'s the bridge between intention and impact in the digital ecosystem.',
     cta_primary: { text: 'Get Started', url: '/register' },
-    cta_secondary: { text: 'Learn More', url: '/features' },
+    cta_secondary: { text: 'Explore Trunc Features', url: '/features' },
   });
 
   const valuesBlock = getContentBlock(page, 'values', {

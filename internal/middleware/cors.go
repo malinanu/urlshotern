@@ -29,3 +29,12 @@ func CORSMiddleware() gin.HandlerFunc {
 
 	return cors.New(config)
 }
+
+// SecurityHeadersMiddleware adds security headers to all responses, including
+// HSTS to enforce HTTPS on the main domain and all subdomains.
+func SecurityHeadersMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		c.Next()
+	}
+}

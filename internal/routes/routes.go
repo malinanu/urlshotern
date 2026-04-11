@@ -74,6 +74,10 @@ func SetupRoutes(
 		if strings.Contains(base, ".") {
 			staticPath := filepath.Join("./static", path)
 			if info, err := os.Stat(staticPath); err == nil && !info.IsDir() {
+				// Next.js assets are content-hashed — safe to cache for 1 year
+				if strings.HasPrefix(path, "/_next/") {
+					c.Header("Cache-Control", "public, max-age=31536000, immutable")
+				}
 				c.File(staticPath)
 				c.Abort()
 				return
@@ -668,6 +672,7 @@ func setupStaticRoutes(router *gin.Engine) {
 
 	// Serve index.html for root path
 	rootHandler := func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=3600")
 		indexPath := filepath.Join("./static", "index.html")
 		c.File(indexPath)
 	}
@@ -693,6 +698,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		routePath := route // Local copy to avoid closure issues
 
 		routeHandler := func(c *gin.Context) {
+			c.Header("Cache-Control", "public, max-age=3600")
 			// Try to serve the specific HTML file for this route (e.g., /features.html)
 			htmlPath := filepath.Join("./static", routePath+".html")
 			if _, err := os.Stat(htmlPath); err == nil {
@@ -714,6 +720,7 @@ func setupStaticRoutes(router *gin.Engine) {
 
 		// Handle sub-routes with /*path
 		subRouteHandler := func(c *gin.Context) {
+			c.Header("Cache-Control", "public, max-age=3600")
 			subPath := c.Param("path")
 			fullPath := routePath + subPath
 

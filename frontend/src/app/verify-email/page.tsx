@@ -91,7 +91,7 @@ function VerifyEmailContent() {
               {verifyResult === 'success' && (
                 <>
                   <CheckCircleIcon className="h-14 w-14 text-green-500 mx-auto" />
-                  <h2 className="text-xl font-bold text-foreground">Email verified!</h2>
+                  <h1 className="text-xl font-bold text-foreground">Email verified!</h1>
                   <p className="text-muted-foreground">Redirecting you to the dashboard…</p>
                 </>
               )}
@@ -99,7 +99,7 @@ function VerifyEmailContent() {
               {verifyResult === 'error' && (
                 <>
                   <ExclamationTriangleIcon className="h-14 w-14 text-yellow-500 mx-auto" />
-                  <h2 className="text-xl font-bold text-foreground">Verification failed</h2>
+                  <h1 className="text-xl font-bold text-foreground">Verification failed</h1>
                   <p className="text-muted-foreground">{verifyError}</p>
                   {user && (
                     <button
@@ -131,7 +131,7 @@ function VerifyEmailContent() {
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-card py-10 px-6 border border-border sm:rounded-lg text-center space-y-4">
             <EnvelopeIcon className="h-14 w-14 text-primary mx-auto" />
-            <h2 className="text-2xl font-bold text-foreground">Check your inbox</h2>
+            <h1 className="text-2xl font-bold text-foreground">Check your inbox</h1>
             <p className="text-muted-foreground">
               We sent a verification email to{' '}
               <span className="font-medium text-foreground">{user?.email ?? 'your email address'}</span>.

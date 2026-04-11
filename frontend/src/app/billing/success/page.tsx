@@ -140,7 +140,7 @@ export default function BillingSuccessPage() {
         <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground">
             Need help getting started?{' '}
-            <Link href="/docs" className="text-primary hover:text-primary/80 font-medium underline">
+            <Link href="/api-docs" className="text-primary hover:text-primary/80 font-medium underline">
               Check out our documentation
             </Link>
           </p>

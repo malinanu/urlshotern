@@ -49,6 +49,18 @@ export default function MalinJayaweeraAuthorPage() {
               strategy. His writing draws on real data from the Trunc platform and first-hand experience
               running campaigns across paid search, email, and social.
             </p>
+            <p className="text-foreground/80 leading-relaxed text-base mt-4">
+              His articles cover the full spectrum of link management: from practical how-to guides on
+              shortening URLs and tracking affiliate links, to in-depth comparisons of URL shortener
+              platforms, to developer tutorials on integrating link shortening via REST API. Every piece
+              is grounded in real platform data and tested workflows rather than generic marketing advice.
+            </p>
+            <p className="text-foreground/80 leading-relaxed text-base mt-4">
+              Outside of writing, Malin focuses on building features that close the gap between
+              enterprise-grade analytics and free-tier accessibility — including Trunc's AI Insights
+              engine, which analyses click patterns to surface actionable recommendations for marketers
+              who do not have a data team behind them.
+            </p>
           </div>
 
           {/* Expertise tags */}

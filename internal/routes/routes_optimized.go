@@ -33,6 +33,9 @@ func SetupOptimizedRoutes(
 	// 4. CORS middleware (allows cross-origin requests)
 	router.Use(middleware.CORSMiddleware())
 
+	// 4a. Security headers (HSTS and other hardening headers)
+	router.Use(middleware.SecurityHeadersMiddleware())
+
 	// 5. Logging middleware (logs with request ID)
 	router.Use(middleware.LoggingMiddleware())
 

@@ -72,9 +72,9 @@ export default function ForgotPasswordPage() {
               <span className="text-2xl font-bold text-foreground">Trunc</span>
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-foreground">
+          <h1 className="mt-6 text-center text-3xl font-bold text-foreground">
             Reset your password
-          </h2>
+          </h1>
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Enter your email address and we'll send you a link to reset your password.
           </p>

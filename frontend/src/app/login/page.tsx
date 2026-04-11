@@ -86,9 +86,9 @@ function LoginForm() {
               <span className="text-2xl font-bold text-foreground">Trunc</span>
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-foreground">
+          <h1 className="mt-6 text-center text-3xl font-bold text-foreground">
             Sign in to your account
-          </h2>
+          </h1>
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Or{' '}
             <Link
