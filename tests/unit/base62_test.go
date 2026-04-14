@@ -17,7 +17,7 @@ func TestBase62Encoding(t *testing.T) {
 		{"Small number", 61, "z"},
 		{"Medium number", 62, "10"},
 		{"Large number", 3844, "100"},
-		{"Very large number", 238328, "zzz"},
+		{"Very large number", 238327, "zzz"},
 	}
 
 	for _, tt := range tests {
@@ -38,7 +38,7 @@ func TestBase62Decoding(t *testing.T) {
 		{"Single char", "z", 61},
 		{"Two chars", "10", 62},
 		{"Three chars", "100", 3844},
-		{"Complex", "zzz", 238328},
+		{"Complex", "zzz", 238327},
 	}
 
 	for _, tt := range tests {
