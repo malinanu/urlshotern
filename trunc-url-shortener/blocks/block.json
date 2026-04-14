@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "trunc/short-link",
+  "version": "1.0.0",
+  "title": "Trunc Short Link",
+  "category": "text",
+  "icon": "admin-links",
+  "description": "Insert a Trunc short link with an optional custom label.",
+  "supports": { "html": false },
+  "attributes": {
+    "shortUrl": { "type": "string", "default": "" },
+    "label":    { "type": "string", "default": "" }
+  },
+  "textdomain": "trunc-url-shortener",
+  "editorScript": "file:./build/index.js"
+}

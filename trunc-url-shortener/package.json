@@ -1,0 +1,12 @@
+{
+  "name": "trunc-url-shortener",
+  "version": "1.0.0",
+  "description": "WordPress plugin — Gutenberg block build",
+  "scripts": {
+    "build": "wp-scripts build blocks/index.js --output-path=blocks/build --no-source-maps",
+    "start": "wp-scripts start blocks/index.js --output-path=blocks/build"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.0"
+  }
+}
