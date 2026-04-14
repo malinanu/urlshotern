@@ -398,7 +398,7 @@ export const posts: BlogPost[] = [
     readTime: 7,
     category: 'Guide',
     image: '/blog/wordpress-url-shortener.webp',
-    imageAlt: 'WordPress admin dashboard showing URL shortening plugin settings alongside Trunc analytics',
+    imageAlt: 'WordPress admin dashboard showing URL shortener plugin settings alongside a click analytics graph — how to set up a WordPress URL shortener in 2026',
     author: 'Malin Jayaweera',
     authorSlug: 'malin-jayaweera',
     content: [
@@ -441,7 +441,7 @@ export const posts: BlogPost[] = [
     readTime: 7,
     category: 'Guide',
     image: '/blog/url-shortener-to-earn-money.webp',
-    imageAlt: 'Earnings dashboard showing pay-per-click URL shortener revenue alongside affiliate marketing comparison',
+    imageAlt: 'Side-by-side comparison of pay-per-click URL shortener earnings ($0.003/click) versus affiliate marketing commissions — honest guide to making money with short links in 2026',
     author: 'Malin Jayaweera',
     authorSlug: 'malin-jayaweera',
     content: [
