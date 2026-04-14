@@ -120,6 +120,41 @@ func APIKeyPermissionMiddleware(apiKeyService *services.APIKeyService, permissio
 	}
 }
 
+// FlexibleOptionalAuth attempts API key auth first, then JWT, then allows
+// anonymous access. It never rejects a request — callers must handle userID == 0.
+// Use this on endpoints that support both authenticated and anonymous access
+// but need API key users to be properly identified for plan enforcement.
+func FlexibleOptionalAuth(authMiddleware *AuthMiddleware, apiKeyService *services.APIKeyService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+
+		// Try API key first (Bearer us_ prefix)
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer us_") {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 {
+				keyData, err := apiKeyService.ValidateAPIKey(parts[1])
+				if err == nil {
+					ipAddress := c.ClientIP()
+					go func() {
+						_ = apiKeyService.UpdateAPIKeyUsage(keyData.ID, ipAddress)
+					}()
+
+					c.Set("user_id", keyData.UserID)
+					c.Set("api_key_id", keyData.ID)
+					c.Set("api_key_permissions", keyData.Permissions)
+					c.Set("auth_type", "api_key")
+					c.Next()
+					return
+				}
+				// Invalid API key — fall through to anonymous
+			}
+		}
+
+		// Try JWT optional auth — sets user_id if valid, passes through if not
+		authMiddleware.OptionalAuth()(c)
+	}
+}
+
 // FlexibleAuthMiddleware allows both JWT and API key authentication
 func FlexibleAuthMiddleware(authMiddleware *AuthMiddleware, apiKeyService *services.APIKeyService) gin.HandlerFunc {
 	return func(c *gin.Context) {

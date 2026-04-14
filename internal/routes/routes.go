@@ -132,7 +132,7 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	router.POST("/api/v1/check-password/:shortCode", handler.CheckPassword)
 
 	router.POST("/api/v1/shorten",
-		authMiddleware.OptionalAuth(),
+		middleware.FlexibleOptionalAuth(authMiddleware, apiKeyService),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
 		handler.ShortenURL,
 	)
