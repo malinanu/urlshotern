@@ -28,8 +28,10 @@ import {
   UsersIcon,
   GlobeAltIcon,
   ArrowPathIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline';
 import CMSManager from '@/components/cms/CMSManager';
+import CampaignsManager from '@/components/admin/CampaignsManager';
 import APIKeyManager from '@/components/api-keys/APIKeyManager';
 import { SEOToolsManager } from '@/components/seo/SEOToolsManager';
 import { VisualPageBuilder } from '@/components/builder/VisualPageBuilder';
@@ -329,6 +331,7 @@ export default function AdminPage() {
         { id: 'users', name: 'Users', icon: UserGroupIcon },
         { id: 'domains', name: 'Domains', icon: GlobeAltIcon },
         { id: 'coupons', name: 'Coupons', icon: TicketIcon },
+        { id: 'campaigns', name: 'Campaigns', icon: MegaphoneIcon },
       ],
     },
     {
@@ -943,6 +946,8 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {activeTab === 'campaigns' && <CampaignsManager />}
             </div>{/* end flex-1 content */}
           </div>{/* end flex sidebar+content */}
         </div>
