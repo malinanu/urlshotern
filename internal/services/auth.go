@@ -26,15 +26,16 @@ import (
 )
 
 type AuthService struct {
-	userService  *UserService
-	jwtService   *JWTService
-	smsService   *SMSService
-	emailService *EmailService
-	db           *storage.PostgresStorage
-	redis        *storage.RedisStorage
-	config       *configs.Config
-	googleConfig *oauth2.Config
-	githubConfig *oauth2.Config
+	userService    *UserService
+	jwtService     *JWTService
+	smsService     *SMSService
+	emailService   *EmailService
+	db             *storage.PostgresStorage
+	redis          *storage.RedisStorage
+	config         *configs.Config
+	googleConfig   *oauth2.Config
+	githubConfig   *oauth2.Config
+	campaignService *CampaignService // optional, set after init to avoid circular dependency
 }
 
 // NewAuthService creates a new authentication service
@@ -79,6 +80,11 @@ func NewAuthService(
 	}
 }
 
+// SetCampaignService wires in the campaign service after init (avoids circular deps).
+func (a *AuthService) SetCampaignService(cs *CampaignService) {
+	a.campaignService = cs
+}
+
 // Register creates a new user account
 func (a *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent string) (*UserRegistrationData, error) {
 	// Validate input
@@ -107,6 +113,15 @@ func (a *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 			"email":    registrationData.User.Email,
 			"provider": "email",
 		}, ipAddress, userAgent)
+
+	// Best-effort: mark this contact as joined in any matching campaigns
+	if a.campaignService != nil {
+		phone := ""
+		if registrationData.User.Phone != nil {
+			phone = *registrationData.User.Phone
+		}
+		a.campaignService.MarkContactJoined(registrationData.User.Email, phone)
+	}
 
 	return registrationData, nil
 }

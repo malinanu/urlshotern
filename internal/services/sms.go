@@ -118,6 +118,12 @@ func (s *SMSService) sendSMS(phone, message string) error {
 	return s.sendViaTwilio(phone, message)
 }
 
+// SendRawSMS is the public façade used by CampaignService and other callers
+// that need to send an arbitrary message without OTP handling.
+func (s *SMSService) SendRawSMS(phone, message string) error {
+	return s.sendSMS(phone, message)
+}
+
 // isSriLankanNumber detects +94 / 94 / 07x formats.
 func isSriLankanNumber(phone string) bool {
 	n := strings.ReplaceAll(phone, " ", "")

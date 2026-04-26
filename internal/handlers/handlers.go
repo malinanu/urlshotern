@@ -46,6 +46,7 @@ type Handler struct {
 	BrandingHandlers       *BrandingHandler
 	TeamHandlers           *TeamHandlers
 	GlobalSettingsHandlers *GlobalSettingsHandlers
+	CampaignHandlers       *CampaignHandlers
 }
 
 // NewHandler creates a new handler instance

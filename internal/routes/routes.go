@@ -513,6 +513,24 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 		admin.GET("/settings/:key", handler.GlobalSettingsHandlers.GetSetting)
 		admin.PUT("/settings/:key", handler.GlobalSettingsHandlers.UpdateSetting)
 	}
+
+	// Campaign management routes
+	if handler.CampaignHandlers != nil {
+		setupCampaignRoutes(admin, handler)
+	}
+}
+
+// setupCampaignRoutes registers promotional campaign API endpoints (admin-only).
+func setupCampaignRoutes(admin *gin.RouterGroup, handler *handlers.Handler) {
+	campaigns := admin.Group("/campaigns")
+	campaigns.POST("", handler.CampaignHandlers.CreateCampaign)
+	campaigns.GET("", handler.CampaignHandlers.ListCampaigns)
+	campaigns.GET("/:id", handler.CampaignHandlers.GetCampaign)
+	campaigns.PUT("/:id", handler.CampaignHandlers.UpdateCampaign)
+	campaigns.DELETE("/:id", handler.CampaignHandlers.DeleteCampaign)
+	campaigns.POST("/:id/contacts", handler.CampaignHandlers.ImportContacts)
+	campaigns.POST("/:id/send", handler.CampaignHandlers.SendCampaign)
+	campaigns.GET("/:id/stats", handler.CampaignHandlers.GetCampaignStats)
 }
 
 // setupConversionTrackingRoutes configures conversion tracking routes
@@ -692,6 +710,7 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/team-invite",
 		"/not-found",
 		"/blog",
+		"/campaigns",
 	}
 
 	for _, route := range frontendRoutes {

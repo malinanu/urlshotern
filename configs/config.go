@@ -85,6 +85,7 @@ type Config struct {
 	TwilioAccountSID  string
 	TwilioAuthToken   string
 	TwilioFromNumber  string
+	TwilioWhatsAppFrom string // e.g. "whatsapp:+14155238886"
 
 	// Admin Panel Control
 	EnableAdminRoutes bool // Enable admin routes at /api/v1/admin/* (default: false for security)
@@ -160,9 +161,10 @@ func LoadConfig() (*Config, error) {
 		TextLKSenderID: getEnv("TEXTLK_SENDER_ID", "TRUNC"),
 
 		// SMS — Twilio (international numbers)
-		TwilioAccountSID: getEnv("TWILIO_ACCOUNT_SID", ""),
-		TwilioAuthToken:  getEnv("TWILIO_AUTH_TOKEN", ""),
-		TwilioFromNumber: getEnv("TWILIO_FROM_NUMBER", ""),
+		TwilioAccountSID:  getEnv("TWILIO_ACCOUNT_SID", ""),
+		TwilioAuthToken:   getEnv("TWILIO_AUTH_TOKEN", ""),
+		TwilioFromNumber:  getEnv("TWILIO_FROM_NUMBER", ""),
+		TwilioWhatsAppFrom: getEnv("TWILIO_WHATSAPP_FROM", ""),
 
 		// Admin Panel Control (default: false for security)
 		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
