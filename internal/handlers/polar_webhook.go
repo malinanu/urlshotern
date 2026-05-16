@@ -296,6 +296,17 @@ func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventD
 		}
 	}
 
+	// Determine billing cycle from matched product price
+	var billingCycle *string
+	if product != nil && len(product.Prices) > 0 {
+		for _, price := range product.Prices {
+			if subscription.PriceID != nil && price.ID == *subscription.PriceID {
+				billingCycle = price.RecurringInterval
+				break
+			}
+		}
+	}
+
 	// Create or update subscription in database
 	polarSub := models.PolarSubscription{
 		UserID:              userID,
@@ -306,6 +317,7 @@ func (pwh *PolarWebhookHandler) handleCheckoutConfirmed(checkout *CheckoutEventD
 		PolarCheckoutID:     &checkout.ID,
 		Status:              subscription.Status,
 		PlanType:            planType,
+		BillingCycle:        billingCycle,
 		CurrentPeriodStart:  subscription.CurrentPeriodStart,
 		CurrentPeriodEnd:    subscription.CurrentPeriodEnd,
 		CancelAtPeriodEnd:   subscription.CancelAtPeriodEnd,

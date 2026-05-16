@@ -102,6 +102,13 @@ function BillingContent() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  // Sync billing interval tab to the user's actual billing cycle
+  useEffect(() => {
+    if (billingData?.subscription?.billing_cycle && !searchParams?.get('interval')) {
+      setBillingInterval(billingData.subscription.billing_cycle as 'month' | 'year');
+    }
+  }, [billingData]);
+
   // Handle plan auto-scroll from query parameter mapping
   useEffect(() => {
     const planParam = searchParams?.get('plan');
@@ -643,9 +650,12 @@ function BillingContent() {
                   {plans.filter(p => p.interval === billingInterval || p.id === 'free').map((plan) => (
                     <div
                       key={plan.id}
-                      className={`bg-card rounded-lg shadow-sm border-2 p-6 ${plan.id === billingData.subscription.plan_type
-                        ? 'border-primary ring-1 ring-primary'
-                        : 'border-border hover:border-primary/50'
+                      className={`bg-card rounded-lg shadow-sm border-2 p-6 ${
+                        plan.id === billingData.subscription.plan_type ||
+                        (billingData.subscription.billing_cycle === 'year' &&
+                          plan.id === billingData.subscription.plan_type + '_yearly')
+                          ? 'border-primary ring-1 ring-primary'
+                          : 'border-border hover:border-primary/50'
                         }`}
                     >
                       <div className="text-center mb-6">
