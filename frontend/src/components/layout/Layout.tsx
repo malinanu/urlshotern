@@ -50,7 +50,7 @@ export default function Layout({ children }: LayoutProps) {
           </span>
           <button
             onClick={() => setEmailBannerDismissed(true)}
-            className="text-yellow-600 hover:text-yellow-800 ml-4 text-base leading-none"
+            className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-500 dark:hover:text-yellow-400 ml-4 text-base leading-none"
             aria-label="Dismiss"
           >
             ✕
@@ -68,7 +68,7 @@ export default function Layout({ children }: LayoutProps) {
           </span>
           <button
             onClick={() => setPhoneBannerDismissed(true)}
-            className="text-blue-600 hover:text-blue-800 ml-4 text-base leading-none"
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 ml-4 text-base leading-none"
             aria-label="Dismiss"
           >
             ✕

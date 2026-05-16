@@ -330,7 +330,7 @@ export default function TermsPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-white py-12">
+      <div className="min-h-screen bg-background py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {error && (
             <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
