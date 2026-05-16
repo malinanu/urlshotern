@@ -588,7 +588,7 @@ export default function DashboardPage() {
 
       {/* Edit URL Modal */}
       {editingUrl && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+        <div key={editingUrl.short_code} className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-card border border-border rounded-lg w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="px-6 pt-6 pb-4 border-b border-border shrink-0">
@@ -633,7 +633,7 @@ export default function DashboardPage() {
                     Destination URL <span className="text-destructive">*</span>
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     name="original_url"
                     required
                     defaultValue={editingUrl.original_url}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/URLshorter/url-shortener/configs"
@@ -296,12 +297,23 @@ func (bs *BillingService) GetPlan(planID string) (*Plan, error) {
 	return &plan, nil
 }
 
-// GetAllPlans returns all available plans
+var planOrder = map[string]int{
+	"free":              0,
+	"premium":           1,
+	"enterprise":        2,
+	"premium_yearly":    3,
+	"enterprise_yearly": 4,
+}
+
+// GetAllPlans returns all available plans in a stable order.
 func (bs *BillingService) GetAllPlans() []Plan {
 	plans := make([]Plan, 0, len(PredefinedPlans))
 	for _, plan := range PredefinedPlans {
 		plans = append(plans, plan)
 	}
+	sort.Slice(plans, func(i, j int) bool {
+		return planOrder[plans[i].ID] < planOrder[plans[j].ID]
+	})
 	return plans
 }
 
