@@ -39,6 +39,12 @@ export default function TermsPage() {
       }
 
       const data = await response.json();
+      const content = data.page?.content || '';
+      // Block JSON from the CMS builder is not renderable as HTML
+      if (content.trim().startsWith('[') || content.trim().startsWith('{')) {
+        setUseFallback(true);
+        return;
+      }
       setPageData(data.page);
     } catch (error) {
       const errorMsg = error instanceof Error
