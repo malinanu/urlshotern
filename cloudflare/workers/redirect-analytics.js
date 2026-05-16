@@ -53,7 +53,7 @@ export default {
       // 1. Try KV cache first (edge-optimized storage)
       const cachedMapping = await env.URL_MAPPINGS.get(shortCode, {
         type: 'json',
-        cacheTtl: 3600, // 1 hour cache at edge node
+        cacheTtl: 60, // 1 minute — short so updated destinations take effect quickly
       });
 
       if (cachedMapping && cachedMapping.destination_url) {
@@ -72,7 +72,7 @@ export default {
       const originResponse = await fetch(request, {
         cf: {
           cacheEverything: true,
-          cacheTtl: 3600,
+          cacheTtl: 60,
           cacheTags: [`url:${shortCode}`],
         },
       });
@@ -92,7 +92,7 @@ export default {
                 short_code: shortCode,
               }),
               {
-                expirationTtl: 3600, // 1 hour
+                expirationTtl: 60, // 1 minute
                 metadata: { shortCode, cachedAt: Date.now() },
               }
             )

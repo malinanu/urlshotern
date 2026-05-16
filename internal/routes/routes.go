@@ -163,6 +163,9 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	if handler.GlobalSettingsHandlers != nil {
 		router.GET("/api/v1/public/settings", handler.GlobalSettingsHandlers.GetPublicSettings)
 	}
+
+	// OG metadata fetch (public — used by create form to auto-fill fields)
+	router.GET("/api/v1/fetch-metadata", handler.FetchURLMetadata)
 }
 
 // setupAuthRoutes configures authentication routes

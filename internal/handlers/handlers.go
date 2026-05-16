@@ -308,8 +308,9 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 		return
 	}
 
-	// Fast path: plain redirect
-	c.Redirect(http.StatusMovedPermanently, mapping.OriginalURL)
+	// Fast path: plain redirect (302 so browsers never cache and always re-request)
+	c.Header("Cache-Control", "no-store, max-age=0")
+	c.Redirect(http.StatusFound, mapping.OriginalURL)
 }
 
 // buildOGPage generates a minimal HTML page with OG meta tags and a JS redirect.

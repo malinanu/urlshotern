@@ -86,14 +86,52 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
       .catch(() => {});
   }, [isPro, getAccessToken]);
 
+  const [fetchingMeta, setFetchingMeta] = useState(false);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm<URLFormData>({
     resolver: zodResolver(urlSchema),
   });
+
+  const watchedUrl = watch('url');
+
+  useEffect(() => {
+    if (!isPro) return;
+    const rawUrl = watchedUrl ?? '';
+    if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setFetchingMeta(true);
+        const res = await fetch(
+          `${API_BASE_URL}/api/v1/fetch-metadata?url=${encodeURIComponent(rawUrl)}`
+        );
+        if (!res.ok) return;
+        const meta = await res.json() as {
+          og_title?: string;
+          og_description?: string;
+          og_image?: string;
+          title?: string;
+        };
+        const title = meta.og_title || meta.title || '';
+        if (title) setOgTitle(title);
+        if (meta.og_description) setOgDescription(meta.og_description);
+        if (meta.og_image) setOgImage(meta.og_image);
+        if (title || meta.og_description || meta.og_image) setShowAdvanced(true);
+      } catch {
+        // non-critical — never block the user
+      } finally {
+        setFetchingMeta(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [watchedUrl, isPro]);
 
   const onSubmit = async (data: URLFormData) => {
     setIsLoading(true);
@@ -244,9 +282,12 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
               >
                 {showAdvanced ? '▲ Hide options' : '▼ Advanced options (custom code, password)'}
+                {fetchingMeta && (
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border border-muted-foreground border-t-transparent" />
+                )}
               </button>
               {showAdvanced && (
                 <div className="mt-3 space-y-3">
