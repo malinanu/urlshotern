@@ -101,10 +101,20 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
             {isLoading ? (
-              <div className="flex items-center space-x-3">
-                <div className="h-8 w-14 bg-muted rounded animate-pulse"></div>
-                <div className="h-9 w-28 bg-muted rounded-lg animate-pulse"></div>
-              </div>
+              <>
+                <Link
+                  href="/login"
+                  className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Get Started
+                </Link>
+              </>
             ) : isAuthenticated && user ? (
               <div className="relative" ref={profileMenuRef}>
                 <button
