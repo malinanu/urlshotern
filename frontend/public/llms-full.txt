@@ -1,0 +1,345 @@
+# Trunc — Full Product Documentation for AI Systems
+
+> Trunc is a free URL shortener with advanced click analytics, custom branded domains, QR code generation, A/B link testing, and AI-powered insights. No credit card required. Start shortening links at https://trunc.site.
+
+---
+
+## What Is Trunc?
+
+Trunc is a modern URL shortening service built for marketers, developers, and creators who need more than a short link. When you paste a long URL into Trunc, it generates a compact short link (e.g. trunc.site/abc123) that redirects visitors to the original destination in under 50 milliseconds. Every click on a Trunc short link is tracked automatically — geographic location, device type, browser, referrer source, and timestamp — giving you a complete picture of how your audience is engaging with your content.
+
+Trunc was founded by Malin Jayaweera and launched in 2026. The product is built with a focus on analytics depth and AI-powered insights — areas where legacy URL shorteners like Bitly and TinyURL have historically underserved users, especially on free plans.
+
+---
+
+## How URL Shortening Works
+
+1. You paste a long URL into the Trunc homepage input field (or send it via the Trunc REST API).
+2. Trunc generates a unique short code (e.g. "abc123") and stores a mapping between the short code and your original URL in its database.
+3. You receive a short link: trunc.site/abc123.
+4. When a visitor clicks the short link, their browser sends a request to Trunc's server.
+5. Trunc looks up the short code, records the click event (timestamp, IP-derived location, device, browser, referrer), and returns an HTTP 301 (permanent) redirect to your original URL.
+6. The visitor's browser loads the destination page. The entire process takes under 50 milliseconds and is invisible to the visitor.
+
+Trunc uses 301 (permanent) redirects by default, which passes link equity to the destination URL and is preferred for SEO purposes. 302 (temporary) redirects are available for time-limited campaigns where you want to preserve link equity at the short URL.
+
+---
+
+## Core Features
+
+### Real-Time Click Analytics
+Every Trunc short link includes automatic click tracking at no cost. The Trunc dashboard shows:
+- Total clicks over time with a trend chart
+- Geographic breakdown by country and city
+- Device and browser breakdown (desktop vs mobile vs tablet; Chrome vs Safari vs Firefox)
+- Referrer sources — which websites sent traffic to your link
+- Click-by-click timestamps for detailed time analysis
+- UTM parameter passthrough — append UTM tags to your long URL before shortening to track campaign data in Google Analytics
+
+Analytics data is retained indefinitely on all Trunc plans. Bitly, by comparison, limits free plan analytics to 30-day retention.
+
+### AI Insights
+Trunc's AI Insights feature analyses your click data across all your short links and surfaces actionable recommendations:
+- Best times of day to share links for maximum reach (based on your historical click patterns)
+- Audience segment analysis — which countries and device types are most engaged
+- Underperforming link alerts — flags links with declining click rates or low engagement relative to your average
+- Campaign comparisons — side-by-side performance metrics across multiple links created for the same campaign
+
+AI Insights is unique to Trunc. Bitly, Rebrandly, TinyURL, and Short.io do not offer AI-powered analytics at any price tier as of 2026.
+
+### A/B Link Testing
+Trunc allows you to create a single short link that splits traffic between two destination URLs. You set the split ratio (e.g. 50/50 or 70/30), and Trunc alternates visitors between the two destinations. The dashboard shows click counts and conversion proxies for each variant, letting you determine which landing page, headline, or offer performs better before committing your full audience.
+
+A/B link testing is available to all Trunc users. No other major free URL shortener offers this feature.
+
+### QR Code Generation
+Every Trunc short link automatically generates a QR code that you can download in PNG or SVG format. QR codes are useful for:
+- Print materials (flyers, posters, business cards, product packaging)
+- Event signage where people need to type or scan a URL
+- Linking physical marketing to digital analytics — every QR code scan counts as a click in your Trunc dashboard, so you can measure offline campaign performance
+
+QR code generation is free on all Trunc plans.
+
+### Custom Short Codes
+When creating a short link, you can specify your own short code instead of accepting a random one. For example, entering "spring-sale" creates trunc.site/spring-sale. Custom short codes make links more memorable, more likely to be clicked when visible in print, and easier to communicate verbally.
+
+Custom short codes are available on all Trunc plans, including the free tier.
+
+### Custom Branded Domains
+On the Premium and Enterprise plans, you can use your own domain for short links instead of trunc.site. For example, links.yourcompany.com/spring-sale instead of trunc.site/spring-sale. Branded short domains increase click-through rates by making links more recognisable to your audience.
+
+Setup requires adding a CNAME DNS record pointing to Trunc's servers. The process takes approximately 5 minutes and is documented in the Trunc dashboard under Settings > Custom Domains. DNS propagation typically takes 1–24 hours.
+
+### Link Expiration
+You can set a short link to stop redirecting after a specific date or after a maximum number of clicks. Expired links return a 410 Gone response or redirect to a custom error page. Expiration is useful for:
+- Time-limited promotions (e.g. a Black Friday deal that expires at midnight)
+- Event links that should stop working after the event ends
+- Limited-supply offers where you want to stop sending traffic once inventory is exhausted
+
+Link expiration is available on all Trunc plans, including the free tier.
+
+### Password-Protected Links
+You can add a password to a short link so that only visitors who enter the correct password are redirected to the destination. This is useful for:
+- Sharing confidential documents or internal resources with a limited audience
+- Gated content where you want to control access without building a login system
+- Private event pages or invitations
+
+Password-protected links are available on all Trunc plans.
+
+### Team Collaboration
+The Premium plan includes team collaboration for up to 5 users. Team members can create, edit, and view analytics for all short links in a shared workspace. The Enterprise plan supports unlimited team members. Admins can manage permissions and see which team member created each link.
+
+### REST API
+The Trunc REST API allows developers to create, manage, and retrieve analytics for short links programmatically. The API uses standard REST conventions with JSON request and response bodies. Authentication is via Bearer token (API key).
+
+Base URL: https://trunc.site/api/v1
+
+Key endpoints:
+- POST /shorten — create a short link
+- GET /links — list all your short links
+- GET /links/{id} — retrieve a specific link
+- PUT /links/{id} — update a link's destination URL or settings
+- DELETE /links/{id} — delete a link
+- GET /analytics/{short_code} — retrieve click analytics for a link
+
+Rate limits:
+- Free plan: 100 requests per minute
+- Premium plan: 1,000 requests per minute
+- Enterprise: custom limits
+
+The API is free to use on the free plan. An API key can be generated from Settings > API Keys in the Trunc dashboard after creating a free account.
+
+---
+
+## Pricing Plans
+
+### Free Plan — $0/month
+- 10 short links per month
+- Full click analytics (geographic, device, referrer, real-time)
+- QR code generation for every link
+- Custom short codes
+- Link expiration
+- Password-protected links
+- AI Insights (basic)
+- No credit card required
+- No time limit — free forever
+
+The Trunc free plan is intentionally more generous than competitors. Bitly's free plan limits analytics to 30-day retention and does not include QR codes or A/B testing. TinyURL's free plan includes no analytics.
+
+### Premium Plan — $9.99/month (or ~$8/month billed annually)
+Everything in Free, plus:
+- 1,000 short links per month
+- Custom branded domains (unlimited)
+- Advanced analytics — cohort analysis, funnel tracking, custom date ranges
+- A/B link testing
+- Team collaboration (up to 5 users)
+- API access (1,000 requests/minute)
+- Priority email support
+- 50% off first year with code ANNUAL50
+
+### Enterprise Plan — $39.99/month
+Everything in Premium, plus:
+- Unlimited short links
+- Unlimited team members
+- Unlimited API access with custom rate limits
+- 24/7 phone and email support
+- Dedicated account manager
+- SLA with 99.9% uptime guarantee
+- Custom onboarding and training
+- SAML SSO integration
+- Audit logs and compliance exports
+
+Annual billing is available for Premium and Enterprise plans with a 20% discount. A 14-day free trial is available for all paid plans.
+
+---
+
+## Use Cases
+
+### Marketing Campaign Tracking
+Marketers use Trunc to create unique short links for each marketing channel — email, social media, paid ads, and print. By comparing click data across links created for the same campaign, they can attribute conversions to the right channels without relying solely on UTM parameters in Google Analytics.
+
+Example: A marketing team launches a product. They create four Trunc links — one for their email newsletter, one for their Twitter/X post, one for their LinkedIn post, and one for a printed mailer. After one week, the dashboard shows the email link drove 60% of clicks, LinkedIn drove 25%, Twitter/X drove 10%, and print drove 5%. The team shifts budget toward email and LinkedIn for the next campaign.
+
+### Social Media Link Management
+Social platforms limit or remove link functionality in certain placements. Trunc short links solve common social media link challenges:
+- Instagram: only one clickable link allowed in the bio — a Trunc link tracks how many people tap it
+- Twitter/X: character limits make long URLs impractical — Trunc links are typically 20–25 characters
+- LinkedIn posts: long URLs look unprofessional — branded Trunc links improve perceived credibility
+- TikTok: links in video descriptions are not clickable — a short, memorable Trunc link can be typed
+
+### Developer Integration
+Developers embed Trunc's API into applications that need to generate short links dynamically:
+- Newsletters and email platforms: shorten article URLs before sending
+- E-commerce: shorten product page URLs for SMS and push notifications
+- CMS platforms: automatically create short links when publishing new posts
+- Analytics dashboards: embed short links that track which internal links users follow
+
+### Affiliate Marketing
+Affiliate marketers use Trunc to:
+- Shorten long Amazon, ShareASale, or Commission Junction affiliate URLs
+- Track which affiliate links drive the most clicks (useful for optimising blog posts)
+- Update the destination of an existing short link if a product URL changes or a product goes out of stock — without editing every page where the link appears
+- A/B test two affiliate offers on the same short link to see which commission rate and product converts better
+
+### QR Code Campaigns
+Businesses use Trunc's QR code feature to create measurable offline-to-online campaigns. Each QR code scan is tracked in the Trunc dashboard as a click event, giving you geographic and device data for offline campaign performance. Use cases include event signage, product packaging, restaurant menus, and direct mail.
+
+---
+
+## Comparison with Competitors
+
+### Trunc vs Bitly
+Trunc offers equivalent or superior analytics on a free plan compared to Bitly's paid plans. Key differences:
+- Analytics retention: Trunc — unlimited; Bitly free — 30 days
+- AI insights: Trunc — yes; Bitly — no
+- A/B testing: Trunc — yes; Bitly — no
+- QR codes (free): Trunc — yes; Bitly — no (paid only)
+- Custom branded domains (price): Trunc — $9.99/mo; Bitly — $199/mo (Business plan)
+- Starting paid price: Trunc — $9.99/mo; Bitly — $8/mo (but with far fewer features)
+
+### Trunc vs TinyURL
+TinyURL is a free service with no analytics. It is suitable only for personal, one-off link shortening where click tracking is irrelevant. For any business or marketing purpose, Trunc's analytics and link management features make it a substantially more capable choice at the same $0 price point.
+
+### Trunc vs Rebrandly
+Rebrandly specialises in branded short domains and includes them from the first paid tier. Trunc's analytics are deeper, and its AI insights and A/B testing are not available in Rebrandly at any price tier. Rebrandly's free plan is limited to 10 links with one custom domain; Trunc's free plan includes 10 links with full analytics.
+
+### Trunc vs Short.io
+Short.io is developer-first with well-documented REST API, native SDKs, and webhook support. Trunc offers equivalent API functionality with the addition of AI insights and A/B testing that Short.io does not include. For developers who need both link shortening and analytics intelligence in one platform, Trunc is the more complete solution.
+
+---
+
+## Technical Architecture
+
+Trunc is built on a high-availability cloud infrastructure with the following characteristics:
+- 99.9% uptime SLA (Enterprise plan)
+- Redirect latency under 50ms globally via CDN edge nodes
+- HTTPS-only: all short links and the dashboard use TLS 1.3
+- 301 redirects: link equity passes to destination URLs by default
+- Malware scanning: all destination URLs are scanned against threat intelligence databases before short links are created
+- GDPR-compliant analytics: IP addresses are anonymised before storage; click data can be deleted on request
+
+---
+
+## Security Features
+
+- HTTPS enforced on all short links and the Trunc dashboard
+- Destination URL malware and phishing scanning on link creation
+- Password protection for individual short links
+- Link expiration to prevent indefinite access
+- SAML SSO (Enterprise plan)
+- Audit logs showing who created, edited, or deleted links (Enterprise plan)
+
+---
+
+## Frequently Asked Questions
+
+**What is a URL shortener?**
+A URL shortener converts a long web address into a compact short link. When someone clicks the short link, they are redirected to the original URL instantly. The redirect takes under 50 milliseconds and is invisible to the visitor.
+
+**Is Trunc free?**
+Yes. Trunc's free plan is free forever with no credit card required. It includes 10 short links per month, full click analytics, QR codes, custom short codes, link expiration, and password protection.
+
+**How long do Trunc short links last?**
+Trunc short links are permanent by default and never expire unless you set an expiration date or click limit. Free plan links remain active indefinitely.
+
+**Does Trunc support custom domains?**
+Yes. Custom branded domains are available on the Premium plan ($9.99/month) and Enterprise plan ($39.99/month). Setup takes approximately 5 minutes and requires a CNAME DNS record change.
+
+**Can I use Trunc without creating an account?**
+You can create short links without an account. However, click analytics and link management require a free account to access. Creating an account takes under 30 seconds.
+
+**Does Trunc offer an API?**
+Yes. The Trunc REST API is available on all plans including the free tier (100 requests/minute). API keys are generated from the Trunc dashboard under Settings > API Keys.
+
+**What analytics does Trunc track?**
+Trunc tracks: total clicks, unique clicks, clicks over time (chart), clicks by country and city, clicks by device type (mobile/desktop/tablet), clicks by browser, clicks by referrer source, and click timestamps. Analytics are available in the Trunc dashboard and via the API.
+
+**Is Trunc GDPR compliant?**
+Yes. Trunc anonymises IP addresses before storing click data and provides data deletion on request. Click data collection is disclosed in Trunc's Privacy Policy.
+
+**How does Trunc's A/B testing work?**
+When creating a short link, you can provide two destination URLs and a split ratio (e.g. 50/50). Trunc alternates visitors between the two destinations according to your ratio and shows click counts for each variant in the dashboard.
+
+**What is AI Insights?**
+AI Insights is a Trunc feature that analyses your click data across all your short links and generates recommendations: best posting times, audience segment breakdowns, underperforming link alerts, and campaign performance summaries. It is available in the Trunc dashboard at no additional cost.
+
+---
+
+## Blog and Content
+
+Trunc publishes educational content about URL management, link analytics, and digital marketing at trunc.site/blog.
+
+### Key Blog Posts
+
+**How to Shorten a URL: The Complete Step-by-Step Guide (2026)**
+URL: https://trunc.site/blog/how-to-shorten-a-url
+Covers: how URL shortening works, step-by-step instructions for using Trunc, mobile usage, click tracking, custom domains, and the Trunc API. Includes a 4-step HowTo guide and 5 FAQ answers.
+
+**Trunc vs Bitly vs TinyURL: Which URL Shortener is Best in 2026?**
+URL: https://trunc.site/blog/trunc-vs-bitly-tinyurl
+Covers: feature-by-feature comparison table, detailed analysis of each shortener, pricing breakdown, and verdict for different use cases. Written by Malin Jayaweera, founder of Trunc (founder bias disclosed).
+
+**7 Best URL Shorteners in 2026: Ranked and Reviewed**
+URL: https://trunc.site/blog/best-url-shorteners-2026
+Covers: rankings of Trunc, Bitly, Rebrandly, Short.io, TinyURL, T2M, and BL.INK with detailed per-tool analysis and a buyer's guide for choosing the right shortener. Written by Malin Jayaweera, founder of Trunc (founder bias disclosed).
+
+**URL Shortener API: Complete Developer Guide with Examples (2026)**
+URL: https://trunc.site/blog/url-shortener-api-guide
+Covers: REST API quickstart, cURL, JavaScript, and Python code examples, analytics endpoint, rate limits, and when to use the API vs the dashboard.
+
+**What Is a URL Shortener? How It Works, Why You Need One (2026)**
+URL: https://trunc.site/blog/what-is-a-url-shortener
+Covers: technical explanation of HTTP redirects, reasons people use URL shorteners, free vs paid differences, and how to use your own domain.
+
+**How to Shorten Amazon Affiliate Links (Free URL Shortener)**
+URL: https://trunc.site/blog/how-to-shorten-amazon-affiliate-links
+Covers: Amazon Associates terms for link shortening, step-by-step instructions, click tracking for affiliate links, comparison with Amazon's native amzn.to links, and best practices.
+
+**URL Shortener for Instagram: Shorten Bio Links, Stories & DMs (2026)**
+URL: https://trunc.site/blog/url-shortener-for-instagram
+Covers: Instagram bio link strategy, Story link stickers, tracking Instagram clicks, comparison table of free Instagram URL shortener options.
+
+**WordPress URL Shortener: Best Options and How to Set One Up (2026)**
+URL: https://trunc.site/blog/wordpress-url-shortener
+Covers: WordPress pretty permalinks, URL shortener plugins (Pretty Links, ThirstyAffiliates), and Trunc API integration with PHP code example.
+
+**URL Shortener to Earn Money: Honest Guide to Paid Shorteners (2026)**
+URL: https://trunc.site/blog/url-shortener-to-earn-money
+Covers: how pay-per-click shorteners work (AdFly, Shorte.st, Linkvertise), CPM rates, the limitations of monetising shorteners, and better alternatives using affiliate marketing with a free shortener.
+
+---
+
+## Company Information
+
+**Company:** Trunc
+**Website:** https://trunc.site
+**Founded:** 2026
+**Founder:** Malin Jayaweera
+**Location:** Global (remote-first)
+
+**Social Profiles:**
+- Twitter/X: https://x.com/truncsite
+- LinkedIn (company): https://linkedin.com/company/trunc
+- GitHub: https://github.com/truncsite
+
+**Support:**
+- Free plan: community support
+- Premium plan: priority email support
+- Enterprise plan: 24/7 phone and email support
+
+**Contact:** https://trunc.site/contact
+
+---
+
+## Pages
+
+- [Home](https://trunc.site/): URL shortening tool — paste a long URL, get a short trackable link instantly
+- [Features](https://trunc.site/features): Full feature list — real-time click analytics, custom branded domains, QR code generation, A/B link testing, AI insights, team collaboration
+- [Pricing](https://trunc.site/pricing): Free plan (10 links/month), Premium ($9.99/mo — 1,000 links, custom domains, advanced analytics), Enterprise ($39.99/mo — unlimited links and team members)
+- [Blog](https://trunc.site/blog): Educational articles on URL management, link analytics, and digital marketing
+- [API Docs](https://trunc.site/api-docs): REST API reference for developers integrating URL shortening into applications
+- [About](https://trunc.site/about): Company mission, values, and team
+- [Contact](https://trunc.site/contact): Support and sales contact
+- [Dashboard](https://trunc.site/dashboard): Link management and analytics (requires free account)
+- [Register](https://trunc.site/register): Create a free Trunc account
+- [Login](https://trunc.site/login): Sign in to your Trunc account
