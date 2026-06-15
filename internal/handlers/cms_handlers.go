@@ -12,14 +12,16 @@ import (
 )
 
 type CMSHandlers struct {
-	cmsService    *services.CMSService
-	apiKeyService *services.APIKeyService
+	cmsService      *services.CMSService
+	apiKeyService   *services.APIKeyService
+	indexNowService *services.IndexNowService
 }
 
-func NewCMSHandlers(cmsService *services.CMSService, apiKeyService *services.APIKeyService) *CMSHandlers {
+func NewCMSHandlers(cmsService *services.CMSService, apiKeyService *services.APIKeyService, indexNowService *services.IndexNowService) *CMSHandlers {
 	return &CMSHandlers{
-		cmsService:    cmsService,
-		apiKeyService: apiKeyService,
+		cmsService:      cmsService,
+		apiKeyService:   apiKeyService,
+		indexNowService: indexNowService,
 	}
 }
 
@@ -543,6 +545,15 @@ func (h *CMSHandlers) PublishStaticPage(c *gin.Context) {
 		// Log to activity log or audit log as needed
 		return nil
 	})
+
+	// Notify IndexNow so Bing/Yandex/Naver recrawl the page immediately.
+	// Best-effort and non-blocking — only on publish, never on unpublish.
+	if req.IsPublished && updatedPage != nil && updatedPage.Slug != "" && h.indexNowService.Enabled() {
+		slug := updatedPage.Slug
+		utils.Go("indexnow_publish_page", func() error {
+			return h.indexNowService.SubmitPaths([]string{"/pages/" + slug})
+		})
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Page " + action + " successfully",

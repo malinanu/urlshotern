@@ -89,6 +89,10 @@ type Config struct {
 
 	// Admin Panel Control
 	EnableAdminRoutes bool // Enable admin routes at /api/v1/admin/* (default: false for security)
+
+	// IndexNow Configuration (instant search-engine recrawl on publish)
+	IndexNowKey   string // Public IndexNow key; must match the file served at PublicSiteURL/<key>.txt
+	PublicSiteURL string // Public-facing site origin used to build canonical URLs (no trailing slash)
 }
 
 func LoadConfig() (*Config, error) {
@@ -168,6 +172,10 @@ func LoadConfig() (*Config, error) {
 
 		// Admin Panel Control (default: false for security)
 		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
+
+		// IndexNow Configuration
+		IndexNowKey:   getEnv("INDEXNOW_KEY", "trunc-indexnow-2026"),
+		PublicSiteURL: getEnv("PUBLIC_SITE_URL", "https://trunc.site"),
 	}
 
 	return config, nil

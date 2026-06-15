@@ -56,7 +56,8 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 
 	// Create CMS service and handler
 	cmsService := services.NewCMSService(db)
-	cmsHandlers := NewCMSHandlers(cmsService, apiKeyService)
+	indexNowService := services.NewIndexNowService(config.PublicSiteURL, config.IndexNowKey)
+	cmsHandlers := NewCMSHandlers(cmsService, apiKeyService, indexNowService)
 
 	// Create billing service and handlers
 	billingHandler := NewBillingHandler(gormDB, config)
