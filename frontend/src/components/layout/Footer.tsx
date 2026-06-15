@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LinkIcon } from '@heroicons/react/24/outline';
+import { CookiePreferencesButton } from '@/components/CookiePreferencesButton';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -16,6 +17,7 @@ export default function Footer() {
       { name: 'Contact', href: '/contact' },
       { name: 'Privacy Policy', href: '/privacy' },
       { name: 'Terms of Service', href: '/terms' },
+      { name: 'Cookie Policy', href: '/cookies' },
     ],
     resources: [
       { name: 'Blog', href: '/blog' },
@@ -104,7 +106,7 @@ export default function Footer() {
         <div className="mt-12 border-t border-border pt-8">
           <div className="md:flex md:items-center md:justify-between">
             <div className="flex space-x-6 md:order-2">
-              {/* Social links would go here */}
+              <CookiePreferencesButton />
             </div>
             <p className="mt-8 text-base text-muted-foreground md:mt-0 md:order-1">
               &copy; {currentYear} Trunc. All rights reserved.

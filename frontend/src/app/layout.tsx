@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CookieConsent } from "@/components/CookieConsent";
+import { ConsentedScripts } from "@/components/analytics/ConsentedScripts";
 import { JsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
@@ -115,27 +115,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Preconnect to session recording provider */}
-        <link rel="preconnect" href="https://t.contentsquare.net" />
-
         {/* Theme initialization — must run before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{
           __html: `(function(){try{var t=localStorage.getItem('theme');var r=document.documentElement;r.classList.remove('light','dark');if(t==='dark'){r.classList.add('dark')}else if(t==='light'){r.classList.add('light')}else{if(window.matchMedia('(prefers-color-scheme: dark)').matches){r.classList.add('dark')}else{r.classList.add('light')}}}catch(e){}})();`
         }} />
 
-        {/* Google Analytics */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-KERP09FSLV"
-          strategy="afterInteractive"
-        />
-        <Script id="gtag-init" strategy="afterInteractive" dangerouslySetInnerHTML={{
-          __html: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-KERP09FSLV');
-          `,
-        }} />
+        {/* Analytics / session-recording scripts (GA, Ahrefs, ContentSquare) are
+            loaded by <ConsentedScripts/> in the body, and ONLY after the visitor
+            grants analytics consent via the cookie banner — never here in the
+            head unconditionally. */}
 
         {/* Structured Data — WebSite, Organization, SoftwareApplication */}
         <JsonLd data={{
@@ -180,17 +168,6 @@ export default function RootLayout({
           "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access"
         }} />
 
-        {/* Ahrefs Analytics */}
-        <Script
-          src="https://analytics.ahrefs.com/analytics.js"
-          data-key="wh1b55CvCXjzUDz3SMYYWw"
-          strategy="afterInteractive"
-        />
-
-        {/* ContentSquare session recording */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="https://t.contentsquare.net/uxa/0ac352c074f83.js" async />
-
         {/* Service Worker Registration */}
         <script dangerouslySetInnerHTML={{
           __html: `
@@ -218,6 +195,7 @@ export default function RootLayout({
               {children}
               <PWAInstallPrompt />
               <CookieConsent />
+              <ConsentedScripts />
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>

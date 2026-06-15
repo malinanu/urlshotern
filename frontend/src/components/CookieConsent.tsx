@@ -6,15 +6,13 @@ import Link from "next/link";
 interface CookieConsentData {
   essential: true;
   analytics: boolean;
-  marketing: boolean;
   savedAt: string;
 }
 
-function saveConsent(analytics: boolean, marketing: boolean): void {
+function saveConsent(analytics: boolean): void {
   const data: CookieConsentData = {
     essential: true,
     analytics,
-    marketing,
     savedAt: new Date().toISOString(),
   };
   localStorage.setItem("cookie_consent", JSON.stringify(data));
@@ -24,30 +22,46 @@ function saveConsent(analytics: boolean, marketing: boolean): void {
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [analytics, setAnalytics] = useState(true);
-  const [marketing, setMarketing] = useState(true);
+  // Default OFF — non-essential trackers must be opt-in, never pre-checked.
+  const [analytics, setAnalytics] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("cookie_consent");
     if (!stored) {
       setVisible(true);
     }
+
+    // Allow re-opening the banner (e.g. the footer "Cookie preferences" link) so
+    // consent can be withdrawn as easily as it was given.
+    function openPreferences() {
+      try {
+        const raw = localStorage.getItem("cookie_consent");
+        if (raw) setAnalytics(JSON.parse(raw)?.analytics === true);
+      } catch {
+        /* ignore malformed stored consent */
+      }
+      setExpanded(true);
+      setVisible(true);
+    }
+
+    window.addEventListener("open-cookie-preferences", openPreferences);
+    return () => window.removeEventListener("open-cookie-preferences", openPreferences);
   }, []);
 
   if (!visible) return null;
 
   function acceptAll() {
-    saveConsent(true, true);
+    saveConsent(true);
     setVisible(false);
   }
 
   function rejectNonEssential() {
-    saveConsent(false, false);
+    saveConsent(false);
     setVisible(false);
   }
 
   function savePreferences() {
-    saveConsent(analytics, marketing);
+    saveConsent(analytics);
     setVisible(false);
   }
 
@@ -57,10 +71,13 @@ export function CookieConsent() {
         {/* Main bar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            We use cookies to improve your experience. Essential cookies are always active.{" "}
-            <Link href="/privacy" className="underline hover:text-foreground">
+            We use essential cookies to run this site. With your consent we also use
+            analytics cookies to understand usage and improve the service. You can
+            accept, reject, or choose. See our{" "}
+            <Link href="/cookies" className="underline hover:text-foreground">
               Cookie Policy
             </Link>
+            .
           </p>
           <div className="flex flex-shrink-0 flex-wrap gap-2">
             <button
@@ -93,7 +110,8 @@ export function CookieConsent() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Essential Cookies</p>
                   <p className="text-xs text-muted-foreground">
-                    Auth session, theme preferences. Always active.
+                    Login session and theme preference. Required for the site to work —
+                    always active.
                   </p>
                 </div>
                 <div className="flex h-6 w-11 flex-shrink-0 cursor-not-allowed items-center rounded-full bg-primary opacity-60">
@@ -106,12 +124,14 @@ export function CookieConsent() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Analytics Cookies</p>
                   <p className="text-xs text-muted-foreground">
-                    Performance tracking, usage analytics to improve the service.
+                    Google Analytics, Ahrefs and ContentSquare — usage analytics and
+                    session insights to improve the service. Off until you allow them.
                   </p>
                 </div>
                 <button
                   role="switch"
                   aria-checked={analytics}
+                  aria-label="Allow analytics cookies"
                   onClick={() => setAnalytics((v) => !v)}
                   className={`relative flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
                     analytics ? "bg-primary" : "bg-muted"
@@ -124,34 +144,10 @@ export function CookieConsent() {
                   />
                 </button>
               </div>
-
-              {/* Marketing */}
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Marketing Cookies</p>
-                  <p className="text-xs text-muted-foreground">
-                    Marketing emails and promotional content preferences.
-                  </p>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked={marketing}
-                  onClick={() => setMarketing((v) => !v)}
-                  className={`relative flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-                    marketing ? "bg-primary" : "bg-muted"
-                  }`}
-                >
-                  <span
-                    className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      marketing ? "translate-x-5" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
-              </div>
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-              <Link href="/privacy" className="text-xs text-muted-foreground underline hover:text-foreground">
+              <Link href="/cookies" className="text-xs text-muted-foreground underline hover:text-foreground">
                 Cookie Policy
               </Link>
               <button
