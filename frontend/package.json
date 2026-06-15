@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "cross-env SKIP_LINT=true TURBOPACK=0 next build",
     "start": "next start",
+    "submit-indexnow": "node scripts/submit-indexnow.mjs",
     "lint": "eslint",
     "analyze": "cross-env ANALYZE=true npm run build",
     "analyze:server": "cross-env ANALYZE=true BUNDLE_ANALYZE=server npm run build",

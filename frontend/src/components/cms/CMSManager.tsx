@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { notifyIndexNow } from '@/app/actions/indexnow';
 import RichTextEditor from '@/components/editor/RichTextEditor';
 import { ContentBlockManager } from './ContentBlockManager';
 import { StructuredContentEditor } from './StructuredContentEditor';
@@ -145,6 +146,11 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
       });
 
       if (response.ok) {
+        // Ping IndexNow so search engines re-crawl the published page immediately.
+        // Best-effort and non-blocking — a failure here never affects the save.
+        if (formData.is_published && formData.slug) {
+          void notifyIndexNow([`/pages/${formData.slug}`]);
+        }
         await fetchPages();
         setShowForm(false);
         setEditingPage(null);
@@ -232,6 +238,10 @@ export default function CMSManager({ onEditInBuilder }: { onEditInBuilder?: (pag
       });
 
       if (response.ok) {
+        // Page just went from draft → published: notify IndexNow to trigger a re-crawl.
+        if (!page.is_published) {
+          void notifyIndexNow([`/pages/${page.slug}`]);
+        }
         await fetchPages();
       }
     } catch (error) {
