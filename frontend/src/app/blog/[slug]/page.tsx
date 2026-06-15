@@ -144,6 +144,23 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           ))}
         </article>
 
+        {/* FAQ — visible content required for FAQPage rich results */}
+        {post.faqs && post.faqs.length > 0 && (
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+            <div className="border-t border-border pt-10">
+              <h2 className="text-2xl font-bold text-foreground mb-6">Frequently Asked Questions</h2>
+              <div className="space-y-6">
+                {post.faqs.map((faq, i) => (
+                  <div key={i}>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">{faq.question}</h3>
+                    <p className="text-foreground/80 leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* About the Author */}
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
           <div className="border-t border-border pt-10">

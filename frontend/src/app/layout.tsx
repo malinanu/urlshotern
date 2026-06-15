@@ -40,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // Guard against short/generic admin-configured values that would harm SEO.
   // A meaningful site title should describe what the product does, not just name it.
   const titleFallback = "Free URL Shortener — Shorten Links & Track Clicks | Trunc";
-  const descFallback = "Shorten URLs for free with Trunc — the best URL shortener with click analytics, custom domains, QR codes, and AI insights. No credit card required. Start in 10 seconds.";
+  const descFallback = "Shorten URLs for free with Trunc — click analytics, custom domains, QR codes, and AI insights. No credit card required. Start in 10 seconds.";
   const title = (settings.site_title && settings.site_title.length > 20) ? settings.site_title : titleFallback;
   const description = (settings.site_description && settings.site_description.length > 60) ? settings.site_description : descFallback;
   const keywords = settings.site_keywords || "url shortener, free url shortener, best url shortener, link shortener, custom url shortener, url shortener with analytics, shorten url";
@@ -115,15 +115,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Preconnect to external domains for faster resource loading */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-
-        {/* DNS prefetch for API and CDN domains */}
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-
-        {/* Optimize critical CSS rendering */}
-        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+        {/* Preconnect to session recording provider */}
+        <link rel="preconnect" href="https://t.contentsquare.net" />
 
         {/* Theme initialization — must run before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{
@@ -150,12 +143,7 @@ export default function RootLayout({
           "@type": "WebSite",
           "name": "Trunc",
           "url": "https://trunc.site",
-          "description": "Free URL shortener with advanced analytics, custom domains, QR codes, and AI insights.",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://trunc.site/?url={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
+          "description": "Free URL shortener with advanced analytics, custom domains, QR codes, and AI insights."
         }} />
         <JsonLd data={{
           "@context": "https://schema.org",
@@ -164,6 +152,11 @@ export default function RootLayout({
           "url": "https://trunc.site",
           "logo": "https://trunc.site/icons/icon-512x512.png",
           "description": "Free URL shortener with advanced analytics, custom domains, and enterprise-grade security.",
+          "sameAs": [
+            "https://x.com/truncsite",
+            "https://linkedin.com/company/trunc",
+            "https://github.com/truncsite"
+          ],
           "contactPoint": {
             "@type": "ContactPoint",
             "contactType": "customer support",
@@ -184,27 +177,7 @@ export default function RootLayout({
             "priceCurrency": "USD",
             "description": "Free plan available with no credit card required"
           },
-          "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access",
-          "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "ratingCount": "1247",
-            "bestRating": "5",
-            "worstRating": "1"
-          },
-          "review": {
-            "@type": "Review",
-            "reviewRating": {
-              "@type": "Rating",
-              "ratingValue": "5",
-              "bestRating": "5"
-            },
-            "author": {
-              "@type": "Person",
-              "name": "Sarah M."
-            },
-            "reviewBody": "Trunc is the best URL shortener I have used. The real-time analytics dashboard is incredibly detailed, and the AI insights feature helped me optimize my marketing campaigns significantly."
-          }
+          "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access"
         }} />
 
         {/* Ahrefs Analytics */}

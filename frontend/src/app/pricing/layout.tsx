@@ -1,27 +1,93 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { PLAN_NAMES } from '@/lib/plan-utils';
 import { JsonLd } from "@/components/JsonLd";
 
+const SITE_URL = 'https://trunc.site';
+
 export const metadata: Metadata = {
-  title: "Pricing — Free URL Shortener Plans | Trunc",
-  description: `Free URL shortener with no credit card required. Compare Trunc plans: ${PLAN_NAMES.free}, ${PLAN_NAMES.premium}, and ${PLAN_NAMES.enterprise}. Get analytics, custom domains, and QR codes. Cancel anytime.`,
+  title: "URL Shortener Pricing: Free, Premium & Enterprise | Trunc",
+  description: `Free URL shortener with no credit card required. Compare Trunc plans: Free, Premium ($9.99/mo), and Enterprise ($39.99/mo). Get analytics, custom domains, and QR codes. Cancel anytime.`,
   keywords: "free url shortener, url shortener pricing, free url shortener no sign up, best free url shortener, custom url shortener free",
   alternates: {
-    canonical: 'https://trunc.site/pricing',
+    canonical: `${SITE_URL}/pricing`,
   },
   openGraph: {
     type: 'website',
-    url: 'https://trunc.site/pricing',
+    url: `${SITE_URL}/pricing`,
     siteName: 'Trunc',
-    title: "Pricing — Free URL Shortener Plans | Trunc",
+    title: "URL Shortener Pricing: Free, Premium & Enterprise | Trunc",
     description: "Free URL shortener with no credit card required. Get analytics, custom domains, and QR codes. Cancel anytime.",
+    images: [{ url: `${SITE_URL}/og-image.webp`, width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pricing — Free URL Shortener Plans | Trunc",
+    title: "URL Shortener Pricing: Free, Premium & Enterprise | Trunc",
     description: "Free URL shortener with no credit card required. Get analytics, custom domains, and QR codes. Cancel anytime.",
+    images: [`${SITE_URL}/og-image.webp`],
   },
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+    { '@type': 'ListItem', position: 2, name: 'Pricing', item: `${SITE_URL}/pricing` },
+  ],
+};
+
+const pricingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Trunc URL Shortener',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Web',
+  url: SITE_URL,
+  description: 'Free URL shortener with click analytics, custom domains, QR codes, A/B testing, and AI insights.',
+  offers: [
+    {
+      '@type': 'Offer',
+      name: 'Free',
+      description: 'Perfect for getting started. 10 short links/month, basic analytics, QR codes, custom short codes.',
+      price: '0',
+      priceCurrency: 'USD',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: '0',
+        priceCurrency: 'USD',
+        unitText: 'MONTH',
+      },
+      url: `${SITE_URL}/pricing`,
+    },
+    {
+      '@type': 'Offer',
+      name: 'Premium',
+      description: '1,000 short links/month, advanced analytics, priority support, custom domains, team collaboration (5 users), API access, password protection.',
+      price: '9.99',
+      priceCurrency: 'USD',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: '9.99',
+        priceCurrency: 'USD',
+        unitText: 'MONTH',
+      },
+      url: `${SITE_URL}/pricing`,
+    },
+    {
+      '@type': 'Offer',
+      name: 'Enterprise',
+      description: 'Unlimited short links, advanced analytics, 24/7 premium support, unlimited team members, unlimited API access, custom domains, password protection.',
+      price: '39.99',
+      priceCurrency: 'USD',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: '39.99',
+        priceCurrency: 'USD',
+        unitText: 'MONTH',
+      },
+      url: `${SITE_URL}/pricing`,
+    },
+  ],
 };
 
 const faqSchema = {
@@ -82,6 +148,8 @@ const faqSchema = {
 export default function PricingLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      <JsonLd data={breadcrumbSchema} />
+      <JsonLd data={pricingSchema} />
       <JsonLd data={faqSchema} />
       {children}
     </>

@@ -62,8 +62,10 @@ export default async function BlogPostLayout({
         image: ogImage,
         author: {
           '@type': 'Person',
+          '@id': `${SITE_URL}/blog/authors/${post.authorSlug}`,
           name: post.author,
           url: `${SITE_URL}/blog/authors/${post.authorSlug}`,
+          sameAs: ['https://x.com/truncsite', 'https://linkedin.com/in/malinjayaweera'],
         },
         publisher: {
           '@type': 'Organization',
@@ -78,6 +80,33 @@ export default async function BlogPostLayout({
           '@type': 'WebPage',
           '@id': `${SITE_URL}/blog/${slug}`,
         },
+      }
+    : null;
+
+  const howToSchema = post?.howTo
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: post.howTo.name,
+        ...(post.howTo.totalTime ? { totalTime: post.howTo.totalTime } : {}),
+        step: post.howTo.steps.map((s, i) => ({
+          '@type': 'HowToStep',
+          position: i + 1,
+          name: s.name,
+          text: s.text,
+        })),
+      }
+    : null;
+
+  const faqSchema = post?.faqs
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: post.faqs.map((f) => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: { '@type': 'Answer', text: f.answer },
+        })),
       }
     : null;
 
@@ -112,6 +141,8 @@ export default async function BlogPostLayout({
     <>
       {articleSchema && <JsonLd data={articleSchema} />}
       {breadcrumbSchema && <JsonLd data={breadcrumbSchema} />}
+      {howToSchema && <JsonLd data={howToSchema} />}
+      {faqSchema && <JsonLd data={faqSchema} />}
       {children}
     </>
   );
