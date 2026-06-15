@@ -71,7 +71,7 @@ export default function TermsPage() {
             By using our service, you agree to these terms.
           </p>
           <p class="text-sm text-muted-foreground mt-4">
-            <strong>Last updated:</strong> September 4, 2025
+            <strong>Last updated:</strong> 16 June 2026
           </p>
         </div>
 
@@ -84,8 +84,11 @@ export default function TermsPage() {
               above, please do not use this service.
             </p>
             <p class="text-muted-foreground">
-              These Terms of Service, along with our Privacy Policy, constitute the entire agreement 
-              between you and 3logiq Technologies, Inc. ("3logiq", "we", "us", "our"), the developer of Trunc.
+              These Terms of Service, along with our Privacy Policy, constitute the entire agreement
+              between you and <strong>[LEGAL ENTITY NAME — to be completed]</strong>, registered in
+              <strong>[country of incorporation]</strong> ("Trunc", "we", "us", "our"), the provider of Trunc.
+              Nothing in these Terms removes mandatory legal rights you have as a consumer under the law
+              of your country of residence.
             </p>
           </section>
 
@@ -161,7 +164,7 @@ export default function TermsPage() {
             <h2 class="text-2xl font-semibold text-foreground mb-4">6. Intellectual Property Rights</h2>
             <h3 class="text-xl font-medium text-foreground mb-3">Our Rights</h3>
             <p class="text-muted-foreground mb-4">
-              All content, features, and functionality of our Service are owned by 3logiq Technologies, Inc. and are 
+              All content, features, and functionality of our Service are owned by us and are
               protected by international copyright, trademark, and other intellectual property laws.
             </p>
             
@@ -189,25 +192,36 @@ export default function TermsPage() {
               <div class="bg-green-500/10 p-4 rounded-lg">
                 <h4 class="font-semibold text-green-600 dark:text-green-500 mb-2">Payment Terms</h4>
                 <ul class="text-sm text-green-600 dark:text-green-500/80 space-y-1">
-                  <li>• Bills are due upon receipt</li>
-                  <li>• Subscription fees are non-refundable</li>
-                  <li>• Auto-renewal unless cancelled</li>
-                  <li>• Price changes with 30-day notice</li>
+                  <li>• Subscriptions are billed in advance for the chosen period</li>
+                  <li>• Payments are processed by our payment provider, Polar</li>
+                  <li>• Plans auto-renew unless cancelled before renewal</li>
+                  <li>• We give at least 30 days' notice of price changes</li>
                 </ul>
               </div>
               <div class="bg-amber-500/10 p-4 rounded-lg">
                 <h4 class="font-semibold text-amber-600 dark:text-amber-500 mb-2">Cancellation</h4>
                 <ul class="text-sm text-amber-600 dark:text-amber-500/80 space-y-1">
                   <li>• Cancel anytime from your dashboard</li>
-                  <li>• Service continues until period end</li>
-                  <li>• No partial refunds for unused time</li>
-                  <li>• Data export available before deletion</li>
+                  <li>• Service continues until the end of the paid period</li>
+                  <li>• Outside any statutory withdrawal right, fees already paid are non-refundable</li>
+                  <li>• You can export your data before deletion</li>
                 </ul>
               </div>
             </div>
 
+            <div class="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
+              <p class="text-primary text-sm">
+                <strong>EU/EEA &amp; UK consumers — right of withdrawal:</strong> If you are a
+                consumer in the EU/EEA or UK, you normally have 14 days to withdraw from a purchase.
+                Because Trunc is digital content/services supplied immediately, by starting to use a
+                paid plan you ask us to begin at once and acknowledge you may lose this 14-day right
+                once the service has been fully provided. This does not affect your other statutory
+                consumer rights.
+              </p>
+            </div>
+
             <p class="text-muted-foreground">
-              We reserve the right to suspend accounts with overdue payments and delete data from 
+              We reserve the right to suspend accounts with overdue payments and delete data from
               accounts that remain unpaid for more than 60 days.
             </p>
           </section>
@@ -246,22 +260,30 @@ export default function TermsPage() {
 
             <h3 class="text-xl font-medium text-foreground mb-3">Limitation of Liability</h3>
             <p class="text-muted-foreground mb-4">
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, 3LOGIQ SHALL NOT BE LIABLE FOR ANY INDIRECT, 
+              TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT,
               INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE SERVICE.
             </p>
-            
-            <p class="text-muted-foreground">
-              Our total liability to you for any claims related to the Service shall not exceed 
+
+            <p class="text-muted-foreground mb-4">
+              Our total liability to you for any claims related to the Service shall not exceed
               the amount you paid us in the twelve (12) months preceding the claim.
+            </p>
+
+            <p class="text-muted-foreground">
+              <strong>Nothing in these Terms excludes or limits our liability where it cannot be
+              excluded or limited under applicable law</strong> — including liability for death or
+              personal injury caused by negligence, for fraud, or for your non-waivable statutory
+              consumer rights.
             </p>
           </section>
 
           <section>
             <h2 class="text-2xl font-semibold text-foreground mb-4">10. Indemnification</h2>
             <p class="text-muted-foreground">
-              You agree to indemnify and hold harmless 3logiq Technologies, Inc., its officers, directors, employees, 
-              and agents from any claims, damages, or expenses arising from your use of the Service, 
-              violation of these Terms, or infringement of any third-party rights.
+              To the extent permitted by law, you agree to indemnify and hold harmless Trunc and its
+              entity, officers, directors, employees, and agents from any claims, damages, or expenses
+              arising from your use of the Service, violation of these Terms, or infringement of any
+              third-party rights. This does not apply to consumers to the extent prohibited by applicable law.
             </p>
           </section>
 
@@ -283,15 +305,21 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 class="text-2xl font-semibold text-foreground mb-4">12. Governing Law and Jurisdiction</h2>
+            <h2 class="text-2xl font-semibold text-foreground mb-4">12. Governing Law and Disputes</h2>
             <p class="text-muted-foreground mb-4">
-              These Terms shall be governed by and construed in accordance with the laws of the 
-              State of California, United States, without regard to its conflict of law provisions.
+              These Terms are governed by the laws of <strong>[country of establishment, e.g. Sri Lanka]</strong>,
+              and the courts of that country have jurisdiction, except as set out below.
+            </p>
+            <p class="text-muted-foreground mb-4">
+              <strong>Consumers:</strong> If you use Trunc as a consumer, you keep the benefit of any
+              mandatory consumer-protection rules of your country of residence, and you may bring
+              proceedings in the courts of your home country. Where you are an EU/EEA or UK consumer,
+              nothing here deprives you of protections that cannot be derogated from by agreement.
             </p>
             <p class="text-muted-foreground">
-              Any disputes arising from these Terms or your use of the Service shall be resolved 
-              through binding arbitration in San Francisco, California, in accordance with the 
-              Commercial Arbitration Rules of the American Arbitration Association.
+              <strong>EU consumers</strong> may also use the European Commission's Online Dispute
+              Resolution platform at
+              <a href="https://ec.europa.eu/consumers/odr" class="text-primary hover:underline" rel="nofollow noopener" target="_blank">ec.europa.eu/consumers/odr</a>.
             </p>
           </section>
 
