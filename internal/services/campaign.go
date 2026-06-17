@@ -211,15 +211,28 @@ func (s *CampaignService) importContacts(campaignID int64, rows []models.Contact
 			phonePtr = &row.Phone
 		}
 
-		// Upsert contact (on conflict email update name/phone)
+		// Upsert contact. Email-only/email+phone rows dedupe on uq_campaign_contacts_email;
+		// phone-only rows (no email) dedupe on the partial index uq_campaign_contacts_phone_only,
+		// since SQL UNIQUE constraints never treat two NULLs as conflicting.
 		var contactID int64
-		err := s.db.QueryRow(`
-			INSERT INTO campaign_contacts (name, email, phone, created_at)
-			VALUES ($1, $2, $3, NOW())
-			ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, phone = COALESCE(EXCLUDED.phone, campaign_contacts.phone)
-			RETURNING id`,
-			row.Name, emailPtr, phonePtr,
-		).Scan(&contactID)
+		var err error
+		if emailPtr != nil {
+			err = s.db.QueryRow(`
+				INSERT INTO campaign_contacts (name, email, phone, created_at)
+				VALUES ($1, $2, $3, NOW())
+				ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, phone = COALESCE(EXCLUDED.phone, campaign_contacts.phone)
+				RETURNING id`,
+				row.Name, emailPtr, phonePtr,
+			).Scan(&contactID)
+		} else {
+			err = s.db.QueryRow(`
+				INSERT INTO campaign_contacts (name, email, phone, created_at)
+				VALUES ($1, $2, $3, NOW())
+				ON CONFLICT (phone) WHERE email IS NULL DO UPDATE SET name = EXCLUDED.name
+				RETURNING id`,
+				row.Name, emailPtr, phonePtr,
+			).Scan(&contactID)
+		}
 		if err != nil {
 			log.Printf("[Campaign] upsert contact error: %v", err)
 			continue
