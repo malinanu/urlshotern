@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,6 +19,61 @@ type ogMetadata struct {
 	OGDescription string `json:"og_description"`
 	OGImage       string `json:"og_image"`
 	Title         string `json:"title"`
+}
+
+// isPrivateOrReservedIP reports whether ip falls in a private, loopback,
+// link-local, or other non-routable range — including the cloud metadata
+// address 169.254.169.254 — that fetch-metadata must never be allowed to reach.
+func isPrivateOrReservedIP(ip net.IP) bool {
+	if ip4 := ip.To4(); ip4 != nil {
+		ip = ip4
+	}
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsUnspecified() || ip.IsPrivate() || ip.IsMulticast() {
+		return true
+	}
+	return false
+}
+
+// safeMetadataDialer resolves the hostname itself and connects directly to the
+// validated IP, so a host that resolves to a private IP (or rebinds DNS between
+// our check and the real connection) can never be reached via this client.
+func safeMetadataDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+
+	var target net.IP
+	for _, ip := range ips {
+		if !isPrivateOrReservedIP(ip) {
+			target = ip
+			break
+		}
+	}
+	if target == nil {
+		return nil, errors.New("no routable public IP found for host")
+	}
+
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	return dialer.DialContext(ctx, network, net.JoinHostPort(target.String(), port))
+}
+
+var metadataHTTPClient = &http.Client{
+	Transport: &http.Transport{
+		DialContext: safeMetadataDialContext,
+	},
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 3 {
+			return errors.New("too many redirects")
+		}
+		return nil
+	},
 }
 
 // FetchURLMetadata fetches OG metadata from a URL and returns it as JSON.
@@ -46,7 +103,7 @@ func (h *Handler) FetchURLMetadata(c *gin.Context) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; TruncBot/1.0)")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := metadataHTTPClient.Do(req)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		c.JSON(http.StatusOK, ogMetadata{})
 		return
