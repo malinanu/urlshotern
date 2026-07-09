@@ -25,7 +25,7 @@ services:
 
       # Auth — required. The server refuses to boot in production with an
       # unset/default JWT secret. Set JWT_SECRET in the .env next to this file.
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env (generate with: openssl rand -base64 48)}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set - generate one with openssl rand -base64 48}
 
       # Frontend Build Configuration
       - NODE_ENV=production
