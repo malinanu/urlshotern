@@ -56,17 +56,22 @@ export default function Header() {
     router.push('/');
   };
 
-  // Close profile menu when clicking outside
+  // Close profile menu when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setIsProfileMenuOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsProfileMenuOpen(false);
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -109,6 +114,9 @@ export default function Header() {
               <div className="relative" ref={profileMenuRef}>
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  aria-haspopup="true"
+                  aria-expanded={isProfileMenuOpen}
+                  aria-controls="profile-menu"
                   className="flex items-center space-x-2 text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium rounded-lg hover:bg-muted transition-colors"
                 >
                   <UserCircleIcon className="h-5 w-5" />
@@ -117,7 +125,7 @@ export default function Header() {
                 </button>
 
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-card rounded-md shadow-lg py-1 z-50 border border-border">
+                  <div id="profile-menu" className="absolute right-0 mt-2 w-48 bg-card rounded-md shadow-lg py-1 z-50 border border-border">
                     <div className="px-4 py-2 text-xs text-muted-foreground border-b border-border">
                       {user.email}
                     </div>
@@ -209,6 +217,8 @@ export default function Header() {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-menu"
               className="text-muted-foreground hover:text-foreground"
             >
               {isMenuOpen ? (
@@ -222,7 +232,7 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
+          <div id="mobile-menu" className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-2 bg-card">
               {navigation.map((item) => (
                 <Link

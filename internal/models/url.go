@@ -106,6 +106,13 @@ type DashboardStats struct {
 	TopURLs     []TopURL `json:"top_urls"`
 }
 
+// PublicStats holds site-wide aggregate counters shown on the public homepage.
+type PublicStats struct {
+	TotalURLs   int64 `json:"total_urls"`
+	TotalClicks int64 `json:"total_clicks"`
+	TotalUsers  int64 `json:"total_users"`
+}
+
 // TopURL represents a top performing URL
 type TopURL struct {
 	ShortCode   string `json:"short_code"`

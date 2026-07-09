@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { toast } from 'react-toastify';
+import { sanitizeHtml } from '@/utils/sanitize';
 
 interface PageData {
   title: string;
@@ -288,7 +289,7 @@ export default function PrivacyPage() {
           )}
           <div
             className="prose prose-lg max-w-none"
-            dangerouslySetInnerHTML={{ __html: displayContent?.content || '' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent?.content) }}
           />
         </div>
       </div>

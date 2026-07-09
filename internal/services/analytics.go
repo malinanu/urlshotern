@@ -2,11 +2,22 @@ package services
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
 )
+
+// publicStatsCache memoizes the site-wide aggregate counters so the COUNT/SUM
+// full-scans behind /api/v1/public/stats don't run on every homepage visit.
+var publicStatsCache = struct {
+	sync.RWMutex
+	data     *models.PublicStats
+	cachedAt time.Time
+}{}
+
+const publicStatsTTL = 5 * time.Minute
 
 type AnalyticsService struct {
 	db             *storage.PostgresStorage
@@ -25,6 +36,37 @@ func NewAnalyticsService(db *storage.PostgresStorage) *AnalyticsService {
 // SetRedis sets the Redis storage for caching analytics
 func (a *AnalyticsService) SetRedis(redis *storage.RedisStorage) {
 	a.redis = redis
+}
+
+// GetPublicStats returns site-wide aggregate counters for the public homepage.
+// Results are cached in-memory for publicStatsTTL to avoid repeated full scans.
+func (a *AnalyticsService) GetPublicStats() (*models.PublicStats, error) {
+	publicStatsCache.RLock()
+	if publicStatsCache.data != nil && time.Since(publicStatsCache.cachedAt) < publicStatsTTL {
+		cached := publicStatsCache.data
+		publicStatsCache.RUnlock()
+		return cached, nil
+	}
+	publicStatsCache.RUnlock()
+
+	stats := &models.PublicStats{}
+
+	if err := a.db.QueryRow("SELECT COUNT(*) FROM url_mappings").Scan(&stats.TotalURLs); err != nil {
+		return nil, fmt.Errorf("failed to count urls: %w", err)
+	}
+	if err := a.db.QueryRow("SELECT COALESCE(SUM(click_count), 0) FROM url_mappings").Scan(&stats.TotalClicks); err != nil {
+		return nil, fmt.Errorf("failed to sum clicks: %w", err)
+	}
+	if err := a.db.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&stats.TotalUsers); err != nil {
+		return nil, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	publicStatsCache.Lock()
+	publicStatsCache.data = stats
+	publicStatsCache.cachedAt = time.Now()
+	publicStatsCache.Unlock()
+
+	return stats, nil
 }
 
 // GetAnalytics retrieves analytics data for a short code

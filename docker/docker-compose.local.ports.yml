@@ -1,0 +1,17 @@
+# Host-port override for local Docker runs when the default ports are already
+# taken by locally-installed Postgres/Redis/Adminer. Only the host-published
+# ports change; containers still reach each other over the Docker network on the
+# standard internal ports (postgres:5432, redis:6379), so nothing else changes.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.local.yml -f docker/docker-compose.local.ports.yml up -d --build
+services:
+  postgres:
+    ports: !override
+      - "5433:5432"
+  redis:
+    ports: !override
+      - "6380:6379"
+  adminer:
+    ports: !override
+      - "8083:8080"

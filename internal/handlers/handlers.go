@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -102,6 +103,26 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 // GetBillingService exposes the billing service for plan gating middleware.
 func (h *Handler) GetBillingService() *services.BillingService {
 	return h.billingService
+}
+
+// GetShortenerService exposes the shortener service for ownership-check middleware.
+func (h *Handler) GetShortenerService() *services.ShortenerService {
+	return h.shortenerService
+}
+
+// GetPublicStats returns site-wide aggregate counters for the public homepage
+// trust strip (URLs shortened, clicks tracked, registered users). No auth.
+func (h *Handler) GetPublicStats(c *gin.Context) {
+	stats, err := h.analyticsService.GetPublicStats()
+	if err != nil {
+		middleware.LogError(c, err, "Failed to get public stats")
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Failed to get stats",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, stats)
 }
 
 // HealthCheck handles health check requests
@@ -335,7 +356,15 @@ func buildOGPage(m *models.URLMapping) string {
 	}
 
 	escaped := strings.NewReplacer(`"`, `&quot;`, `<`, `&lt;`, `>`, `&gt;`, `&`, `&amp;`).Replace
-	dest := strings.ReplaceAll(m.OriginalURL, `"`, `%22`)
+
+	// For the inline <script>, embed the destination as a JSON string literal.
+	// encoding/json escapes ", \, and (with HTML escaping on by default) < > &,
+	// so a destination URL cannot break out of the JS string or close the
+	// <script> element — closing the stored-XSS vector on this origin.
+	destJSON, err := json.Marshal(m.OriginalURL)
+	if err != nil {
+		destJSON = []byte(`""`)
+	}
 
 	return `<!DOCTYPE html><html><head>` +
 		`<meta charset="utf-8">` +
@@ -348,7 +377,7 @@ func buildOGPage(m *models.URLMapping) string {
 		`<meta name="twitter:title" content="` + escaped(title) + `">` +
 		`<meta name="twitter:description" content="` + escaped(description) + `">` +
 		`<meta name="twitter:image" content="` + escaped(image) + `">` +
-		`<script>window.location.href="` + dest + `";</script>` +
+		`<script>window.location.href=` + string(destJSON) + `;</script>` +
 		`</head><body><a href="` + escaped(m.OriginalURL) + `">Click here if not redirected.</a></body></html>`
 }
 

@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,10 @@ type visitor struct {
 	lastSeen time.Time
 }
 
-var visitors = make(map[string]*visitor)
+var (
+	visitors   = make(map[string]*visitor)
+	visitorsMu sync.Mutex
+)
 
 // RateLimitMiddleware creates rate limiting middleware
 func RateLimitMiddleware(config RateLimitConfig) gin.HandlerFunc {
@@ -56,15 +60,18 @@ func RateLimitMiddleware(config RateLimitConfig) gin.HandlerFunc {
 		if ip == "" {
 			ip = c.ClientIP()
 		}
-		
+
+		// Guard the shared visitors map — it is read/written from every request
+		// goroutine and the cleanup goroutine concurrently.
+		visitorsMu.Lock()
 		v, exists := visitors[ip]
 		if !exists {
 			limiter := rate.NewLimiter(rate.Limit(config.RequestsPerSecond), config.Burst)
-			visitors[ip] = &visitor{limiter, time.Now()}
-			v = visitors[ip]
+			v = &visitor{limiter, time.Now()}
+			visitors[ip] = v
 		}
-
 		v.lastSeen = time.Now()
+		visitorsMu.Unlock()
 
 		if !v.limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
@@ -83,10 +90,12 @@ func RateLimitMiddleware(config RateLimitConfig) gin.HandlerFunc {
 func cleanupVisitors() {
 	for {
 		time.Sleep(time.Minute)
+		visitorsMu.Lock()
 		for ip, v := range visitors {
 			if time.Since(v.lastSeen) > time.Hour {
 				delete(visitors, ip)
 			}
 		}
+		visitorsMu.Unlock()
 	}
 }

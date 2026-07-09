@@ -51,6 +51,10 @@ func APIKeyAuthMiddleware(apiKeyService *services.APIKeyService) gin.HandlerFunc
 		c.Set("api_key_permissions", keyData.Permissions)
 		c.Set("auth_type", "api_key")
 
+		// Capture the request start time before handling so the recorded
+		// response time is meaningful (previously always ~0ms).
+		startedAt := time.Now()
+
 		c.Next()
 
 		// Record API key usage after request
@@ -60,8 +64,7 @@ func APIKeyAuthMiddleware(apiKeyService *services.APIKeyService) gin.HandlerFunc
 			method := c.Request.Method
 			userAgent := c.GetHeader("User-Agent")
 
-			// Calculate response time (simplified - you might want to use a more accurate method)
-			responseTime := int(time.Since(time.Now()).Milliseconds())
+			responseTime := int(time.Since(startedAt).Milliseconds())
 
 			_ = apiKeyService.RecordAPIKeyUsage(
 				keyData.ID,

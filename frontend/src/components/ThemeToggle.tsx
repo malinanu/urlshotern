@@ -28,7 +28,7 @@ export default function ThemeToggle() {
     { id: 'light', icon: SunIcon, label: 'Light' },
     { id: 'dark', icon: MoonIcon, label: 'Dark' },
     { id: 'system', icon: ComputerDesktopIcon, label: 'System' },
-  ];
+  ] as const;
 
   return (
     <div className="relative">
@@ -36,7 +36,7 @@ export default function ThemeToggle() {
         onClick={() => {
           const currentIndex = themes.findIndex(t => t.id === theme);
           const nextIndex = (currentIndex + 1) % themes.length;
-          setTheme(themes[nextIndex].id as any);
+          setTheme(themes[nextIndex].id);
         }}
         aria-label={`Toggle theme. Current: ${theme}`}
         className="w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

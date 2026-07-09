@@ -102,14 +102,9 @@ export default function Footer() {
 
         {/* Bottom border */}
         <div className="mt-12 border-t border-border pt-8">
-          <div className="md:flex md:items-center md:justify-between">
-            <div className="flex space-x-6 md:order-2">
-              {/* Social links would go here */}
-            </div>
-            <p className="mt-8 text-base text-muted-foreground md:mt-0 md:order-1">
-              &copy; {currentYear} Trunc. All rights reserved.
-            </p>
-          </div>
+          <p className="text-base text-muted-foreground">
+            &copy; {currentYear} Trunc. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

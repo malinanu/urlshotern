@@ -1,0 +1,79 @@
+# Runs the app (backend + frontend) against the developer's pre-existing shared
+# Postgres/Redis containers instead of starting its own DB services.
+#
+# The shared DBs run on the external Docker network "shared-network" as
+# shared-postgres:5432 (user postgres / admin123) and shared-redis:6379.
+# We join that network and reach them by service name.
+#
+# Bootstrap once (creates urlshortener_db + loads base schema):
+#   see the create-db / load-schema steps in the run notes.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.sharedb.yml up -d --build
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.backend.dev
+    container_name: urlshortener-backend-dev
+    environment:
+      - DB_HOST=shared-postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=admin123
+      # POSTGRES_PASSWORD lets the migration script grant schema perms as superuser.
+      - POSTGRES_PASSWORD=admin123
+      - DB_NAME=urlshortener_db
+      - DB_SSLMODE=disable
+      - REDIS_HOST=shared-redis
+      - REDIS_PORT=6379
+      - SERVER_PORT=8080
+      - ENVIRONMENT=development
+      - JWT_SECRET=local-dev-secret-change-me
+      - BASE_URL=http://localhost:8090
+      - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}
+      - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-whsec_test_mock_secret_for_development}
+      - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID:-65dca2de-3a3e-4a9a-9464-ee6053485626}
+      - POLAR_API_URL=${POLAR_API_URL:-https://sandbox-api.polar.sh/v1}
+    ports:
+      - "8090:8080"
+    volumes:
+      - ..:/app
+      - /app/tmp
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - shared-network
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.frontend.dev
+    container_name: urlshortener-frontend-dev
+    environment:
+      # Browser calls the backend directly on the published host port.
+      - NEXT_PUBLIC_API_URL=http://localhost:8090
+      # Server-side Next.js rewrites use the Docker network.
+      - BACKEND_URL=http://backend:8080
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true

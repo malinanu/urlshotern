@@ -3,7 +3,8 @@ import { posts } from './blog/posts';
 
 export const dynamic = 'force-static';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// Runs server-side (build/SSR); prefer the in-network backend address.
+const API_BASE_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://trunc.site';
 
 async function fetchCMSPages(): Promise<Array<{ slug: string; updated_at?: string; status?: string }>> {
@@ -28,7 +29,7 @@ async function fetchCMSPages(): Promise<Array<{ slug: string; updated_at?: strin
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, lastModified: new Date('2026-04-12'), changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${SITE_URL}/`, lastModified: new Date(), changeFrequency: 'weekly', priority: 1.0 },
     { url: `${SITE_URL}/features`, lastModified: new Date('2026-04-12'), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/pricing`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/about`, lastModified: new Date('2026-03-28'), changeFrequency: 'monthly', priority: 0.6 },

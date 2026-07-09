@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
+import { sanitizeHtml } from '@/utils/sanitize';
 
 interface BuilderBlock {
   id: string;
@@ -34,7 +35,7 @@ function renderBlock(block: BuilderBlock) {
   switch (block.type) {
     case 'text':
       return (
-        <div key={block.id} style={style} dangerouslySetInnerHTML={{ __html: block.content?.html || '' }} />
+        <div key={block.id} style={style} dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content?.html) }} />
       );
     case 'image':
       return block.content?.src ? (
@@ -72,13 +73,13 @@ function renderBlock(block: BuilderBlock) {
       return (
         <div key={block.id} style={{ ...style, display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           {(block.content?.columns || []).map((col: any, i: number) => (
-            <div key={i} style={{ flex: 1, minWidth: '200px' }} dangerouslySetInnerHTML={{ __html: col.content || '' }} />
+            <div key={i} style={{ flex: 1, minWidth: '200px' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(col.content) }} />
           ))}
         </div>
       );
     case 'content-block':
       return block.resolved_html ? (
-        <div key={block.id} style={style} dangerouslySetInnerHTML={{ __html: block.resolved_html }} />
+        <div key={block.id} style={style} dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.resolved_html) }} />
       ) : null;
     default:
       return null;

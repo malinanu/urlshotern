@@ -128,8 +128,12 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	apiKeyService := handler.APIKeyHandlers.GetAPIKeyService()
 
 	// URL shortening (anonymous users get 5 free URLs, authenticated users use billing limits)
-	// Password check for protected links (public — no auth required)
-	router.POST("/api/v1/check-password/:shortCode", handler.CheckPassword)
+	// Password check for protected links (public — no auth required).
+	// Rate limited to slow brute-force attempts against link passwords.
+	router.POST("/api/v1/check-password/:shortCode",
+		middleware.RateLimitMiddleware(middleware.AuthRateLimit),
+		handler.CheckPassword,
+	)
 
 	router.POST("/api/v1/shorten",
 		middleware.FlexibleOptionalAuth(authMiddleware, apiKeyService),
@@ -140,10 +144,12 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	// URL redirection (no auth required)
 	router.GET("/:shortCode", handler.RedirectURL)
 
-	// Public analytics (supports both JWT and API key authentication for enhanced features)
+	// Per-link analytics (requires JWT or API key; caller must own the link).
+	// Ownership is enforced to prevent IDOR-style access to other users' data.
 	router.GET("/api/v1/analytics/:shortCode",
 		middleware.FlexibleAuthMiddleware(authMiddleware, apiKeyService),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		middleware.RequireURLOwnership(handler.GetShortenerService()),
 		handler.GetAnalytics,
 	)
 
@@ -163,6 +169,12 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 	if handler.GlobalSettingsHandlers != nil {
 		router.GET("/api/v1/public/settings", handler.GlobalSettingsHandlers.GetPublicSettings)
 	}
+
+	// Public site-wide stats for the homepage trust strip (no auth)
+	router.GET("/api/v1/public/stats",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		handler.GetPublicStats,
+	)
 
 	// OG metadata fetch (public — used by create form to auto-fill fields)
 	router.GET("/api/v1/fetch-metadata", handler.FetchURLMetadata)
@@ -247,30 +259,40 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	
 	// Enhanced analytics for authenticated users
 	billing := handler.GetBillingService()
-	api.GET("/analytics/:shortCode/trends", handler.GetClickTrends)
-	api.GET("/analytics/:shortCode/advanced",           handler.AdvancedAnalyticsHandlers.GetAdvancedAnalytics)
-	api.GET("/analytics/:shortCode/device",             handler.AdvancedAnalyticsHandlers.GetDeviceAnalytics)
-	api.GET("/analytics/:shortCode/referrers",          handler.AdvancedAnalyticsHandlers.GetReferrerAnalytics)
+	// own enforces that the caller owns the :shortCode before any per-link
+	// analytics/insights handler runs (prevents IDOR). Admins bypass it.
+	own := middleware.RequireURLOwnership(handler.GetShortenerService())
+	api.GET("/analytics/:shortCode/trends", own, handler.GetClickTrends)
+	api.GET("/analytics/:shortCode/advanced",           own, handler.AdvancedAnalyticsHandlers.GetAdvancedAnalytics)
+	api.GET("/analytics/:shortCode/device",             own, handler.AdvancedAnalyticsHandlers.GetDeviceAnalytics)
+	api.GET("/analytics/:shortCode/referrers",          own, handler.AdvancedAnalyticsHandlers.GetReferrerAnalytics)
 	// Pro+ features
 	api.GET("/analytics/:shortCode/geographic",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureCityGeo),
 		handler.AdvancedAnalyticsHandlers.GetGeographicAnalytics)
 	api.GET("/analytics/:shortCode/time",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureTimeSeries),
 		handler.AdvancedAnalyticsHandlers.GetTimeAnalytics)
 	api.GET("/analytics/:shortCode/heatmap",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureHeatmap),
 		handler.AdvancedAnalyticsHandlers.GetHeatmapAnalytics)
 	api.GET("/analytics/:shortCode/utm-campaigns",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureUTM),
 		handler.AdvancedAnalyticsHandlers.GetUTMCampaignAnalytics)
 	api.GET("/analytics/:shortCode/referrers/enhanced",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureUTM),
 		handler.AdvancedAnalyticsHandlers.GetEnhancedReferrerAnalytics)
 	api.GET("/analytics/:shortCode/referrers/insights",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureUTM),
 		handler.AdvancedAnalyticsHandlers.GetReferrerInsights)
 	api.GET("/analytics/:shortCode/map",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureLiveMap),
 		handler.AdvancedAnalyticsHandlers.GetMapAnalytics)
 	api.GET("/dashboard/stats", handler.GetUserDashboardStats)
@@ -307,18 +329,23 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 
 	// Ultra (enterprise) — AI Insights
 	api.GET("/insights/:shortCode/summary",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureAISummary),
 		handler.AIInsightsHandlers.GetSummary)
 	api.GET("/insights/:shortCode/anomalies",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureAIAnomaly),
 		handler.AIInsightsHandlers.GetAnomalies)
 	api.GET("/insights/:shortCode/recommendations",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureAIRecommend),
 		handler.AIInsightsHandlers.GetRecommendations)
 	api.GET("/insights/:shortCode/forecast",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureForecast),
 		handler.AIInsightsHandlers.GetForecast)
 	api.GET("/insights/:shortCode/audience",
+		own,
 		middleware.CheckPlanFeature(billing, middleware.FeatureAudience),
 		handler.AIInsightsHandlers.GetAudienceProfile)
 }

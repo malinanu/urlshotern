@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { toast } from 'react-toastify';
 import Header from './Header';
 import Footer from './Footer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,13 +22,15 @@ export default function Layout({ children }: LayoutProps) {
     if (resendState !== 'idle') return;
     setResendState('sending');
     try {
-      await fetch(API_ENDPOINTS.auth.resendEmail, {
+      const res = await fetch(API_ENDPOINTS.auth.resendEmail, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getAccessToken()}` },
       });
+      if (!res.ok) throw new Error('resend failed');
       setResendState('sent');
     } catch {
       setResendState('idle');
+      toast.error('Could not send the verification email. Please try again.');
     }
   };
 
@@ -45,7 +49,7 @@ export default function Layout({ children }: LayoutProps) {
               onClick={handleResend}
               className="underline font-medium hover:opacity-80"
             >
-              {resendState === 'sent' ? 'Email sent!' : resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
+              {resendState === 'sent' ? 'Email sent' : resendState === 'sending' ? 'Sending…' : 'Resend verification email'}
             </button>
           </span>
           <button
@@ -62,9 +66,9 @@ export default function Layout({ children }: LayoutProps) {
         <div className="bg-blue-500/10 border-b border-blue-500/20 px-4 py-2 flex items-center justify-between text-sm">
           <span className="text-blue-700 dark:text-blue-400">
             Add a phone number for extra security.{' '}
-            <a href="/settings#security" className="underline font-medium hover:opacity-80">
+            <Link href="/settings#security" className="underline font-medium hover:opacity-80">
               Go to Security settings
-            </a>
+            </Link>
           </span>
           <button
             onClick={() => setPhoneBannerDismissed(true)}

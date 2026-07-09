@@ -170,8 +170,8 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
           await refreshToken();
           return attemptRequest(false); // Retry once with new token
         } catch (refreshError) {
-          // If refresh fails, continue without authentication
-          console.warn('Token refresh failed, proceeding without authentication');
+          // If refresh fails, continue without authentication. Resend the full
+          // body so any options the user set are preserved on the retry.
           const headersWithoutAuth: Record<string, string> = {
             'Content-Type': 'application/json',
           };
@@ -179,7 +179,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
           const retryResponse = await fetch(API_ENDPOINTS.urls.shorten, {
             method: 'POST',
             headers: headersWithoutAuth,
-            body: JSON.stringify(data),
+            body: JSON.stringify(body),
           });
 
           if (!retryResponse.ok) {
@@ -256,14 +256,14 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                   id="url"
                   placeholder="https://example.com/very-long-url"
                   className={clsx(
-                    'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-background text-foreground placeholder-muted-foreground',
+                    'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground',
                     errors.url
                       ? 'border-destructive focus:ring-destructive focus:border-destructive'
                       : 'border-input hover:border-border'
                   )}
                 />
                 {errors.url && (
-                  <p className="mt-1 text-sm text-red-600">{errors.url.message}</p>
+                  <p className="mt-1 text-sm text-destructive">{errors.url.message}</p>
                 )}
               </div>
               <button
@@ -406,13 +406,13 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
 
         {/* Success Result */}
         {shortenedURL && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="text-sm font-medium text-green-800 mb-3">
-              URL shortened successfully!
+          <div className="mt-6 p-4 bg-success/10 border border-success/30 rounded-lg">
+            <h3 className="text-sm font-medium text-success mb-3">
+              URL shortened successfully
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-green-700 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   Short URL
                 </label>
                 <div className="flex items-center gap-2">
@@ -450,14 +450,14 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-green-700 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   Original URL
                 </label>
                 <p className="text-sm text-foreground break-all">
                   {shortenedURL.original_url}
                 </p>
               </div>
-              <div className="flex justify-between items-center text-xs text-green-600">
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
                 <span>Short Code: {shortenedURL.short_code}</span>
                 <span>
                   Created: {new Date(shortenedURL.created_at).toLocaleString()}

@@ -19,6 +19,8 @@
   --accent-foreground: 203.8863 88.2845% 53.1373%;
   --destructive: 356.3033 90.5579% 54.3137%;
   --destructive-foreground: 0 0% 100%;
+  --success: 147.1429 78.5047% 41.9608%;
+  --success-foreground: 0 0% 100%;
   --border: 201.4286 30.4348% 90.9804%;
   --input: 200 23.0769% 97.4510%;
   --ring: 202.8169 89.1213% 53.1373%;
@@ -74,6 +76,8 @@
   --accent-foreground: 203.7736 87.6033% 52.5490%;
   --destructive: 356.3033 90.5579% 54.3137%;
   --destructive-foreground: 0 0% 100%;
+  --success: 147.1429 78.5047% 41.9608%;
+  --success-foreground: 0 0% 100%;
   --border: 210 5.2632% 14.9020%;
   --input: 207.6923 27.6596% 18.4314%;
   --ring: 202.8169 89.1213% 53.1373%;
@@ -108,4 +112,48 @@
   --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
   --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
   --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+}
+
+@layer utilities {
+  /* Subtle dotted grid for hero backgrounds. Replaces the old, undefined
+     bg-grid-gray-100 utility. Tinted with the foreground token so it adapts
+     to light and dark automatically. */
+  .bg-grid {
+    background-image: radial-gradient(
+      hsl(var(--foreground) / 0.07) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+
+  /* Soft aurora glow driven by the locked sky-blue accent. pointer-events-none
+     is applied on the element; animate transform/opacity only. */
+  .bg-aurora {
+    background:
+      radial-gradient(40% 55% at 20% 15%, hsl(var(--primary) / 0.18), transparent 60%),
+      radial-gradient(35% 45% at 85% 25%, hsl(var(--chart-2) / 0.14), transparent 60%),
+      radial-gradient(45% 50% at 60% 85%, hsl(var(--primary) / 0.10), transparent 60%);
+  }
+
+  @keyframes aurora-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 0.9;
+    }
+    50% {
+      transform: translate3d(0, -2%, 0) scale(1.05);
+      opacity: 1;
+    }
+  }
+
+  .animate-aurora {
+    animation: aurora-drift 14s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-aurora {
+      animation: none;
+    }
+  }
 }

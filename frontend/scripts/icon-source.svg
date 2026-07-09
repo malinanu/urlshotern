@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Full-bleed brand background so the icon works as a maskable icon.
+       The glyph is kept within the central ~60% safe zone. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Link / chain glyph, centered, ~46% of canvas, white. Drawn as two
+       interlocking rounded link halves at a diagonal. -->
+  <g stroke="#ffffff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- connecting bar -->
+    <line x1="212" y1="300" x2="300" y2="212"/>
+    <!-- upper-right link -->
+    <path d="M300 212
+             l40 -40
+             a56 56 0 0 1 79 79
+             l-40 40
+             a56 56 0 0 1 -79 -79 Z"/>
+    <!-- lower-left link -->
+    <path d="M212 300
+             l-40 40
+             a56 56 0 0 1 -79 -79
+             l40 -40
+             a56 56 0 0 1 79 79 Z"/>
+  </g>
+</svg>

@@ -9,7 +9,10 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { JsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// Server-side (SSR/metadata) fetches run inside the container, where the
+// browser-facing NEXT_PUBLIC_API_URL (e.g. localhost:8090) is unreachable.
+// Prefer BACKEND_URL (the in-network backend address) on the server.
+const API_BASE_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,6 +65,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     alternates: {
       canonical: 'https://trunc.site',
+      types: {
+        'application/rss+xml': 'https://trunc.site/feed.xml',
+      },
     },
     manifest: "/manifest.json",
     appleWebApp: {
@@ -115,27 +121,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Preconnect to external domains for faster resource loading */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Fonts are self-hosted via next/font (Geist), so no external font
+            preconnect is needed. */}
 
-        {/* DNS prefetch for API and CDN domains */}
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-
-        {/* Optimize critical CSS rendering */}
-        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-
-        {/* Theme initialization — must run before first paint to prevent flash */}
+        {/* Theme initialization must run before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{
           __html: `(function(){try{var t=localStorage.getItem('theme');var r=document.documentElement;r.classList.remove('light','dark');if(t==='dark'){r.classList.add('dark')}else if(t==='light'){r.classList.add('light')}else{if(window.matchMedia('(prefers-color-scheme: dark)').matches){r.classList.add('dark')}else{r.classList.add('light')}}}catch(e){}})();`
         }} />
 
-        {/* Google Analytics */}
+        {/* Google Analytics — lazyOnload so it never competes with LCP/INP.
+            gtag-init only queues into dataLayer, so it is safe before gtag.js. */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KERP09FSLV"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="gtag-init" strategy="afterInteractive" dangerouslySetInnerHTML={{
+        <Script id="gtag-init" strategy="lazyOnload" dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -184,39 +184,22 @@ export default function RootLayout({
             "priceCurrency": "USD",
             "description": "Free plan available with no credit card required"
           },
-          "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access",
-          "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "ratingCount": "1247",
-            "bestRating": "5",
-            "worstRating": "1"
-          },
-          "review": {
-            "@type": "Review",
-            "reviewRating": {
-              "@type": "Rating",
-              "ratingValue": "5",
-              "bestRating": "5"
-            },
-            "author": {
-              "@type": "Person",
-              "name": "Sarah M."
-            },
-            "reviewBody": "Trunc is the best URL shortener I have used. The real-time analytics dashboard is incredibly detailed, and the AI insights feature helped me optimize my marketing campaigns significantly."
-          }
+          "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access"
         }} />
 
-        {/* Ahrefs Analytics */}
+        {/* Ahrefs Analytics — deferred to protect Core Web Vitals */}
         <Script
           src="https://analytics.ahrefs.com/analytics.js"
           data-key="wh1b55CvCXjzUDz3SMYYWw"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
 
-        {/* ContentSquare session recording */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="https://t.contentsquare.net/uxa/0ac352c074f83.js" async />
+        {/* ContentSquare session recording — deferred via next/script lazyOnload
+            instead of a render-blocking sync <script> */}
+        <Script
+          src="https://t.contentsquare.net/uxa/0ac352c074f83.js"
+          strategy="lazyOnload"
+        />
 
         {/* Service Worker Registration */}
         <script dangerouslySetInnerHTML={{

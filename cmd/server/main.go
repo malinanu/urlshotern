@@ -31,6 +31,17 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Guard against booting with a missing or default JWT signing secret. With
+	// the default secret, anyone can forge tokens (including admin), so refuse to
+	// start in production. In non-production we only warn to keep local dev easy.
+	const defaultJWTSecret = "your-secret-key-change-this-in-production"
+	if config.JWTSecret == "" || config.JWTSecret == defaultJWTSecret {
+		if config.Environment == "production" {
+			log.Fatalf("SECURITY: JWT_SECRET is unset or using the insecure default. Set a strong, random JWT_SECRET before starting in production.")
+		}
+		log.Printf("WARNING: JWT_SECRET is unset or using the insecure default. This is unsafe outside local development — set JWT_SECRET.")
+	}
+
 	// Initialize storage layers
 	db, err := storage.NewPostgresStorage(config)
 	if err != nil {
