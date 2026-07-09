@@ -23,6 +23,10 @@ services:
       - NODE_ID=1
       - BASE_URL=${BASE_URL:-https://trunc.site}
 
+      # Auth — required. The server refuses to boot in production with an
+      # unset/default JWT secret. Set JWT_SECRET in the .env next to this file.
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env (generate with: openssl rand -base64 48)}
+
       # Frontend Build Configuration
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
