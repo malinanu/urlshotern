@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -249,6 +250,12 @@ func (h *Handler) ShortenURL(c *gin.Context) {
 		case services.ErrReservedCustomCode, services.ErrCustomCodeAlreadyExists:
 			statusCode = http.StatusConflict
 			errorType = "custom_code_unavailable"
+		default:
+			var svcErr *services.ServiceError
+			if errors.As(err, &svcErr) {
+				statusCode = http.StatusBadRequest
+				errorType = "bad_request"
+			}
 		}
 
 		c.JSON(statusCode, models.ErrorResponse{

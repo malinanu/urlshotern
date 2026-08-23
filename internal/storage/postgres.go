@@ -1002,6 +1002,78 @@ func (p *PostgresStorage) GetURLMappingByShortCode(shortCode string) (*models.UR
 	return mapping, nil
 }
 
+// GetURLMappingByOriginalURLAndUser retrieves a URL mapping by original URL and user ID
+func (p *PostgresStorage) GetURLMappingByOriginalURLAndUser(originalURL string, userID int64) (*models.URLMapping, error) {
+	query := `
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active, created_by_ip, user_id, password_hash,
+		       og_title, og_description, og_image, twitter_card, custom_domain_id, team_id
+		FROM url_mappings
+		WHERE original_url = $1 AND user_id = $2 AND is_active = TRUE
+		LIMIT 1
+	`
+
+	mapping := &models.URLMapping{}
+	var expiresAt sql.NullTime
+	var createdByIP sql.NullString
+	var dbUserID sql.NullInt64
+	var passwordHash sql.NullString
+	var ogTitle, ogDescription, ogImage, twitterCard sql.NullString
+	var customDomainID, teamID sql.NullInt64
+
+	err := p.db.QueryRow(query, originalURL, userID).Scan(
+		&mapping.ID, &mapping.ShortCode, &mapping.OriginalURL,
+		&mapping.CreatedAt, &expiresAt, &mapping.ClickCount,
+		&mapping.IsActive, &createdByIP, &dbUserID, &passwordHash,
+		&ogTitle, &ogDescription, &ogImage, &twitterCard,
+		&customDomainID, &teamID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrURLNotFound
+		}
+		return nil, fmt.Errorf("failed to get URL mapping: %w", err)
+	}
+
+	if expiresAt.Valid {
+		mapping.ExpiresAt = &expiresAt.Time
+	}
+	if createdByIP.Valid {
+		mapping.CreatedByIP = createdByIP.String
+	}
+	if dbUserID.Valid {
+		mapping.UserID = &dbUserID.Int64
+	}
+	if passwordHash.Valid {
+		mapping.PasswordHash = &passwordHash.String
+	}
+	if ogTitle.Valid {
+		mapping.OGTitle = &ogTitle.String
+	}
+	if ogDescription.Valid {
+		mapping.OGDescription = &ogDescription.String
+	}
+	if ogImage.Valid {
+		mapping.OGImage = &ogImage.String
+	}
+	if twitterCard.Valid {
+		mapping.TwitterCard = &twitterCard.String
+	}
+	if customDomainID.Valid {
+		mapping.CustomDomainID = &customDomainID.Int64
+	}
+	if teamID.Valid {
+		mapping.TeamID = &teamID.Int64
+	}
+
+	// Check if URL has expired
+	if mapping.ExpiresAt != nil && mapping.ExpiresAt.Before(time.Now()) {
+		return nil, ErrURLExpired
+	}
+
+	return mapping, nil
+}
+
 // GetURLMappingByDomain retrieves a URL mapping by short code and custom domain hostname.
 // Used when the Host header indicates a custom domain request.
 func (p *PostgresStorage) GetURLMappingByDomain(shortCode, hostname string) (*models.URLMapping, error) {

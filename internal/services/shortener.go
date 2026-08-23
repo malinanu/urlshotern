@@ -80,6 +80,20 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 		return nil, &ServiceError{Message: "Twitter Card type is too long (maximum 50 characters)"}
 	}
 
+	// Check if the user has already shortened this exact URL (without custom configurations)
+	if request.CustomCode == "" && request.Password == "" && request.ExpiresAt == nil && request.OGTitle == "" && request.OGDescription == "" && request.OGImage == "" && request.TwitterCard == "" && request.DomainID == nil && request.TeamID == nil && userID != nil {
+		existingURL, err := s.db.GetURLMappingByOriginalURLAndUser(request.URL, *userID)
+		if err == nil && existingURL != nil {
+			// Return the existing short URL to prevent duplicates
+			return &models.ShortenResponse{
+				ShortCode:   existingURL.ShortCode,
+				ShortURL:    fmt.Sprintf("%s/%s", s.config.BaseURL, existingURL.ShortCode),
+				OriginalURL: existingURL.OriginalURL,
+				CreatedAt:   existingURL.CreatedAt,
+			}, nil
+		}
+	}
+
 	// Generate unique ID
 	id, err := utils.GenerateID()
 	if err != nil {
