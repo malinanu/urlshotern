@@ -401,6 +401,19 @@ func (h *Handler) UpdateURLOGMetadata(c *gin.Context) {
 		return
 	}
 
+	if req.OGTitle != nil && len(*req.OGTitle) > 255 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_request", Message: "OG Title is too long (maximum 255 characters)"})
+		return
+	}
+	if req.OGImage != nil && len(*req.OGImage) > 500 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_request", Message: "OG Image URL is too long (maximum 500 characters)"})
+		return
+	}
+	if req.TwitterCard != nil && len(*req.TwitterCard) > 50 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_request", Message: "Twitter Card type is too long (maximum 50 characters)"})
+		return
+	}
+
 	if err := h.db.UpdateURLOGMetadata(shortCode, userID, &req); err != nil {
 		if err == storage.ErrURLNotFound {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: "URL not found or not owned by you"})

@@ -67,6 +67,25 @@ func (s *OptimizedShortenerService) ShortenURL(request *models.ShortenRequest, c
 		return nil, err
 	}
 
+	// Check VirusTotal for spam/malicious URLs
+	isSpam, err := CheckURLSpam(request.URL, s.config.VirusTotalAPIKey)
+	if err != nil {
+		fmt.Printf("Warning: VirusTotal check failed: %v\n", err)
+	} else if isSpam {
+		return nil, &ServiceError{Message: "This URL has been flagged as malicious or spam by VirusTotal."}
+	}
+
+	// Validate OG field lengths
+	if len(request.OGTitle) > 255 {
+		return nil, &ServiceError{Message: "OG Title is too long (maximum 255 characters)"}
+	}
+	if len(request.OGImage) > 500 {
+		return nil, &ServiceError{Message: "OG Image URL is too long (maximum 500 characters)"}
+	}
+	if len(request.TwitterCard) > 50 {
+		return nil, &ServiceError{Message: "Twitter Card type is too long (maximum 50 characters)"}
+	}
+
 	// Generate unique ID
 	id, err := utils.GenerateID()
 	if err != nil {

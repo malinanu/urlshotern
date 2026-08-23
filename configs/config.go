@@ -77,6 +77,9 @@ type Config struct {
 	// AI Configuration (OpenRouter)
 	OpenRouterAPIKey string
 
+	// VirusTotal Configuration
+	VirusTotalAPIKey string
+
 	// SMS — text.lk (Sri Lankan numbers, +94)
 	TextLKAPIKey   string
 	TextLKSenderID string
@@ -155,6 +158,9 @@ func LoadConfig() (*Config, error) {
 
 		// AI Configuration (OpenRouter)
 		OpenRouterAPIKey: getEnv("OPENROUTER_API_KEY", ""),
+
+		// VirusTotal Configuration
+		VirusTotalAPIKey: getEnv("VIRUSTOTAL_API_KEY", ""),
 
 		// SMS — text.lk (Sri Lankan numbers)
 		TextLKAPIKey:   getEnv("TEXTLK_API_KEY", ""),

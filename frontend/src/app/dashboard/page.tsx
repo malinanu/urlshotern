@@ -60,6 +60,14 @@ export default function DashboardPage() {
     const cached = getCached<{ urls: URLData[] }>('dashboard:urls');
     return cached?.urls ?? [];
   });
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const cached = getCached<{ page?: number }>('dashboard:urls');
+    return cached?.page ?? 1;
+  });
+  const [totalPages, setTotalPages] = useState<number>(() => {
+    const cached = getCached<{ total_pages?: number }>('dashboard:urls');
+    return cached?.total_pages ?? 1;
+  });
   const [stats, setStats] = useState<DashboardStats | null>(() => getCached<DashboardStats>('dashboard:stats'));
   const [loadingUrls, setLoadingUrls] = useState(getCached('dashboard:urls') === null);
   const [loadingStats, setLoadingStats] = useState(getCached('dashboard:stats') === null);
@@ -120,11 +128,13 @@ export default function DashboardPage() {
       if (getCached('dashboard:stats') === null) setLoadingStats(true);
 
       // Fetch user's URLs from backend
-      const urlsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/my-urls`);
+      const urlsResponse = await makeAuthenticatedRequest(`${API_BASE_URL}/api/v1/my-urls?page=${currentPage}&limit=20`);
 
       if (urlsResponse && urlsResponse.ok) {
         const urlsData = await urlsResponse.json();
         setUrls(urlsData.urls || []);
+        setCurrentPage(urlsData.page || 1);
+        setTotalPages(urlsData.total_pages || 1);
         setCached('dashboard:urls', urlsData);
       } else if (urlsResponse) {
         console.error('Failed to fetch URLs:', urlsResponse.status);
@@ -160,7 +170,7 @@ export default function DashboardPage() {
         abortControllerRef.current.abort();
       }
     };
-  }, [isAuthenticated, user, getAccessToken]);
+  }, [isAuthenticated, user, getAccessToken, currentPage]);
 
   // Fetch user's teams for the edit modal
   useEffect(() => {
@@ -580,6 +590,31 @@ export default function DashboardPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing page {currentPage} of {totalPages}
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1 || loadingUrls}
+                    className="px-3 py-1 bg-muted text-foreground rounded hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages || loadingUrls}
+                    className="px-3 py-1 bg-muted text-foreground rounded hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
           </div>
