@@ -366,6 +366,7 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	// Admin analytics
 	admin.GET("/stats", handler.AuthHandlers.GetAdminStats)
 	admin.GET("/activity", handler.AuthHandlers.GetRecentActivity)
+	admin.GET("/urls", handler.GetAllURLsAdmin)
 
 	// Admin user management (existing)
 	admin.GET("/users", handler.AuthHandlers.GetUserList)

@@ -327,3 +327,13 @@ func (r *RedisStorage) GetForceLogout(userID int64) (time.Time, error) {
 	}
 	return time.Unix(val, 0), nil
 }
+
+// LPush pushes a value onto a list
+func (r *RedisStorage) LPush(key string, value interface{}) error {
+	return r.client.LPush(r.ctx, key, value).Err()
+}
+
+// RPop pops a value from a list
+func (r *RedisStorage) RPop(key string) (string, error) {
+	return r.client.RPop(r.ctx, key).Result()
+}

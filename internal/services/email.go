@@ -480,3 +480,27 @@ func (e *EmailService) GetHealthInfo() map[string]interface{} {
 
 	return healthInfo
 }
+
+// SendSpamAlert sends an email to the user when their URL is flagged as spam
+func (e *EmailService) SendSpamAlert(toEmail, originalURL, shortCode string) error {
+	subject := "Action Required: URL Disabled Due to Spam/Malware Detection"
+	htmlBody := fmt.Sprintf(`
+		<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+			<h2>Your URL has been disabled</h2>
+			<p>Hello,</p>
+			<p>Our security systems have flagged one of your shortened URLs as potentially malicious or spam.</p>
+			<p><strong>Short Code:</strong> %s</p>
+			<p><strong>Original URL:</strong> %s</p>
+			<p>To protect our users, this short link has been disabled and will no longer redirect to the destination.</p>
+			<p>If you believe this is an error, please contact support.</p>
+			<br/>
+			<p>Best regards,<br/>The URL Shortener Team</p>
+		</div>
+	`, shortCode, originalURL)
+
+	textBody := fmt.Sprintf(
+		"Hello,\n\nOur security systems have flagged one of your shortened URLs as potentially malicious or spam.\n\nShort Code: %s\nOriginal URL: %s\n\nTo protect our users, this short link has been disabled and will no longer redirect to the destination.\n\nBest regards,\nThe URL Shortener Team",
+		shortCode, originalURL)
+
+	return e.provider.SendEmail(toEmail, subject, htmlBody, textBody)
+}

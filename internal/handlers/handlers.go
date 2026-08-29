@@ -699,6 +699,38 @@ func (h *Handler) GetUserURLs(c *gin.Context) {
 	})
 }
 
+// GetAllURLsAdmin handles requests for the list of all URLs in the system (admin only)
+func (h *Handler) GetAllURLsAdmin(c *gin.Context) {
+	// Parse query parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	offset := (page - 1) * limit
+
+	urls, total, err := h.shortenerService.GetAllURLsAdmin(offset, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"urls":        urls,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+		"total_pages": (total + int64(limit) - 1) / int64(limit),
+	})
+}
+
 // DeleteURL handles URL deletion requests
 func (h *Handler) DeleteURL(c *gin.Context) {
 	userID, exists := middleware.GetUserID(c)

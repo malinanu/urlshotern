@@ -113,6 +113,13 @@ export default function AdminPage() {
   const [showRolesModal, setShowRolesModal] = useState(false);
   const [modalMode, setModalMode] = useState<'view' | 'manage'>('view');
   const [builderPageId, setBuilderPageId] = useState<number | null>(null);
+  
+  // URLs tab state
+  const [allUrls, setAllUrls] = useState<any[]>([]);
+  const [loadingUrls, setLoadingUrls] = useState(false);
+  const [urlsPage, setUrlsPage] = useState(1);
+  const [urlsTotalPages, setUrlsTotalPages] = useState(1);
+  
   const router = useRouter();
 
   // Restore active tab from URL on mount
@@ -223,6 +230,32 @@ export default function AdminPage() {
     }
   }, [activeTab, isAuthenticated, isAdmin]);
 
+  const fetchUrlsData = async (page = 1) => {
+    const token = getAccessToken();
+    if (!token) return;
+    setLoadingUrls(true);
+    try {
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+      const response = await fetch(`${API_ENDPOINTS.admin.urls}?page=${page}&limit=20`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setAllUrls(data.urls || []);
+        setUrlsPage(data.page || 1);
+        setUrlsTotalPages(data.total_pages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching admin urls:', error);
+    } finally {
+      setLoadingUrls(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'urls' && isAuthenticated && isAdmin) {
+      fetchUrlsData(1);
+    }
+  }, [activeTab, isAuthenticated, isAdmin]);
+
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
     const token = getAccessToken();
     if (!token) return;
@@ -323,12 +356,14 @@ export default function AdminPage() {
         { id: 'overview', name: 'Overview', icon: ChartBarIcon },
         { id: 'analytics', name: 'Analytics', icon: LinkIcon },
         { id: 'activity', name: 'Activity', icon: ClockIcon },
+        { id: 'non-admin-users', name: 'Non Admin Users', icon: UserGroupIcon },
       ],
     },
     {
       label: 'Manage',
       tabs: [
-        { id: 'users', name: 'Users', icon: UserGroupIcon },
+        { id: 'admin-users', name: 'Admin Users', icon: ShieldCheckIcon },
+        { id: 'urls', name: 'URLs', icon: LinkIcon },
         { id: 'domains', name: 'Domains', icon: GlobeAltIcon },
         { id: 'coupons', name: 'Coupons', icon: TicketIcon },
         { id: 'campaigns', name: 'Campaigns', icon: MegaphoneIcon },
@@ -436,7 +471,12 @@ export default function AdminPage() {
                 <StatsSkeleton />
               ) : stats && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+                  <div 
+                    className="bg-card p-6 rounded-lg shadow-sm border border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      handleTabChange('non-admin-users');
+                    }}
+                  >
                     <div className="flex items-center">
                       <UserGroupIcon className="h-8 w-8 text-blue-600 dark:text-blue-500" />
                       <div className="ml-4">
@@ -446,7 +486,10 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+                  <div 
+                    className="bg-card p-6 rounded-lg shadow-sm border border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('urls')}
+                  >
                     <div className="flex items-center">
                       <LinkIcon className="h-8 w-8 text-green-600 dark:text-green-500" />
                       <div className="ml-4">
@@ -456,7 +499,10 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+                  <div 
+                    className="bg-card p-6 rounded-lg shadow-sm border border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('analytics')}
+                  >
                     <div className="flex items-center">
                       <ChartBarIcon className="h-8 w-8 text-purple-600 dark:text-purple-500" />
                       <div className="ml-4">
@@ -466,7 +512,10 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
+                  <div 
+                    className="bg-card p-6 rounded-lg shadow-sm border border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleTabChange('system')}
+                  >
                     <div className="flex items-center">
                       <ServerIcon className="h-8 w-8 text-amber-600 dark:text-amber-500" />
                       <div className="ml-4">
@@ -485,15 +534,24 @@ export default function AdminPage() {
                 <div className="bg-card rounded-lg shadow-sm border border-border p-6">
                   <h3 className="text-lg font-medium text-foreground mb-4">Today's Activity</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
+                    <div 
+                      className="text-center cursor-pointer hover:bg-muted/30 p-4 rounded-lg transition-colors"
+                      onClick={() => handleTabChange('activity')}
+                    >
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-500">{stats.daily_signups}</p>
                       <p className="text-sm text-muted-foreground">New Signups</p>
                     </div>
-                    <div className="text-center">
+                    <div 
+                      className="text-center cursor-pointer hover:bg-muted/30 p-4 rounded-lg transition-colors"
+                      onClick={() => handleTabChange('activity')}
+                    >
                       <p className="text-2xl font-bold text-green-600 dark:text-green-500">{stats.daily_urls_created}</p>
                       <p className="text-sm text-muted-foreground">URLs Created</p>
                     </div>
-                    <div className="text-center">
+                    <div 
+                      className="text-center cursor-pointer hover:bg-muted/30 p-4 rounded-lg transition-colors"
+                      onClick={() => handleTabChange('activity')}
+                    >
                       <p className="text-2xl font-bold text-amber-600 dark:text-amber-500">{stats.active_users}</p>
                       <p className="text-sm text-muted-foreground">Active Users</p>
                     </div>
@@ -503,17 +561,21 @@ export default function AdminPage() {
             </div>
           )}
 
-          {activeTab === 'users' && (
+          {['non-admin-users', 'admin-users'].includes(activeTab) && (
             <div className="bg-card rounded-lg shadow-sm border border-border">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-foreground">User Management</h2>
-                <button
-                  onClick={() => setShowCreateUserModal(true)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                  <span>Add User</span>
-                </button>
+                <h2 className="text-xl font-semibold text-foreground">
+                  {activeTab === 'non-admin-users' ? 'Non Admin Users' : 'Admin Users'}
+                </h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setShowCreateUserModal(true)}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                  >
+                    <PlusIcon className="h-5 w-5" />
+                    <span>Add User</span>
+                  </button>
+                </div>
               </div>
 
               {loadingUsers ? (
@@ -546,7 +608,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {users.map((user) => (
+                      {users.filter(u => activeTab === 'non-admin-users' ? !u.is_admin : u.is_admin).map((user) => (
                         <tr key={user.id} className="hover:bg-muted">
                           <td className="px-6 py-4">
                             <div>
@@ -696,8 +758,21 @@ export default function AdminPage() {
                   { label: 'Active Users', value: stats.active_users, icon: UserGroupIcon, color: 'text-green-600 dark:text-green-400' },
                   { label: 'Total URLs', value: stats.total_urls, icon: LinkIcon, color: 'text-purple-600 dark:text-purple-400' },
                   { label: 'Total Clicks', value: stats.total_clicks, icon: ChartBarIcon, color: 'text-amber-600 dark:text-amber-400' },
-                ].map(({ label, value, icon: Icon, color }) => (
-                  <div key={label} className="bg-card rounded-lg border border-border p-5">
+                ].map(({ label, value, icon: Icon, color }) => {
+                  const onClick = () => {
+                    if (label === 'Total Users' || label === 'Active Users') {
+                      handleTabChange('non-admin-users');
+                    } else if (label === 'Total URLs') {
+                      handleTabChange('urls');
+                    }
+                  };
+                  
+                  return (
+                  <div 
+                    key={label} 
+                    className="bg-card rounded-lg border border-border p-5 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={onClick}
+                  >
                     <div className="flex items-center gap-3">
                       <Icon className={`h-7 w-7 ${color}`} />
                       <div>
@@ -706,7 +781,8 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Today's Activity */}
@@ -726,11 +802,12 @@ export default function AdminPage() {
                 </div>
                 <div className="bg-card rounded-lg border border-border p-5">
                   <h3 className="font-semibold text-foreground mb-3">Plan Distribution</h3>
-                  {users.length > 0 ? (
+                  {users.filter(u => activeTab === 'non-admin-users' ? !u.is_admin : u.is_admin).length > 0 ? (
                     <div className="space-y-2 text-sm">
                       {(['free', 'premium', 'enterprise'] as const).map(plan => {
-                        const count = users.filter(u => u.account_type === plan).length;
-                        const pct = users.length > 0 ? Math.round((count / users.length) * 100) : 0;
+                        const currentUsers = users.filter(u => activeTab === 'non-admin-users' ? !u.is_admin : u.is_admin);
+                        const count = currentUsers.filter(u => u.account_type === plan).length;
+                        const pct = currentUsers.length > 0 ? Math.round((count / currentUsers.length) * 100) : 0;
                         const displayName = plan === 'free' ? PLAN_NAMES.free : plan === 'premium' ? PLAN_NAMES.premium : PLAN_NAMES.enterprise;
                         return (
                           <div key={plan} className="flex items-center gap-3">
@@ -747,7 +824,7 @@ export default function AdminPage() {
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Load the Users tab first to see plan data.</p>
+                    <p className="text-sm text-muted-foreground">No users found for this category.</p>
                   )}
                 </div>
               </div>
@@ -772,6 +849,114 @@ export default function AdminPage() {
                   <span className="text-sm text-muted-foreground">Storage: {stats.storage_used}</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'urls' && (
+            <div className="bg-card rounded-lg shadow-sm border border-border">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-foreground">All System URLs</h2>
+                <button
+                  onClick={() => fetchUrlsData(urlsPage)}
+                  className="flex items-center space-x-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowPathIcon className="h-4 w-4" />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              {loadingUrls ? (
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-12 bg-muted rounded animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Short Code
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Original URL
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Clicks
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Created
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {allUrls.map((url) => (
+                        <tr key={url.id} className="hover:bg-muted">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
+                            <a href={url.short_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                              {url.short_code}
+                            </a>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-foreground truncate max-w-xs" title={url.original_url}>
+                              {url.original_url}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                            {url.click_count.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              url.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                            }`}>
+                              {url.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                            {formatDate(url.created_at)}
+                          </td>
+                        </tr>
+                      ))}
+                      {allUrls.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                            No URLs found in the system.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              {/* Pagination */}
+              {!loadingUrls && urlsTotalPages > 1 && (
+                <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Page {urlsPage} of {urlsTotalPages}
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => fetchUrlsData(urlsPage - 1)}
+                      disabled={urlsPage <= 1}
+                      className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => fetchUrlsData(urlsPage + 1)}
+                      disabled={urlsPage >= urlsTotalPages}
+                      className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

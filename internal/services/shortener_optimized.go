@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
@@ -68,11 +69,13 @@ func (s *OptimizedShortenerService) ShortenURL(request *models.ShortenRequest, c
 	}
 
 	// Check VirusTotal for spam/malicious URLs
-	isSpam, err := CheckURLSpam(request.URL, s.config.VirusTotalAPIKey)
+	spamStatus, err := CheckURLSpam(request.URL, s.config.VirusTotalAPIKey)
 	if err != nil {
 		fmt.Printf("Warning: VirusTotal check failed: %v\n", err)
-	} else if isSpam {
+	} else if spamStatus == SpamStatusSpam {
 		return nil, &ServiceError{Message: "This URL has been flagged as malicious or spam by VirusTotal."}
+	} else if spamStatus == SpamStatusUnknown {
+		s.queueVirusTotalCheck(request.URL, userID)
 	}
 
 	// Validate OG field lengths
@@ -577,4 +580,23 @@ func (s *OptimizedShortenerService) UpdateUserURL(userID int64, shortCode string
 // Shutdown gracefully shuts down the service
 func (s *OptimizedShortenerService) Shutdown(timeout time.Duration) error {
 	return workers.ShutdownAnalyticsPool(timeout)
+}
+
+// queueVirusTotalCheck queues a URL for background spam checking
+func (s *OptimizedShortenerService) queueVirusTotalCheck(originalURL string, userID *int64) {
+	if s.redis == nil {
+		return
+	}
+	type VTTask struct {
+		OriginalURL string `json:"original_url"`
+		UserID      *int64 `json:"user_id"`
+	}
+	task := VTTask{
+		OriginalURL: originalURL,
+		UserID:      userID,
+	}
+	data, err := json.Marshal(task)
+	if err == nil {
+		s.redis.LPush("vt_scan_queue", string(data))
+	}
 }

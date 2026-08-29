@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
@@ -62,11 +63,13 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 	}
 
 	// Check VirusTotal for spam/malicious URLs
-	isSpam, err := CheckURLSpam(request.URL, s.config.VirusTotalAPIKey)
+	spamStatus, err := CheckURLSpam(request.URL, s.config.VirusTotalAPIKey)
 	if err != nil {
 		fmt.Printf("Warning: VirusTotal check failed: %v\n", err)
-	} else if isSpam {
+	} else if spamStatus == SpamStatusSpam {
 		return nil, &ServiceError{Message: "This URL has been flagged as malicious or spam by VirusTotal."}
+	} else if spamStatus == SpamStatusUnknown {
+		s.queueVirusTotalCheck(request.URL, userID)
 	}
 
 	// Validate OG field lengths
@@ -577,6 +580,71 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 	return urls, total, nil
 }
 
+// GetAllURLsAdmin retrieves all URLs in the system with pagination (admin only)
+func (s *ShortenerService) GetAllURLsAdmin(offset, limit int) ([]*models.UserURLResponse, int64, error) {
+	query := `
+		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
+		       COALESCE(user_id, 0), COALESCE(is_public, true), COALESCE(custom_alias, ''),
+		       COALESCE(title, ''), COALESCE(description, '')
+		FROM url_mappings
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+	
+	rows, err := s.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query all URLs: %w", err)
+	}
+	defer rows.Close()
+
+	var urls []*models.UserURLResponse
+	for rows.Next() {
+		var url models.UserURLResponse
+		var userIDDB int64
+		var isPublicDB bool
+		var customAlias, title, description string
+		var expiresAt sql.NullTime
+
+		err := rows.Scan(
+			&url.ID, &url.ShortCode, &url.OriginalURL, &url.CreatedAt,
+			&expiresAt, &url.ClickCount, &url.IsActive,
+			&userIDDB, &isPublicDB, &customAlias, &title, &description,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan URL row: %w", err)
+		}
+
+		// Set nullable fields
+		if expiresAt.Valid {
+			url.ExpiresAt = &expiresAt.Time
+		}
+		if title != "" {
+			url.Title = &title
+		}
+		if description != "" {
+			url.Description = &description
+		}
+		if customAlias != "" {
+			url.CustomAlias = &customAlias
+		}
+		url.IsPublic = isPublicDB
+
+		// Build short URL
+		url.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, url.ShortCode)
+		
+		urls = append(urls, &url)
+	}
+
+	// Get total count
+	var total int64
+	err = s.db.QueryRow("SELECT COUNT(*) FROM url_mappings").Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count all URLs: %w", err)
+	}
+
+	return urls, total, nil
+}
+
 // DeleteUserURL deletes a URL belonging to a specific user
 func (s *ShortenerService) DeleteUserURL(userID int64, shortCode string) error {
 	query := `UPDATE url_mappings SET is_active = FALSE WHERE short_code = $1 AND user_id = $2 AND is_active = TRUE`
@@ -868,4 +936,23 @@ func extractUTMParam(referrer, param string) string {
 	}
 	
 	return parsedURL.Query().Get(param)
+}
+
+// queueVirusTotalCheck queues a URL for background spam checking
+func (s *ShortenerService) queueVirusTotalCheck(originalURL string, userID *int64) {
+	if s.redis == nil {
+		return
+	}
+	type VTTask struct {
+		OriginalURL string `json:"original_url"`
+		UserID      *int64 `json:"user_id"`
+	}
+	task := VTTask{
+		OriginalURL: originalURL,
+		UserID:      userID,
+	}
+	data, err := json.Marshal(task)
+	if err == nil {
+		s.redis.LPush("vt_scan_queue", string(data))
+	}
 }

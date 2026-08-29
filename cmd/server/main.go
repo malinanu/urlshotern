@@ -148,6 +148,11 @@ func main() {
 	go webhookRetryWorker.Start(workerCtx)
 	log.Println("✅ Webhook retry worker started")
 
+	// Initialize and start VirusTotal worker
+	vtWorker := workers.NewVirusTotalWorker(redis, db, emailService, config.VirusTotalAPIKey)
+	go vtWorker.Start(workerCtx)
+	log.Println("✅ VirusTotal worker started")
+
 	// Start product sync worker in background
 	syncInterval := time.Duration(config.ProductSyncIntervalMinutes) * time.Minute
 	polarSvc := handler.BillingHandlers.GetPolarService()

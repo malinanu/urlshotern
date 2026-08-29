@@ -86,6 +86,7 @@ export const API_ENDPOINTS = {
   admin: {
     stats: `${API_BASE_URL}/api/v1/admin/stats`,
     users: `${API_BASE_URL}/api/v1/admin/users`,
+    urls: `${API_BASE_URL}/api/v1/admin/urls`,
     activity: `${API_BASE_URL}/api/v1/admin/activity`,
     userStatus: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}/status`,
     deleteUser: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}`,
