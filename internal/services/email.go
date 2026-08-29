@@ -290,12 +290,20 @@ func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 
 // SendContactFormEmail sends contact form submission email
 func (e *EmailService) SendContactFormEmail(name, emailAddr, subject, message string) error {
-	// Generate email template
-	template := email.ContactFormEmailTemplate(name, emailAddr, subject, message)
-
-	// Send to contact email
+	// Generate email template for admin
+	adminTemplate := email.ContactFormEmailTemplate(name, emailAddr, subject, message)
+	
+	// Send to contact email (admin)
 	contactEmail := "contact@trunc.site"
-	return e.provider.SendEmail(contactEmail, template.Subject, template.HTMLBody, template.TextBody)
+	err := e.provider.SendEmail(contactEmail, adminTemplate.Subject, adminTemplate.HTMLBody, adminTemplate.TextBody)
+	if err != nil {
+		return err
+	}
+
+	// Send a copy to the user
+	userSubject := fmt.Sprintf("Copy of your message: %s", subject)
+	userTemplate := email.ContactFormEmailTemplate(name, emailAddr, userSubject, message)
+	return e.provider.SendEmail(emailAddr, userTemplate.Subject, userTemplate.HTMLBody, userTemplate.TextBody)
 }
 
 // SendSupportInquiryEmail sends support inquiry email
