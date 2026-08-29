@@ -512,3 +512,12 @@ func (e *EmailService) SendSpamAlert(toEmail, originalURL, shortCode string) err
 
 	return e.provider.SendEmail(toEmail, subject, htmlBody, textBody)
 }
+
+// SendWelcomeEmail sends a welcome email to a newly registered user
+func (e *EmailService) SendWelcomeEmail(name, emailAddr string) error {
+	// Generate email template
+	template := email.WelcomeEmailTemplate(name, emailAddr)
+
+	// Send to user
+	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+}

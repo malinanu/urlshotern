@@ -98,12 +98,19 @@ func (a *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent
 		return nil, err
 	}
 
-	// Send email verification
+	// Send email verification and welcome email
 	if a.emailService != nil {
+		// Send verification email
 		err = a.emailService.SendEmailVerification(registrationData.User.Email, registrationData.EmailToken)
 		if err != nil {
 			fmt.Printf("Failed to send email verification: %v\n", err)
 			// Don't fail registration if email fails
+		}
+
+		// Send welcome email
+		err = a.emailService.SendWelcomeEmail(registrationData.User.Name, registrationData.User.Email)
+		if err != nil {
+			fmt.Printf("Failed to send welcome email: %v\n", err)
 		}
 	}
 

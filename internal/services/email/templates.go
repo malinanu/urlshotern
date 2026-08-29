@@ -572,3 +572,78 @@ trunc.site Team
 		TextBody: textBody,
 	}
 }
+
+// WelcomeEmailTemplate generates a welcome email template
+func WelcomeEmailTemplate(name, email string) EmailTemplate {
+	subject := "Welcome to trunc.site!"
+
+	textBody := fmt.Sprintf(`Hello %s,
+
+Welcome to trunc.site! We're thrilled to have you on board.
+
+With trunc.site, you can easily shorten long URLs, track clicks, and manage your links in one place.
+
+If you have any questions or need help getting started, feel free to reach out to us at contact@trunc.site or use the Contact Form on our website.
+
+Best regards,
+trunc.site Team
+`, name)
+
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to trunc.site</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e9df1 0%%, #1da1f2 100%%); padding: 40px 20px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">trunc.site</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <h2 style="color: #333333; margin-top: 0; font-size: 24px;">Welcome aboard, %s!</h2>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                                We're absolutely thrilled to have you join trunc.site!
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                                You can now start shortening long URLs, tracking clicks and analytics, and managing all your links in one convenient dashboard.
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                                Need help getting started? Feel free to reach out to us at any time using our contact form.
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0;">
+                                Best regards,<br>
+                                <strong>The trunc.site Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                                &copy; 2026 trunc.site. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>`, name)
+
+	return EmailTemplate{
+		Subject:  subject,
+		HTMLBody: htmlBody,
+		TextBody: textBody,
+	}
+}
