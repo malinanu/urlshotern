@@ -17,11 +17,20 @@ interface User {
   id: number;
   name: string;
   email: string;
+  phone?: string;
+  phone_verified?: boolean;
+  provider?: string;
+  avatar_url?: string;
   is_active: boolean;
   is_admin: boolean;
+  is_email_verified?: boolean;
   account_type: string;
+  created_at?: string;
+  updated_at?: string;
+  last_login_at?: string;
   urls_count?: number;
   total_clicks?: number;
+  roles?: string[];
 }
 
 interface Props {
@@ -107,24 +116,28 @@ export function UserDetailsModal({ isOpen, onClose, user, onUserUpdated, onViewU
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="User Details">
+    <Modal isOpen={isOpen} onClose={onClose} title="User Details" size="lg">
       <div className="space-y-6">
         {/* Profile Info */}
         <div className="bg-muted p-4 rounded-lg flex items-start space-x-4">
-          <div className="bg-primary/10 p-3 rounded-full">
-            <UserIcon className="h-6 w-6 text-primary" />
-          </div>
+          {user.avatar_url ? (
+            <img src={user.avatar_url} alt={user.name} className="h-12 w-12 rounded-full border-2 border-primary/20 object-cover" />
+          ) : (
+            <div className="bg-primary/10 p-3 rounded-full flex-shrink-0">
+              <UserIcon className="h-6 w-6 text-primary" />
+            </div>
+          )}
           <div className="flex-1">
             <h3 className="text-lg font-medium text-foreground">{user.name}</h3>
-            <div className="flex items-center text-sm text-muted-foreground mt-1 space-x-4">
+            <div className="flex flex-wrap items-center text-sm text-muted-foreground mt-1 gap-4">
               <span className="flex items-center">
                 <EnvelopeIcon className="h-4 w-4 mr-1" />
                 {user.email}
               </span>
               {user.is_admin && (
-                <span className="flex items-center text-red-500">
+                <span className="flex items-center text-red-500 font-medium">
                   <ShieldCheckIcon className="h-4 w-4 mr-1" />
-                  Admin
+                  Admin Access
                 </span>
               )}
             </div>
@@ -137,6 +150,79 @@ export function UserDetailsModal({ isOpen, onClose, user, onUserUpdated, onViewU
             >
               {user.is_active ? 'Active' : 'Inactive'}
             </span>
+          </div>
+        </div>
+
+        {/* Account Additional Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-card border border-border p-4 rounded-lg">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Account Info</h4>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Status:</span>
+                <span className="font-medium text-foreground">{user.is_active ? 'Active' : 'Disabled'}</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Email Verified:</span>
+                <span className="font-medium text-foreground">{user.is_email_verified ? 'Yes' : 'No'}</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Joined:</span>
+                <span className="font-medium text-foreground">
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Last Updated:</span>
+                <span className="font-medium text-foreground">
+                  {user.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'N/A'}
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Last Login:</span>
+                <span className="font-medium text-foreground">
+                  {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
+                </span>
+              </li>
+            </ul>
+          </div>
+          
+          <div className="bg-card border border-border p-4 rounded-lg">
+            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Identity & Access</h4>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Login Provider:</span>
+                <span className="font-medium text-foreground capitalize">{user.provider || 'Email'}</span>
+              </li>
+              {user.phone && (
+                <li className="flex justify-between">
+                  <span className="text-muted-foreground">Phone Number:</span>
+                  <span className="font-medium text-foreground">{user.phone} {user.phone_verified && '✓'}</span>
+                </li>
+              )}
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Account Tier:</span>
+                <span className="font-medium text-foreground capitalize">{PLAN_NAMES[user.account_type as keyof typeof PLAN_NAMES] || user.account_type}</span>
+              </li>
+              <li className="flex justify-between">
+                <span className="text-muted-foreground">Admin Access:</span>
+                <span className="font-medium text-foreground">{user.is_admin ? 'Yes' : 'No'}</span>
+              </li>
+              <li className="flex flex-col mt-2">
+                <span className="text-muted-foreground mb-1">Assigned Roles:</span>
+                <div className="flex flex-wrap gap-1">
+                  {user.roles && user.roles.length > 0 ? (
+                    user.roles.map(role => (
+                      <span key={role} className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded">
+                        {role}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs italic text-muted-foreground">None</span>
+                  )}
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
 

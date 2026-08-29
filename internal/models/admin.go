@@ -19,11 +19,16 @@ type AdminUser struct {
 	ID              int64      `json:"id,string"`
 	Name            string     `json:"name"`
 	Email           string     `json:"email"`
+	Phone           *string    `json:"phone,omitempty"`
+	PhoneVerified   bool       `json:"phone_verified"`
+	Provider        string     `json:"provider"`
+	AvatarURL       *string    `json:"avatar_url,omitempty"`
 	IsActive        bool       `json:"is_active"`
 	IsAdmin         bool       `json:"is_admin"`
 	IsEmailVerified bool       `json:"is_email_verified"`
 	AccountType     string     `json:"account_type"`
 	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
 	URLsCount       int64      `json:"urls_count"`
 	TotalClicks     int64      `json:"total_clicks"`

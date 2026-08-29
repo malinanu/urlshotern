@@ -71,8 +71,9 @@ func (s *AdminService) GetSystemStats() (*models.SystemStats, error) {
 func (s *AdminService) GetUserList(limit, offset int) ([]*models.AdminUser, error) {
 	query := `
 		SELECT
-			u.id, u.name, u.email, u.is_active, u.is_admin, u.email_verified,
-			u.account_type, u.created_at, u.last_login_at,
+			u.id, u.name, u.email, u.phone, u.phone_verified, u.provider, u.avatar_url,
+			u.is_active, u.is_admin, u.email_verified,
+			u.account_type, u.created_at, u.updated_at, u.last_login_at,
 			COUNT(DISTINCT url.id) as urls_count,
 			COALESCE(SUM(url.click_count), 0) as total_clicks,
 			COALESCE((
@@ -85,7 +86,7 @@ func (s *AdminService) GetUserList(limit, offset int) ([]*models.AdminUser, erro
 		FROM users u
 		LEFT JOIN url_mappings url ON url.user_id = u.id
 		WHERE u.deleted_at IS NULL
-		GROUP BY u.id, u.name, u.email, u.is_active, u.is_admin, u.email_verified, u.account_type, u.created_at, u.last_login_at
+		GROUP BY u.id, u.name, u.email, u.phone, u.phone_verified, u.provider, u.avatar_url, u.is_active, u.is_admin, u.email_verified, u.account_type, u.created_at, u.updated_at, u.last_login_at
 		ORDER BY u.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -106,11 +107,16 @@ func (s *AdminService) GetUserList(limit, offset int) ([]*models.AdminUser, erro
 			&user.ID,
 			&user.Name,
 			&user.Email,
+			&user.Phone,
+			&user.PhoneVerified,
+			&user.Provider,
+			&user.AvatarURL,
 			&user.IsActive,
 			&user.IsAdmin,
 			&user.IsEmailVerified,
 			&user.AccountType,
 			&user.CreatedAt,
+			&user.UpdatedAt,
 			&lastLoginAt,
 			&user.URLsCount,
 			&user.TotalClicks,
@@ -194,14 +200,14 @@ func (s *AdminService) DeleteUser(userID int64) error {
 func (s *AdminService) GetUserByIDWithStats(userID int64) (*models.AdminUser, error) {
 	query := `
 		SELECT
-			u.id, u.name, u.email, u.is_active, u.email_verified,
-			u.account_type, u.created_at, u.last_login_at,
+			u.id, u.name, u.email, u.phone, u.phone_verified, u.provider, u.avatar_url, u.is_active, u.email_verified,
+			u.account_type, u.created_at, u.updated_at, u.last_login_at,
 			COUNT(DISTINCT url.id) as urls_count,
 			COALESCE(SUM(url.click_count), 0) as total_clicks
 		FROM users u
 		LEFT JOIN url_mappings url ON url.user_id = u.id
 		WHERE u.id = $1 AND u.deleted_at IS NULL
-		GROUP BY u.id, u.name, u.email, u.is_active, u.email_verified, u.account_type, u.created_at, u.last_login_at
+		GROUP BY u.id, u.name, u.email, u.phone, u.phone_verified, u.provider, u.avatar_url, u.is_active, u.email_verified, u.account_type, u.created_at, u.updated_at, u.last_login_at
 	`
 
 	user := &models.AdminUser{}
@@ -211,10 +217,15 @@ func (s *AdminService) GetUserByIDWithStats(userID int64) (*models.AdminUser, er
 		&user.ID,
 		&user.Name,
 		&user.Email,
+		&user.Phone,
+		&user.PhoneVerified,
+		&user.Provider,
+		&user.AvatarURL,
 		&user.IsActive,
 		&user.IsEmailVerified,
 		&user.AccountType,
 		&user.CreatedAt,
+		&user.UpdatedAt,
 		&lastLoginAt,
 		&user.URLsCount,
 		&user.TotalClicks,
