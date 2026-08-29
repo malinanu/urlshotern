@@ -144,6 +144,9 @@ type UserURLResponse struct {
 	IsPublic    bool       `json:"is_public"`
 	CreatedAt   time.Time  `json:"created_at"`
 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	UserID      *int64     `json:"user_id,omitempty"`
+	UserName    *string    `json:"user_name,omitempty"`
+	UserEmail   *string    `json:"user_email,omitempty"`
 }
 
 // UserDashboardStats represents user-specific dashboard statistics

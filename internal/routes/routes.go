@@ -368,11 +368,12 @@ func setupAdminRoutes(router *gin.Engine, handler *handlers.Handler, authMiddlew
 	admin.GET("/activity", handler.AuthHandlers.GetRecentActivity)
 	admin.GET("/urls", handler.GetAllURLsAdmin)
 
-	// Admin user management (existing)
+	// Admin user management
 	admin.GET("/users", handler.AuthHandlers.GetUserList)
 	admin.GET("/users/:id", handler.AuthHandlers.GetUserByID)
 	admin.PUT("/users/:id/status", handler.AuthHandlers.ToggleUserStatus)
 	admin.DELETE("/users/:id", handler.AuthHandlers.DeleteUserAdmin)
+	admin.POST("/users/:id/reset-password-email", handler.AuthHandlers.SendPasswordResetEmailAdmin)
 
 	// ============================================================================
 	// RBAC Admin User Management (NEW)

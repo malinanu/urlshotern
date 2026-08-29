@@ -580,18 +580,21 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 	return urls, total, nil
 }
 
-// GetAllURLsAdmin retrieves all URLs in the system with pagination (admin only)
-func (s *ShortenerService) GetAllURLsAdmin(offset, limit int) ([]*models.UserURLResponse, int64, error) {
+// GetAllURLsAdmin retrieves all URLs in the system with pagination (admin only), optionally filtered by userID
+func (s *ShortenerService) GetAllURLsAdmin(offset, limit int, userID int64) ([]*models.UserURLResponse, int64, error) {
 	query := `
-		SELECT id, short_code, original_url, created_at, expires_at, click_count, is_active,
-		       COALESCE(user_id, 0), COALESCE(is_public, true), COALESCE(custom_alias, ''),
-		       COALESCE(title, ''), COALESCE(description, '')
-		FROM url_mappings
-		ORDER BY created_at DESC
+		SELECT u.id, u.short_code, u.original_url, u.created_at, u.expires_at, u.click_count, u.is_active,
+		       COALESCE(u.user_id, 0), COALESCE(u.is_public, true), COALESCE(u.custom_alias, ''),
+		       COALESCE(u.title, ''), COALESCE(u.description, ''),
+		       us.name, us.email
+		FROM url_mappings u
+		LEFT JOIN users us ON u.user_id = us.id
+		WHERE ($3::bigint = 0 OR u.user_id = $3)
+		ORDER BY u.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
 	
-	rows, err := s.db.Query(query, limit, offset)
+	rows, err := s.db.Query(query, limit, offset, userID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query all URLs: %w", err)
 	}
@@ -604,11 +607,13 @@ func (s *ShortenerService) GetAllURLsAdmin(offset, limit int) ([]*models.UserURL
 		var isPublicDB bool
 		var customAlias, title, description string
 		var expiresAt sql.NullTime
+		var userName, userEmail sql.NullString
 
 		err := rows.Scan(
 			&url.ID, &url.ShortCode, &url.OriginalURL, &url.CreatedAt,
 			&expiresAt, &url.ClickCount, &url.IsActive,
 			&userIDDB, &isPublicDB, &customAlias, &title, &description,
+			&userName, &userEmail,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan URL row: %w", err)
@@ -627,6 +632,15 @@ func (s *ShortenerService) GetAllURLsAdmin(offset, limit int) ([]*models.UserURL
 		if customAlias != "" {
 			url.CustomAlias = &customAlias
 		}
+		if userName.Valid {
+			url.UserName = &userName.String
+		}
+		if userEmail.Valid {
+			url.UserEmail = &userEmail.String
+		}
+		if userIDDB > 0 {
+			url.UserID = &userIDDB
+		}
 		url.IsPublic = isPublicDB
 
 		// Build short URL
@@ -637,7 +651,8 @@ func (s *ShortenerService) GetAllURLsAdmin(offset, limit int) ([]*models.UserURL
 
 	// Get total count
 	var total int64
-	err = s.db.QueryRow("SELECT COUNT(*) FROM url_mappings").Scan(&total)
+	countQuery := "SELECT COUNT(*) FROM url_mappings WHERE ($1::bigint = 0 OR user_id = $1)"
+	err = s.db.QueryRow(countQuery, userID).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count all URLs: %w", err)
 	}

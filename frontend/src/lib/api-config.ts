@@ -89,6 +89,7 @@ export const API_ENDPOINTS = {
     urls: `${API_BASE_URL}/api/v1/admin/urls`,
     activity: `${API_BASE_URL}/api/v1/admin/activity`,
     userStatus: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}/status`,
+    userResetPasswordEmail: (userId: string | number) => `${API_BASE_URL}/api/v1/admin/users/${userId}/reset-password-email`,
     deleteUser: (userId: string) => `${API_BASE_URL}/api/v1/admin/users/${userId}`,
 
     // RBAC User Management

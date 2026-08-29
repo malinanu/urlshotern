@@ -37,6 +37,7 @@ import { SEOToolsManager } from '@/components/seo/SEOToolsManager';
 import { VisualPageBuilder } from '@/components/builder/VisualPageBuilder';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { UserRolesModal } from '@/components/admin/UserRolesModal';
+import { UserDetailsModal } from '@/components/admin/UserDetailsModal';
 import { PLAN_NAMES } from '@/lib/plan-utils';
 
 interface SystemStats {
@@ -111,7 +112,12 @@ export default function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showRolesModal, setShowRolesModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'view' | 'manage'>('view');
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  
+  // User details modal state
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null);
+
   const [builderPageId, setBuilderPageId] = useState<number | null>(null);
   
   // URLs tab state
@@ -119,6 +125,7 @@ export default function AdminPage() {
   const [loadingUrls, setLoadingUrls] = useState(false);
   const [urlsPage, setUrlsPage] = useState(1);
   const [urlsTotalPages, setUrlsTotalPages] = useState(1);
+  const [urlsFilterUserId, setUrlsFilterUserId] = useState<number | null>(null);
   
   const router = useRouter();
 
@@ -230,23 +237,53 @@ export default function AdminPage() {
     }
   }, [activeTab, isAuthenticated, isAdmin]);
 
-  const fetchUrlsData = async (page = 1) => {
+  const fetchUrlsData = async (page = 1, userIdFilter = urlsFilterUserId) => {
     const token = getAccessToken();
     if (!token) return;
     setLoadingUrls(true);
     try {
-      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-      const response = await fetch(`${API_ENDPOINTS.admin.urls}?page=${page}&limit=20`, { headers });
-      if (response.ok) {
-        const data = await response.json();
+      let url = `${API_ENDPOINTS.admin.urls}?page=${page}&limit=20`;
+      if (userIdFilter !== null) {
+        url += `&user_id=${userIdFilter}`;
+      }
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
         setAllUrls(data.urls || []);
         setUrlsPage(data.page || 1);
         setUrlsTotalPages(data.total_pages || 1);
       }
     } catch (error) {
-      console.error('Error fetching admin urls:', error);
+      console.error('Error fetching URLs:', error);
     } finally {
       setLoadingUrls(false);
+    }
+  };
+
+  const fetchUserAndShowModal = async (userId: number) => {
+    let u = users.find(user => user.id === userId);
+    if (u) {
+      setSelectedUserForModal(u);
+      setShowUserDetailsModal(true);
+      return;
+    }
+    
+    try {
+      const token = getAccessToken();
+      const res = await fetch(`${API_ENDPOINTS.admin.users}/${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Backend returns the user directly or nested in data.user depending on the response format
+        const fetchedUser = data.user || data;
+        setSelectedUserForModal(fetchedUser);
+        setShowUserDetailsModal(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user details", error);
     }
   };
 
@@ -609,7 +646,7 @@ export default function AdminPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {users.filter(u => activeTab === 'non-admin-users' ? !u.is_admin : u.is_admin).map((user) => (
-                        <tr key={user.id} className="hover:bg-muted">
+                        <tr key={user.id} className="hover:bg-muted cursor-pointer" onClick={() => { setSelectedUserForModal(user); setShowUserDetailsModal(true); }}>
                           <td className="px-6 py-4">
                             <div>
                               <div className="text-sm font-medium text-foreground">{user.name}</div>
@@ -661,8 +698,9 @@ export default function AdminPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => {
-                                  setModalMode('manage');
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setModalMode('edit');
                                   setSelectedUserId(user.id);
                                   setSelectedUserName(user.name);
                                   setShowRolesModal(true);
@@ -674,7 +712,10 @@ export default function AdminPage() {
                                 <ShieldCheckIcon className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => toggleUserStatus(user.id, user.is_active)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleUserStatus(user.id, user.is_active);
+                                }}
                                 aria-label={user.is_active ? 'Deactivate user' : 'Activate user'}
                                 className={`p-1 rounded transition-colors ${user.is_active
                                   ? 'text-destructive hover:text-destructive/80'
@@ -689,7 +730,10 @@ export default function AdminPage() {
                                 )}
                               </button>
                               <button
-                                onClick={() => deleteUser(user.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteUser(user.id);
+                                }}
                                 aria-label="Delete user"
                                 className="p-1 text-destructive hover:text-destructive/80 transition-colors"
                                 title="Delete user"
@@ -855,7 +899,19 @@ export default function AdminPage() {
           {activeTab === 'urls' && (
             <div className="bg-card rounded-lg shadow-sm border border-border">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-foreground">All System URLs</h2>
+                <div className="flex items-center space-x-4">
+                  <h2 className="text-xl font-semibold text-foreground">
+                    {urlsFilterUserId ? 'User URLs' : 'All System URLs'}
+                  </h2>
+                  {urlsFilterUserId && (
+                    <button
+                      onClick={() => { setUrlsFilterUserId(null); fetchUrlsData(1, null); }}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Clear Filter
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => fetchUrlsData(urlsPage)}
                   className="flex items-center space-x-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -883,6 +939,9 @@ export default function AdminPage() {
                           Original URL
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Creator
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Clicks
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -901,12 +960,27 @@ export default function AdminPage() {
                               {url.short_code}
                             </a>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-foreground truncate max-w-xs" title={url.original_url}>
-                              {url.original_url}
-                            </div>
+                          <td className="px-6 py-4 text-sm text-muted-foreground max-w-[200px] truncate" title={url.original_url}>
+                            {url.original_url}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {url.user_name ? (
+                              <button
+                                onClick={() => {
+                                  if (url.user_id) {
+                                    fetchUserAndShowModal(url.user_id);
+                                  }
+                                }}
+                                className="text-sm font-medium text-primary hover:underline flex flex-col items-start"
+                              >
+                                <span>{url.user_name}</span>
+                                <span className="text-xs text-muted-foreground">{url.user_email}</span>
+                              </button>
+                            ) : (
+                              <span className="text-sm text-muted-foreground italic">Anonymous</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">
                             {url.click_count.toLocaleString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -923,7 +997,7 @@ export default function AdminPage() {
                       ))}
                       {allUrls.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                          <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
                             No URLs found in the system.
                           </td>
                         </tr>
@@ -1162,6 +1236,21 @@ export default function AdminPage() {
           mode={modalMode}
         />
       )}
+
+      <UserDetailsModal
+        isOpen={showUserDetailsModal}
+        onClose={() => {
+          setShowUserDetailsModal(false);
+          setSelectedUserForModal(null);
+        }}
+        user={selectedUserForModal}
+        onUserUpdated={fetchAdminData}
+        onViewUrls={(userId) => {
+          setUrlsFilterUserId(userId);
+          fetchUrlsData(1, userId);
+          handleTabChange('urls');
+        }}
+      />
     </Layout>
   );
 }

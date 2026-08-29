@@ -712,8 +712,17 @@ func (h *Handler) GetAllURLsAdmin(c *gin.Context) {
 	}
 
 	offset := (page - 1) * limit
+	
+	// Optional user filter
+	userIDStr := c.Query("user_id")
+	var filterUserID int64 = 0
+	if userIDStr != "" {
+		if id, err := strconv.ParseInt(userIDStr, 10, 64); err == nil {
+			filterUserID = id
+		}
+	}
 
-	urls, total, err := h.shortenerService.GetAllURLsAdmin(offset, limit)
+	urls, total, err := h.shortenerService.GetAllURLsAdmin(offset, limit, filterUserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",

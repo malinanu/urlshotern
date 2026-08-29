@@ -1442,3 +1442,40 @@ func (h *AuthHandlers) EmailHealthCheck(c *gin.Context) {
 	// Return health information
 	c.JSON(http.StatusOK, healthInfo)
 }
+
+// SendPasswordResetEmailAdmin allows an admin to trigger a password reset email for a user
+func (h *AuthHandlers) SendPasswordResetEmailAdmin(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Fetch user details using adminService
+	user, err := h.adminService.GetUserByIDWithStats(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "not_found",
+			"message": "User not found",
+		})
+		return
+	}
+
+	// Request password reset
+	err = h.authService.RequestPasswordReset(user.Email, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_error",
+			"message": "Failed to send password reset email",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Password reset email sent successfully",
+	})
+}
