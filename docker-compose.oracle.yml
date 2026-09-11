@@ -72,6 +72,9 @@ services:
       # AI Insights (OpenRouter — required for Ultra-plan AI features)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 
+      # VirusTotal (spam/malicious URL detection on shorten)
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
+
       # SMS — text.lk (Sri Lankan numbers)
       - TEXTLK_API_KEY=${TEXTLK_API_KEY:-}
       - TEXTLK_SENDER_ID=${TEXTLK_SENDER_ID:-TRUNC}

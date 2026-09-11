@@ -10,8 +10,6 @@ import {
   UserGroupIcon,
   LinkIcon,
   ChartBarIcon,
-  CogIcon,
-  ExclamationTriangleIcon,
   CheckCircleIcon,
   XMarkIcon,
   EyeIcon,
@@ -76,6 +74,19 @@ interface RecentActivity {
   ip_address?: string;
 }
 
+interface AdminURL {
+  id: number;
+  short_code: string;
+  short_url: string;
+  original_url: string;
+  user_id: number | null;
+  user_name?: string;
+  user_email?: string;
+  click_count: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 interface AdminDomain {
   id: number;
   domain: string;
@@ -112,7 +123,7 @@ export default function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showRolesModal, setShowRolesModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [modalMode, setModalMode] = useState<'view' | 'manage'>('manage');
   
   // User details modal state
   const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
@@ -121,7 +132,7 @@ export default function AdminPage() {
   const [builderPageId, setBuilderPageId] = useState<number | null>(null);
   
   // URLs tab state
-  const [allUrls, setAllUrls] = useState<any[]>([]);
+  const [allUrls, setAllUrls] = useState<AdminURL[]>([]);
   const [loadingUrls, setLoadingUrls] = useState(false);
   const [urlsPage, setUrlsPage] = useState(1);
   const [urlsTotalPages, setUrlsTotalPages] = useState(1);
@@ -204,6 +215,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) return;
     fetchAdminData();
+    // fetchAdminData is recreated every render; only re-run on auth changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin]);
 
   const fetchDomainData = async () => {
@@ -235,6 +248,8 @@ export default function AdminPage() {
     if (activeTab === 'domains' && isAuthenticated && isAdmin) {
       fetchDomainData();
     }
+    // fetchDomainData is recreated every render; only re-run on tab/auth changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthenticated, isAdmin]);
 
   const fetchUrlsData = async (page = 1, userIdFilter = urlsFilterUserId) => {
@@ -263,7 +278,7 @@ export default function AdminPage() {
   };
 
   const fetchUserAndShowModal = async (userId: number) => {
-    let u = users.find(user => user.id === userId);
+    const u = users.find(user => user.id === userId);
     if (u) {
       setSelectedUserForModal(u);
       setShowUserDetailsModal(true);
@@ -291,6 +306,8 @@ export default function AdminPage() {
     if (activeTab === 'urls' && isAuthenticated && isAdmin) {
       fetchUrlsData(1);
     }
+    // fetchUrlsData is recreated every render; only re-run on tab/auth changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthenticated, isAdmin]);
 
   const toggleUserStatus = async (userId: number, isActive: boolean) => {
@@ -569,7 +586,7 @@ export default function AdminPage() {
               {/* Quick Stats */}
               {stats && (
                 <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-                  <h3 className="text-lg font-medium text-foreground mb-4">Today's Activity</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-4">Today&apos;s Activity</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div 
                       className="text-center cursor-pointer hover:bg-muted/30 p-4 rounded-lg transition-colors"
@@ -700,7 +717,7 @@ export default function AdminPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setModalMode('edit');
+                                  setModalMode('manage');
                                   setSelectedUserId(user.id);
                                   setSelectedUserName(user.name);
                                   setShowRolesModal(true);
@@ -832,7 +849,7 @@ export default function AdminPage() {
               {/* Today's Activity */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-card rounded-lg border border-border p-5">
-                  <h3 className="font-semibold text-foreground mb-3">Today's Activity</h3>
+                  <h3 className="font-semibold text-foreground mb-3">Today&apos;s Activity</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">New Signups</span>
@@ -846,10 +863,10 @@ export default function AdminPage() {
                 </div>
                 <div className="bg-card rounded-lg border border-border p-5">
                   <h3 className="font-semibold text-foreground mb-3">Plan Distribution</h3>
-                  {users.filter(u => activeTab === 'non-admin-users' ? !u.is_admin : u.is_admin).length > 0 ? (
+                  {users.filter(u => !u.is_admin).length > 0 ? (
                     <div className="space-y-2 text-sm">
                       {(['free', 'premium', 'enterprise'] as const).map(plan => {
-                        const currentUsers = users.filter(u => activeTab === 'non-admin-users' ? !u.is_admin : u.is_admin);
+                        const currentUsers = users.filter(u => !u.is_admin);
                         const count = currentUsers.filter(u => u.account_type === plan).length;
                         const pct = currentUsers.length > 0 ? Math.round((count / currentUsers.length) * 100) : 0;
                         const displayName = plan === 'free' ? PLAN_NAMES.free : plan === 'premium' ? PLAN_NAMES.premium : PLAN_NAMES.enterprise;
