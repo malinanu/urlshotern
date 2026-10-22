@@ -72,6 +72,12 @@ interface BillingData {
   };
 }
 
+// Tier order used to decide whether a plan card is an upgrade or a downgrade
+const PLAN_RANK: Record<string, number> = { free: 0, premium: 1, enterprise: 2 };
+
+// Strip the interval suffix so 'enterprise_yearly' and 'enterprise' compare as the same tier
+const baseTier = (planId: string) => planId.replace('_yearly', '');
+
 function BillingContent() {
   const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const searchParams = useSearchParams();
@@ -647,13 +653,28 @@ function BillingContent() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {plans.filter(p => p.interval === billingInterval || p.id === 'free').map((plan) => (
+                  {plans.filter(p => p.interval === billingInterval || p.id === 'free').map((plan) => {
+                    const currentTier = baseTier(billingData.subscription.plan_type);
+                    const planTier = baseTier(plan.id);
+                    const isCurrent = planTier === currentTier;
+                    const isDowngrade = !isCurrent && (PLAN_RANK[planTier] ?? 0) < (PLAN_RANK[currentTier] ?? 0);
+                    // No plan-change endpoint exists: a checkout for a lower paid tier would open a second subscription
+                    const cancelScheduled = billingData.subscription.cancel_at_period_end;
+                    const downgradeBlockedReason = !isDowngrade
+                      ? null
+                      : planTier !== 'free'
+                        ? cancelScheduled
+                          ? 'Available once your current plan ends.'
+                          : 'Cancel your current subscription first, then choose this plan.'
+                        : cancelScheduled
+                          ? 'Cancellation already scheduled.'
+                          : null;
+
+                    return (
                     <div
                       key={plan.id}
                       className={`bg-card rounded-lg shadow-sm border-2 p-6 ${
-                        plan.id === billingData.subscription.plan_type ||
-                        (billingData.subscription.billing_cycle === 'year' &&
-                          plan.id === billingData.subscription.plan_type + '_yearly')
+                        isCurrent
                           ? 'border-primary ring-1 ring-primary'
                           : 'border-border hover:border-primary/50'
                         }`}
@@ -680,13 +701,23 @@ function BillingContent() {
                         ))}
                       </ul>
 
-                      {plan.id === billingData.subscription.plan_type ? (
+                      {isCurrent ? (
                         <button
                           disabled
                           className="w-full py-2 px-4 bg-muted text-muted-foreground rounded-md cursor-not-allowed"
                         >
                           Current Plan
                         </button>
+                      ) : downgradeBlockedReason ? (
+                        <>
+                          <button
+                            disabled
+                            className="w-full py-2 px-4 bg-muted text-muted-foreground rounded-md cursor-not-allowed"
+                          >
+                            Downgrade
+                          </button>
+                          <p className="mt-2 text-xs text-center text-muted-foreground">{downgradeBlockedReason}</p>
+                        </>
                       ) : (
                         <button
                           onClick={() => handleUpgrade(plan.id)}
@@ -698,7 +729,7 @@ function BillingContent() {
                               <ArrowPathIcon className="h-4 w-4 animate-spin mr-2" />
                               Processing...
                             </>
-                          ) : plan.price === 0 ? (
+                          ) : isDowngrade ? (
                             'Downgrade'
                           ) : (
                             'Upgrade'
@@ -706,7 +737,8 @@ function BillingContent() {
                         </button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>
