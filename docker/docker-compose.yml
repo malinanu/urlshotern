@@ -27,10 +27,14 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:8080}
       - ENVIRONMENT=development
       - ENABLE_ADMIN_ROUTES=${ENABLE_ADMIN_ROUTES:-false}
+      - ENABLE_MICROSITES=${ENABLE_MICROSITES:-false}
+      - MICROSITE_UPLOAD_PATH=/app/uploads
       - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN}
       - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET}
       - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID}
       - POLAR_API_URL=${POLAR_API_URL}
+    volumes:
+      - microsite_uploads:/app/uploads
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -169,6 +173,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  microsite_uploads:
 
 networks:
   urlshortener:

@@ -124,6 +124,37 @@ func main() {
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService, teamHandlers, globalSettingsService)
 	handler.CampaignHandlers = handlers.NewCampaignHandlers(campaignService)
 
+	// Microsites (/m/<slug> landing pages + digital vCards) — off unless enabled.
+	// Nothing below runs, and no routes are registered, when the flag is false.
+	if config.EnableMicrosites {
+		assetStore, err := services.NewLocalAssetStore(config.MicrositeUploadPath)
+		if err != nil {
+			log.Printf("Warning: microsites disabled — upload directory unavailable: %v", err)
+		} else {
+			micrositeService := services.NewMicrositeService(db, redis)
+			handler.MicrositeHandlers = handlers.NewMicrositeHandlers(
+				micrositeService,
+				services.NewMicrositeAnalyticsService(db, redis, config.JWTSecret),
+				services.NewMicrositeAssetService(db, assetStore, config.MicrositeMaxUploadBytes),
+				handler.GetBillingService(),
+				shortenerService,
+				botDetectionService,
+				config.BaseURL,
+				assetStore.Root(),
+			)
+			authService.OnAccountDeleted(func(userID int64) {
+				if err := assetStore.DeleteUserFiles(userID); err != nil {
+					log.Printf("Warning: failed to remove microsite uploads for user %d: %v", userID, err)
+				}
+			})
+			if err := micrositeService.Ready(); err != nil {
+				log.Printf("Warning: microsites enabled but not ready (apply migration 046): %v", err)
+			} else {
+				log.Println("✅ Microsites enabled")
+			}
+		}
+	}
+
 	// Initialize webhook retry worker with email alerting
 	webhookProcessor := handlers.NewWebhookEventProcessor(handler.PolarWebhookHandler)
 

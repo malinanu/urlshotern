@@ -58,6 +58,7 @@ type PlanLimits struct {
 	TeamMembers         int  `json:"team_members"`       // 0 = none, -1 = unlimited
 	PasswordProtection  bool `json:"password_protection"`
 	Advanced     bool `json:"advanced_features"`
+	MaxPages            int  `json:"max_pages"`          // microsites (/m/<slug>); -1 for unlimited
 }
 
 type BillingUsage struct {
@@ -102,6 +103,7 @@ var PredefinedPlans = map[string]Plan{
 			TeamMembers:        0,
 			PasswordProtection: false,
 			Advanced:           false,
+			MaxPages:           1,
 		},
 	},
 	"premium": {
@@ -135,6 +137,7 @@ var PredefinedPlans = map[string]Plan{
 			TeamMembers:        5,
 			PasswordProtection: true,
 			Advanced:           true,
+			MaxPages:           10,
 		},
 	},
 	"enterprise": {
@@ -169,6 +172,7 @@ var PredefinedPlans = map[string]Plan{
 			TeamMembers:        -1,
 			PasswordProtection: true,
 			Advanced:           true,
+			MaxPages:           -1,
 		},
 	},
 	"premium_yearly": {
@@ -202,6 +206,7 @@ var PredefinedPlans = map[string]Plan{
 			TeamMembers:        5,
 			PasswordProtection: true,
 			Advanced:           true,
+			MaxPages:           10,
 		},
 	},
 	"enterprise_yearly": {
@@ -236,6 +241,7 @@ var PredefinedPlans = map[string]Plan{
 			TeamMembers:        -1,
 			PasswordProtection: true,
 			Advanced:           true,
+			MaxPages:           -1,
 		},
 	},
 }
@@ -378,6 +384,48 @@ func (bs *BillingService) CanCreateURL(userID int64) (bool, string, error) {
 		return false, fmt.Sprintf("URL limit reached (%d/%d). Upgrade to create more URLs.", usage.CurrentURLs, plan.Limits.URLs), nil
 	}
 	
+	return true, "", nil
+}
+
+// GetPagePlanLimits returns the plan type and limits that apply to a user's
+// microsites. Unknown plan types fall back to the free plan's limits.
+func (bs *BillingService) GetPagePlanLimits(userID int64) (string, PlanLimits, error) {
+	subscription, err := bs.GetUserSubscription(userID)
+	if err != nil {
+		return "", PlanLimits{}, err
+	}
+	plan, err := bs.GetPlan(subscription.PlanType)
+	if err != nil {
+		return subscription.PlanType, PredefinedPlans["free"].Limits, nil
+	}
+	return subscription.PlanType, plan.Limits, nil
+}
+
+// CountUserPages returns how many live (not deleted) microsites a user owns.
+func (bs *BillingService) CountUserPages(userID int64) (int, error) {
+	var count int64
+	err := bs.db.Table("microsites").Where("user_id = ? AND deleted_at IS NULL", userID).Count(&count).Error
+	return int(count), err
+}
+
+// CanCreatePage checks if user can create another microsite within their plan limits
+func (bs *BillingService) CanCreatePage(userID int64) (bool, string, error) {
+	_, limits, err := bs.GetPagePlanLimits(userID)
+	if err != nil {
+		return false, "Error getting subscription", err
+	}
+	if limits.MaxPages == -1 {
+		return true, "", nil
+	}
+
+	count, err := bs.CountUserPages(userID)
+	if err != nil {
+		return false, "Error checking page usage", err
+	}
+	if count >= limits.MaxPages {
+		return false, fmt.Sprintf("Page limit reached (%d/%d). Upgrade to create more pages.", count, limits.MaxPages), nil
+	}
+
 	return true, "", nil
 }
 

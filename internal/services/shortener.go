@@ -461,12 +461,12 @@ func (s *ShortenerService) validateCustomCode(code string) error {
 		// App routes
 		"admin", "dashboard", "settings", "analytics", "billing", "login",
 		"register", "signup", "logout", "auth", "oauth", "callback",
-		"teams", "ab-tests", "audience", "custom-domains", "conversions",
+		"teams", "ab-tests", "audience", "custom-domains", "conversions", "microsites",
 		// Content / marketing pages
 		"features", "pricing", "about", "contact", "privacy", "terms",
 		"blog", "docs", "help", "support", "status",
 		// Short-link system paths
-		"p", "s", "r", "go", "l",
+		"p", "s", "r", "go", "l", "m",
 	}
 	codeLower := strings.ToLower(code)
 	for _, reserved := range reservedWords {

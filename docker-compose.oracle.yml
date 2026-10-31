@@ -87,6 +87,13 @@ services:
       # Admin Routes Configuration
       - ENABLE_ADMIN_ROUTES=true
 
+      # Microsites (/m/<slug> landing pages + vCards) — off unless enabled
+      - ENABLE_MICROSITES=${ENABLE_MICROSITES:-false}
+      - MICROSITE_UPLOAD_PATH=/app/uploads
+
+    volumes:
+      - microsite-uploads:/app/uploads
+
     depends_on:
       - redis
     networks:
@@ -136,3 +143,4 @@ networks:
 
 volumes:
   redis-data:
+  microsite-uploads:

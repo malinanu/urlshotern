@@ -24,6 +24,8 @@ const (
 	FeatureForecast    = "ai_forecast"
 	FeatureAudience    = "ai_audience"
 	FeatureBranding    = "branding" // Enterprise white-label branding
+
+	FeatureRemoveBranding = "remove_branding" // Hide the "Made with Trunc" badge on microsites
 )
 
 // planFeatures maps DB plan names to allowed features.
@@ -39,7 +41,7 @@ var planFeatures = map[string][]string{
 		FeatureCityGeo, FeatureTimeSeries, FeatureHeatmap, FeatureUTM,
 		FeatureRealtime, FeatureLiveMap, FeatureBotFilter, FeatureCSVExport,
 		FeatureAISummary, FeatureAIAnomaly, FeatureAIRecommend, FeatureForecast, FeatureAudience,
-		FeatureBranding,
+		FeatureBranding, FeatureRemoveBranding,
 	},
 }
 
@@ -54,6 +56,13 @@ func hasFeature(plan, feature string) bool {
 		}
 	}
 	return false
+}
+
+// PlanHasFeature reports whether a DB plan name (free | premium | enterprise)
+// includes the given feature. Used where a feature is enforced on a field
+// rather than on a whole route (e.g. microsite badge removal).
+func PlanHasFeature(plan, feature string) bool {
+	return hasFeature(plan, feature)
 }
 
 // CheckPlanFeature returns a gin middleware that enforces plan-level access to
