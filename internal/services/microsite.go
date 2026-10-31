@@ -224,7 +224,7 @@ func (s *MicrositeService) Create(userID int64, req models.CreateMicrositeReques
 		title = slug
 	}
 
-	content, err := NormalizeMicrositeContent(BuildMicrositeTemplate(tmpl, title))
+	content, err := NormalizeMicrositeDraft(BuildMicrositeTemplate(tmpl, title))
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func (s *MicrositeService) UpdateDraft(id int64, req models.UpdateMicrositeReque
 	}
 	content := current.Draft
 	if req.Content != nil {
-		if content, err = NormalizeMicrositeContent(*req.Content); err != nil {
+		if content, err = NormalizeMicrositeDraft(*req.Content); err != nil {
 			return nil, err
 		}
 		if content.Settings.HideBadge && !s.Entitlements(current.UserID).CanRemoveBadge {

@@ -70,7 +70,7 @@ func (h *MicrositeHandlers) ServeMicrositeVCard(c *gin.Context) {
 		if b.Hidden {
 			continue
 		}
-		data, err := services.DecodeMicrositeBlockData(b.Type, b.Data, "block")
+		data, err := services.DecodeMicrositeBlockData(b.Type, b.Data, "block", true)
 		if err != nil {
 			continue
 		}
@@ -251,7 +251,7 @@ func micrositeHasTarget(content models.MicrositeContent, blockID, itemID string)
 		if itemID == "" {
 			return true
 		}
-		data, err := services.DecodeMicrositeBlockData(b.Type, b.Data, "block")
+		data, err := services.DecodeMicrositeBlockData(b.Type, b.Data, "block", true)
 		if err != nil {
 			return false
 		}

@@ -135,7 +135,7 @@ type imageView struct {
 // at render time; blocks that fail validation are skipped rather than emitted.
 func RenderMicrosite(content models.MicrositeContent, opts MicrositeRenderOptions) ([]byte, error) {
 	base := strings.TrimRight(opts.BaseURL, "/")
-	theme, err := normalizeTheme(content.Theme)
+	theme, err := normalizeTheme(content.Theme, true)
 	if err != nil {
 		theme = DefaultMicrositeTheme()
 	}
@@ -205,7 +205,7 @@ func RenderMicrosite(content models.MicrositeContent, opts MicrositeRenderOption
 }
 
 func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOptions) (micrositeBlockView, *models.ProfileHeaderData, bool) {
-	data, err := DecodeMicrositeBlockData(b.Type, b.Data, "block")
+	data, err := DecodeMicrositeBlockData(b.Type, b.Data, "block", true)
 	if err != nil || !idPattern.MatchString(b.ID) {
 		return micrositeBlockView{}, nil, false
 	}
@@ -280,6 +280,9 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 		bv.Text = &d
 
 	case models.ImageData:
+		if d.URL == "" {
+			return bv, nil, false
+		}
 		iv := &imageView{BlockID: b.ID, Src: absoluteAssetURL(d.URL, base), Alt: d.Alt}
 		if d.LinkURL != "" {
 			if href, err := SanitizeMicrositeLinkURL(d.LinkURL, "link_url"); err == nil {

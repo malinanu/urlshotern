@@ -243,7 +243,7 @@ func (h *MicrositeHandlers) PreviewMicrosite(c *gin.Context) {
 		return
 	}
 	var validation interface{}
-	if _, err := services.NormalizeMicrositeContent(req.Content); err != nil {
+	if _, err := services.NormalizeMicrositeDraft(req.Content); err != nil {
 		var verr *services.MicrositeValidationError
 		if errors.As(err, &verr) {
 			validation = gin.H{"field": verr.Field, "message": verr.Message}
@@ -400,7 +400,7 @@ func writeMicrositeError(c *gin.Context, err error) {
 	var verr *services.MicrositeValidationError
 	switch {
 	case errors.As(err, &verr):
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "validation_error", "message": verr.Error(), "field": verr.Field})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "validation_error", "message": verr.Message, "field": verr.Field})
 	case errors.Is(err, services.ErrMicrositeNotFound), errors.Is(err, services.ErrAssetNotFound):
 		c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: err.Error()})
 	case errors.Is(err, services.ErrMicrositeSlugTaken):

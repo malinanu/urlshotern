@@ -103,7 +103,7 @@ func TestMicrositeThemeCSSOnlyValidatedValues(t *testing.T) {
 	th, err := normalizeTheme(models.MicrositeTheme{
 		Background: models.MicrositeBackground{Type: "linear", Stops: []string{"#1e3c72", "#2a5298"}, Angle: 135},
 		Accent:     "#00d2ff",
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,5 +134,22 @@ func TestMicrositeBlockLabels(t *testing.T) {
 	labels := MicrositeBlockLabels(BuildMicrositeTemplate(MicrositeTemplateCreator, "X"))
 	if labels["blk_links/itm_latest"] != "My latest video" || labels["blk_social/itm_youtube"] != "YouTube" {
 		t.Errorf("labels = %v", labels)
+	}
+}
+
+func TestRenderSkipsIncompleteItemsOnly(t *testing.T) {
+	c := models.MicrositeContent{Blocks: []models.MicrositeBlock{
+		rawBlock("l", models.BlockTypeLinkList, models.LinkListData{Items: []models.LinkItem{
+			{ID: "ok", Label: "Works", URL: "https://example.com"},
+			{ID: "wip", Label: "Half typed", URL: ""},
+		}}),
+		rawBlock("img", models.BlockTypeImage, models.ImageData{}),
+	}}
+	html := renderString(t, c, MicrositeRenderOptions{BaseURL: "https://trunc.site", Slug: "abc"})
+	if !strings.Contains(html, "Works") {
+		t.Error("valid sibling item should still render")
+	}
+	if strings.Contains(html, "Half typed") || strings.Contains(html, `<figure class="image">`) {
+		t.Error("incomplete items/blocks should be skipped")
 	}
 }

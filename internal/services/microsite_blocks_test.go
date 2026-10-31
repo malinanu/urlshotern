@@ -98,12 +98,12 @@ func TestNormalizeThemeRejectsCSSInjection(t *testing.T) {
 		{Background: models.MicrositeBackground{Type: "linear", Stops: []string{"#000000", "#ffffff"}, Angle: 720}},
 	}
 	for i, th := range bad {
-		if _, err := normalizeTheme(th); err == nil {
+		if _, err := normalizeTheme(th, true); err == nil {
 			t.Errorf("case %d: theme %+v accepted, want error", i, th)
 		}
 	}
 
-	got, err := normalizeTheme(models.MicrositeTheme{Accent: "#00D2FF"})
+	got, err := normalizeTheme(models.MicrositeTheme{Accent: "#00D2FF"}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestNormalizeMicrositeContentErrors(t *testing.T) {
 
 func TestContactButtonsNormalizeWhatsApp(t *testing.T) {
 	out, err := DecodeMicrositeBlockData(models.BlockTypeContactButtons,
-		json.RawMessage(`{"items":[{"id":"w","kind":"whatsapp","value":"+1 (303) 333-4444"}]}`), "b")
+		json.RawMessage(`{"items":[{"id":"w","kind":"whatsapp","value":"+1 (303) 333-4444"}]}`), "b", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,5 +200,31 @@ func TestTemplatesAreValid(t *testing.T) {
 		if _, err := NormalizeMicrositeContent(BuildMicrositeTemplate(tmpl.ID, "Sasha Fields")); err != nil {
 			t.Errorf("template %s does not validate: %v", tmpl.ID, err)
 		}
+	}
+}
+
+func TestDraftAllowsIncompleteButNotUnsafe(t *testing.T) {
+	incomplete := models.MicrositeContent{Blocks: []models.MicrositeBlock{
+		block(t, "l", models.BlockTypeLinkList, models.LinkListData{Items: []models.LinkItem{{ID: "a", Label: "", URL: ""}}}),
+		block(t, "c", models.BlockTypeContactButtons, models.ContactButtonsData{Items: []models.ContactButton{{ID: "b", Kind: "call"}}}),
+		block(t, "s", models.BlockTypeSocialIcons, models.SocialIconsData{Items: []models.SocialLink{{ID: "s1", Platform: "github"}}}),
+		block(t, "i", models.BlockTypeImage, models.ImageData{}),
+		block(t, "v", models.BlockTypeVCardAction, models.VCardActionData{}),
+	}}
+	if _, err := NormalizeMicrositeDraft(incomplete); err != nil {
+		t.Fatalf("draft with empty required fields rejected: %v", err)
+	}
+	if _, err := NormalizeMicrositeContent(incomplete); err == nil {
+		t.Fatal("publish validation must reject incomplete content")
+	}
+
+	unsafe := models.MicrositeContent{Blocks: []models.MicrositeBlock{
+		block(t, "l", models.BlockTypeLinkList, models.LinkListData{Items: []models.LinkItem{{ID: "a", Label: "x", URL: "javascript:alert(1)"}}}),
+	}}
+	if _, err := NormalizeMicrositeDraft(unsafe); err == nil {
+		t.Fatal("draft must still reject unsafe URLs")
+	}
+	if _, err := NormalizeMicrositeDraft(models.MicrositeContent{Theme: models.MicrositeTheme{Accent: "red"}}); err == nil {
+		t.Fatal("draft must still reject invalid theme values")
 	}
 }

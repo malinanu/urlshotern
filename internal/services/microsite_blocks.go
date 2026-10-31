@@ -122,13 +122,26 @@ func DefaultMicrositeTheme() models.MicrositeTheme {
 	}
 }
 
-// NormalizeMicrositeContent validates every field of a page document and
-// returns a normalized copy. Unknown block fields are dropped; empty theme
-// fields fall back to defaults; any invalid value is rejected.
+// NormalizeMicrositeContent validates every field of a page document for
+// publishing and returns a normalized copy. Unknown block fields are dropped;
+// empty theme fields fall back to defaults; any invalid or missing required
+// value is rejected.
 func NormalizeMicrositeContent(in models.MicrositeContent) (models.MicrositeContent, error) {
+	return normalizeContent(in, false)
+}
+
+// NormalizeMicrositeDraft is the lenient variant used for saving work in
+// progress: required fields may be left empty (e.g. a new link without a URL
+// yet), but every non-empty value gets the same validation as on publish, so
+// unsafe values (javascript: URLs, raw CSS) are still rejected.
+func NormalizeMicrositeDraft(in models.MicrositeContent) (models.MicrositeContent, error) {
+	return normalizeContent(in, true)
+}
+
+func normalizeContent(in models.MicrositeContent, draft bool) (models.MicrositeContent, error) {
 	var out models.MicrositeContent
 
-	theme, err := normalizeTheme(in.Theme)
+	theme, err := normalizeTheme(in.Theme, draft)
 	if err != nil {
 		return out, err
 	}
@@ -147,7 +160,7 @@ func NormalizeMicrositeContent(in models.MicrositeContent) (models.MicrositeCont
 	out.Blocks = make([]models.MicrositeBlock, 0, len(in.Blocks))
 	for i, b := range in.Blocks {
 		field := fmt.Sprintf("blocks[%d]", i)
-		nb, err := normalizeBlock(b, field)
+		nb, err := normalizeBlock(b, field, draft)
 		if err != nil {
 			return out, err
 		}
@@ -168,7 +181,7 @@ func NormalizeMicrositeContent(in models.MicrositeContent) (models.MicrositeCont
 	return out, nil
 }
 
-func normalizeBlock(b models.MicrositeBlock, field string) (models.MicrositeBlock, error) {
+func normalizeBlock(b models.MicrositeBlock, field string, draft bool) (models.MicrositeBlock, error) {
 	id := strings.TrimSpace(b.ID)
 	if id == "" {
 		id = newMicrositeID("blk")
@@ -176,7 +189,7 @@ func normalizeBlock(b models.MicrositeBlock, field string) (models.MicrositeBloc
 	if !idPattern.MatchString(id) {
 		return b, validationErr(field+".id", "invalid block id")
 	}
-	data, err := DecodeMicrositeBlockData(b.Type, b.Data, field+".data")
+	data, err := DecodeMicrositeBlockData(b.Type, b.Data, field+".data", draft)
 	if err != nil {
 		return b, err
 	}
@@ -194,9 +207,10 @@ func normalizeBlock(b models.MicrositeBlock, field string) (models.MicrositeBloc
 }
 
 // DecodeMicrositeBlockData decodes and validates block data for its type,
-// returning the normalized typed payload. It is used both when saving and
-// (defensively) when rendering.
-func DecodeMicrositeBlockData(blockType string, raw json.RawMessage, field string) (interface{}, error) {
+// returning the normalized typed payload. With draft=true, empty required
+// fields are allowed (renderers skip incomplete items); non-empty values are
+// always fully validated.
+func DecodeMicrositeBlockData(blockType string, raw json.RawMessage, field string, draft bool) (interface{}, error) {
 	if len(raw) == 0 || string(raw) == "null" {
 		raw = json.RawMessage(`{}`)
 	}
@@ -206,43 +220,43 @@ func DecodeMicrositeBlockData(blockType string, raw json.RawMessage, field strin
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid profile header data")
 		}
-		return normalizeProfileHeader(d, field)
+		return normalizeProfileHeader(d, field, draft)
 	case models.BlockTypeVCardAction:
 		var d models.VCardActionData
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid contact card data")
 		}
-		return normalizeVCardAction(d, field)
+		return normalizeVCardAction(d, field, draft)
 	case models.BlockTypeLinkList:
 		var d models.LinkListData
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid link list data")
 		}
-		return normalizeLinkList(d, field)
+		return normalizeLinkList(d, field, draft)
 	case models.BlockTypeContactButtons:
 		var d models.ContactButtonsData
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid contact buttons data")
 		}
-		return normalizeContactButtons(d, field)
+		return normalizeContactButtons(d, field, draft)
 	case models.BlockTypeSocialIcons:
 		var d models.SocialIconsData
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid social icons data")
 		}
-		return normalizeSocialIcons(d, field)
+		return normalizeSocialIcons(d, field, draft)
 	case models.BlockTypeText:
 		var d models.TextData
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid text data")
 		}
-		return normalizeText(d, field)
+		return normalizeText(d, field, draft)
 	case models.BlockTypeImage:
 		var d models.ImageData
 		if err := json.Unmarshal(raw, &d); err != nil {
 			return nil, validationErr(field, "invalid image data")
 		}
-		return normalizeImage(d, field)
+		return normalizeImage(d, field, draft)
 	case models.BlockTypeDivider:
 		var d models.DividerData
 		if err := json.Unmarshal(raw, &d); err != nil {
@@ -259,7 +273,7 @@ func DecodeMicrositeBlockData(blockType string, raw json.RawMessage, field strin
 
 // ---- per-block normalizers -------------------------------------------------
 
-func normalizeProfileHeader(d models.ProfileHeaderData, field string) (models.ProfileHeaderData, error) {
+func normalizeProfileHeader(d models.ProfileHeaderData, field string, _ bool) (models.ProfileHeaderData, error) {
 	var err error
 	if d.DisplayName, err = cleanText(d.DisplayName, 80, false, field+".display_name"); err != nil {
 		return d, err
@@ -288,7 +302,7 @@ func normalizeProfileHeader(d models.ProfileHeaderData, field string) (models.Pr
 	return d, nil
 }
 
-func normalizeVCardAction(d models.VCardActionData, field string) (models.VCardActionData, error) {
+func normalizeVCardAction(d models.VCardActionData, field string, draft bool) (models.VCardActionData, error) {
 	var err error
 	texts := []struct {
 		v     *string
@@ -316,7 +330,7 @@ func normalizeVCardAction(d models.VCardActionData, field string) (models.VCardA
 	if d.ButtonText == "" {
 		d.ButtonText = "Save Contact"
 	}
-	if d.FirstName == "" && d.LastName == "" && d.Organization == "" {
+	if !draft && d.FirstName == "" && d.LastName == "" && d.Organization == "" {
 		return d, validationErr(field+".first_name", "a name or organization is required for the contact card")
 	}
 	for _, p := range []struct {
@@ -346,7 +360,7 @@ func normalizeVCardAction(d models.VCardActionData, field string) (models.VCardA
 	return d, nil
 }
 
-func normalizeLinkList(d models.LinkListData, field string) (models.LinkListData, error) {
+func normalizeLinkList(d models.LinkListData, field string, draft bool) (models.LinkListData, error) {
 	if len(d.Items) > maxLinkItems {
 		return d, validationErr(field+".items", "at most %d links per block", maxLinkItems)
 	}
@@ -361,10 +375,10 @@ func normalizeLinkList(d models.LinkListData, field string) (models.LinkListData
 		if it.Label, err = cleanText(it.Label, 80, false, f+".label"); err != nil {
 			return d, err
 		}
-		if it.Label == "" {
+		if it.Label == "" && !draft {
 			return d, validationErr(f+".label", "is required")
 		}
-		if it.URL, err = SanitizeMicrositeLinkURL(it.URL, f+".url"); err != nil {
+		if it.URL, err = optionalURL(it.URL, draft, f+".url", SanitizeMicrositeLinkURL); err != nil {
 			return d, err
 		}
 		if it.ThumbnailURL, err = SanitizeMicrositeImageURL(it.ThumbnailURL, f+".thumbnail_url"); err != nil {
@@ -376,7 +390,7 @@ func normalizeLinkList(d models.LinkListData, field string) (models.LinkListData
 	return d, nil
 }
 
-func normalizeContactButtons(d models.ContactButtonsData, field string) (models.ContactButtonsData, error) {
+func normalizeContactButtons(d models.ContactButtonsData, field string, draft bool) (models.ContactButtonsData, error) {
 	if len(d.Items) > maxContactButtons {
 		return d, validationErr(field+".items", "at most %d contact buttons per block", maxContactButtons)
 	}
@@ -405,7 +419,7 @@ func normalizeContactButtons(d models.ContactButtonsData, field string) (models.
 		if err != nil {
 			return d, err
 		}
-		if it.Value == "" {
+		if it.Value == "" && !draft {
 			return d, validationErr(f+".value", "is required")
 		}
 		out = append(out, it)
@@ -414,7 +428,7 @@ func normalizeContactButtons(d models.ContactButtonsData, field string) (models.
 	return d, nil
 }
 
-func normalizeSocialIcons(d models.SocialIconsData, field string) (models.SocialIconsData, error) {
+func normalizeSocialIcons(d models.SocialIconsData, field string, draft bool) (models.SocialIconsData, error) {
 	if len(d.Items) > maxSocialItems {
 		return d, validationErr(field+".items", "at most %d social links per block", maxSocialItems)
 	}
@@ -429,7 +443,7 @@ func normalizeSocialIcons(d models.SocialIconsData, field string) (models.Social
 		if _, ok := MicrositeSocialPlatforms[it.Platform]; !ok {
 			return d, validationErr(f+".platform", "unsupported platform %q", it.Platform)
 		}
-		if it.URL, err = sanitizeWebURL(it.URL, f+".url"); err != nil {
+		if it.URL, err = optionalURL(it.URL, draft, f+".url", sanitizeWebURL); err != nil {
 			return d, err
 		}
 		out = append(out, it)
@@ -438,7 +452,7 @@ func normalizeSocialIcons(d models.SocialIconsData, field string) (models.Social
 	return d, nil
 }
 
-func normalizeText(d models.TextData, field string) (models.TextData, error) {
+func normalizeText(d models.TextData, field string, _ bool) (models.TextData, error) {
 	var err error
 	if d.Text, err = cleanText(d.Text, 2000, true, field+".text"); err != nil {
 		return d, err
@@ -449,12 +463,12 @@ func normalizeText(d models.TextData, field string) (models.TextData, error) {
 	return d, nil
 }
 
-func normalizeImage(d models.ImageData, field string) (models.ImageData, error) {
+func normalizeImage(d models.ImageData, field string, draft bool) (models.ImageData, error) {
 	var err error
 	if d.URL, err = SanitizeMicrositeImageURL(d.URL, field+".url"); err != nil {
 		return d, err
 	}
-	if d.URL == "" {
+	if d.URL == "" && !draft {
 		return d, validationErr(field+".url", "is required")
 	}
 	if d.Alt, err = cleanText(d.Alt, 150, false, field+".alt"); err != nil {
@@ -470,7 +484,7 @@ func normalizeImage(d models.ImageData, field string) (models.ImageData, error) 
 
 // ---- theme & settings --------------------------------------------------------
 
-func normalizeTheme(t models.MicrositeTheme) (models.MicrositeTheme, error) {
+func normalizeTheme(t models.MicrositeTheme, draft bool) (models.MicrositeTheme, error) {
 	def := DefaultMicrositeTheme()
 	var err error
 
@@ -509,7 +523,7 @@ func normalizeTheme(t models.MicrositeTheme) (models.MicrositeTheme, error) {
 		if bg.ImageURL, err = SanitizeMicrositeImageURL(bg.ImageURL, "theme.background.image_url"); err != nil {
 			return t, err
 		}
-		if bg.ImageURL == "" {
+		if bg.ImageURL == "" && !draft {
 			return t, validationErr("theme.background.image_url", "is required for image backgrounds")
 		}
 		if bg.Color, err = normalizeColor(bg.Color, "#111827", "theme.background.color"); err != nil {
@@ -696,6 +710,14 @@ func newMicrositeID(prefix string) string {
 		return prefix + "_0"
 	}
 	return prefix + "_" + hex.EncodeToString(b)
+}
+
+// optionalURL validates a URL, allowing it to be empty in drafts.
+func optionalURL(raw string, draft bool, field string, sanitize func(string, string) (string, error)) (string, error) {
+	if draft && strings.TrimSpace(raw) == "" {
+		return "", nil
+	}
+	return sanitize(raw, field)
 }
 
 // sanitizeWebURL accepts only absolute http(s) URLs with a host.

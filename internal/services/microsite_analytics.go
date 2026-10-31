@@ -94,7 +94,7 @@ func (s *MicrositeAnalyticsService) GetReport(micrositeID int64, days int, label
 		}
 	}
 
-	r := &models.MicrositeAnalytics{Days: days, ContactActions: map[string]int64{}}
+	r := &models.MicrositeAnalytics{Days: days, ContactActions: map[string]int64{}, Blocks: []models.MicrositeBlockClicks{}}
 	const window = `microsite_id = $1 AND is_bot = FALSE AND occurred_at >= NOW() - make_interval(days => $2)`
 
 	// Totals
@@ -228,7 +228,7 @@ func (s *MicrositeAnalyticsService) countBy(expr, where string, id int64, days, 
 func MicrositeBlockLabels(content models.MicrositeContent) map[string]string {
 	labels := map[string]string{}
 	for _, b := range content.Blocks {
-		data, err := DecodeMicrositeBlockData(b.Type, b.Data, "block")
+		data, err := DecodeMicrositeBlockData(b.Type, b.Data, "block", true)
 		if err != nil {
 			continue
 		}
