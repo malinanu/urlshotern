@@ -5,7 +5,9 @@ import { LockClosedIcon } from '@heroicons/react/24/outline';
 import { PLAN_NAMES } from '@/lib/plan-utils';
 import {
   FONTS,
+  TEMPLATE_STYLES,
   THEME_PRESETS,
+  type TemplateStyle,
   type MicrositeBackground,
   type MicrositeEntitlements,
   type MicrositeSettings,
@@ -83,8 +85,64 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
     else setBg({ type, stops: bg.stops?.length ? bg.stops : [first, '#2a5298'], angle: bg.angle ?? 135 });
   };
 
+  const style: TemplateStyle = theme.style ?? 'classic';
+  const styled = style !== 'classic';
+  const styleInfo = TEMPLATE_STYLES.find((s) => s.id === style);
+  // Switching style keeps the owner's colors; the style's palette is one click away.
+  const changeStyle = (id: TemplateStyle) => {
+    const next = TEMPLATE_STYLES.find((s) => s.id === id);
+    onTheme({ ...theme, style: id, font: next?.theme.font ?? theme.font });
+  };
+  const paletteDiffers =
+    styled &&
+    !!styleInfo &&
+    (['accent', 'card_fill', 'text', 'button_text'] as const).some((k) => styleInfo.theme[k] && styleInfo.theme[k] !== theme[k]);
+
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-1 gap-6">
+      <Section title="Template style">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Template style">
+          {TEMPLATE_STYLES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="radio"
+              aria-checked={style === s.id}
+              onClick={() => changeStyle(s.id)}
+              className={`text-left rounded-lg border px-3 py-2 ${
+                style === s.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+              }`}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <span
+                  aria-hidden="true"
+                  className="h-3 w-3 rounded-sm border border-border"
+                  style={{ background: s.theme.accent ?? theme.accent }}
+                />
+                {s.name}
+              </span>
+              <span className="block text-xs text-muted-foreground">{s.description}</span>
+            </button>
+          ))}
+        </div>
+        {paletteDiffers && styleInfo && (
+          <button
+            type="button"
+            className="justify-self-start text-xs font-medium text-primary hover:underline"
+            onClick={() => onTheme({ ...theme, ...styleInfo.theme, style })}
+          >
+            Use the {styleInfo.name.toLowerCase()} colors
+          </button>
+        )}
+        {styled && (
+          <p className="text-xs text-muted-foreground">
+            This style sets its own background, corners and shadows. Your colors and font still apply.
+          </p>
+        )}
+      </Section>
+
+      {!styled && (
+      <>
       <Section title="Presets">
         <div className="grid grid-cols-5 gap-2">
           {THEME_PRESETS.map((p) => (
@@ -180,18 +238,22 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
           </>
         )}
       </Section>
+      </>
+      )}
 
       <Section title="Colors">
         <div className="grid grid-cols-2 gap-3">
-          <ColorField label="Card" value={theme.card_fill} onChange={(v) => setTheme({ card_fill: v })} />
+          <ColorField label={style === 'board' ? 'Board' : 'Card'} value={theme.card_fill} onChange={(v) => setTheme({ card_fill: v })} />
           <ColorField label="Text" value={theme.text} onChange={(v) => setTheme({ text: v })} />
           <ColorField label="Accent" value={theme.accent} onChange={(v) => setTheme({ accent: v })} />
           <ColorField label="Button text" value={theme.button_text} onChange={(v) => setTheme({ button_text: v })} />
         </div>
       </Section>
 
-      <Section title="Typography & shapes">
+      <Section title={styled ? 'Typography' : 'Typography & shapes'}>
         <SelectField label="Font" value={theme.font} onChange={(v) => setTheme({ font: v })} options={FONTS.map((f) => ({ value: f.id, label: f.name }))} />
+        {!styled && (
+        <>
         <Segmented
           label="Button corners"
           value={theme.button_radius}
@@ -222,6 +284,8 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
             { value: 'thick', label: 'Thick' },
           ]}
         />
+        </>
+        )}
       </Section>
 
       <Section title="Sharing & search">

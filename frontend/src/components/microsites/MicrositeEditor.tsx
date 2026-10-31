@@ -9,6 +9,7 @@ import {
   CheckIcon,
   ClipboardDocumentIcon,
   LinkIcon,
+  LockClosedIcon,
   PlusIcon,
   QrCodeIcon,
 } from '@heroicons/react/24/outline';
@@ -17,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import {
   BLOCK_CATALOG,
+  BLOCK_GROUPS,
   apiFetch,
   describeValidation,
   isApiError,
@@ -29,10 +31,12 @@ import {
 } from '@/lib/microsites';
 import BlockList from './BlockList';
 import DesignPanel from './DesignPanel';
+import InboxPanel from './InboxPanel';
 import PreviewFrame from './PreviewFrame';
 import TrackPanel from './TrackPanel';
 
-type Tab = 'build' | 'design' | 'track';
+type Tab = 'build' | 'design' | 'track' | 'inbox';
+const TABS: Tab[] = ['build', 'design', 'track', 'inbox'];
 type SaveState = 'saved' | 'saving' | 'unsaved' | 'error' | 'conflict';
 
 const SAVE_LABELS: Record<SaveState, string> = {
@@ -47,7 +51,7 @@ export default function MicrositeEditor() {
   const router = useRouter();
   const params = useSearchParams();
   const id = Number(params.get('id'));
-  const tab = (['build', 'design', 'track'].includes(params.get('tab') ?? '') ? params.get('tab') : 'build') as Tab;
+  const tab = (TABS.includes(params.get('tab') as Tab) ? params.get('tab') : 'build') as Tab;
   const { getAccessToken } = useAuth();
 
   const [site, setSite] = useState<Microsite | null>(null);
@@ -159,7 +163,7 @@ export default function MicrositeEditor() {
 
   const addBlock = (type: BlockType) => {
     const entry = BLOCK_CATALOG.find((b) => b.type === type);
-    if (!entry) return;
+    if (!entry || (entry.requiresForms && !entitlements?.can_use_forms)) return;
     const block: MicrositeBlock = { id: newId('blk'), type, data: entry.create() };
     edit((c) => ({ ...c, blocks: [...c.blocks, block] }));
     setSelected(block.id);
@@ -293,7 +297,7 @@ export default function MicrositeEditor() {
         </div>
 
         <nav className="max-w-[1600px] mx-auto px-4 flex gap-1" aria-label="Editor sections">
-          {(['build', 'design', 'track'] as Tab[]).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t}
               type="button"
@@ -338,12 +342,14 @@ export default function MicrositeEditor() {
       <div className="max-w-[1600px] mx-auto px-4 py-6">
         {tab === 'track' ? (
           <TrackPanel micrositeId={id} maxDays={entitlements?.analytics_days} />
+        ) : tab === 'inbox' ? (
+          <InboxPanel micrositeId={id} blocks={content.blocks} canUseForms={!!entitlements?.can_use_forms} />
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_1fr] xl:grid-cols-[minmax(340px,420px)_1fr_260px]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)_260px]">
             {/* Left: module config */}
             <div className="order-2 lg:order-1 min-w-0">
               {tab === 'build' ? (
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <h2 className="text-sm font-semibold text-foreground">Blocks</h2>
                   <BlockList
                     blocks={content.blocks}
@@ -355,10 +361,11 @@ export default function MicrositeEditor() {
                       edit((c) => ({ ...c, blocks: c.blocks.map((b) => (b.id === bid ? { ...b, ...patch } : b)) }))
                     }
                     onRemove={(bid) => edit((c) => ({ ...c, blocks: c.blocks.filter((b) => b.id !== bid) }))}
+                    canUseForms={!!entitlements?.can_use_forms}
                   />
                   {/* Catalog shown inline below xl, as a side panel at xl */}
                   <div className="xl:hidden">
-                    <BlockCatalog onAdd={addBlock} />
+                    <BlockCatalog onAdd={addBlock} canUseForms={!!entitlements?.can_use_forms} />
                   </div>
                 </div>
               ) : (
@@ -380,7 +387,13 @@ export default function MicrositeEditor() {
 
             {/* Right: catalog & sharing */}
             <aside className="hidden xl:grid gap-6 order-3 self-start">
-              <BlockCatalog onAdd={(t) => { if (tab !== 'build') setTab('build'); addBlock(t); }} />
+              <BlockCatalog
+                canUseForms={!!entitlements?.can_use_forms}
+                onAdd={(t) => {
+                  if (tab !== 'build') setTab('build');
+                  addBlock(t);
+                }}
+              />
               <section className="grid gap-2">
                 <h2 className="text-sm font-semibold text-foreground">Share</h2>
                 {shortUrl ? (
@@ -420,27 +433,51 @@ export default function MicrositeEditor() {
   );
 }
 
-function BlockCatalog({ onAdd }: { onAdd: (type: BlockType) => void }) {
+function BlockCatalog({ onAdd, canUseForms }: { onAdd: (type: BlockType) => void; canUseForms: boolean }) {
   return (
-    <section className="grid gap-2">
+    <section className="grid gap-3">
       <h2 className="text-sm font-semibold text-foreground">Add a block</h2>
-      <ul className="grid grid-cols-2 xl:grid-cols-1 gap-2">
-        {BLOCK_CATALOG.map((b) => (
-          <li key={b.type}>
-            <button
-              type="button"
-              onClick={() => onAdd(b.type)}
-              className="w-full h-full text-left rounded-lg border border-border bg-card px-3 py-2 hover:border-primary hover:bg-primary/5"
-            >
-              <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                <PlusIcon className="h-4 w-4 text-primary" />
-                {b.name}
-              </span>
-              <span className="block text-xs text-muted-foreground">{b.description}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      {BLOCK_GROUPS.map((g) => {
+        const entries = BLOCK_CATALOG.filter((b) => b.group === g.id);
+        return (
+          <div key={g.id} className="grid gap-1.5">
+            <h3 className="text-xs font-medium text-muted-foreground">{g.name}</h3>
+            <ul className="grid grid-cols-2 xl:grid-cols-1 gap-2">
+              {entries.map((b) => {
+                const locked = b.requiresForms && !canUseForms;
+                return (
+                  <li key={b.type}>
+                    {locked ? (
+                      <Link
+                        href="/billing"
+                        className="block w-full h-full text-left rounded-lg border border-dashed border-border bg-card px-3 py-2 hover:bg-muted"
+                      >
+                        <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                          <LockClosedIcon className="h-4 w-4" />
+                          {b.name}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">Pro and Ultra plans. Upgrade to add.</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onAdd(b.type)}
+                        className="w-full h-full text-left rounded-lg border border-border bg-card px-3 py-2 hover:border-primary hover:bg-primary/5"
+                      >
+                        <span className="flex items-center gap-1 text-sm font-medium text-foreground">
+                          <PlusIcon className="h-4 w-4 text-primary" />
+                          {b.name}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">{b.description}</span>
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
     </section>
   );
 }

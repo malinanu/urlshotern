@@ -1,8 +1,10 @@
 'use client';
 
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { SOCIAL_PLATFORMS, newId, type BlockData, type MicrositeBlock } from '@/lib/microsites';
-import { ImageField, SelectField, TextAreaField, TextField, ToggleField } from './fields';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { SOCIAL_PLATFORMS, newId, newProduct, type BlockData, type MicrositeBlock } from '@/lib/microsites';
+import { ImageField, SelectField, TextAreaField, TextField, TimeZoneField, ToggleField } from './fields';
 
 type Data = BlockData;
 
@@ -10,10 +12,54 @@ interface FormProps {
   block: MicrositeBlock;
   micrositeId: number;
   onChange: (data: Data) => void;
+  /** Whether the owner's plan includes forms (Pro and Ultra). */
+  canUseForms?: boolean;
+}
+
+function ProductFields({ d, set, micrositeId }: { d: Data; set: (patch: Data) => void; micrositeId: number }) {
+  return (
+    <>
+      <ImageField label="Photo" value={d.image_url} onChange={(v) => set({ image_url: v })} micrositeId={micrositeId} />
+      <TextField label="Name" value={d.name} onChange={(v) => set({ name: v })} maxLength={80} />
+      <div className="grid grid-cols-2 gap-3">
+        <TextField label="Price" value={d.price} onChange={(v) => set({ price: v })} maxLength={24} placeholder="$24.99" />
+        <TextField label="Was (optional)" value={d.compare_price} onChange={(v) => set({ compare_price: v })} maxLength={24} placeholder="$34.99" />
+      </div>
+      <TextField label="Badge (optional)" value={d.badge} onChange={(v) => set({ badge: v })} maxLength={20} placeholder="-30%" />
+      <TextAreaField label="Description" value={d.description} onChange={(v) => set({ description: v })} maxLength={300} rows={2} />
+      <div className="grid grid-cols-2 gap-3">
+        <TextField label="Buy link" value={d.buy_url} onChange={(v) => set({ buy_url: v })} placeholder="https:// or WhatsApp link" />
+        <TextField label="Button text" value={d.button_text} onChange={(v) => set({ button_text: v })} maxLength={30} />
+      </div>
+    </>
+  );
+}
+
+/**
+ * A number input that keeps what the owner is typing ("-", "6.") locally and
+ * only reports parseable values (or undefined when cleared).
+ */
+function NumberField({ label, value, onChange, placeholder }: { label: string; value?: number | null; onChange: (v: number | undefined) => void; placeholder?: string }) {
+  const [text, setText] = useState(value === undefined || value === null ? '' : String(value));
+  useEffect(() => {
+    setText((t) => (Number(t) === value || (t.trim() === '' && (value === undefined || value === null)) ? t : value === undefined || value === null ? '' : String(value)));
+  }, [value]);
+  return (
+    <TextField
+      label={label}
+      value={text}
+      placeholder={placeholder}
+      onChange={(v) => {
+        setText(v);
+        if (v.trim() === '') onChange(undefined);
+        else if (Number.isFinite(Number(v))) onChange(Number(v));
+      }}
+    />
+  );
 }
 
 /** Renders the configuration form for one block. */
-export default function BlockForm({ block, micrositeId, onChange }: FormProps) {
+export default function BlockForm({ block, micrositeId, onChange, canUseForms }: FormProps) {
   const d = block.data;
   const set = (patch: Data) => onChange({ ...d, ...patch });
 
@@ -188,6 +234,179 @@ export default function BlockForm({ block, micrositeId, onChange }: FormProps) {
             { value: 'space', label: 'Space' },
           ]}
         />
+      );
+
+    case 'product_card':
+      return (
+        <div className="grid gap-3">
+          <ProductFields d={d} set={set} micrositeId={micrositeId} />
+        </div>
+      );
+
+    case 'product_carousel':
+      return (
+        <div className="grid gap-3">
+          <TextField label="Heading (optional)" value={d.title} onChange={(v) => set({ title: v })} maxLength={60} />
+          <ItemList
+            items={d.items ?? []}
+            onChange={(items) => set({ items })}
+            addLabel="Add product"
+            max={12}
+            create={newProduct}
+            render={(it, update) => <ProductFields d={it} set={update} micrositeId={micrositeId} />}
+          />
+        </div>
+      );
+
+    case 'event_details':
+      return (
+        <div className="grid gap-3">
+          <TextField label="Event name" value={d.title} onChange={(v) => set({ title: v })} maxLength={100} />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField label="Starts" type="datetime-local" value={d.start} onChange={(v) => set({ start: v })} />
+            <TextField label="Ends (optional)" type="datetime-local" value={d.end} onChange={(v) => set({ end: v })} />
+          </div>
+          <TimeZoneField label="Time zone" value={d.timezone} onChange={(v) => set({ timezone: v })} />
+          <TextField label="Venue" value={d.venue} onChange={(v) => set({ venue: v })} maxLength={100} />
+          <TextField label="Address" value={d.address} onChange={(v) => set({ address: v })} maxLength={200} />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField label="Tickets link" value={d.ticket_url} onChange={(v) => set({ ticket_url: v })} placeholder="https://" />
+            <TextField label="Tickets button" value={d.ticket_text} onChange={(v) => set({ ticket_text: v })} maxLength={30} />
+          </div>
+          <ToggleField
+            label="Show “Add to calendar”"
+            checked={d.show_add_to_calendar}
+            onChange={(v) => set({ show_add_to_calendar: v })}
+            hint="Visitors download an .ics file that works with Apple, Google and Outlook calendars."
+          />
+        </div>
+      );
+
+    case 'countdown':
+      return (
+        <div className="grid gap-3">
+          <TextField label="Count down to" type="datetime-local" value={d.target} onChange={(v) => set({ target: v })} />
+          <TimeZoneField label="Time zone" value={d.timezone} onChange={(v) => set({ timezone: v })} />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField label="Label" value={d.label} onChange={(v) => set({ label: v })} maxLength={40} placeholder="Starts in" />
+            <TextField label="When it's over" value={d.done_text} onChange={(v) => set({ done_text: v })} maxLength={60} placeholder="Happening now" />
+          </div>
+        </div>
+      );
+
+    case 'agenda':
+      return (
+        <div className="grid gap-3">
+          <TextField label="Heading (optional)" value={d.title} onChange={(v) => set({ title: v })} maxLength={60} />
+          <ItemList
+            items={d.items ?? []}
+            onChange={(items) => set({ items })}
+            addLabel="Add session"
+            max={40}
+            create={() => ({ id: newId('itm'), time: '', title: 'New session', speaker: '', track: '', detail: '' })}
+            render={(it, update) => (
+              <>
+                <div className="grid grid-cols-[6rem_1fr] gap-3">
+                  <TextField label="Time" value={it.time} onChange={(v) => update({ time: v })} maxLength={20} placeholder="09:30" />
+                  <TextField label="Session" value={it.title} onChange={(v) => update({ title: v })} maxLength={100} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <TextField label="Speaker (optional)" value={it.speaker} onChange={(v) => update({ speaker: v })} maxLength={80} />
+                  <TextField label="Track (optional)" value={it.track} onChange={(v) => update({ track: v })} maxLength={30} placeholder="Main hall" />
+                </div>
+                <TextAreaField label="Details (shown when opened)" value={it.detail} onChange={(v) => update({ detail: v })} maxLength={500} rows={2} />
+              </>
+            )}
+          />
+        </div>
+      );
+
+    case 'map':
+      return (
+        <div className="grid gap-3">
+          <TextField label="Label" value={d.label} onChange={(v) => set({ label: v })} maxLength={80} placeholder="Venue" />
+          <TextField label="Address" value={d.address} onChange={(v) => set({ address: v })} maxLength={200} />
+          <p className="text-xs text-muted-foreground">
+            Visitors always get a “Get directions” link. Add coordinates to also show a map they can tap to load.
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <NumberField label="Latitude" value={d.lat} onChange={(v) => set({ lat: v })} placeholder="6.9271" />
+            <NumberField label="Longitude" value={d.lng} onChange={(v) => set({ lng: v })} placeholder="79.8612" />
+            <NumberField label="Zoom (3–19)" value={d.zoom || undefined} onChange={(v) => set({ zoom: v })} placeholder="15" />
+          </div>
+        </div>
+      );
+
+    case 'video':
+      return (
+        <div className="grid gap-3">
+          <TextField
+            label="YouTube or Vimeo link"
+            value={d.url}
+            onChange={(v) => set({ url: v })}
+            placeholder="https://www.youtube.com/watch?v=…"
+            hint="The player loads only when a visitor taps play."
+          />
+          <TextField label="Title" value={d.title} onChange={(v) => set({ title: v })} maxLength={100} />
+          <ImageField label="Cover image (optional)" value={d.poster_url} onChange={(v) => set({ poster_url: v })} micrositeId={micrositeId} />
+        </div>
+      );
+
+    case 'audio':
+      return (
+        <div className="grid gap-3">
+          <TextField
+            label="Spotify link"
+            value={d.url}
+            onChange={(v) => set({ url: v })}
+            placeholder="https://open.spotify.com/track/…"
+            hint="Tracks, albums, playlists, episodes and shows."
+          />
+          <TextField label="Title" value={d.title} onChange={(v) => set({ title: v })} maxLength={100} />
+        </div>
+      );
+
+    case 'form':
+      return (
+        <div className="grid gap-3">
+          {!canUseForms && (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              Forms are part of the Pro and Ultra plans. This form stays hidden on your live page until you{' '}
+              <Link href="/billing" className="underline font-medium">
+                upgrade
+              </Link>
+              .
+            </p>
+          )}
+          <SelectField
+            label="Form type"
+            value={d.kind || 'newsletter'}
+            onChange={(v) => set({ kind: v, button_text: v === 'contact' ? 'Send message' : 'Subscribe' })}
+            options={[
+              { value: 'newsletter', label: 'Newsletter: email only' },
+              { value: 'contact', label: 'Contact: name, email and message' },
+            ]}
+          />
+          <TextField label="Heading" value={d.title} onChange={(v) => set({ title: v })} maxLength={80} />
+          <TextAreaField label="Intro (optional)" value={d.description} onChange={(v) => set({ description: v })} maxLength={300} rows={2} />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField label="Button text" value={d.button_text} onChange={(v) => set({ button_text: v })} maxLength={30} />
+            <TextField label="Thank-you message" value={d.success_text} onChange={(v) => set({ success_text: v })} maxLength={200} placeholder="Thanks! We got it." />
+          </div>
+          <TextField
+            label="Consent note (optional)"
+            value={d.consent_text}
+            onChange={(v) => set({ consent_text: v })}
+            maxLength={300}
+            placeholder="We'll only email you about new offers. Unsubscribe any time."
+          />
+          <ToggleField
+            label="Email me when someone submits"
+            checked={d.notify}
+            onChange={(v) => set({ notify: v })}
+            hint="At most one alert a minute. Every submission is kept in the Inbox tab."
+          />
+        </div>
       );
 
     default:

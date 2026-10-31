@@ -30,10 +30,11 @@ interface Props {
   onReorder: (blocks: MicrositeBlock[]) => void;
   onUpdate: (id: string, patch: Partial<MicrositeBlock>) => void;
   onRemove: (id: string) => void;
+  canUseForms?: boolean;
 }
 
 /** Draggable, accordion-style list of the page's blocks. */
-export default function BlockList({ blocks, selectedId, micrositeId, onSelect, onReorder, onUpdate, onRemove }: Props) {
+export default function BlockList({ blocks, selectedId, micrositeId, onSelect, onReorder, onUpdate, onRemove, canUseForms }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
@@ -59,13 +60,14 @@ export default function BlockList({ blocks, selectedId, micrositeId, onSelect, o
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-        <ul className="grid gap-2" aria-label="Page blocks">
+        <ul className="grid grid-cols-1 gap-2" aria-label="Page blocks">
           {blocks.map((b) => (
             <SortableBlock
               key={b.id}
               block={b}
               open={selectedId === b.id}
               micrositeId={micrositeId}
+              canUseForms={canUseForms}
               onToggle={() => onSelect(selectedId === b.id ? null : b.id)}
               onChange={(data) => onUpdate(b.id, { data })}
               onToggleHidden={() => onUpdate(b.id, { hidden: !b.hidden })}
@@ -91,6 +93,22 @@ function blockSummary(b: MicrositeBlock): string {
       return `${(d.items ?? []).length} item${(d.items ?? []).length === 1 ? '' : 's'}`;
     case 'text':
       return (d.text || '').slice(0, 40);
+    case 'product_card':
+      return [d.name, d.price].filter(Boolean).join(' · ');
+    case 'product_carousel':
+    case 'agenda':
+      return `${(d.items ?? []).length} item${(d.items ?? []).length === 1 ? '' : 's'}`;
+    case 'event_details':
+      return [d.title, (d.start || '').replace('T', ' ')].filter(Boolean).join(' · ');
+    case 'countdown':
+      return (d.target || '').replace('T', ' ');
+    case 'map':
+      return d.address || d.label || '';
+    case 'video':
+    case 'audio':
+      return d.title || (d.url || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 40);
+    case 'form':
+      return d.kind === 'contact' ? 'Contact form' : 'Newsletter';
     default:
       return '';
   }
@@ -100,6 +118,7 @@ function SortableBlock({
   block,
   open,
   micrositeId,
+  canUseForms,
   onToggle,
   onChange,
   onToggleHidden,
@@ -108,6 +127,7 @@ function SortableBlock({
   block: MicrositeBlock;
   open: boolean;
   micrositeId: number;
+  canUseForms?: boolean;
   onToggle: () => void;
   onChange: (data: BlockData) => void;
   onToggleHidden: () => void;
@@ -155,7 +175,7 @@ function SortableBlock({
       </div>
       {open && (
         <div className="border-t border-border px-3 py-3">
-          <BlockForm block={block} micrositeId={micrositeId} onChange={onChange} />
+          <BlockForm block={block} micrositeId={micrositeId} onChange={onChange} canUseForms={canUseForms} />
         </div>
       )}
     </li>

@@ -17,7 +17,16 @@ export type BlockType =
   | 'social_icons'
   | 'text'
   | 'image'
-  | 'divider';
+  | 'divider'
+  | 'product_card'
+  | 'product_carousel'
+  | 'event_details'
+  | 'countdown'
+  | 'agenda'
+  | 'map'
+  | 'video'
+  | 'audio'
+  | 'form';
 
 /**
  * Block payloads are validated and normalized server-side (see
@@ -43,7 +52,11 @@ export interface MicrositeBackground {
   overlay?: number;
 }
 
+/** Template styles; "classic" is the original centered card. */
+export type TemplateStyle = 'classic' | 'letterpress' | 'board' | 'flyer' | 'programme';
+
 export interface MicrositeTheme {
+  style?: TemplateStyle;
   background: MicrositeBackground;
   card_fill: string;
   accent: string;
@@ -102,6 +115,7 @@ export interface MicrositeSummary {
 export interface MicrositeEntitlements {
   max_pages: number;
   can_remove_badge: boolean;
+  can_use_forms: boolean;
   analytics_days: number;
   used_pages: number;
   can_create_more: boolean;
@@ -125,6 +139,9 @@ export interface MicrositeAnalytics {
   link_clicks: number;
   vcard_downloads: number;
   contact_actions: Record<string, number>;
+  form_submits: number;
+  calendar_adds: number;
+  video_plays: number;
   ctr: number;
   contact_save_rate: number;
   daily: { date: string; views: number; unique_visitors: number; clicks: number; vcard_downloads: number }[];
@@ -134,6 +151,16 @@ export interface MicrositeAnalytics {
   operating_systems: MicrositeCount[];
   countries: MicrositeCount[];
   blocks: { block_id: string; item_id?: string; event_type: string; label: string; count: number }[];
+}
+
+export interface MicrositeSubmission {
+  id: number;
+  block_id: string;
+  kind: 'newsletter' | 'contact';
+  email: string;
+  name?: string;
+  message?: string;
+  created_at: string;
 }
 
 export interface ApiError {
@@ -157,47 +184,172 @@ export function newId(prefix: 'blk' | 'itm'): string {
   return `${prefix}_${rand}`;
 }
 
+export type BlockGroup = 'basics' | 'contact' | 'shop' | 'event' | 'media' | 'forms';
+
+export const BLOCK_GROUPS: { id: BlockGroup; name: string }[] = [
+  { id: 'basics', name: 'Basics' },
+  { id: 'contact', name: 'Contact' },
+  { id: 'shop', name: 'Shop' },
+  { id: 'event', name: 'Event' },
+  { id: 'media', name: 'Video & audio' },
+  { id: 'forms', name: 'Forms' },
+];
+
 export interface BlockCatalogEntry {
   type: BlockType;
   name: string;
   description: string;
+  group: BlockGroup;
+  /** Needs the forms entitlement (Pro and Ultra). */
+  requiresForms?: boolean;
   create: () => BlockData;
 }
+
+/** The visitor's IANA time zone, e.g. "Asia/Colombo" (UTC if unknown). */
+export function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+/** A local "YYYY-MM-DDTHH:mm" value `days` from now at `hour`:00. */
+export function localDateTime(days: number, hour: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  d.setHours(hour, 0, 0, 0);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+const productData = (): BlockData => ({
+  name: 'Product name',
+  price: '',
+  compare_price: '',
+  badge: '',
+  description: '',
+  image_url: '',
+  buy_url: '',
+  button_text: 'Buy now',
+});
+
+/** A carousel item: product fields plus a stable item id. */
+export const newProduct = (): BlockData => ({ id: newId('itm'), ...productData() });
 
 export const BLOCK_CATALOG: BlockCatalogEntry[] = [
   {
     type: 'profile_header',
     name: 'Profile',
     description: 'Avatar, name, title and company',
+    group: 'basics',
     create: () => ({ display_name: 'Your Name', title: '', company: '', bio: '' }),
   },
+  {
+    type: 'link_list',
+    name: 'Links',
+    description: 'A stack of link buttons',
+    group: 'basics',
+    create: () => ({ items: [{ id: newId('itm'), label: 'My website', url: '', highlight: false }] }),
+  },
+  { type: 'text', name: 'Text', description: 'A paragraph of plain text', group: 'basics', create: () => ({ text: '', align: 'center' }) },
+  { type: 'image', name: 'Image', description: 'A picture, optionally linked', group: 'basics', create: () => ({ url: '', alt: '' }) },
+  { type: 'divider', name: 'Divider', description: 'A line or spacing', group: 'basics', create: () => ({ style: 'line' }) },
   {
     type: 'vcard_action',
     name: 'Save Contact',
     description: 'One-tap .vcf download for iPhone and Android',
+    group: 'contact',
     create: () => ({ button_text: 'Save Contact', first_name: 'Your', last_name: 'Name' }),
   },
   {
     type: 'contact_buttons',
     name: 'Contact buttons',
     description: 'Call, text, email and WhatsApp',
+    group: 'contact',
     create: () => ({ items: [{ id: newId('itm'), kind: 'call', value: '', label: 'Call' }] }),
-  },
-  {
-    type: 'link_list',
-    name: 'Links',
-    description: 'A stack of link buttons',
-    create: () => ({ items: [{ id: newId('itm'), label: 'My website', url: '', highlight: false }] }),
   },
   {
     type: 'social_icons',
     name: 'Social icons',
     description: 'LinkedIn, Instagram, GitHub and more',
+    group: 'contact',
     create: () => ({ items: [{ id: newId('itm'), platform: 'linkedin', url: '' }] }),
   },
-  { type: 'text', name: 'Text', description: 'A paragraph of plain text', create: () => ({ text: '', align: 'center' }) },
-  { type: 'image', name: 'Image', description: 'A picture, optionally linked', create: () => ({ url: '', alt: '' }) },
-  { type: 'divider', name: 'Divider', description: 'A line or spacing', create: () => ({ style: 'line' }) },
+  {
+    type: 'product_card',
+    name: 'Product',
+    description: 'Photo, price, badge and a buy button',
+    group: 'shop',
+    create: productData,
+  },
+  {
+    type: 'product_carousel',
+    name: 'Product carousel',
+    description: 'A swipeable strip of products',
+    group: 'shop',
+    create: () => ({ title: 'This week', items: [newProduct(), newProduct()] }),
+  },
+  {
+    type: 'event_details',
+    name: 'Event details',
+    description: 'Date, venue, tickets and add-to-calendar',
+    group: 'event',
+    create: () => ({
+      title: 'Event name',
+      start: localDateTime(30, 9),
+      end: localDateTime(30, 17),
+      timezone: browserTimeZone(),
+      venue: '',
+      address: '',
+      ticket_url: '',
+      ticket_text: 'Get tickets',
+      show_add_to_calendar: true,
+    }),
+  },
+  {
+    type: 'countdown',
+    name: 'Countdown',
+    description: 'Days, hours and minutes to a moment',
+    group: 'event',
+    create: () => ({ target: localDateTime(30, 9), timezone: browserTimeZone(), label: 'Starts in', done_text: 'Happening now' }),
+  },
+  {
+    type: 'agenda',
+    name: 'Agenda',
+    description: 'A timetable of sessions',
+    group: 'event',
+    create: () => ({ title: 'Programme', items: [{ id: newId('itm'), time: '09:00', title: 'Opening', speaker: '', track: '', detail: '' }] }),
+  },
+  {
+    type: 'map',
+    name: 'Map & directions',
+    description: 'Address, directions link and a tap-to-load map',
+    group: 'event',
+    create: () => ({ label: 'Venue', address: '' }),
+  },
+  {
+    type: 'video',
+    name: 'Video',
+    description: 'YouTube or Vimeo, loads when tapped',
+    group: 'media',
+    create: () => ({ url: '', title: '' }),
+  },
+  {
+    type: 'audio',
+    name: 'Audio',
+    description: 'A Spotify track, album, playlist or episode',
+    group: 'media',
+    create: () => ({ url: '', title: '' }),
+  },
+  {
+    type: 'form',
+    name: 'Newsletter or contact form',
+    description: 'Collect emails or messages in your Inbox',
+    group: 'forms',
+    requiresForms: true,
+    create: () => ({ kind: 'newsletter', title: 'Get updates', description: '', button_text: 'Subscribe', notify: true }),
+  },
 ];
 
 export const BLOCK_NAMES: Record<BlockType, string> = Object.fromEntries(
@@ -223,6 +375,47 @@ export const FONTS: { id: string; name: string }[] = [
   { id: 'rounded', name: 'Rounded' },
   { id: 'humanist', name: 'Humanist' },
   { id: 'geometric', name: 'Geometric' },
+  { id: 'schibsted', name: 'Schibsted Grotesk' },
+  { id: 'martian', name: 'Martian Mono' },
+  { id: 'barlow', name: 'Barlow Condensed' },
+  { id: 'hanken', name: 'Hanken Grotesk' },
+];
+
+export interface TemplateStyleInfo {
+  id: TemplateStyle;
+  name: string;
+  description: string;
+  /** Applied when the owner switches to this style (colors stay editable). */
+  theme: Partial<MicrositeTheme>;
+}
+
+/** Mirrors the styled themes in internal/services/microsite_templates.go. */
+export const TEMPLATE_STYLES: TemplateStyleInfo[] = [
+  { id: 'classic', name: 'Classic', description: 'A centered card on your own background', theme: { font: 'system' } },
+  {
+    id: 'letterpress',
+    name: 'Letterpress card',
+    description: 'A thick business card with painted edges',
+    theme: { font: 'schibsted', accent: '#2340d6', card_fill: '#ffffff', text: '#14161c', button_text: '#ffffff' },
+  },
+  {
+    id: 'board',
+    name: 'Departure board',
+    description: 'Links as departures, the newest boarding now',
+    theme: { font: 'martian', accent: '#ffd400', card_fill: '#1b2a6b', text: '#ffffff', button_text: '#1b2a6b' },
+  },
+  {
+    id: 'flyer',
+    name: 'Weekly flyer',
+    description: 'Big prices, deal badges and a bold masthead',
+    theme: { font: 'barlow', accent: '#d7261e', card_fill: '#ffffff', text: '#17181c', button_text: '#ffffff' },
+  },
+  {
+    id: 'programme',
+    name: 'Programme',
+    description: 'A printed event programme with a timetable',
+    theme: { font: 'hanken', accent: '#0e7c66', card_fill: '#ffffff', text: '#111318', button_text: '#ffffff' },
+  },
 ];
 
 export interface ThemePreset {

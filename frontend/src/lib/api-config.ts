@@ -221,6 +221,7 @@ export const API_ENDPOINTS = {
     list: `${API_BASE_URL}/api/v1/microsites`,
     create: `${API_BASE_URL}/api/v1/microsites`,
     templates: `${API_BASE_URL}/api/v1/microsites/templates`,
+    templatePreview: (template: string) => `${API_BASE_URL}/api/v1/microsites/templates/${encodeURIComponent(template)}/preview`,
     slugAvailable: `${API_BASE_URL}/api/v1/microsites/slug-available`,
     preview: `${API_BASE_URL}/api/v1/microsites/preview`,
     assets: `${API_BASE_URL}/api/v1/microsites/assets`,
@@ -233,6 +234,9 @@ export const API_ENDPOINTS = {
     analytics: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/analytics`,
     upload: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/assets`,
     shortLink: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/short-link`,
+    submissions: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/submissions`,
+    exportSubmissions: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/submissions/export`,
+    deleteSubmission: (id: number, sid: number) => `${API_BASE_URL}/api/v1/microsites/${id}/submissions/${sid}`,
   },
 
   // White-label branding endpoints (enterprise)

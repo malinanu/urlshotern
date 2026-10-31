@@ -19,6 +19,7 @@ import { API_ENDPOINTS } from '@/lib/api-config';
 import { PLAN_NAMES } from '@/lib/plan-utils';
 import {
   apiFetch,
+  browserTimeZone,
   isApiError,
   type Microsite,
   type MicrositeEntitlements,
@@ -107,7 +108,7 @@ export default function MicrositesPage() {
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Pages</h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  Digital business cards and link-in-bio pages{limitLabel && ` · ${limitLabel}`}
+                  Business cards, link-in-bio, shop and event pages{limitLabel && ` · ${limitLabel}`}
                 </p>
               </div>
             </div>
@@ -291,7 +292,7 @@ function CreateDialog({
     try {
       const site = await apiFetch<Microsite>(API_ENDPOINTS.microsites.create, getAccessToken(), {
         method: 'POST',
-        body: JSON.stringify({ title: title.trim(), slug, template }),
+        body: JSON.stringify({ title: title.trim(), slug, template, timezone: browserTimeZone() }),
       });
       onCreated(site);
     } catch (err) {
@@ -302,7 +303,11 @@ function CreateDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-page-title">
-      <form onSubmit={submit} className="w-full max-w-lg rounded-xl bg-card border border-border shadow-xl p-6 space-y-5">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-lg md:max-w-4xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl bg-card border border-border shadow-xl p-6 grid gap-5 md:grid-cols-[1fr_300px] md:gap-6"
+      >
+        <div className="space-y-5 min-w-0">
         <div className="flex items-center justify-between">
           <h2 id="create-page-title" className="text-lg font-semibold text-foreground">Create a page</h2>
           <button type="button" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Close">
@@ -383,7 +388,57 @@ function CreateDialog({
             {submitting ? 'Creating…' : 'Create page'}
           </button>
         </div>
+        </div>
+        <TemplatePreview template={template} name={title} />
       </form>
+    </div>
+  );
+}
+
+/** Server-rendered sample of a template, shown in a sandboxed, scaled iframe. */
+function TemplatePreview({ template, name }: { template: string; name: string }) {
+  const { getAccessToken } = useAuth();
+  const [html, setHtml] = useState<Record<string, string>>({});
+  const [debouncedName, setDebouncedName] = useState(name);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedName(name.trim()), 400);
+    return () => clearTimeout(t);
+  }, [name]);
+
+  const key = `${template}|${debouncedName}`;
+  useEffect(() => {
+    if (html[key] !== undefined) return;
+    let cancelled = false;
+    const q = new URLSearchParams({ name: debouncedName, tz: browserTimeZone() });
+    apiFetch<{ html: string }>(`${API_ENDPOINTS.microsites.templatePreview(template)}?${q}`, getAccessToken())
+      .then((res) => {
+        if (!cancelled) setHtml((h) => ({ ...h, [key]: res.html }));
+      })
+      .catch(() => {
+        if (!cancelled) setHtml((h) => ({ ...h, [key]: '' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [key, template, debouncedName, html, getAccessToken]);
+
+  const doc = html[key];
+  const width = 390;
+  const scale = 300 / width;
+  return (
+    <div className="hidden md:block" aria-hidden="true">
+      <p className="text-sm font-medium text-foreground mb-2">Preview</p>
+      <div className="rounded-[1.75rem] border-[8px] border-gray-900 overflow-hidden bg-white shadow-lg" style={{ width: 300 + 16, height: 600 }}>
+        <div style={{ width, height: 584 / scale, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          {doc ? (
+            <iframe title="Template preview" srcDoc={doc} sandbox="" tabIndex={-1} className="w-full h-full border-0" />
+          ) : (
+            <div className="w-full h-full animate-pulse bg-muted" />
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">Sample content. You can change every word, color and block.</p>
     </div>
   );
 }

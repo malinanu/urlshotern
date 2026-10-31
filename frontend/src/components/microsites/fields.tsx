@@ -142,6 +142,47 @@ export function ToggleField({
   );
 }
 
+let zoneCache: string[] | null = null;
+function timeZones(): string[] {
+  if (zoneCache) return zoneCache;
+  try {
+    const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+    zoneCache = intl.supportedValuesOf ? intl.supportedValuesOf('timeZone') : [];
+  } catch {
+    zoneCache = [];
+  }
+  if (!zoneCache.includes('UTC')) zoneCache = ['UTC', ...zoneCache];
+  return zoneCache;
+}
+
+/** IANA time zone picker (free text with suggestions). */
+export function TimeZoneField({ label, value, onChange }: { label: string; value?: string; onChange: (v: string) => void }) {
+  const id = useId();
+  const listId = `${id}-zones`;
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-medium text-muted-foreground mb-1">
+        {label}
+      </label>
+      <input
+        id={id}
+        list={listId}
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Europe/London"
+        className={inputClass}
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <datalist id={listId}>
+        {timeZones().map((z) => (
+          <option key={z} value={z} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
+
 export function ColorField({ label, value, onChange }: { label: string; value?: string; onChange: (v: string) => void }) {
   const id = useId();
   const [text, setText] = useState(value ?? '#000000');

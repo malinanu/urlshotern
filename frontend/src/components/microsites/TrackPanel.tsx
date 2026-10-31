@@ -24,6 +24,9 @@ const EVENT_LABELS: Record<string, string> = {
   email: 'Email',
   whatsapp: 'WhatsApp',
   vcard_download: 'Save contact',
+  form_submit: 'Form sent',
+  calendar_add: 'Added to calendar',
+  video_play: 'Played',
 };
 
 function formatDay(d: string) {
@@ -126,6 +129,13 @@ export default function TrackPanel({ micrositeId, maxDays }: { micrositeId: numb
             <StatTile label="Contacts saved" value={data.vcard_downloads.toLocaleString()} hint={`${data.contact_save_rate}% save rate`} />
             <StatTile label="Click-through rate" value={`${data.ctr}%`} hint="Taps ÷ views" />
           </div>
+          {(data.form_submits > 0 || data.calendar_adds > 0 || data.video_plays > 0) && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {data.form_submits > 0 && <StatTile label="Form submissions" value={data.form_submits.toLocaleString()} hint="Signups and messages" />}
+              {data.calendar_adds > 0 && <StatTile label="Added to calendar" value={data.calendar_adds.toLocaleString()} />}
+              {data.video_plays > 0 && <StatTile label="Video and audio plays" value={data.video_plays.toLocaleString()} />}
+            </div>
+          )}
 
           <section className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between mb-3">
