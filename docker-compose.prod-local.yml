@@ -43,11 +43,18 @@ services:
       # Admin Panel Configuration
       - ENABLE_ADMIN_ROUTES=${ENABLE_ADMIN_ROUTES:-false}
 
+      # Microsites (/m/<slug> landing pages + vCards) — off unless enabled
+      - ENABLE_MICROSITES=${ENABLE_MICROSITES:-false}
+      - MICROSITE_UPLOAD_PATH=/app/uploads
+
       # Polar Configuration (Optional)
       - POLAR_ACCESS_TOKEN=${POLAR_ACCESS_TOKEN:-}
       - POLAR_WEBHOOK_SECRET=${POLAR_WEBHOOK_SECRET:-}
       - POLAR_ORGANIZATION_ID=${POLAR_ORGANIZATION_ID:-}
       - POLAR_API_URL=${POLAR_API_URL:-https://sandbox-api.polar.sh/v1}
+
+    volumes:
+      - microsite-uploads-prod:/app/uploads
 
     depends_on:
       postgres:
@@ -123,3 +130,4 @@ networks:
 volumes:
   postgres-prod-data:
   redis-prod-data:
+  microsite-uploads-prod:

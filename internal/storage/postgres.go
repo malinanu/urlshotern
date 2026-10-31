@@ -1780,6 +1780,7 @@ func (s *PostgresStorage) SeedDefaultStaticPages() error {
 //  2. Delete click events for free-plan users older than 30 days
 //  3. Delete click events for premium-plan users older than 1 year
 //  4. Enterprise users: never delete
+//  5. Microsite page events follow the same free/premium windows
 func (p *PostgresStorage) RunRetentionJob() error {
 	// 1. Null raw IPs older than 24 hours
 	res, err := p.db.Exec(`
@@ -1827,5 +1828,56 @@ func (p *PostgresStorage) RunRetentionJob() error {
 		log.Printf("🗑️  Retention: deleted %d click events for premium users (>1 year)", n)
 	}
 
+	// 5. Microsite page events — same plan windows (skipped if migration 046 is not applied)
+	if err := p.runMicrositeEventRetention(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// runMicrositeEventRetention applies the click retention windows to
+// microsite_events and microsite_submissions: free 30 days, premium 1 year,
+// enterprise kept. A table whose migration is not applied is skipped.
+func (p *PostgresStorage) runMicrositeEventRetention() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	tables := []struct {
+		name, timeColumn string
+	}{
+		{"microsite_events", "occurred_at"},
+		{"microsite_submissions", "created_at"},
+	}
+	windows := []struct {
+		accountType string
+		interval    string
+	}{
+		{"free", "30 days"},
+		{"premium", "1 year"},
+	}
+	for _, t := range tables {
+		var exists bool
+		if err := p.db.QueryRowContext(ctx, `SELECT to_regclass('public.' || $1) IS NOT NULL`, t.name).Scan(&exists); err != nil || !exists {
+			continue
+		}
+		for _, w := range windows {
+			// Table and column names are constants above, never user input.
+			res, err := p.db.ExecContext(ctx, /* #nosec G202 -- identifiers from the constant list above */ `
+				DELETE FROM `+t.name+` me
+				USING microsites m, users u
+				WHERE me.microsite_id = m.id
+				  AND m.user_id = u.id
+				  AND u.account_type = $1
+				  AND me.`+t.timeColumn+` < NOW() - $2::interval
+			`, w.accountType, w.interval)
+			if err != nil {
+				return fmt.Errorf("delete %s-plan %s: %w", w.accountType, t.name, err)
+			}
+			if n, _ := res.RowsAffected(); n > 0 {
+				log.Printf("🗑️  Retention: deleted %d %s rows for %s users (>%s)", n, t.name, w.accountType, w.interval)
+			}
+		}
+	}
 	return nil
 }

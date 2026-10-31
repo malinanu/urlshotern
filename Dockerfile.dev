@@ -28,10 +28,13 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ARG BASE_URL
 ARG NODE_ENV=production
+# Shows the "Pages" (microsites) navigation; keep in sync with ENABLE_MICROSITES
+ARG NEXT_PUBLIC_ENABLE_MICROSITES=false
 
 # Build frontend for production with environment variables
 RUN cd frontend && \
     NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NEXT_PUBLIC_ENABLE_MICROSITES=${NEXT_PUBLIC_ENABLE_MICROSITES} \
     BASE_URL=${BASE_URL} \
     NODE_ENV=${NODE_ENV} \
     npm run build

@@ -36,6 +36,7 @@ type AuthService struct {
 	googleConfig   *oauth2.Config
 	githubConfig   *oauth2.Config
 	campaignService *CampaignService // optional, set after init to avoid circular dependency
+	accountDeletedHooks []func(userID int64) // run after an account is deleted
 }
 
 // NewAuthService creates a new authentication service
@@ -83,6 +84,12 @@ func NewAuthService(
 // SetCampaignService wires in the campaign service after init (avoids circular deps).
 func (a *AuthService) SetCampaignService(cs *CampaignService) {
 	a.campaignService = cs
+}
+
+// OnAccountDeleted registers a callback run after an account has been deleted,
+// for cleanup the database cascade cannot reach (e.g. uploaded files).
+func (a *AuthService) OnAccountDeleted(fn func(userID int64)) {
+	a.accountDeletedHooks = append(a.accountDeletedHooks, fn)
 }
 
 // Register creates a new user account
@@ -994,10 +1001,16 @@ func (a *AuthService) DeleteAccount(userID int64) error {
 
 	// Delete user — cascades to: user_sessions, user_preferences, email_verifications,
 	// phone_verifications, password_resets, api_keys (→ api_key_usage), team_members,
-	// audit_logs (SET NULL)
+	// microsites (→ microsite_events), microsite_assets, audit_logs (SET NULL)
 	if _, err := tx.Exec(`DELETE FROM users WHERE id = $1`, userID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	for _, hook := range a.accountDeletedHooks {
+		hook(userID)
+	}
+	return nil
 }

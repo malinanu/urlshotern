@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+{{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+{{if .NoIndex}}<meta name="robots" content="noindex, nofollow">{{end}}
+{{if .CanonicalURL}}<link rel="canonical" href="{{.CanonicalURL}}">{{end}}
+<meta property="og:type" content="profile">
+<meta property="og:title" content="{{.Title}}">
+{{if .Description}}<meta property="og:description" content="{{.Description}}">{{end}}
+{{if .CanonicalURL}}<meta property="og:url" content="{{.CanonicalURL}}">{{end}}
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+<meta name="twitter:card" content="{{if .OGImage}}summary_large_image{{else}}summary{{end}}">
+<meta name="twitter:title" content="{{.Title}}">
+{{if .Description}}<meta name="twitter:description" content="{{.Description}}">{{end}}
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{if .Favicon}}<link rel="icon" href="{{.Favicon}}">{{end}}
+{{if .Preview}}<base target="_blank">{{end}}
+{{range .FontPreloads}}<link rel="preload" href="{{.}}" as="font" type="font/woff2" crossorigin>{{end}}<style>{{.BaseCSS}}{{.ThemeCSS}}{{.ExtraCSS}}</style>
+</head>
+<body{{if .BodyClass}} class="{{.BodyClass}}"{{end}}>
+{{if .BgImage}}<img class="bg-image" src="{{.BgImage}}" alt=""><div class="bg-overlay"></div>{{end}}
+<main class="page">
+{{if .Groups}}{{range .Groups}}<div class="{{.Class}}">{{range .Blocks}}{{template "block" .}}{{end}}</div>{{end}}{{else}}<div class="card">
+{{range .Blocks}}{{template "block" .}}{{else}}
+<p class="empty">This page has no content yet.</p>
+{{end}}
+</div>{{end}}
+{{if .ShowBadge}}<footer class="badge"><a href="{{.BadgeURL}}" rel="noopener">Made with Trunc</a></footer>{{end}}
+</main>
+{{if .BeaconSrc}}<script src="{{.BeaconSrc}}" data-endpoint="{{.EventURL}}" defer></script>{{end}}{{range .Scripts}}<script src="{{.}}" defer></script>{{end}}
+</body>
+</html>

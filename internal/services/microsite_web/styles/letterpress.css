@@ -1,0 +1,45 @@
+/* Letterpress business card: a thick white card with painted edges */
+body.s-letterpress{background:var(--accent-12);color:var(--text)}
+.s-letterpress .bg-image,.s-letterpress .bg-overlay{display:none}
+.s-letterpress ::selection{background:var(--accent);color:var(--accent-text)}
+.s-letterpress .page{max-width:440px;padding:18px 18px 32px}
+.s-letterpress .grp{background:var(--card);border:6px solid var(--accent);border-radius:12px;padding:28px 22px 24px;display:flex;flex-direction:column;gap:18px;box-shadow:0 2px 3px rgba(0,0,0,.06),0 22px 44px -22px rgba(0,0,0,.4)}
+.s-letterpress .lp-front{position:relative;isolation:isolate;min-height:min(66vh,500px);justify-content:flex-start;padding-bottom:0;overflow:hidden}
+/* the painted foot the Save Contact bar sits in, edge to edge under the card's radius */
+.s-letterpress .lp-front::after{content:"";position:absolute;left:0;right:0;bottom:0;height:66px;background:var(--accent);z-index:-1}
+.s-letterpress .lp-back{margin-top:16px;gap:0;padding-top:8px;padding-bottom:8px}
+
+/* identity, set flush left like a printed card */
+.s-letterpress .profile{align-items:flex-start;text-align:left;gap:4px}
+.s-letterpress .avatar{width:60px;height:60px;border-radius:6px;border:0;margin-bottom:28px}
+.s-letterpress .avatar-fallback{background:var(--accent);color:var(--accent-text);font-size:26px}
+.s-letterpress .profile h1{margin:0;font-size:clamp(34px,10vw,44px);font-weight:800;letter-spacing:-.025em;line-height:1.02;color:var(--text);text-shadow:0 1px 0 rgba(255,255,255,.85),0 -1px 1px rgba(0,0,0,.16);text-wrap:balance}
+.s-letterpress .verified{width:22px;height:22px}
+.s-letterpress .pronouns{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.s-letterpress .role{margin-top:10px;font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text)}
+.s-letterpress .company-logo{height:24px;margin-top:10px}
+.s-letterpress .location{font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+.s-letterpress .bio{margin-top:18px;font-size:16px;line-height:1.55;max-width:34ch}
+
+/* Save Contact: the painted bar at the card's foot */
+.s-letterpress .lp-front>.btn-primary:last-child,.s-letterpress .lp-front .btn-primary{margin:auto -22px 0;width:calc(100% + 44px);min-height:64px;border:0;border-radius:0;background:var(--accent);color:var(--accent-text);font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;transition:filter .2s ease-out}
+.s-letterpress .lp-front .btn-primary:hover{filter:brightness(1.08)}
+.s-letterpress .lp-front .btn-primary:active{transform:none;filter:brightness(.95)}
+
+/* the back: typeset rows instead of icon tiles */
+.s-letterpress .contacts,.s-letterpress .links{display:flex;flex-direction:column;gap:0}
+.s-letterpress .contact,.s-letterpress .links .btn{flex-direction:row;justify-content:flex-start;gap:14px;min-height:56px;padding:14px 2px;border:0;border-top:1px solid var(--line);border-radius:0;background:none;color:var(--text);font-size:16px;font-weight:600;text-align:left;width:100%}
+.s-letterpress .grp>:first-child .contact:first-child,.s-letterpress .grp>.links:first-child .btn:first-child{border-top:0}
+.s-letterpress .contact span.ico{width:auto;height:auto;background:none;color:var(--accent)}
+.s-letterpress .contact::after,.s-letterpress .links .btn::after{content:"";margin-left:auto;width:8px;height:8px;border-top:2px solid var(--muted);border-right:2px solid var(--muted);transform:rotate(45deg);flex:none}
+.s-letterpress .links .btn-primary{color:var(--accent-deep)}
+.s-letterpress .links .btn img.thumb{margin-left:0;border-radius:4px}
+.s-letterpress .socials{justify-content:flex-start;gap:10px;padding:16px 0 4px;border-top:1px solid var(--line)}
+.s-letterpress .circle{width:44px;height:44px;border-radius:6px;border:1.5px solid var(--line);background:none;color:var(--text);font-size:13px}
+.s-letterpress .circle:hover{border-color:var(--accent);color:var(--accent-deep)}
+.s-letterpress .text{padding:14px 0;border-top:1px solid var(--line);font-size:15px}
+.s-letterpress .divider{border-top-color:var(--line);margin:0}
+.s-letterpress .btn:focus-visible,.s-letterpress .contact:focus-visible,.s-letterpress .circle:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.s-letterpress .badge{margin-top:22px}
+.s-letterpress .badge a{background:none;box-shadow:none;color:var(--accent-deep);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:11px}

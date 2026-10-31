@@ -49,6 +49,7 @@ type Handler struct {
 	TeamHandlers           *TeamHandlers
 	GlobalSettingsHandlers *GlobalSettingsHandlers
 	CampaignHandlers       *CampaignHandlers
+	MicrositeHandlers      *MicrositeHandlers // nil unless ENABLE_MICROSITES=true
 }
 
 // NewHandler creates a new handler instance
