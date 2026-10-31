@@ -221,3 +221,7 @@ dist
 
 # Microsite image uploads (runtime data, persisted via a Docker volume)
 /uploads/
+
+# Impeccable design-review captures (local only)
+/.impeccable/review/
+/.impeccable/questions/

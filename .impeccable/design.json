@@ -1,0 +1,502 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T13:16:16+00:00",
+  "title": "Design System: Trunc Pages templates",
+  "extensions": {
+    "colorMeta": {
+      "press-blue": {
+        "role": "primary",
+        "displayName": "Press Blue",
+        "canonical": "#2340d6",
+        "tonalRamp": [
+          "#0c164b",
+          "#132376",
+          "#1a30a0",
+          "#2340d6",
+          "#6579e2",
+          "#9ca9ed",
+          "#c8cff5",
+          "#e9ecfb"
+        ],
+        "note": "Default only: on a live page this is the owner's accent token."
+      },
+      "press-ground": {
+        "role": "neutral",
+        "displayName": "Press Ground",
+        "canonical": "#e5e8fa",
+        "tonalRamp": [
+          "#505158",
+          "#7e808a",
+          "#acaebc",
+          "#e5e8fa",
+          "#edeffc",
+          "#f3f5fd",
+          "#f8f9fe",
+          "#fcfdfe"
+        ]
+      },
+      "card-stock": {
+        "role": "neutral",
+        "displayName": "Card Stock",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#595959",
+          "#8c8c8c",
+          "#bfbfbf",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#14161c",
+        "tonalRamp": [
+          "#07080a",
+          "#0b0c0f",
+          "#0f1015",
+          "#14161c",
+          "#5b5c60",
+          "#959699",
+          "#c4c5c6",
+          "#e8e8e8"
+        ]
+      },
+      "station-blue": {
+        "role": "neutral",
+        "displayName": "Station Blue",
+        "canonical": "#1b2a6b",
+        "tonalRamp": [
+          "#090f25",
+          "#0f173b",
+          "#142050",
+          "#1b2a6b",
+          "#5f6a97",
+          "#989fbc",
+          "#c6cada",
+          "#e8eaf0"
+        ],
+        "note": "Default only: the owner's card_fill token."
+      },
+      "boarding-yellow": {
+        "role": "primary",
+        "displayName": "Boarding Yellow",
+        "canonical": "#ffd400",
+        "tonalRamp": [
+          "#594a00",
+          "#8c7500",
+          "#bf9f00",
+          "#ffd400",
+          "#ffe14d",
+          "#ffec8c",
+          "#fff4bf",
+          "#fffbe6"
+        ]
+      },
+      "board-white": {
+        "role": "neutral",
+        "displayName": "Board White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#595959",
+          "#8c8c8c",
+          "#bfbfbf",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "deal-red": {
+        "role": "primary",
+        "displayName": "Deal Red",
+        "canonical": "#d7261e",
+        "tonalRamp": [
+          "#4b0d0a",
+          "#761510",
+          "#a11c16",
+          "#d7261e",
+          "#e36762",
+          "#ed9d9a",
+          "#f5c9c7",
+          "#fbe9e8"
+        ]
+      },
+      "deal-red-deep": {
+        "role": "primary",
+        "displayName": "Deal Red Deep",
+        "canonical": "#961b15",
+        "tonalRamp": [
+          "#340907",
+          "#520f0c",
+          "#701410",
+          "#961b15",
+          "#b65f5b",
+          "#d09896",
+          "#e5c6c4",
+          "#f4e8e8"
+        ]
+      },
+      "flyer-ink": {
+        "role": "neutral",
+        "displayName": "Flyer Ink",
+        "canonical": "#17181c",
+        "tonalRamp": [
+          "#08080a",
+          "#0d0d0f",
+          "#111215",
+          "#17181c",
+          "#5d5d60",
+          "#979799",
+          "#c5c5c6",
+          "#e8e8e8"
+        ]
+      },
+      "track-green": {
+        "role": "primary",
+        "displayName": "Track Green",
+        "canonical": "#0e7c66",
+        "tonalRamp": [
+          "#052b24",
+          "#084438",
+          "#0a5d4c",
+          "#0e7c66",
+          "#56a394",
+          "#93c4ba",
+          "#c3ded9",
+          "#e7f2f0"
+        ]
+      },
+      "programme-ink": {
+        "role": "neutral",
+        "displayName": "Programme Ink",
+        "canonical": "#111318",
+        "tonalRamp": [
+          "#060708",
+          "#090a0d",
+          "#0d0e12",
+          "#111318",
+          "#585a5d",
+          "#949597",
+          "#c4c4c5",
+          "#e7e7e8"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#595959",
+          "#8c8c8c",
+          "#bfbfbf",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "press-blue-30": {
+        "role": "derived",
+        "displayName": "Press Blue 30%",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "press-badge": {
+        "role": "derived",
+        "displayName": "Press Badge Ink",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "card-hairline": {
+        "role": "derived",
+        "displayName": "Card Hairline",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "boarding-yellow-30": {
+        "role": "derived",
+        "displayName": "Boarding Yellow 30%",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "boarding-yellow-deep": {
+        "role": "derived",
+        "displayName": "Boarding Yellow Deep",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "board-hairline": {
+        "role": "derived",
+        "displayName": "Board Hairline",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "board-muted": {
+        "role": "derived",
+        "displayName": "Board Muted",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "deal-red-30": {
+        "role": "derived",
+        "displayName": "Deal Red 30%",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "deal-red-track": {
+        "role": "derived",
+        "displayName": "Deal Red Track",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "track-green-30": {
+        "role": "derived",
+        "displayName": "Track Green 30%",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "track-green-track": {
+        "role": "derived",
+        "displayName": "Track Green Track",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "programme-hairline": {
+        "role": "derived",
+        "displayName": "Programme Hairline",
+        "note": "Computed by the renderer from the owner's tokens; value shown for the template default."
+      },
+      "alert-ink": {
+        "role": "semantic",
+        "displayName": "Alert Ink",
+        "note": "Fixed system color."
+      },
+      "alert-wash": {
+        "role": "semantic",
+        "displayName": "Alert Wash",
+        "note": "Fixed system color."
+      },
+      "shadow-ink": {
+        "role": "neutral",
+        "displayName": "Shadow Ink",
+        "note": "Fixed system color."
+      }
+    },
+    "typographyMeta": {
+      "card-name": {
+        "displayName": "Card name",
+        "purpose": "The owner's name on the letterpress card, debossed."
+      },
+      "card-label": {
+        "displayName": "Card label",
+        "purpose": "Tracked caps: title line and the Save Contact bar."
+      },
+      "board-plate": {
+        "displayName": "Board plate",
+        "purpose": "Station name plate at the top of the board."
+      },
+      "board-row": {
+        "displayName": "Board row",
+        "purpose": "Each departure (link) on the board."
+      },
+      "board-boarding": {
+        "displayName": "Now boarding",
+        "purpose": "The highlighted, newest link."
+      },
+      "flyer-masthead": {
+        "displayName": "Masthead",
+        "purpose": "Shop name in the flyer band."
+      },
+      "flyer-price-hero": {
+        "displayName": "Hero price",
+        "purpose": "First product's price numerals."
+      },
+      "flyer-price": {
+        "displayName": "Price",
+        "purpose": "Grid and carousel prices."
+      },
+      "programme-title": {
+        "displayName": "Event title",
+        "purpose": "The cover headline."
+      },
+      "programme-section": {
+        "displayName": "Section",
+        "purpose": "Programme, Getting there, form headings."
+      },
+      "programme-body": {
+        "displayName": "Body",
+        "purpose": "Details and timetable text, tabular figures."
+      },
+      "programme-countdown": {
+        "displayName": "Countdown",
+        "purpose": "Cover countdown numerals, tabular."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Badge, status chips, timetable track labels (11px floor)."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Meta labels and small caps."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Secondary lines."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Rows and paragraphs."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Flyer buttons and emphasized rows."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Product names and larger rows."
+      },
+      "heading-sm": {
+        "displayName": "Heading Sm",
+        "purpose": "Small section heads."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Section heads."
+      },
+      "heading-md": {
+        "displayName": "Heading Md",
+        "purpose": "Carousel heads."
+      },
+      "heading-lg": {
+        "displayName": "Heading Lg",
+        "purpose": "Large heads."
+      },
+      "display-sm": {
+        "displayName": "Display Sm",
+        "purpose": "Small display (prices in tight cells)."
+      },
+      "display-md": {
+        "displayName": "Display Md",
+        "purpose": "Carousel prices."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-in-hand",
+        "value": "0 2px 3px rgba(0,0,0,.06), 0 22px 44px -22px rgba(0,0,0,.4)",
+        "purpose": "Letterpress only: the card is a held object. No other style casts shadows."
+      }
+    ],
+    "motion": [
+      {
+        "name": "split-flap",
+        "value": "flap .62s steps(9,end) both",
+        "purpose": "One-time reveal of the board's boarding row; removed under prefers-reduced-motion."
+      },
+      {
+        "name": "countdown-tick",
+        "value": "1s interval, text only",
+        "purpose": "countdown.js updates numerals; no animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "390px"
+      },
+      {
+        "name": "wide",
+        "value": "620px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Save Contact bar",
+      "kind": "button",
+      "refersTo": "save-contact-bar",
+      "description": "The letterpress card's painted foot; downloads the owner's vCard.",
+      "html": "<div class=\"ds-lp-card\"><p class=\"ds-lp-name\">Sasha Fields</p><a class=\"ds-lp-bar\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M19 8v6M22 11h-6\"/></svg>SAVE CONTACT</a></div>",
+      "css": ".ds-lp-card{width:300px;border:6px solid #2340d6;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 2px 3px rgba(0,0,0,.06),0 22px 44px -22px rgba(0,0,0,.4);font-family:'Schibsted Grotesk',system-ui,sans-serif}.ds-lp-name{margin:24px 20px 40px;font-size:36px;font-weight:800;letter-spacing:-.025em;color:#14161c;text-shadow:0 1px 0 rgba(255,255,255,.85),0 -1px 1px rgba(0,0,0,.16)}.ds-lp-bar{display:flex;align-items:center;justify-content:center;gap:10px;height:66px;background:#2340d6;color:#fff;font-size:14px;font-weight:700;letter-spacing:.14em;text-decoration:none}.ds-lp-bar:hover{background:#1c33ab}.ds-lp-bar:focus-visible{outline:3px solid #14161c;outline-offset:-6px}"
+    },
+    {
+      "name": "Contact row",
+      "kind": "custom",
+      "refersTo": "ink",
+      "description": "Typeset contact action on the card's back: line icon, label, chevron, hairline.",
+      "html": "<a class=\"ds-lp-row\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#2340d6\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z\"/></svg>Call<span class=\"ds-chev\" aria-hidden=\"true\">\u203a</span></a>",
+      "css": ".ds-lp-row{display:flex;align-items:center;gap:14px;width:280px;padding:14px 2px;border-bottom:1px solid #e2e4ea;color:#14161c;font:600 16px 'Schibsted Grotesk',system-ui,sans-serif;text-decoration:none}.ds-chev{margin-left:auto;color:#6b6f7a;font-size:20px}.ds-lp-row:hover{color:#2340d6}.ds-lp-row:focus-visible{outline:2px solid #2340d6;outline-offset:2px}"
+    },
+    {
+      "name": "Boarding row",
+      "kind": "custom",
+      "refersTo": "board-row-boarding",
+      "description": "The newest link on the departure board, with destination, via host and status chip.",
+      "html": "<div class=\"ds-board\"><a class=\"ds-brd-now\" href=\"#\"><span class=\"ds-dest\">MY LATEST VIDEO</span><span class=\"ds-chip\">NOW BOARDING</span><span class=\"ds-via\">youtube.com</span></a><a class=\"ds-brd-row\" href=\"#\"><span class=\"ds-dest\">THE PODCAST</span><span class=\"ds-via\">example.com</span></a></div>",
+      "css": ".ds-board{width:340px;background:#1b2a6b;font-family:'Martian Mono',ui-monospace,monospace}.ds-brd-now,.ds-brd-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:'dest chip' 'via via';gap:4px 10px;padding:13px 18px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.18)}.ds-brd-now{background:#ffd400;padding:18px}.ds-dest{grid-area:dest;font-size:15px;font-weight:600;letter-spacing:.02em;color:#fff}.ds-brd-now .ds-dest{font-size:19px;color:#1b2a6b}.ds-via{grid-area:via;font-size:11px;letter-spacing:.06em;color:rgba(255,255,255,.72)}.ds-brd-now .ds-via{color:#1b2a6b}.ds-chip{grid-area:chip;align-self:center;font-size:11px;letter-spacing:.08em;padding:3px 7px;border-radius:2px;background:#1b2a6b;color:#ffd400}.ds-brd-row:hover .ds-dest{text-decoration:underline}.ds-brd-now:focus-visible,.ds-brd-row:focus-visible{outline:3px solid #ffd400;outline-offset:-3px}"
+    },
+    {
+      "name": "Flyer product with burst",
+      "kind": "card",
+      "refersTo": "flyer-burst",
+      "description": "Price-led product tile: thick accent rule, condensed name, superscript cents, twelve-point burst.",
+      "html": "<article class=\"ds-fl-prod\"><span class=\"ds-burst\">SAVE 20%</span><h2 class=\"ds-fl-name\">YOUR BEST SELLER</h2><p class=\"ds-fl-price\"><span class=\"ds-cur\">$</span><span class=\"ds-amt\">24</span><span class=\"ds-cents\">.99</span> <s>$31.00</s></p><a class=\"ds-fl-buy\" href=\"#\">BUY NOW</a></article>",
+      "css": ".ds-fl-prod{position:relative;width:300px;margin-top:60px;padding-top:12px;border-top:6px solid #d7261e;font-family:'Barlow Condensed','Arial Narrow',sans-serif;color:#17181c}.ds-fl-name{margin:0;padding-right:78px;font-size:20px;font-weight:800;line-height:1}.ds-fl-price{margin:8px 0;color:#961b15;font-weight:800}.ds-cur{font-size:20px;vertical-align:top}.ds-amt{font-size:76px;line-height:.85;letter-spacing:-.02em}.ds-cents{font-size:30px;vertical-align:top}.ds-fl-price s{font-size:18px;color:#6b6b6b;margin-left:8px}.ds-fl-buy{display:block;padding:12px;background:#d7261e;color:#fff;text-align:center;font-size:17px;font-weight:800;letter-spacing:.03em;border-radius:2px;text-decoration:none}.ds-fl-buy:hover{background:#961b15}.ds-fl-buy:focus-visible{outline:3px solid #17181c;outline-offset:2px}.ds-burst{position:absolute;top:-58px;right:-4px;width:76px;height:76px;display:flex;align-items:center;justify-content:center;padding:14px;text-align:center;font-size:13px;font-weight:800;line-height:1;color:#fff;transform:rotate(-8deg);isolation:isolate;background:linear-gradient(#961b15,#961b15) center/70.72% 70.72% no-repeat}.ds-burst::before,.ds-burst::after{content:'';position:absolute;inset:14.64%;background:#961b15;z-index:-1;transform:rotate(30deg)}.ds-burst::after{transform:rotate(60deg)}"
+    },
+    {
+      "name": "Programme actions",
+      "kind": "button",
+      "refersTo": "programme-tickets",
+      "description": "Get tickets (primary) beside Add to calendar (secondary, downloads .ics).",
+      "html": "<div class=\"ds-pg-act\"><a class=\"ds-pg-btn ds-pg-primary\" href=\"#\">Get tickets</a><a class=\"ds-pg-btn\" href=\"#\">Add to calendar</a></div>",
+      "css": ".ds-pg-act{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:340px;font-family:'Hanken Grotesk',system-ui,sans-serif}.ds-pg-btn{display:flex;align-items:center;justify-content:center;padding:12px 10px;border-radius:4px;border:1.5px solid #111318;color:#111318;font-size:15px;font-weight:600;white-space:nowrap;text-decoration:none}.ds-pg-primary{background:#0e7c66;border-color:#0e7c66;color:#fff}.ds-pg-btn:hover{background:#f1f3f2}.ds-pg-primary:hover{background:#0b6553}.ds-pg-btn:focus-visible{outline:3px solid #0e7c66;outline-offset:2px}"
+    },
+    {
+      "name": "Timetable row",
+      "kind": "custom",
+      "refersTo": "track-green",
+      "description": "Programme session: tabular time, 4px track bar cell, title, speaker and track.",
+      "html": "<div class=\"ds-pg-row\"><time>19:00</time><span class=\"ds-trk\" aria-hidden=\"true\"></span><div><strong>Keynote</strong><span>Speaker name</span><small>MAIN STAGE</small></div></div>",
+      "css": ".ds-pg-row{display:grid;grid-template-columns:56px 4px 1fr;gap:14px;width:340px;padding:12px 0;border-bottom:1px solid #e3e5e8;font-family:'Hanken Grotesk',system-ui,sans-serif;color:#111318;font-variant-numeric:tabular-nums}.ds-pg-row time{font-weight:700;font-size:15px}.ds-trk{background:#0e7c66;border-radius:1px}.ds-pg-row strong{display:block;font-size:16px}.ds-pg-row span{display:block;font-size:14px;color:#3d4148}.ds-pg-row small{display:block;margin-top:2px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#5b6068}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The owner's page, printed",
+    "overview": "Each template is a printed object the visitor already knows how to read: a business card, a departure board, a weekly flyer, a conference programme. The owner's four color tokens paint it, one self-hosted face sets it, and the server renders it from validated data. The classic card stays exactly as it was for existing pages.",
+    "keyCharacteristics": [
+      "One world per template, not one skeleton reskinned",
+      "Owner tokens drive every color",
+      "One OFL face per style, preloaded only when used",
+      "Click-to-load media, no third-party code until asked",
+      "Byte-identical classic output"
+    ],
+    "rules": [
+      {
+        "name": "The Owner's Brand Rule",
+        "body": "No template hard-codes its signature color; defaults only seed a new page.",
+        "section": "colors"
+      },
+      {
+        "name": "The Contrast Floor",
+        "body": "Text sits on a flat field; layered paint is drawn as separate layers, never as a gradient behind text.",
+        "section": "colors"
+      },
+      {
+        "name": "One Face",
+        "body": "Each style loads exactly one self-hosted face; other scripts fall back to the system stack.",
+        "section": "typography"
+      },
+      {
+        "name": "Held Object",
+        "body": "Only the letterpress card casts a shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do derive extra colors from the owner's tokens",
+      "Do give each new block a rule in every style sheet or the shared blocks.css look",
+      "Do keep functional text at 11px or larger"
+    ],
+    "donts": [
+      "Don't put text on a gradient",
+      "Don't use eyebrows, colored side-borders or icon tiles",
+      "Don't draw organic shapes with many-vertex clip-path",
+      "Don't change the classic style's output"
+    ]
+  }
+}
