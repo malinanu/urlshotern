@@ -24,10 +24,48 @@ routes are registered and the app behaves exactly as before.
 If the flag is on but a migration is missing, the server logs a warning and
 the affected endpoints return `503` instead of failing.
 
-In production, `docker/nginx.prod.conf` has a `location ^~ /m/` block. The app
-sends each page's Content-Security-Policy itself, and that block repeats the
-other security headers. The server-wide policy (`child-src 'self'`) would
-otherwise block the embedded players.
+The app sends each page's Content-Security-Policy itself. If you put the repo's
+nginx in front (`docker/nginx.prod.conf` or `docker/nginx.conf`), both have a
+`location ^~ /m/` block that keeps their site-wide policy off pages and repeats
+the other security headers. Without it, that site-wide policy would block the
+embedded players.
+
+### Behind CloudPanel and Cloudflare
+
+The production path is Cloudflare → the CloudPanel reverse-proxy vhost → the
+container (`docker-compose.oracle.yml`, port 8082). Neither of the repo's nginx
+files is involved, and **nothing needs to change** in CloudPanel or Cloudflare:
+
+- CloudPanel's vhost adds X-Frame-Options, nosniff, X-XSS-Protection,
+  X-Permitted-Cross-Domain-Policies, `Referrer-Policy: same-origin` and
+  `Cache-Control: no-transform`, but **no Content-Security-Policy**. Pages
+  therefore run under the app's own policy, which lets the players and map load.
+  Each player iframe sets its own `referrerpolicy`, so YouTube still receives
+  the origin it requires.
+- Form rate limits and visitor counts use Cloudflare's `CF-Connecting-IP`, and
+  the visitor's country comes from `CF-IPCountry`.
+- Cloudflare doesn't cache the pages (they send `private, no-cache`), and
+  `no-transform` keeps Rocket Loader and email obfuscation off. Both would break
+  pages, which allow no inline script.
+
+If you ever add a Content-Security-Policy in the CloudPanel vhost, exempt `/m/`
+so the app's policy stays the only one. Add this to the vhost (Sites → your
+site → Vhost), above its `location /` block:
+
+```nginx
+location ^~ /m/ {
+    proxy_pass http://127.0.0.1:8082;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # no add_header Content-Security-Policy here
+}
+```
+
+`docker/nginx.prod.conf` and `docker/nginx.conf` already have an equivalent
+`/m/` location for deployments that use them.
 
 ## Plans
 
