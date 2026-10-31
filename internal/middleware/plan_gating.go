@@ -26,6 +26,7 @@ const (
 	FeatureBranding    = "branding" // Enterprise white-label branding
 
 	FeatureRemoveBranding = "remove_branding" // Hide the "Made with Trunc" badge on microsites
+	FeatureMicrositeForms = "microsite_forms" // Newsletter / contact forms on microsites
 )
 
 // planFeatures maps DB plan names to allowed features.
@@ -36,12 +37,13 @@ var planFeatures = map[string][]string{
 	"premium": {
 		FeatureCityGeo, FeatureTimeSeries, FeatureHeatmap, FeatureUTM,
 		FeatureRealtime, FeatureLiveMap, FeatureBotFilter, FeatureCSVExport,
+		FeatureMicrositeForms,
 	},
 	"enterprise": {
 		FeatureCityGeo, FeatureTimeSeries, FeatureHeatmap, FeatureUTM,
 		FeatureRealtime, FeatureLiveMap, FeatureBotFilter, FeatureCSVExport,
 		FeatureAISummary, FeatureAIAnomaly, FeatureAIRecommend, FeatureForecast, FeatureAudience,
-		FeatureBranding, FeatureRemoveBranding,
+		FeatureBranding, FeatureRemoveBranding, FeatureMicrositeForms,
 	},
 }
 

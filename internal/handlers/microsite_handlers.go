@@ -33,7 +33,11 @@ type MicrositeHandlers struct {
 	refParser   *services.ReferrerParsingService
 	baseURL     string
 	uploadRoot  string
+	forms       *services.MicrositeFormService // nil: form blocks render but submissions are refused
 }
+
+// SetForms wires the form submission service.
+func (h *MicrositeHandlers) SetForms(forms *services.MicrositeFormService) { h.forms = forms }
 
 // NewMicrositeHandlers wires the microsite handlers. Any of billing,
 // shortener, botDetector may be nil (features degrade gracefully).
@@ -80,6 +84,7 @@ func MicrositeEntitlementsFromBilling(billing *services.BillingService) services
 		return models.MicrositeEntitlements{
 			MaxPages:       limits.MaxPages,
 			CanRemoveBadge: middleware.PlanHasFeature(planType, middleware.FeatureRemoveBranding),
+			CanUseForms:    middleware.PlanHasFeature(planType, middleware.FeatureMicrositeForms),
 			AnalyticsDays:  limits.Analytics,
 		}
 	}
@@ -127,6 +132,34 @@ func (h *MicrositeHandlers) ListMicrosites(c *gin.Context) {
 // ListMicrositeTemplates handles GET /api/v1/microsites/templates
 func (h *MicrositeHandlers) ListMicrositeTemplates(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"templates": services.MicrositeTemplates})
+}
+
+// PreviewMicrositeTemplate handles GET /api/v1/microsites/templates/:template/preview.
+// It renders a template's sample content for the create dialog, using the
+// caller's name and time zone when given.
+func (h *MicrositeHandlers) PreviewMicrositeTemplate(c *gin.Context) {
+	id := c.Param("template")
+	if !services.IsMicrositeTemplate(id) {
+		writeMicrositeError(c, services.ErrMicrositeInvalidTmpl)
+		return
+	}
+	name := c.Query("name")
+	if len([]rune(name)) > 80 {
+		name = string([]rune(name)[:80])
+	}
+	content := services.BuildMicrositeTemplate(id, strings.TrimSpace(name), c.Query("tz"))
+	html, err := services.RenderMicrosite(content, services.MicrositeRenderOptions{
+		BaseURL:   h.baseURL,
+		Title:     name,
+		ShowBadge: true,
+		Preview:   true,
+	})
+	if err != nil {
+		writeMicrositeError(c, err)
+		return
+	}
+	c.Header("Cache-Control", "private, max-age=300")
+	c.JSON(http.StatusOK, gin.H{"html": string(html)})
 }
 
 // CreateMicrosite handles POST /api/v1/microsites
@@ -251,11 +284,12 @@ func (h *MicrositeHandlers) PreviewMicrosite(c *gin.Context) {
 	}
 	ent := h.sites.Entitlements(userID)
 	html, err := services.RenderMicrosite(req.Content, services.MicrositeRenderOptions{
-		BaseURL:   h.baseURL,
-		Slug:      strings.ToLower(strings.TrimSpace(req.Slug)),
-		Title:     req.Title,
-		ShowBadge: !(req.Content.Settings.HideBadge && ent.CanRemoveBadge),
-		Preview:   true,
+		BaseURL:      h.baseURL,
+		Slug:         strings.ToLower(strings.TrimSpace(req.Slug)),
+		Title:        req.Title,
+		ShowBadge:    !(req.Content.Settings.HideBadge && ent.CanRemoveBadge),
+		Preview:      true,
+		FormsEnabled: ent.CanUseForms,
 	})
 	if err != nil {
 		writeMicrositeError(c, err)
@@ -401,13 +435,14 @@ func writeMicrositeError(c *gin.Context, err error) {
 	switch {
 	case errors.As(err, &verr):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "validation_error", "message": verr.Message, "field": verr.Field})
-	case errors.Is(err, services.ErrMicrositeNotFound), errors.Is(err, services.ErrAssetNotFound):
+	case errors.Is(err, services.ErrMicrositeNotFound), errors.Is(err, services.ErrAssetNotFound),
+		errors.Is(err, services.ErrSubmissionNotFound):
 		c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: err.Error()})
 	case errors.Is(err, services.ErrMicrositeSlugTaken):
 		c.JSON(http.StatusConflict, models.ErrorResponse{Error: "slug_taken", Message: err.Error()})
 	case errors.Is(err, services.ErrMicrositeVersion):
 		c.JSON(http.StatusConflict, models.ErrorResponse{Error: "version_conflict", Message: err.Error()})
-	case errors.Is(err, services.ErrMicrositeBadgeLocked):
+	case errors.Is(err, services.ErrMicrositeBadgeLocked), errors.Is(err, services.ErrMicrositeFormsLocked):
 		c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "plan_upgrade_required", Message: err.Error()})
 	case errors.Is(err, services.ErrMicrositeInvalidTmpl):
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_request", Message: err.Error()})

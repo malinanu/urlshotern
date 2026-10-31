@@ -720,7 +720,13 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 func setupMicrositePublicRoutes(router *gin.Engine, h *handlers.MicrositeHandlers) {
 	router.GET("/m/:slug", h.ServeMicrositePage)
 	router.GET("/m/:slug/vcard", h.ServeMicrositeVCard)
-	router.GET("/m-static/beacon.js", h.ServeMicrositeBeacon)
+	router.GET("/m/:slug/ics", h.ServeMicrositeICS)
+	router.POST("/m/:slug/submit",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		h.SubmitMicrositeForm,
+	)
+	router.GET("/m-static/:file", h.ServeMicrositeScript)
+	router.GET("/m-static/fonts/:file", h.ServeMicrositeFont)
 	router.GET("/uploads/m/*path", h.ServeMicrositeUpload)
 	router.POST("/api/v1/m/:slug/event",
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
@@ -736,6 +742,7 @@ func setupMicrositeRoutes(api *gin.RouterGroup, h *handlers.MicrositeHandlers) {
 	sites.GET("", h.ListMicrosites)
 	sites.POST("", h.CreateMicrosite)
 	sites.GET("/templates", h.ListMicrositeTemplates)
+	sites.GET("/templates/:template/preview", h.PreviewMicrositeTemplate)
 	sites.GET("/slug-available", h.CheckMicrositeSlug)
 	sites.POST("/preview", h.PreviewMicrosite)
 	sites.GET("/assets", h.ListMicrositeAssets)
@@ -749,6 +756,9 @@ func setupMicrositeRoutes(api *gin.RouterGroup, h *handlers.MicrositeHandlers) {
 	sites.GET("/:id/analytics", own, h.GetMicrositeAnalytics)
 	sites.POST("/:id/assets", own, h.UploadMicrositeAsset)
 	sites.POST("/:id/short-link", own, h.CreateMicrositeShortLink)
+	sites.GET("/:id/submissions", own, h.ListMicrositeSubmissions)
+	sites.GET("/:id/submissions/export", own, h.ExportMicrositeSubmissions)
+	sites.DELETE("/:id/submissions/:sid", own, h.DeleteMicrositeSubmission)
 }
 
 // setupStaticRoutes configures static file serving for the frontend.

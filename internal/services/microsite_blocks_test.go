@@ -197,7 +197,7 @@ func TestContactButtonsNormalizeWhatsApp(t *testing.T) {
 
 func TestTemplatesAreValid(t *testing.T) {
 	for _, tmpl := range MicrositeTemplates {
-		if _, err := NormalizeMicrositeContent(BuildMicrositeTemplate(tmpl.ID, "Sasha Fields")); err != nil {
+		if _, err := NormalizeMicrositeContent(BuildMicrositeTemplate(tmpl.ID, "Sasha Fields", "UTC")); err != nil {
 			t.Errorf("template %s does not validate: %v", tmpl.ID, err)
 		}
 	}
@@ -227,4 +227,13 @@ func TestDraftAllowsIncompleteButNotUnsafe(t *testing.T) {
 	if _, err := NormalizeMicrositeDraft(models.MicrositeContent{Theme: models.MicrositeTheme{Accent: "red"}}); err == nil {
 		t.Fatal("draft must still reject invalid theme values")
 	}
+}
+
+func mustJSON(t *testing.T, v interface{}) json.RawMessage {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

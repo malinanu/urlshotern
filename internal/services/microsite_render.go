@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/URLshorter/url-shortener/internal/models"
@@ -16,13 +17,15 @@ import (
 var (
 	//go:embed microsite_web/page.html.tmpl
 	micrositePageTemplate string
+	//go:embed microsite_web/blocks.html.tmpl
+	micrositeBlocksTemplate string
 	//go:embed microsite_web/page.css
 	micrositeBaseCSS string
 	// MicrositeBeaconJS is the click-tracking script served at /m-static/beacon.js.
 	//go:embed microsite_web/beacon.js
 	MicrositeBeaconJS []byte
 
-	micrositeTmpl = template.Must(template.New("page").Parse(micrositePageTemplate))
+	micrositeTmpl = template.Must(template.Must(template.New("page").Parse(micrositePageTemplate)).Parse(micrositeBlocksTemplate))
 )
 
 // MicrositeBeaconPath is where the beacon script is served.
@@ -51,6 +54,17 @@ type MicrositeRenderOptions struct {
 	Title     string
 	ShowBadge bool
 	Preview   bool // builder preview: no tracking script, links open nothing
+
+	// Forms (v2). FormsEnabled is false when the owner's plan lacks forms; form
+	// blocks are then not rendered. FormToken signs a render-time token.
+	FormsEnabled bool
+	FormToken    func(blockID string) string
+	SentBlock    string // block whose submission just succeeded (?sent=)
+	ErrorBlock   string // block whose submission failed (?form_error=)
+	ErrorCode    string
+	Now          time.Time // render time (countdowns); zero means time.Now()
+
+	style string // set by RenderMicrosite from the theme
 }
 
 type micrositePageView struct {
@@ -69,6 +83,14 @@ type micrositePageView struct {
 	BadgeURL     string
 	BeaconSrc    string
 	EventURL     string
+
+	// v2 styles and blocks. All empty for classic pages without v2 blocks,
+	// which therefore render exactly as before.
+	BodyClass    string
+	Groups       []blockGroup
+	ExtraCSS     template.CSS
+	FontPreloads []string
+	Scripts      []string
 }
 
 type micrositeBlockView struct {
@@ -82,6 +104,15 @@ type micrositeBlockView struct {
 	Text     *models.TextData
 	Image    *imageView
 	Divider  string
+
+	Product   *productView
+	Carousel  *carouselView
+	Event     *eventView
+	Countdown *countdownView
+	Agenda    *agendaView
+	Map       *mapView
+	Embed     *embedView
+	Form      *formView
 }
 
 type profileView struct {
@@ -103,6 +134,8 @@ type linkView struct {
 	Highlight bool
 	Thumb     string
 	External  bool
+	Via       string // board style: destination host, shown as a column
+	Status    string // board style: status chip for the highlighted link
 }
 
 type contactView struct {
@@ -164,6 +197,7 @@ func RenderMicrosite(content models.MicrositeContent, opts MicrositeRenderOption
 		view.EventURL = "/api/v1/m/" + url.PathEscape(opts.Slug) + "/event"
 	}
 
+	opts.style = theme.Style
 	var firstProfile *models.ProfileHeaderData
 	for _, b := range content.Blocks {
 		if b.Hidden {
@@ -196,6 +230,8 @@ func RenderMicrosite(content models.MicrositeContent, opts MicrositeRenderOption
 			view.OGImage = absoluteAssetURL(firstProfile.AvatarURL, base)
 		}
 	}
+
+	applyV2Layout(&view, theme, base)
 
 	var buf bytes.Buffer
 	if err := micrositeTmpl.Execute(&buf, view); err != nil {
@@ -236,12 +272,19 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 			if err != nil {
 				continue
 			}
-			bv.Links = append(bv.Links, linkView{
+			lv := linkView{
 				BlockID: b.ID, ID: it.ID, Label: it.Label, Highlight: it.Highlight,
 				Href:     template.URL(href), // #nosec G203 -- scheme allowlisted by SanitizeMicrositeLinkURL
 				Thumb:    absoluteAssetURL(it.ThumbnailURL, base),
 				External: strings.HasPrefix(href, "http"),
-			})
+			}
+			if opts.style == MicrositeStyleBoard {
+				lv.Via = linkVia(href)
+				if it.Highlight {
+					lv.Status = "Now boarding"
+				}
+			}
+			bv.Links = append(bv.Links, lv)
 		}
 
 	case models.ContactButtonsData:
@@ -293,6 +336,10 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 
 	case models.DividerData:
 		bv.Divider = d.Style
+
+	default:
+		ok := buildV2BlockView(&bv, data, base, opts)
+		return bv, nil, ok
 	}
 	return bv, nil, true
 }

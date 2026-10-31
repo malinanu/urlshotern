@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +29,17 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 	config.AllowCredentials = true
 
-	return cors.New(config)
+	handler := cors.New(config)
+	return func(c *gin.Context) {
+		// Public page assets (self-hosted fonts) are fetched in CORS mode by any
+		// page, including the builder's sandboxed preview (Origin: null). They
+		// carry no credentials and set Access-Control-Allow-Origin: * themselves.
+		if strings.HasPrefix(c.Request.URL.Path, "/m-static/") {
+			c.Next()
+			return
+		}
+		handler(c)
+	}
 }
 
 // SecurityHeadersMiddleware adds security headers to all responses, including

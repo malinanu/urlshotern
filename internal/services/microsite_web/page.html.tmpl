@@ -18,51 +18,18 @@
 {{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
 {{if .Favicon}}<link rel="icon" href="{{.Favicon}}">{{end}}
 {{if .Preview}}<base target="_blank">{{end}}
-<style>{{.BaseCSS}}{{.ThemeCSS}}</style>
+{{range .FontPreloads}}<link rel="preload" href="{{.}}" as="font" type="font/woff2" crossorigin>{{end}}<style>{{.BaseCSS}}{{.ThemeCSS}}{{.ExtraCSS}}</style>
 </head>
-<body>
+<body{{if .BodyClass}} class="{{.BodyClass}}"{{end}}>
 {{if .BgImage}}<img class="bg-image" src="{{.BgImage}}" alt=""><div class="bg-overlay"></div>{{end}}
 <main class="page">
-<div class="card">
-{{range .Blocks}}
-{{if eq .Type "profile_header"}}{{with .Profile}}
-<header class="profile">
-  {{if .AvatarURL}}<img class="avatar" src="{{.AvatarURL}}" alt="{{.DisplayName}}" width="104" height="104">{{else if .Initial}}<div class="avatar avatar-fallback" aria-hidden="true">{{.Initial}}</div>{{end}}
-  {{if .DisplayName}}<h1>{{.DisplayName}}{{if .Verified}}<svg class="icon verified" viewBox="0 0 24 24" role="img" aria-label="Verified"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>{{end}}</h1>{{end}}
-  {{if .Pronouns}}<span class="pronouns">{{.Pronouns}}</span>{{end}}
-  {{if .Role}}<p class="role">{{.Role}}</p>{{end}}
-  {{if .CompanyLogoURL}}<img class="company-logo" src="{{.CompanyLogoURL}}" alt="{{.Company}}">{{end}}
-  {{if .Location}}<span class="location"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{.Location}}</span>{{end}}
-  {{if .Bio}}<p class="bio">{{.Bio}}</p>{{end}}
-</header>
-{{end}}{{end}}
-{{if eq .Type "vcard_action"}}{{with .VCard}}
-<a class="btn btn-primary" href="{{.Href}}" rel="nofollow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>{{.ButtonText}}</a>
-{{end}}{{end}}
-{{if eq .Type "contact_buttons"}}
-<nav class="contacts" aria-label="Contact">
-{{range .Contacts}}<a class="contact" href="{{.Href}}" data-track="{{.Kind}}" data-block="{{.BlockID}}" data-item="{{.ID}}"{{if .External}} target="_blank" rel="noopener noreferrer"{{end}}><span class="ico">{{.Icon}}</span>{{.Label}}</a>
-{{end}}</nav>
-{{end}}
-{{if eq .Type "link_list"}}
-<nav class="links" aria-label="Links">
-{{range .Links}}<a class="btn{{if .Highlight}} btn-primary{{end}}" href="{{.Href}}" data-track="click" data-block="{{.BlockID}}" data-item="{{.ID}}"{{if .External}} target="_blank" rel="noopener noreferrer"{{end}}>{{if .Thumb}}<img class="thumb" src="{{.Thumb}}" alt="" width="36" height="36">{{end}}{{.Label}}</a>
-{{end}}</nav>
-{{end}}
-{{if eq .Type "social_icons"}}
-<nav class="socials" aria-label="Social profiles">
-{{range .Socials}}<a class="circle" href="{{.Href}}" data-track="click" data-block="{{.BlockID}}" data-item="{{.ID}}" target="_blank" rel="noopener noreferrer me" aria-label="{{.Name}}" title="{{.Name}}">{{if .Icon}}{{.Icon}}{{else}}{{.Monogram}}{{end}}</a>
-{{end}}</nav>
-{{end}}
-{{if eq .Type "text"}}{{with .Text}}<p class="text{{if eq .Align "center"}} center{{end}}">{{.Text}}</p>{{end}}{{end}}
-{{if eq .Type "image"}}{{with .Image}}<figure class="image">{{if .Href}}<a href="{{.Href}}" data-track="click" data-block="{{.BlockID}}" target="_blank" rel="noopener noreferrer"><img src="{{.Src}}" alt="{{.Alt}}" loading="lazy"></a>{{else}}<img src="{{.Src}}" alt="{{.Alt}}" loading="lazy">{{end}}</figure>{{end}}{{end}}
-{{if eq .Type "divider"}}{{if eq .Divider "space"}}<div class="spacer" aria-hidden="true"></div>{{else}}<hr class="divider">{{end}}{{end}}
-{{else}}
+{{if .Groups}}{{range .Groups}}<div class="{{.Class}}">{{range .Blocks}}{{template "block" .}}{{end}}</div>{{end}}{{else}}<div class="card">
+{{range .Blocks}}{{template "block" .}}{{else}}
 <p class="empty">This page has no content yet.</p>
 {{end}}
-</div>
+</div>{{end}}
 {{if .ShowBadge}}<footer class="badge"><a href="{{.BadgeURL}}" rel="noopener">Made with Trunc</a></footer>{{end}}
 </main>
-{{if .BeaconSrc}}<script src="{{.BeaconSrc}}" data-endpoint="{{.EventURL}}" defer></script>{{end}}
+{{if .BeaconSrc}}<script src="{{.BeaconSrc}}" data-endpoint="{{.EventURL}}" defer></script>{{end}}{{range .Scripts}}<script src="{{.}}" defer></script>{{end}}
 </body>
 </html>

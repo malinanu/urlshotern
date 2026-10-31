@@ -70,7 +70,7 @@ func TestRenderMicrositeDropsUnsafeLinks(t *testing.T) {
 }
 
 func TestRenderMicrositeMetaAndTracking(t *testing.T) {
-	c := BuildMicrositeTemplate(MicrositeTemplateExecutive, "Sasha Fields")
+	c := BuildMicrositeTemplate(MicrositeTemplateExecutive, "Sasha Fields", "UTC")
 	pub := renderString(t, c, MicrositeRenderOptions{BaseURL: "https://trunc.site/", Slug: "sasha", Title: "Sasha", ShowBadge: true})
 	for _, want := range []string{
 		`<link rel="canonical" href="https://trunc.site/m/sasha">`,
@@ -131,7 +131,7 @@ func TestBlendHex(t *testing.T) {
 }
 
 func TestMicrositeBlockLabels(t *testing.T) {
-	labels := MicrositeBlockLabels(BuildMicrositeTemplate(MicrositeTemplateCreator, "X"))
+	labels := MicrositeBlockLabels(BuildMicrositeTemplate(MicrositeTemplateCreator, "X", "UTC"))
 	if labels["blk_links/itm_latest"] != "My latest video" || labels["blk_social/itm_youtube"] != "YouTube" {
 		t.Errorf("labels = %v", labels)
 	}

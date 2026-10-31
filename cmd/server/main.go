@@ -142,6 +142,11 @@ func main() {
 				config.BaseURL,
 				assetStore.Root(),
 			)
+			forms := services.NewMicrositeFormService(db, redis, emailService, config.JWTSecret, config.BaseURL)
+			handler.MicrositeHandlers.SetForms(forms)
+			if err := forms.Ready(); err != nil {
+				log.Printf("Warning: page forms not ready (apply migration 047): %v", err)
+			}
 			authService.OnAccountDeleted(func(userID int64) {
 				if err := assetStore.DeleteUserFiles(userID); err != nil {
 					log.Printf("Warning: failed to remove microsite uploads for user %d: %v", userID, err)

@@ -21,6 +21,17 @@ const (
 	BlockTypeText           = "text"
 	BlockTypeImage          = "image"
 	BlockTypeDivider        = "divider"
+
+	// v2 blocks
+	BlockTypeProductCard     = "product_card"
+	BlockTypeProductCarousel = "product_carousel"
+	BlockTypeEventDetails    = "event_details"
+	BlockTypeCountdown       = "countdown"
+	BlockTypeAgenda          = "agenda"
+	BlockTypeMap             = "map"
+	BlockTypeVideo           = "video"
+	BlockTypeAudio           = "audio"
+	BlockTypeForm            = "form"
 )
 
 // Microsite telemetry event types
@@ -32,6 +43,9 @@ const (
 	MicrositeEventSMS           = "sms"
 	MicrositeEventEmail         = "email"
 	MicrositeEventWhatsApp      = "whatsapp"
+	MicrositeEventFormSubmit    = "form_submit"
+	MicrositeEventCalendarAdd   = "calendar_add"
+	MicrositeEventVideoPlay     = "video_play"
 )
 
 // Microsite is a user-owned micro-landing page served at /m/<slug>.
@@ -75,14 +89,15 @@ type MicrositeContent struct {
 // validated values; raw CSS is never accepted.
 type MicrositeTheme struct {
 	Background   MicrositeBackground `json:"background"`
-	CardFill     string              `json:"card_fill"`     // #rrggbb
-	Accent       string              `json:"accent"`        // #rrggbb
-	ButtonText   string              `json:"button_text"`   // #rrggbb, text on accent buttons
-	Text         string              `json:"text"`          // #rrggbb
-	Font         string              `json:"font"`          // system | serif | mono | rounded | humanist | geometric
-	ButtonRadius string              `json:"button_radius"` // sharp | rounded | pill
-	Shadow       string              `json:"shadow"`        // none | soft | strong
-	AvatarBorder string              `json:"avatar_border"` // none | thin | thick
+	CardFill     string              `json:"card_fill"`       // #rrggbb
+	Accent       string              `json:"accent"`          // #rrggbb
+	ButtonText   string              `json:"button_text"`     // #rrggbb, text on accent buttons
+	Text         string              `json:"text"`            // #rrggbb
+	Font         string              `json:"font"`            // system | serif | mono | rounded | humanist | geometric
+	ButtonRadius string              `json:"button_radius"`   // sharp | rounded | pill
+	Shadow       string              `json:"shadow"`          // none | soft | strong
+	AvatarBorder string              `json:"avatar_border"`   // none | thin | thick
+	Style        string              `json:"style,omitempty"` // classic | letterpress | board | flyer | programme
 }
 
 // MicrositeBackground describes the page background.
@@ -215,6 +230,7 @@ type CreateMicrositeRequest struct {
 	Title    string `json:"title"`
 	Slug     string `json:"slug"`
 	Template string `json:"template"`
+	Timezone string `json:"timezone,omitempty"` // creator's IANA zone; seeds event templates
 }
 
 // UpdateMicrositeRequest saves the draft. Version must match the stored
@@ -237,6 +253,7 @@ type MicrositeTemplateInfo struct {
 type MicrositeEntitlements struct {
 	MaxPages       int  `json:"max_pages"` // -1 = unlimited
 	CanRemoveBadge bool `json:"can_remove_badge"`
+	CanUseForms    bool `json:"can_use_forms"`
 	AnalyticsDays  int  `json:"analytics_days"`
 	UsedPages      int  `json:"used_pages"`
 	CanCreateMore  bool `json:"can_create_more"`
@@ -282,6 +299,9 @@ type MicrositeAnalytics struct {
 	LinkClicks       int64                  `json:"link_clicks"`
 	VCardDownloads   int64                  `json:"vcard_downloads"`
 	ContactActions   map[string]int64       `json:"contact_actions"`
+	FormSubmits      int64                  `json:"form_submits"`
+	CalendarAdds     int64                  `json:"calendar_adds"`
+	VideoPlays       int64                  `json:"video_plays"`
 	CTR              float64                `json:"ctr"`               // (link clicks + contact actions) / views * 100
 	ContactSaveRate  float64                `json:"contact_save_rate"` // vcard downloads / unique views * 100
 	Daily            []MicrositeDailyPoint  `json:"daily"`
@@ -315,4 +335,107 @@ type MicrositeBlockClicks struct {
 	EventType string `json:"event_type"`
 	Label     string `json:"label"`
 	Count     int64  `json:"count"`
+}
+
+// ---- v2 block payloads --------------------------------------------------------
+
+// ProductItem is one product (used by product_card and product_carousel).
+type ProductItem struct {
+	ID           string `json:"id,omitempty"`
+	ImageURL     string `json:"image_url,omitempty"`
+	Name         string `json:"name"`
+	Price        string `json:"price,omitempty"`         // display text, e.g. "$24.99" or "LKR 2,500"
+	ComparePrice string `json:"compare_price,omitempty"` // previous price, shown struck through
+	Badge        string `json:"badge,omitempty"`
+	Description  string `json:"description,omitempty"`
+	BuyURL       string `json:"buy_url,omitempty"`
+	ButtonText   string `json:"button_text,omitempty"`
+}
+
+// ProductCarouselData is a horizontal strip of products.
+type ProductCarouselData struct {
+	Title string        `json:"title,omitempty"`
+	Items []ProductItem `json:"items"`
+}
+
+// EventDetailsData describes an event. Times are local wall-clock values
+// ("2006-01-02T15:04") in the IANA Timezone.
+type EventDetailsData struct {
+	Title             string `json:"title"`
+	Start             string `json:"start"`
+	End               string `json:"end,omitempty"`
+	Timezone          string `json:"timezone"`
+	Venue             string `json:"venue,omitempty"`
+	Address           string `json:"address,omitempty"`
+	TicketURL         string `json:"ticket_url,omitempty"`
+	TicketText        string `json:"ticket_text,omitempty"`
+	ShowAddToCalendar bool   `json:"show_add_to_calendar"`
+}
+
+// CountdownData counts down to a moment.
+type CountdownData struct {
+	Target   string `json:"target"`
+	Timezone string `json:"timezone"`
+	Label    string `json:"label,omitempty"`
+	DoneText string `json:"done_text,omitempty"`
+}
+
+// AgendaData is a timetable.
+type AgendaData struct {
+	Title string       `json:"title,omitempty"`
+	Items []AgendaItem `json:"items"`
+}
+
+// AgendaItem is one session.
+type AgendaItem struct {
+	ID      string `json:"id"`
+	Time    string `json:"time,omitempty"`
+	Title   string `json:"title"`
+	Speaker string `json:"speaker,omitempty"`
+	Track   string `json:"track,omitempty"`
+	Detail  string `json:"detail,omitempty"`
+}
+
+// MapData is a location with directions and an optional embedded map.
+type MapData struct {
+	Label   string   `json:"label,omitempty"`
+	Address string   `json:"address"`
+	Lat     *float64 `json:"lat,omitempty"`
+	Lng     *float64 `json:"lng,omitempty"`
+	Zoom    int      `json:"zoom,omitempty"`
+}
+
+// VideoData is a YouTube or Vimeo video, rendered click-to-load.
+type VideoData struct {
+	URL       string `json:"url"`
+	Title     string `json:"title,omitempty"`
+	PosterURL string `json:"poster_url,omitempty"`
+}
+
+// AudioData is a Spotify embed, rendered click-to-load.
+type AudioData struct {
+	URL   string `json:"url"`
+	Title string `json:"title,omitempty"`
+}
+
+// FormData is a newsletter or contact form (Pro and Ultra plans).
+type FormData struct {
+	Kind        string `json:"kind"` // newsletter | contact
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	ButtonText  string `json:"button_text,omitempty"`
+	SuccessText string `json:"success_text,omitempty"`
+	ConsentText string `json:"consent_text,omitempty"`
+	Notify      bool   `json:"notify"`
+}
+
+// MicrositeSubmission is one form submission.
+type MicrositeSubmission struct {
+	ID        int64     `json:"id"`
+	BlockID   string    `json:"block_id"`
+	Kind      string    `json:"kind"`
+	Email     string    `json:"email,omitempty"`
+	Name      string    `json:"name,omitempty"`
+	Message   string    `json:"message,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }

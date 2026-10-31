@@ -337,3 +337,20 @@ func (r *RedisStorage) LPush(key string, value interface{}) error {
 func (r *RedisStorage) RPop(key string) (string, error) {
 	return r.client.RPop(r.ctx, key).Result()
 }
+// IncrWindow increments key and starts a TTL window on the first hit,
+// returning the count within the window (fixed-window rate limiting).
+func (r *RedisStorage) IncrWindow(key string, window time.Duration) (int64, error) {
+	count, err := r.client.Incr(r.ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if count == 1 {
+		r.client.Expire(r.ctx, key, window)
+	}
+	return count, nil
+}
+
+// SetNX sets key only if it does not exist, returning whether it was set.
+func (r *RedisStorage) SetNX(key string, value interface{}, ttl time.Duration) (bool, error) {
+	return r.client.SetNX(r.ctx, key, value, ttl).Result()
+}

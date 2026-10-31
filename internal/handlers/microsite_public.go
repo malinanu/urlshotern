@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html"
 	"io"
 	"log"
@@ -30,26 +31,57 @@ func (h *MicrositeHandlers) ServeMicrositePage(c *gin.Context) {
 		h.publicError(c, err)
 		return
 	}
-	body, err := services.RenderMicrosite(page.Content, services.MicrositeRenderOptions{
-		BaseURL:   h.baseURL,
-		Slug:      page.Slug,
-		Title:     page.Title,
-		ShowBadge: page.ShowBadge,
-	})
+	opts := services.MicrositeRenderOptions{
+		BaseURL:      h.baseURL,
+		Slug:         page.Slug,
+		Title:        page.Title,
+		ShowBadge:    page.ShowBadge,
+		FormsEnabled: page.FormsEnabled && h.forms != nil,
+		SentBlock:    c.Query("sent"),
+	}
+	if code := c.Query("form_error"); code != "" {
+		opts.ErrorBlock, opts.ErrorCode = c.Query("b"), code
+	}
+	if h.forms != nil {
+		now := time.Now()
+		opts.FormToken = func(blockID string) string { return h.forms.Token(page.ID, blockID, now) }
+	}
+	body, err := services.RenderMicrosite(page.Content, opts)
 	if err != nil {
 		log.Printf("microsites: render %s: %v", page.Slug, err)
 		h.publicError(c, err)
 		return
 	}
 
-	ev := h.buildEvent(c, page, models.MicrositeEventView, "", "")
-	utils.Go("microsite_view", func() error { return h.analytics.RecordEvent(ev) })
+	// The redirect back after a form submission is not a new view.
+	if opts.SentBlock == "" && opts.ErrorBlock == "" {
+		ev := h.buildEvent(c, page, models.MicrositeEventView, "", "")
+		utils.Go("microsite_view", func() error { return h.analytics.RecordEvent(ev) })
+	}
 
 	// Not cached at shared caches so every view reaches the server and is counted.
 	c.Header("Cache-Control", "private, no-cache")
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+	c.Header("Content-Security-Policy", micrositePageCSP(h.baseURL))
 	c.Data(http.StatusOK, "text/html; charset=utf-8", body)
+}
+
+// micrositeFrameSrc lists the only origins a page may frame: the click-to-load
+// players and the map, whose URLs the server builds from validated IDs.
+const micrositeFrameSrc = "https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com https://www.openstreetmap.org"
+
+// micrositePageCSP is the policy for public pages: no inline script, only the
+// embed hosts may be framed, and forms post back to this site. nginx passes
+// it through for /m/ (see docker/nginx.prod.conf).
+func micrositePageCSP(baseURL string) string {
+	self := "'self'"
+	if u, err := url.Parse(baseURL); err == nil && u.Scheme != "" && u.Host != "" {
+		self += " " + u.Scheme + "://" + u.Host
+	}
+	return "default-src 'none'; script-src " + self + "; style-src 'self' 'unsafe-inline'; img-src " + self +
+		" data: https:; font-src " + self + "; connect-src " + self + "; frame-src " + micrositeFrameSrc +
+		"; form-action " + self + "; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
 }
 
 // ServeMicrositeVCard handles GET /m/:slug/vcard?b=<blockID> — the .vcf download.
@@ -145,11 +177,69 @@ func (h *MicrositeHandlers) RecordMicrositeEvent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// ServeMicrositeBeacon handles GET /m-static/beacon.js
-func (h *MicrositeHandlers) ServeMicrositeBeacon(c *gin.Context) {
+// ServeMicrositeScript handles GET /m-static/:file (beacon.js, embed.js, countdown.js).
+func (h *MicrositeHandlers) ServeMicrositeScript(c *gin.Context) {
+	js, ok := services.MicrositeStaticScript("/m-static/" + c.Param("file"))
+	if !ok {
+		c.Status(http.StatusNotFound)
+		return
+	}
 	c.Header("Cache-Control", "public, max-age=86400")
 	c.Header("X-Content-Type-Options", "nosniff")
-	c.Data(http.StatusOK, "application/javascript; charset=utf-8", services.MicrositeBeaconJS)
+	c.Data(http.StatusOK, "application/javascript; charset=utf-8", js)
+}
+
+// ServeMicrositeFont handles GET /m-static/fonts/:file (self-hosted OFL woff2).
+func (h *MicrositeHandlers) ServeMicrositeFont(c *gin.Context) {
+	b, ok := services.MicrositeFontFile(c.Param("file"))
+	if !ok {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Access-Control-Allow-Origin", "*") // fonts preload with crossorigin
+	c.Data(http.StatusOK, "font/woff2", b)
+}
+
+// ServeMicrositeICS handles GET /m/:slug/ics?b=<blockID> — "Add to calendar".
+func (h *MicrositeHandlers) ServeMicrositeICS(c *gin.Context) {
+	page, err := h.sites.GetPublishedBySlug(c.Param("slug"))
+	if err != nil {
+		h.publicError(c, err)
+		return
+	}
+	want := c.Query("b")
+	for _, b := range page.Content.Blocks {
+		if b.Hidden || b.Type != models.BlockTypeEventDetails || (want != "" && b.ID != want) {
+			continue
+		}
+		data, err := services.DecodeMicrositeBlockData(b.Type, b.Data, "block", true)
+		if err != nil {
+			continue
+		}
+		ev := data.(models.EventDetailsData)
+		pageURL := h.publicURL(page.Slug)
+		ics, err := services.BuildICS(ev, fmt.Sprintf("%s-%d@%s", b.ID, page.ID, hostOf(h.baseURL)), pageURL, time.Now())
+		if err != nil {
+			continue
+		}
+		event := h.buildEvent(c, page, models.MicrositeEventCalendarAdd, b.ID, "")
+		utils.Go("microsite_calendar", func() error { return h.analytics.RecordEvent(event) })
+		c.Header("Content-Disposition", `attachment; filename="`+services.ICSFilename(ev.Title, page.Slug)+`"`)
+		c.Header("Cache-Control", "private, no-store")
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Data(http.StatusOK, "text/calendar; charset=utf-8", ics)
+		return
+	}
+	h.publicError(c, services.ErrMicrositeNotFound)
+}
+
+func hostOf(base string) string {
+	if u, err := url.Parse(base); err == nil && u.Host != "" {
+		return u.Host
+	}
+	return "trunc.site"
 }
 
 // ServeMicrositeUpload handles GET /uploads/m/*path. Only content-addressed,

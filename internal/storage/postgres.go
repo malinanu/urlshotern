@@ -1837,14 +1837,17 @@ func (p *PostgresStorage) RunRetentionJob() error {
 }
 
 // runMicrositeEventRetention applies the click retention windows to
-// microsite_events: free 30 days, premium 1 year, enterprise kept.
+// microsite_events and microsite_submissions: free 30 days, premium 1 year,
+// enterprise kept. A table whose migration is not applied is skipped.
 func (p *PostgresStorage) runMicrositeEventRetention() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	var exists bool
-	if err := p.db.QueryRowContext(ctx, `SELECT to_regclass('public.microsite_events') IS NOT NULL`).Scan(&exists); err != nil || !exists {
-		return nil //nolint:nilerr // table missing or unreadable: migration 046 not applied, nothing to clean
+	tables := []struct {
+		name, timeColumn string
+	}{
+		{"microsite_events", "occurred_at"},
+		{"microsite_submissions", "created_at"},
 	}
 	windows := []struct {
 		accountType string
@@ -1853,20 +1856,27 @@ func (p *PostgresStorage) runMicrositeEventRetention() error {
 		{"free", "30 days"},
 		{"premium", "1 year"},
 	}
-	for _, w := range windows {
-		res, err := p.db.ExecContext(ctx, `
-			DELETE FROM microsite_events me
-			USING microsites m, users u
-			WHERE me.microsite_id = m.id
-			  AND m.user_id = u.id
-			  AND u.account_type = $1
-			  AND me.occurred_at < NOW() - $2::interval
-		`, w.accountType, w.interval)
-		if err != nil {
-			return fmt.Errorf("delete %s-plan microsite events: %w", w.accountType, err)
+	for _, t := range tables {
+		var exists bool
+		if err := p.db.QueryRowContext(ctx, `SELECT to_regclass('public.' || $1) IS NOT NULL`, t.name).Scan(&exists); err != nil || !exists {
+			continue
 		}
-		if n, _ := res.RowsAffected(); n > 0 {
-			log.Printf("🗑️  Retention: deleted %d microsite events for %s users (>%s)", n, w.accountType, w.interval)
+		for _, w := range windows {
+			// Table and column names are constants above, never user input.
+			res, err := p.db.ExecContext(ctx, /* #nosec G202 -- identifiers from the constant list above */ `
+				DELETE FROM `+t.name+` me
+				USING microsites m, users u
+				WHERE me.microsite_id = m.id
+				  AND m.user_id = u.id
+				  AND u.account_type = $1
+				  AND me.`+t.timeColumn+` < NOW() - $2::interval
+			`, w.accountType, w.interval)
+			if err != nil {
+				return fmt.Errorf("delete %s-plan %s: %w", w.accountType, t.name, err)
+			}
+			if n, _ := res.RowsAffected(); n > 0 {
+				log.Printf("🗑️  Retention: deleted %d %s rows for %s users (>%s)", n, t.name, w.accountType, w.interval)
+			}
 		}
 	}
 	return nil

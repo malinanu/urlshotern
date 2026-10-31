@@ -21,6 +21,7 @@ var (
 	ErrMicrositeVersion      = errors.New("this page was changed elsewhere; reload to get the latest version")
 	ErrMicrositesUnavailable = errors.New("pages are temporarily unavailable")
 	ErrMicrositeBadgeLocked  = errors.New("removing the Trunc badge requires the Ultra plan")
+	ErrMicrositeFormsLocked  = errors.New("forms are available on the Pro and Ultra plans")
 	ErrMicrositeInvalidTmpl  = errors.New("unknown template")
 )
 
@@ -50,13 +51,16 @@ type MicrositeEntitlementsFunc func(userID int64) models.MicrositeEntitlements
 
 // PublishedMicrosite is the cached, render-ready view of a published page.
 type PublishedMicrosite struct {
-	ID          int64                   `json:"id"`
-	UserID      int64                   `json:"user_id"`
-	Slug        string                  `json:"slug"`
-	Title       string                  `json:"title"`
-	Content     models.MicrositeContent `json:"content"`
-	ShowBadge   bool                    `json:"show_badge"`
-	PublishedAt time.Time               `json:"published_at"`
+	ID        int64                   `json:"id"`
+	UserID    int64                   `json:"user_id"`
+	Slug      string                  `json:"slug"`
+	Title     string                  `json:"title"`
+	Content   models.MicrositeContent `json:"content"`
+	ShowBadge bool                    `json:"show_badge"`
+	// FormsEnabled is false when the owner's plan no longer includes forms;
+	// form blocks are then hidden and submissions refused.
+	FormsEnabled bool      `json:"forms_enabled"`
+	PublishedAt  time.Time `json:"published_at"`
 }
 
 // MicrositeService manages micro-landing pages.
@@ -224,7 +228,7 @@ func (s *MicrositeService) Create(userID int64, req models.CreateMicrositeReques
 		title = slug
 	}
 
-	content, err := NormalizeMicrositeDraft(BuildMicrositeTemplate(tmpl, title))
+	content, err := NormalizeMicrositeDraft(BuildMicrositeTemplate(tmpl, title, req.Timezone))
 	if err != nil {
 		return nil, err
 	}
@@ -283,6 +287,16 @@ func (s *MicrositeService) UpdateDraft(id int64, req models.UpdateMicrositeReque
 			}
 			content.Settings.HideBadge = false
 		}
+		if !s.Entitlements(current.UserID).CanUseForms {
+			// Forms are a paid feature: new form blocks are refused, while
+			// ones saved before a downgrade may stay in the draft.
+			had := formBlockIDs(current.Draft)
+			for id := range formBlockIDs(content) {
+				if !had[id] {
+					return nil, ErrMicrositeFormsLocked
+				}
+			}
+		}
 	}
 	draft, err := json.Marshal(content)
 	if err != nil {
@@ -316,8 +330,12 @@ func (s *MicrositeService) Publish(id int64) (*models.Microsite, error) {
 	if err != nil {
 		return nil, err
 	}
-	if content.Settings.HideBadge && !s.Entitlements(current.UserID).CanRemoveBadge {
+	ent := s.Entitlements(current.UserID)
+	if content.Settings.HideBadge && !ent.CanRemoveBadge {
 		content.Settings.HideBadge = false
+	}
+	if !ent.CanUseForms && contentHasBlockType(content, models.BlockTypeForm) {
+		return nil, ErrMicrositeFormsLocked
 	}
 	snapshot, err := json.Marshal(content)
 	if err != nil {
@@ -442,7 +460,9 @@ func (s *MicrositeService) GetPublishedBySlug(rawSlug string) (*PublishedMicrosi
 	if err := json.Unmarshal(published, &p.Content); err != nil {
 		return nil, fmt.Errorf("decode published: %w", err)
 	}
-	p.ShowBadge = !(p.Content.Settings.HideBadge && s.Entitlements(p.UserID).CanRemoveBadge)
+	ent := s.Entitlements(p.UserID)
+	p.ShowBadge = !(p.Content.Settings.HideBadge && ent.CanRemoveBadge)
+	p.FormsEnabled = ent.CanUseForms
 
 	if s.cache != nil {
 		if encoded, err := json.Marshal(p); err == nil {

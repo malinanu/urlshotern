@@ -24,6 +24,9 @@ var micrositeEventTypes = map[string]bool{
 	models.MicrositeEventSMS:           true,
 	models.MicrositeEventEmail:         true,
 	models.MicrositeEventWhatsApp:      true,
+	models.MicrositeEventFormSubmit:    true,
+	models.MicrositeEventCalendarAdd:   true,
+	models.MicrositeEventVideoPlay:     true,
 }
 
 // IsMicrositeEventType reports whether t is a known event type.
@@ -107,9 +110,13 @@ func (s *MicrositeAnalyticsService) GetReport(micrositeID int64, days int, label
 		       COUNT(*) FILTER (WHERE event_type = 'call'),
 		       COUNT(*) FILTER (WHERE event_type = 'sms'),
 		       COUNT(*) FILTER (WHERE event_type = 'email'),
-		       COUNT(*) FILTER (WHERE event_type = 'whatsapp')
+		       COUNT(*) FILTER (WHERE event_type = 'whatsapp'),
+		       COUNT(*) FILTER (WHERE event_type = 'form_submit'),
+		       COUNT(*) FILTER (WHERE event_type = 'calendar_add'),
+		       COUNT(*) FILTER (WHERE event_type = 'video_play')
 		  FROM microsite_events WHERE `+window, micrositeID, days).
-		Scan(&r.Views, &r.UniqueVisitors, &r.LinkClicks, &r.VCardDownloads, &calls, &sms, &emails, &whatsapp)
+		Scan(&r.Views, &r.UniqueVisitors, &r.LinkClicks, &r.VCardDownloads, &calls, &sms, &emails, &whatsapp,
+			&r.FormSubmits, &r.CalendarAdds, &r.VideoPlays)
 	if err != nil {
 		return nil, mapMicrositeDBError(err)
 	}

@@ -70,6 +70,11 @@ var MicrositeFonts = map[string]string{
 	"rounded":   `ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", Quicksand, Nunito, system-ui, sans-serif`,
 	"humanist":  `Seravek, "Gill Sans Nova", Ubuntu, Calibri, "DejaVu Sans", source-sans-pro, sans-serif`,
 	"geometric": `Avenir, Montserrat, Corbel, "URW Gothic", source-sans-pro, sans-serif`,
+	// Self-hosted faces (Latin + Latin-ext); other scripts fall back to the system stack.
+	"schibsted": `"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif`,
+	"martian":   `"Martian Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono", monospace`,
+	"barlow":    `"Barlow Condensed", "Arial Narrow", system-ui, "Noto Sans", sans-serif`,
+	"hanken":    `"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif`,
 }
 
 var (
@@ -267,6 +272,9 @@ func DecodeMicrositeBlockData(blockType string, raw json.RawMessage, field strin
 		}
 		return d, nil
 	default:
+		if v, ok, err := decodeV2BlockData(blockType, raw, field, draft); ok {
+			return v, err
+		}
 		return nil, validationErr(field, "unknown block type %q", blockType)
 	}
 }
@@ -575,6 +583,12 @@ func normalizeTheme(t models.MicrositeTheme, draft bool) (models.MicrositeTheme,
 	}
 	if _, ok := MicrositeFonts[t.Font]; !ok {
 		return t, validationErr("theme.font", "unsupported font %q", t.Font)
+	}
+	if t.Style == "" {
+		t.Style = MicrositeStyleClassic
+	}
+	if !MicrositeStyles[t.Style] {
+		return t, validationErr("theme.style", "unsupported style %q", t.Style)
 	}
 	return t, nil
 }
