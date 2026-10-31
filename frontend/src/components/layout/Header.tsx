@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bars3Icon, XMarkIcon, LinkIcon, ChevronDownIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
+import { MICROSITES_ENABLED } from '@/lib/microsites';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
   prefetchDashboard,
@@ -169,6 +170,15 @@ export default function Header() {
                     >
                       Custom Domains
                     </Link>
+                    {MICROSITES_ENABLED && (
+                      <Link
+                        href="/microsites"
+                        className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Pages
+                      </Link>
+                    )}
                     <Link
                       href="/teams"
                       className="block px-4 py-2 text-sm text-foreground hover:bg-muted"
@@ -294,6 +304,15 @@ export default function Header() {
                     >
                       Custom Domains
                     </Link>
+                    {MICROSITES_ENABLED && (
+                      <Link
+                        href="/microsites"
+                        className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Pages
+                      </Link>
+                    )}
                     <Link
                       href="/teams"
                       className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm font-medium block"

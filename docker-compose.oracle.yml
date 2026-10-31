@@ -13,6 +13,7 @@ services:
         - NEXT_PUBLIC_API_URL=${BASE_URL:-https://trunc.site}
         - BASE_URL=${BASE_URL:-https://trunc.site}
         - NODE_ENV=production
+        - NEXT_PUBLIC_ENABLE_MICROSITES=${ENABLE_MICROSITES:-false}
     container_name: urlshortener-app
     ports:
       - "8082:8080"

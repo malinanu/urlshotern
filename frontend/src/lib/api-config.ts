@@ -216,6 +216,25 @@ export const API_ENDPOINTS = {
     status:       (id: number | string) => `${API_BASE_URL}/api/v1/custom-domains/${id}/status`,
   },
 
+  // Microsites — micro-landing pages & digital vCards (public at /m/<slug>)
+  microsites: {
+    list: `${API_BASE_URL}/api/v1/microsites`,
+    create: `${API_BASE_URL}/api/v1/microsites`,
+    templates: `${API_BASE_URL}/api/v1/microsites/templates`,
+    slugAvailable: `${API_BASE_URL}/api/v1/microsites/slug-available`,
+    preview: `${API_BASE_URL}/api/v1/microsites/preview`,
+    assets: `${API_BASE_URL}/api/v1/microsites/assets`,
+    deleteAsset: (assetId: number) => `${API_BASE_URL}/api/v1/microsites/assets/${assetId}`,
+    get: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}`,
+    update: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}`,
+    delete: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}`,
+    publish: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/publish`,
+    unpublish: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/unpublish`,
+    analytics: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/analytics`,
+    upload: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/assets`,
+    shortLink: (id: number) => `${API_BASE_URL}/api/v1/microsites/${id}/short-link`,
+  },
+
   // White-label branding endpoints (enterprise)
   branding: {
     get:    `${API_BASE_URL}/api/v1/branding`,
