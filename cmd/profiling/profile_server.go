@@ -127,7 +127,7 @@ func main() {
 			"heap_sys_mb":   float64(m.HeapSys) / 1024 / 1024,
 			"heap_objects":  m.HeapObjects,
 			"gc_runs":       m.NumGC,
-			"last_gc":       time.Unix(0, int64(m.LastGC)), //nolint:gosec // ns since epoch; fits int64 until 2262
+			"last_gc":       time.Unix(0, int64(m.LastGC)), // #nosec G115 -- ns since epoch; fits int64 until 2262
 			"gc_pause_ns":   m.PauseNs[(m.NumGC+255)%256],
 		}
 
