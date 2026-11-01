@@ -560,6 +560,7 @@ export default function SettingsPage() {
                         <input
                           {...profileForm.register('email')}
                           type="email"
+                          data-cs-mask
                           disabled
                           className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm bg-muted text-muted-foreground cursor-not-allowed"
                         />
@@ -574,6 +575,7 @@ export default function SettingsPage() {
                       <input
                         {...profileForm.register('phone')}
                         type="tel"
+                        data-cs-mask
                         className="mt-1 block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         placeholder="+1 (555) 123-4567"
                       />
@@ -607,6 +609,7 @@ export default function SettingsPage() {
                         <input
                           {...passwordForm.register('currentPassword')}
                           type={showCurrentPassword ? 'text' : 'password'}
+                          data-cs-mask
                           className="block w-full px-3 py-2 pr-10 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         <button
@@ -634,6 +637,7 @@ export default function SettingsPage() {
                         <input
                           {...passwordForm.register('newPassword')}
                           type={showNewPassword ? 'text' : 'password'}
+                          data-cs-mask
                           className="block w-full px-3 py-2 pr-10 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         <button
@@ -661,6 +665,7 @@ export default function SettingsPage() {
                         <input
                           {...passwordForm.register('confirmPassword')}
                           type={showConfirmPassword ? 'text' : 'password'}
+                          data-cs-mask
                           className="block w-full px-3 py-2 pr-10 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background text-foreground"
                         />
                         <button

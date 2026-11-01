@@ -78,6 +78,114 @@ const PLAN_RANK: Record<string, number> = { free: 0, premium: 1, enterprise: 2 }
 // Strip the interval suffix so 'enterprise_yearly' and 'enterprise' compare as the same tier
 const baseTier = (planId: string) => planId.replace('_yearly', '');
 
+// Version of the auto-renewal disclosure below; sent with checkout as a consent record
+const ARL_TERMS_VERSION = 'arl-2026-10';
+
+interface AutoRenewConfirmProps {
+  planName: string;
+  price: string; // formatted, '—' when unknown
+  interval: 'month' | 'year';
+  discountCode: string | null;
+  agreed: boolean;
+  onAgreeChange: (agreed: boolean) => void;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (terms: string) => void;
+}
+
+/**
+ * Automatic-renewal disclosure and consent shown right before checkout
+ * (California Bus. & Prof. Code §17602): the recurring price and frequency,
+ * how to cancel, and an unticked box the customer must check to continue.
+ */
+function AutoRenewConfirm({
+  planName, price, interval, discountCode, agreed, onAgreeChange, busy, onCancel, onConfirm,
+}: AutoRenewConfirmProps) {
+  const priceKnown = price !== '—';
+  const period = interval === 'year' ? 'year' : 'month';
+  const terms = `${price} per ${period} until canceled`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="arl-title">
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl">
+        <h2 id="arl-title" className="text-xl font-semibold text-foreground">
+          Confirm your {planName} subscription
+        </h2>
+
+        {priceKnown ? (
+          <p className="mt-4 text-2xl font-bold text-foreground">
+            {price} per {period}
+            <span className="block text-sm font-medium text-muted-foreground">
+              charged automatically until you cancel
+            </span>
+          </p>
+        ) : (
+          <p className="mt-4 text-sm text-destructive">
+            We couldn&apos;t load the price for this plan. Please refresh the page and try again.
+          </p>
+        )}
+
+        <ul className="mt-4 space-y-2 text-sm text-muted-foreground list-disc pl-5">
+          <li>
+            Your subscription starts today and <strong className="text-foreground">renews automatically every {period}</strong> at{' '}
+            {price} (plus any applicable taxes) until you cancel.
+          </li>
+          <li>
+            <strong className="text-foreground">Cancel anytime</strong> on this page (Billing &amp; Subscription → Cancel
+            Subscription). Cancelling stops all future charges, and you keep access until the end of the period you&apos;ve
+            already paid for.
+          </li>
+          {discountCode && (
+            <li>
+              Your discount code <span className="font-mono">{discountCode}</span> is applied at checkout, which shows how
+              many payments it covers. Renewals after that are charged at {price} per {period}.
+            </li>
+          )}
+        </ul>
+
+        <label className="mt-5 flex items-start gap-3 rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4"
+            checked={agreed}
+            onChange={(e) => onAgreeChange(e.target.checked)}
+            disabled={!priceKnown}
+          />
+          <span>
+            I agree that my {planName} subscription will renew automatically at {price} per {period} until I cancel, and I
+            have read the cancellation terms above.
+          </span>
+        </label>
+
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(terms)}
+            disabled={!agreed || !priceKnown || busy}
+            className="flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? (
+              <>
+                <ArrowPathIcon className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Continue to payment'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BillingContent() {
   const { user, isAuthenticated, isLoading, getAccessToken } = useAuth();
   const searchParams = useSearchParams();
@@ -98,6 +206,10 @@ function BillingContent() {
   const [discountData, setDiscountData] = useState<any>(null);
   const [validatingDiscount, setValidatingDiscount] = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
+
+  // California ARL: renewal terms are shown and agreed to before checkout starts
+  const [confirmPlan, setConfirmPlan] = useState<Plan | null>(null);
+  const [autoRenewAgreed, setAutoRenewAgreed] = useState(false);
 
   const router = useRouter();
 
@@ -268,7 +380,7 @@ function BillingContent() {
     }
   }, [searchParams, plans.length]);
 
-  const handleUpgrade = async (planId: string) => {
+  const handleUpgrade = async (planId: string, autoRenewTerms?: string) => {
     const token = getAccessToken();
     if (!token) return;
 
@@ -350,6 +462,9 @@ function BillingContent() {
           discount_code: discountData ? discountCode : undefined,
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/billing`,
+          auto_renew_consent: Boolean(autoRenewTerms),
+          consent_text_version: ARL_TERMS_VERSION,
+          auto_renew_terms: autoRenewTerms,
         }),
       });
 
@@ -633,6 +748,7 @@ function BillingContent() {
                         setDiscountData(null);
                       }}
                       placeholder="Enter code"
+                      data-cs-mask
                       className="flex-1 bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary uppercase"
                     />
                     <button
@@ -720,7 +836,15 @@ function BillingContent() {
                         </>
                       ) : (
                         <button
-                          onClick={() => handleUpgrade(plan.id)}
+                          onClick={() => {
+                            if (isDowngrade) {
+                              handleUpgrade(plan.id);
+                              return;
+                            }
+                            // Paid plan: show the auto-renewal terms and get consent first
+                            setAutoRenewAgreed(false);
+                            setConfirmPlan(plan);
+                          }}
                           disabled={upgrading === plan.id}
                           className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         >
@@ -741,6 +865,23 @@ function BillingContent() {
                   })}
                 </div>
               </div>
+
+              {confirmPlan && (
+                <AutoRenewConfirm
+                  planName={PLAN_NAMES[baseTier(confirmPlan.id) as keyof typeof PLAN_NAMES] ?? confirmPlan.name}
+                  price={getPolarPrice(confirmPlan.id, billingInterval)}
+                  interval={billingInterval}
+                  discountCode={discountData ? discountCode : null}
+                  agreed={autoRenewAgreed}
+                  onAgreeChange={setAutoRenewAgreed}
+                  busy={upgrading === confirmPlan.id}
+                  onCancel={() => setConfirmPlan(null)}
+                  onConfirm={async (terms) => {
+                    await handleUpgrade(confirmPlan.id, terms);
+                    setConfirmPlan(null);
+                  }}
+                />
+              )}
             </>
           )}
         </div>

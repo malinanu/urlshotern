@@ -3,8 +3,10 @@ package services
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 	"time"
 
@@ -234,7 +236,7 @@ func (e *EmailService) SendEmailVerification(emailAddr, token string) error {
 	template := email.VerificationEmailTemplate(verificationURL, emailAddr)
 
 	// Send email using provider
-	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	return e.deliver(emailAddr, template.Subject, template.HTMLBody, template.TextBody, false)
 }
 
 // SendPasswordReset sends password reset email
@@ -249,7 +251,7 @@ func (e *EmailService) SendPasswordReset(emailAddr, token string) error {
 	log.Printf("INFO [EMAIL] Sending password reset email to %s", emailAddr)
 
 	// Send email using provider
-	err := e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	err := e.deliver(emailAddr, template.Subject, template.HTMLBody, template.TextBody, false)
 	if err != nil {
 		log.Printf("ERROR [EMAIL] Failed to send password reset email to %s: %v", emailAddr, err)
 		return fmt.Errorf("failed to send password reset email: %w", err)
@@ -270,7 +272,7 @@ func (e *EmailService) SendTeamInvitation(emailAddr, teamName, inviterName, toke
 	template := email.TeamInvitationEmailTemplate(inviteURL, teamName, inviterName, emailAddr)
 
 	// Send email using provider
-	err := e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	err := e.deliver(emailAddr, template.Subject, template.HTMLBody, template.TextBody, false)
 	if err != nil {
 		log.Printf("ERROR [EMAIL] Failed to send team invitation email to %s: %v", emailAddr, err)
 	}
@@ -285,7 +287,95 @@ func (e *EmailService) sendEmail(emailAddr, token string) error {
 
 // SendEmail sends a generic email (for alerts, notifications, etc.)
 func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
+	return e.deliver(to, subject, htmlBody, textBody, false)
+}
+
+// ErrEmailSuppressed is returned when a marketing email is addressed to someone who opted out.
+var ErrEmailSuppressed = errors.New("recipient has unsubscribed from marketing emails")
+
+// SendPromotionalEmail sends a marketing message. It refuses addresses that have
+// unsubscribed and labels the footer as promotional (CAN-SPAM).
+func (e *EmailService) SendPromotionalEmail(to, subject, htmlBody, textBody string) error {
+	suppressed, err := e.IsEmailSuppressed(to)
+	if err != nil {
+		return fmt.Errorf("check suppression list: %w", err)
+	}
+	if suppressed {
+		return ErrEmailSuppressed
+	}
+	return e.deliver(to, subject, htmlBody, textBody, true)
+}
+
+// SendDMCANotice forwards a takedown notice to the Designated Agent and sends the
+// complaining party a receipt.
+func (e *EmailService) SendDMCANotice(notice email.DMCANotice) error {
+	tpl := email.DMCANoticeEmailTemplate(notice)
+	if err := e.deliver(email.DMCAAgentEmail, tpl.Subject, tpl.HTMLBody, tpl.TextBody, false); err != nil {
+		return err
+	}
+	receipt := email.DMCAReceiptEmailTemplate(notice.ReferenceID, notice.SubmittedAt)
+	if err := e.deliver(notice.Email, receipt.Subject, receipt.HTMLBody, receipt.TextBody, false); err != nil {
+		// The notice itself reached the agent; a failed receipt shouldn't fail the submission
+		log.Printf("WARN [EMAIL] DMCA receipt for %s not sent: %v", notice.ReferenceID, err)
+	}
+	return nil
+}
+
+// deliver adds the CAN-SPAM footer (postal address, privacy policy and a
+// per-recipient unsubscribe link) and hands the message to the provider.
+func (e *EmailService) deliver(to, subject, htmlBody, textBody string, promotional bool) error {
+	htmlBody, textBody = email.ApplyFooter(htmlBody, textBody, email.FooterOptions{
+		SiteURL:        e.siteURL(),
+		UnsubscribeURL: e.UnsubscribeURL(to),
+		Promotional:    promotional,
+	})
 	return e.provider.SendEmail(to, subject, htmlBody, textBody)
+}
+
+func (e *EmailService) siteURL() string {
+	if e.config != nil && e.config.BaseURL != "" {
+		return strings.TrimRight(e.config.BaseURL, "/")
+	}
+	return email.DefaultSiteURL
+}
+
+// UnsubscribeURL returns the recipient's personal unsubscribe link.
+func (e *EmailService) UnsubscribeURL(to string) string {
+	return e.siteURL() + "/unsubscribe?token=" + url.QueryEscape(UnsubscribeToken(e.config.JWTSecret, to))
+}
+
+// IsEmailSuppressed reports whether marketing email must not be sent to addr: it is on
+// the suppression list, or it belongs to a user who has marketing emails turned off.
+func (e *EmailService) IsEmailSuppressed(addr string) (bool, error) {
+	var suppressed bool
+	err := e.db.QueryRow(`
+		SELECT EXISTS (SELECT 1 FROM email_suppressions WHERE email = $1)
+		    OR EXISTS (
+		        SELECT 1 FROM users u
+		        LEFT JOIN user_preferences p ON p.user_id = u.id
+		        WHERE LOWER(u.email) = $1 AND COALESCE(p.marketing_emails, FALSE) = FALSE)`,
+		normalizeEmail(addr)).Scan(&suppressed)
+	return suppressed, err
+}
+
+// Unsubscribe applies an unsubscribe link: the address joins the suppression list and
+// any matching user has marketing emails switched off. Account emails are unaffected.
+func (e *EmailService) Unsubscribe(token string) (string, error) {
+	addr, err := ParseUnsubscribeToken(e.config.JWTSecret, token)
+	if err != nil {
+		return "", err
+	}
+	if _, err := e.db.Exec(`
+		INSERT INTO email_suppressions (email, reason) VALUES ($1, 'unsubscribe')
+		ON CONFLICT (email) DO NOTHING`, addr); err != nil {
+		return "", fmt.Errorf("record suppression: %w", err)
+	}
+	if _, err := e.db.Exec(`
+		UPDATE user_preferences SET marketing_emails = FALSE
+		WHERE user_id IN (SELECT id FROM users WHERE LOWER(email) = $1)`, addr); err != nil {
+		return "", fmt.Errorf("update preferences: %w", err)
+	}
+	return addr, nil
 }
 
 // SendContactFormEmail sends contact form submission email
@@ -295,7 +385,7 @@ func (e *EmailService) SendContactFormEmail(name, emailAddr, subject, message st
 	
 	// Send to contact email (admin)
 	contactEmail := "contact@trunc.site"
-	err := e.provider.SendEmail(contactEmail, adminTemplate.Subject, adminTemplate.HTMLBody, adminTemplate.TextBody)
+	err := e.deliver(contactEmail, adminTemplate.Subject, adminTemplate.HTMLBody, adminTemplate.TextBody, false)
 	if err != nil {
 		return err
 	}
@@ -303,7 +393,7 @@ func (e *EmailService) SendContactFormEmail(name, emailAddr, subject, message st
 	// Send a copy to the user
 	userSubject := fmt.Sprintf("Copy of your message: %s", subject)
 	userTemplate := email.ContactFormEmailTemplate(name, emailAddr, userSubject, message)
-	return e.provider.SendEmail(emailAddr, userTemplate.Subject, userTemplate.HTMLBody, userTemplate.TextBody)
+	return e.deliver(emailAddr, userTemplate.Subject, userTemplate.HTMLBody, userTemplate.TextBody, false)
 }
 
 // SendSupportInquiryEmail sends support inquiry email
@@ -313,7 +403,7 @@ func (e *EmailService) SendSupportInquiryEmail(name, emailAddr, subject, issue s
 
 	// Send to support email
 	supportEmail := "hello@trunc.site"
-	return e.provider.SendEmail(supportEmail, template.Subject, template.HTMLBody, template.TextBody)
+	return e.deliver(supportEmail, template.Subject, template.HTMLBody, template.TextBody, false)
 }
 
 // SendOTPEmail sends one-time password email
@@ -322,7 +412,7 @@ func (e *EmailService) SendOTPEmail(emailAddr, otp string, expiryMinutes int) er
 	template := email.OTPEmailTemplate(otp, emailAddr, expiryMinutes)
 
 	// Send email using provider
-	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	return e.deliver(emailAddr, template.Subject, template.HTMLBody, template.TextBody, false)
 }
 
 // generateVerificationToken generates a random verification token
@@ -510,7 +600,7 @@ func (e *EmailService) SendSpamAlert(toEmail, originalURL, shortCode string) err
 		"Hello,\n\nOur security systems have flagged one of your shortened URLs as potentially malicious or spam.\n\nShort Code: %s\nOriginal URL: %s\n\nTo protect our users, this short link has been disabled and will no longer redirect to the destination.\n\nBest regards,\nThe URL Shortener Team",
 		shortCode, originalURL)
 
-	return e.provider.SendEmail(toEmail, subject, htmlBody, textBody)
+	return e.deliver(toEmail, subject, htmlBody, textBody, false)
 }
 
 // SendWelcomeEmail sends a welcome email to a newly registered user
@@ -519,5 +609,5 @@ func (e *EmailService) SendWelcomeEmail(name, emailAddr string) error {
 	template := email.WelcomeEmailTemplate(name, emailAddr)
 
 	// Send to user
-	return e.provider.SendEmail(emailAddr, template.Subject, template.HTMLBody, template.TextBody)
+	return e.deliver(emailAddr, template.Subject, template.HTMLBody, template.TextBody, false)
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -383,7 +384,12 @@ func (s *CampaignService) sendToContact(campaign *models.Campaign, contact *mode
 	}
 
 	now := time.Now()
-	if sendErr != nil {
+	if errors.Is(sendErr, ErrEmailSuppressed) {
+		// CAN-SPAM: the contact opted out of marketing email, so nothing was sent
+		_, _ = s.db.Exec(
+			"UPDATE campaign_sends SET status='skipped', error=$1 WHERE id=$2",
+			"recipient unsubscribed from marketing emails", sendID)
+	} else if sendErr != nil {
 		errMsg := sendErr.Error()
 		_, _ = s.db.Exec(
 			"UPDATE campaign_sends SET status='failed', error=$1, sent_at=$2 WHERE id=$3",
@@ -403,6 +409,15 @@ func (s *CampaignService) sendEmail(campaign *models.Campaign, contact *models.C
 		return fmt.Errorf("no email address for contact %d", contact.ID)
 	}
 
+	// Honour unsubscribes before spending an AI call on the message
+	suppressed, err := s.emailService.IsEmailSuppressed(*contact.Email)
+	if err != nil {
+		return fmt.Errorf("check suppression list: %w", err)
+	}
+	if suppressed {
+		return ErrEmailSuppressed
+	}
+
 	subject, htmlBody, err := s.generateEmailContent(campaign, contact)
 	if err != nil {
 		return fmt.Errorf("AI generate email: %w", err)
@@ -412,7 +427,8 @@ func (s *CampaignService) sendEmail(campaign *models.Campaign, contact *models.C
 	textBody := strings.NewReplacer("<br>", "\n", "<br/>", "\n", "</p>", "\n\n", "<li>", "• ").Replace(htmlBody)
 	textBody = stripHTMLTagsSimple(textBody)
 
-	return s.emailService.SendEmail(*contact.Email, subject, htmlBody, textBody)
+	// Adds the promotional footer: postal address, privacy policy, unsubscribe link
+	return s.emailService.SendPromotionalEmail(*contact.Email, subject, htmlBody, textBody)
 }
 
 func (s *CampaignService) generateEmailContent(campaign *models.Campaign, contact *models.CampaignContact) (subject, htmlBody string, err error) {
@@ -426,6 +442,8 @@ func (s *CampaignService) generateEmailContent(campaign *models.Campaign, contac
 Campaign context: %s
 
 Write a warm, professional promotional email to %s.
+The subject line must accurately describe what the email is about (no misleading or "Re:"/"Fwd:" subjects).
+Do not add a footer, postal address, unsubscribe link or sign-off disclaimer; those are appended automatically.
 Return ONLY valid JSON (no markdown):
 {
   "subject": "email subject here",

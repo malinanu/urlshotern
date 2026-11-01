@@ -54,6 +54,7 @@ interface RegisterData {
   email: string;
   password: string;
   phone: string;
+  date_of_birth: string; // YYYY-MM-DD
   terms_accepted: boolean;
   marketing_consent?: boolean;
 }
@@ -468,7 +469,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Registration failed');
+        // Keep the server's machine-readable code (e.g. 'age_restricted') for the caller
+        const err = new Error(result.error || 'Registration failed') as Error & { code?: string };
+        err.code = result.code;
+        throw err;
       }
 
       logger.info('Registration successful');

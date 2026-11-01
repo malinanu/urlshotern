@@ -2,81 +2,95 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { CONSENT_OPEN_EVENT, getConsent, saveConsent, type ConsentChoice } from "@/lib/consent";
 
-interface CookieConsentData {
-  essential: true;
-  analytics: boolean;
-  marketing: boolean;
-  savedAt: string;
-}
+const NONE: ConsentChoice = { analytics: false, replay: false, marketing: false };
+const ALL: ConsentChoice = { analytics: true, replay: true, marketing: true };
 
-function saveConsent(analytics: boolean, marketing: boolean): void {
-  const data: CookieConsentData = {
-    essential: true,
-    analytics,
-    marketing,
-    savedAt: new Date().toISOString(),
-  };
-  localStorage.setItem("cookie_consent", JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent("cookie-consent-updated", { detail: data }));
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onChange}
+      className={`relative flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+        checked ? "bg-primary" : "bg-muted"
+      }`}
+    >
+      <span
+        className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
 }
 
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [analytics, setAnalytics] = useState(true);
-  const [marketing, setMarketing] = useState(true);
+  // Optional categories start switched off: nothing beyond essentials without an opt-in
+  const [choice, setChoice] = useState<ConsentChoice>(NONE);
 
   useEffect(() => {
-    const stored = localStorage.getItem("cookie_consent");
-    if (!stored) {
+    if (!getConsent()) {
       setVisible(true);
     }
+
+    // Footer "Cookie settings" re-opens the banner with the current choices
+    const open = () => {
+      const current = getConsent();
+      setChoice(current ? { analytics: current.analytics, replay: current.replay, marketing: current.marketing } : NONE);
+      setExpanded(true);
+      setVisible(true);
+    };
+    window.addEventListener(CONSENT_OPEN_EVENT, open);
+    return () => window.removeEventListener(CONSENT_OPEN_EVENT, open);
   }, []);
 
   if (!visible) return null;
 
-  function acceptAll() {
-    saveConsent(true, true);
+  function save(next: ConsentChoice) {
+    saveConsent(next);
     setVisible(false);
   }
 
-  function rejectNonEssential() {
-    saveConsent(false, false);
-    setVisible(false);
-  }
-
-  function savePreferences() {
-    saveConsent(analytics, marketing);
-    setVisible(false);
-  }
+  const toggle = (key: keyof ConsentChoice) => setChoice((c) => ({ ...c, [key]: !c[key] }));
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background shadow-lg">
+    <div
+      role="dialog"
+      aria-label="Cookie preferences"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background shadow-lg"
+    >
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
         {/* Main bar */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            We use cookies to improve your experience. Essential cookies are always active.{" "}
+            We use essential cookies to run the site. With your permission we&apos;d also use analytics
+            and session replay, which records how you interact with our pages (form fields are masked).
+            Nothing optional runs unless you opt in.{" "}
             <Link href="/privacy" className="underline hover:text-foreground">
               Cookie Policy
             </Link>
           </p>
           <div className="flex flex-shrink-0 flex-wrap gap-2">
             <button
-              onClick={rejectNonEssential}
+              onClick={() => save(NONE)}
               className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
             >
               Reject Non-Essential
             </button>
             <button
-              onClick={acceptAll}
+              onClick={() => save(ALL)}
               className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Accept All
             </button>
             <button
               onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
               className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
             >
               Manage {expanded ? "▲" : "▾"}
@@ -106,23 +120,23 @@ export function CookieConsent() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Analytics Cookies</p>
                   <p className="text-xs text-muted-foreground">
-                    Performance tracking, usage analytics to improve the service.
+                    Aggregate usage statistics (Google Analytics, Ahrefs) to improve the service.
                   </p>
                 </div>
-                <button
-                  role="switch"
-                  aria-checked={analytics}
-                  onClick={() => setAnalytics((v) => !v)}
-                  className={`relative flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-                    analytics ? "bg-primary" : "bg-muted"
-                  }`}
-                >
-                  <span
-                    className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      analytics ? "translate-x-5" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
+                <Toggle checked={choice.analytics} onChange={() => toggle("analytics")} label="Analytics cookies" />
+              </div>
+
+              {/* Session replay */}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Session Analytics &amp; Replay</p>
+                  <p className="text-xs text-muted-foreground">
+                    Records mouse movements, clicks, scrolling and page changes (Contentsquare) so we can
+                    see where the site is confusing. Everything you type into form fields is masked and
+                    never recorded.
+                  </p>
+                </div>
+                <Toggle checked={choice.replay} onChange={() => toggle("replay")} label="Session analytics and replay" />
               </div>
 
               {/* Marketing */}
@@ -133,20 +147,7 @@ export function CookieConsent() {
                     Marketing emails and promotional content preferences.
                   </p>
                 </div>
-                <button
-                  role="switch"
-                  aria-checked={marketing}
-                  onClick={() => setMarketing((v) => !v)}
-                  className={`relative flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-                    marketing ? "bg-primary" : "bg-muted"
-                  }`}
-                >
-                  <span
-                    className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                      marketing ? "translate-x-5" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
+                <Toggle checked={choice.marketing} onChange={() => toggle("marketing")} label="Marketing cookies" />
               </div>
             </div>
 
@@ -155,7 +156,7 @@ export function CookieConsent() {
                 Cookie Policy
               </Link>
               <button
-                onClick={savePreferences}
+                onClick={() => save(choice)}
                 className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Save Preferences

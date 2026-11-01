@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LinkIcon } from '@heroicons/react/24/outline';
+import { CookieSettingsButton } from '@/components/CookieSettingsButton';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -16,6 +17,7 @@ export default function Footer() {
       { name: 'Contact', href: '/contact' },
       { name: 'Privacy Policy', href: '/privacy' },
       { name: 'Terms of Service', href: '/terms' },
+      { name: 'DMCA / Copyright', href: '/dmca' },
     ],
     resources: [
       { name: 'Blog', href: '/blog' },
@@ -75,6 +77,9 @@ export default function Footer() {
                       </Link>
                     </li>
                   ))}
+                  <li>
+                    <CookieSettingsButton className="text-base text-muted-foreground hover:text-foreground transition-colors" />
+                  </li>
                 </ul>
               </div>
             </div>

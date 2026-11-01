@@ -174,6 +174,18 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 		handler.ContactHandlers.SubmitContactForm,
 	)
 
+	// Email unsubscribe link (CAN-SPAM) — public, token-authenticated
+	router.POST("/api/v1/email/unsubscribe",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		handler.ContactHandlers.Unsubscribe,
+	)
+
+	// DMCA takedown notices — public
+	router.POST("/api/v1/legal/dmca",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		handler.ContactHandlers.SubmitDMCANotice,
+	)
+
 	// Public site settings (for frontend SEO metadata generation)
 	if handler.GlobalSettingsHandlers != nil {
 		router.GET("/api/v1/public/settings", handler.GlobalSettingsHandlers.GetPublicSettings)
@@ -792,7 +804,7 @@ func setupStaticRoutes(router *gin.Engine, extraRoutes ...string) {
 	// All frontend routes that need static HTML
 	frontendRoutes := []string{
 		"/features", "/pricing", "/api-docs",
-		"/about", "/contact", "/terms", "/privacy",
+		"/about", "/contact", "/terms", "/privacy", "/dmca", "/unsubscribe",
 		"/dashboard", "/login", "/register",
 		"/analytics", "/profile", "/settings",
 		"/bulk", "/conversions", "/api-keys", "/admin",

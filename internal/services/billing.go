@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -459,8 +460,32 @@ func (bs *BillingService) UpdateSubscription(userID int64, updates map[string]in
 	return bs.db.Model(&Subscription{}).Where("user_id = ?", userID).Updates(updates).Error
 }
 
+// truncate shortens s to at most n runes (Polar caps metadata string values).
+func truncate(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+	return s
+}
+
+// ErrAutoRenewConsentRequired is returned when a subscription checkout lacks the
+// customer's affirmative consent to the automatic renewal terms.
+var ErrAutoRenewConsentRequired = errors.New("please agree to the automatic renewal terms before continuing to payment")
+
+// AutoRenewConsent is the customer's affirmative consent to the automatic renewal
+// terms shown next to the checkout button (California ARL, Bus. & Prof. Code §17602).
+type AutoRenewConsent struct {
+	TermsVersion   string    // version of the disclosure copy shown
+	DisplayedTerms string    // e.g. "$9.99 per month until canceled"
+	ConsentedAt    time.Time
+}
+
 // CreateCheckoutSession creates a Polar checkout session
-func (bs *BillingService) CreateCheckoutSession(userID int64, email string, productID string, priceID *string, discountID *string, successURL, cancelURL string) (*PolarCheckoutSession, error) {
+func (bs *BillingService) CreateCheckoutSession(userID int64, email string, productID string, priceID *string, discountID *string, successURL, cancelURL string, consent *AutoRenewConsent) (*PolarCheckoutSession, error) {
+	if consent == nil {
+		return nil, ErrAutoRenewConsentRequired
+	}
+
 	// Get or create Polar customer
 	customerID, err := bs.polarService.GetOrCreatePolarCustomer(userID, email, nil)
 	if err != nil {
@@ -468,10 +493,15 @@ func (bs *BillingService) CreateCheckoutSession(userID int64, email string, prod
 	}
 
 	// Create metadata — store user_id as string to avoid float64 precision loss
-	// when Polar echoes it back in webhooks (Snowflake IDs exceed 2^53)
+	// when Polar echoes it back in webhooks (Snowflake IDs exceed 2^53).
+	// The auto-renewal consent travels with the checkout as a record of what was agreed.
 	metadata := map[string]interface{}{
-		"user_id":    fmt.Sprintf("%d", userID),
-		"product_id": productID,
+		"user_id":                  fmt.Sprintf("%d", userID),
+		"product_id":               productID,
+		"auto_renew_consent":       "true",
+		"auto_renew_consent_at":    consent.ConsentedAt.UTC().Format(time.RFC3339),
+		"auto_renew_terms_version": truncate(consent.TermsVersion, 50),
+		"auto_renew_terms":         truncate(consent.DisplayedTerms, 500),
 	}
 
 	// Create checkout session via Polar
@@ -640,7 +670,8 @@ func (bs *BillingService) CreateCheckoutHandler(c *gin.Context) {
 		return
 	}
 
-	checkoutURL, err := bs.CreateCheckoutSession(userID, user.Email, req.PlanID, nil, nil, req.SuccessURL, req.CancelURL)
+	// Unrouted legacy handler: without recorded auto-renewal consent the checkout is refused
+	checkoutURL, err := bs.CreateCheckoutSession(userID, user.Email, req.PlanID, nil, nil, req.SuccessURL, req.CancelURL, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
 		return

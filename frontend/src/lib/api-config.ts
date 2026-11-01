@@ -132,6 +132,12 @@ export const API_ENDPOINTS = {
     page: (slug: string) => `${API_BASE_URL}/api/v1/pages/${slug}`,
   },
 
+  // Legal / compliance endpoints (public)
+  legal: {
+    unsubscribe: `${API_BASE_URL}/api/v1/email/unsubscribe`,
+    dmca: `${API_BASE_URL}/api/v1/legal/dmca`,
+  },
+
   // Conversion tracking endpoints
   conversions: {
     goals: `${API_BASE_URL}/api/v1/conversions/goals`,

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -64,6 +65,11 @@ func (h *AuthHandlers) Register(c *gin.Context) {
 
 	// Register user
 	response, err := h.authService.Register(&req, c.ClientIP(), c.Request.UserAgent())
+	if errors.Is(err, services.ErrAgeRestricted) {
+		// COPPA: nothing was stored; don't log the submitted details either
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error(), "code": "age_restricted"})
+		return
+	}
 	if err != nil {
 		middleware.LogError(c, err, "User registration failed")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1302,12 +1308,47 @@ func (h *AuthHandlers) ResetPassword(c *gin.Context) {
 	})
 }
 
-// GoogleLogin initiates Google OAuth flow
-func (h *AuthHandlers) GoogleLogin(c *gin.Context) {
-	state, err := h.authService.GenerateOAuthState()
+// newOAuthState creates the OAuth state, carrying the optional ?dob= from the signup
+// form. An under-13 or malformed DOB redirects to /register and returns ok=false.
+func (h *AuthHandlers) newOAuthState(c *gin.Context, provider string) (state string, ok bool) {
+	dob := c.Query("dob")
+	if dob != "" {
+		if _, _, err := services.CheckSignupAge(dob); err != nil {
+			reason := "invalid_dob"
+			if errors.Is(err, services.ErrAgeRestricted) {
+				reason = "age_restricted"
+			}
+			c.Redirect(http.StatusFound, h.config.BaseURL+"/register?error="+reason)
+			return "", false
+		}
+	}
+
+	state, err := h.authService.GenerateOAuthState(dob)
 	if err != nil {
 		middleware.LogError(c, err, "Failed to generate OAuth state")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate Google login"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate " + provider + " login"})
+		return "", false
+	}
+	return state, true
+}
+
+// oauthAgeGateRedirect maps COPPA age-gate errors from an OAuth signup to the register page.
+func (h *AuthHandlers) oauthAgeGateRedirect(c *gin.Context, err error, provider string) bool {
+	switch {
+	case errors.Is(err, services.ErrAgeRequired):
+		c.Redirect(http.StatusFound, h.config.BaseURL+"/register?error=age_required&provider="+provider)
+	case errors.Is(err, services.ErrAgeRestricted):
+		c.Redirect(http.StatusFound, h.config.BaseURL+"/register?error=age_restricted")
+	default:
+		return false
+	}
+	return true
+}
+
+// GoogleLogin initiates Google OAuth flow
+func (h *AuthHandlers) GoogleLogin(c *gin.Context) {
+	state, ok := h.newOAuthState(c, "Google")
+	if !ok {
 		return
 	}
 
@@ -1327,13 +1368,17 @@ func (h *AuthHandlers) GoogleCallback(c *gin.Context) {
 	}
 
 	// Validate state (CSRF protection)
-	if !h.authService.ValidateOAuthState(state) {
+	dob, ok := h.authService.ValidateOAuthState(state)
+	if !ok {
 		c.Redirect(http.StatusFound, frontendURL+"/login?error=invalid_state")
 		return
 	}
 
 	// Exchange code for user info and create/find user
-	response, err := h.authService.HandleGoogleCallback(code, c.ClientIP(), c.Request.UserAgent())
+	response, err := h.authService.HandleGoogleCallback(code, dob, c.ClientIP(), c.Request.UserAgent())
+	if err != nil && h.oauthAgeGateRedirect(c, err, "google") {
+		return
+	}
 	if err != nil {
 		middleware.LogError(c, err, "Google OAuth callback failed")
 		c.Redirect(http.StatusFound, frontendURL+"/login?error=google_auth_failed")
@@ -1364,10 +1409,8 @@ func (h *AuthHandlers) GoogleCallback(c *gin.Context) {
 
 // GithubLogin initiates GitHub OAuth flow
 func (h *AuthHandlers) GithubLogin(c *gin.Context) {
-	state, err := h.authService.GenerateOAuthState()
-	if err != nil {
-		middleware.LogError(c, err, "Failed to generate OAuth state")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate GitHub login"})
+	state, ok := h.newOAuthState(c, "GitHub")
+	if !ok {
 		return
 	}
 	authURL := h.authService.GetGithubAuthURL(state)
@@ -1385,12 +1428,16 @@ func (h *AuthHandlers) GithubCallback(c *gin.Context) {
 		return
 	}
 
-	if !h.authService.ValidateOAuthState(state) {
+	dob, ok := h.authService.ValidateOAuthState(state)
+	if !ok {
 		c.Redirect(http.StatusFound, frontendURL+"/login?error=invalid_state")
 		return
 	}
 
-	response, err := h.authService.HandleGithubCallback(code, c.ClientIP(), c.Request.UserAgent())
+	response, err := h.authService.HandleGithubCallback(code, dob, c.ClientIP(), c.Request.UserAgent())
+	if err != nil && h.oauthAgeGateRedirect(c, err, "github") {
+		return
+	}
 	if err != nil {
 		middleware.LogError(c, err, "GitHub OAuth callback failed")
 		c.Redirect(http.StatusFound, frontendURL+"/login?error=github_auth_failed")

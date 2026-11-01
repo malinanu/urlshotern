@@ -28,7 +28,24 @@ var (
 	ErrOTPExpired         = errors.New("Your verification code has expired. Please request a new one.")
 	ErrTooManyOTPAttempts = errors.New("Too many incorrect attempts. Please wait a few minutes and try again.")
 	ErrTokenUsed          = errors.New("This link has already been used. Please request a new one if needed.")
+	ErrAgeRestricted      = errors.New("We're sorry, but we can't create an account for you at this time.")
+	ErrAgeRequired        = errors.New("Please confirm your date of birth to create an account.")
 )
+
+// CheckSignupAge validates a YYYY-MM-DD date of birth for a new account (COPPA).
+// It returns utils.ErrInvalidDOB for bad input and ErrAgeRestricted for anyone under 13.
+func CheckSignupAge(dobStr string) (dob time.Time, isMinor bool, err error) {
+	now := time.Now()
+	dob, err = utils.ParseDOB(dobStr, now)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	age := utils.AgeOn(dob, now)
+	if age < utils.MinSignupAge {
+		return time.Time{}, false, ErrAgeRestricted
+	}
+	return dob, age < utils.AdultAge, nil
+}
 
 type UserService struct {
 	db          *storage.PostgresStorage
@@ -79,6 +96,12 @@ func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage,
 
 // CreateUser creates a new user account
 func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistrationData, error) {
+	// Age gate before touching the database (COPPA)
+	dob, isMinor, err := CheckSignupAge(req.DateOfBirth)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if email already exists
 	existingUser, err := u.GetUserByEmail(req.Email)
 	if err == nil && existingUser != nil {
@@ -106,6 +129,7 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 	}
 
 	// Create user
+	now := time.Now()
 	user := &models.User{
 		ID:              userID,
 		Name:            req.Name,
@@ -118,8 +142,11 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 		AccountType:     "free",
 		IsActive:        true,
 		IsAdmin:         false,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		CreatedAt:       now,
+		UpdatedAt:       now,
+		DateOfBirth:     &dob,
+		IsMinor:         isMinor,
+		AgeVerifiedAt:   &now,
 	}
 
 	// Save user to database
@@ -134,7 +161,7 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 		DefaultExpiration:  nil, // No expiration by default
 		AnalyticsPublic:    false,
 		EmailNotifications: true,
-		MarketingEmails:    req.MarketingConsent,
+		MarketingEmails:    req.MarketingConsent && !isMinor, // no marketing to minors
 		Timezone:          "UTC",
 		Theme:             "light",
 	}

@@ -172,6 +172,10 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		DiscountCode *string `json:"discount_code,omitempty"`
 		SuccessURL   string  `json:"success_url"`
 		CancelURL    string  `json:"cancel_url"`
+		// California ARL: the customer ticked the automatic-renewal consent box
+		AutoRenewConsent   bool   `json:"auto_renew_consent"`
+		ConsentTextVersion string `json:"consent_text_version"`
+		AutoRenewTerms     string `json:"auto_renew_terms"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -179,6 +183,14 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid request body",
 			"details": err.Error(),
+		})
+		return
+	}
+
+	if !req.AutoRenewConsent {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": services.ErrAutoRenewConsentRequired.Error(),
+			"code":  "auto_renew_consent_required",
 		})
 		return
 	}
@@ -226,6 +238,11 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 		polarDiscountID,
 		req.SuccessURL,
 		req.CancelURL,
+		&services.AutoRenewConsent{
+			TermsVersion:   req.ConsentTextVersion,
+			DisplayedTerms: req.AutoRenewTerms,
+			ConsentedAt:    time.Now(),
+		},
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

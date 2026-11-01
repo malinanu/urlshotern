@@ -86,9 +86,10 @@ trunc.site Team
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
@@ -182,9 +183,10 @@ trunc.site Team
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
@@ -276,9 +278,10 @@ trunc.site Team
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
@@ -365,9 +368,10 @@ This email was sent from the trunc.site contact form.
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
@@ -468,9 +472,10 @@ Please respond to the user at: %s
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
@@ -554,9 +559,10 @@ trunc.site Team
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
@@ -629,9 +635,10 @@ trunc.site Team
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-                            <p style="color: #999999; margin: 0; font-size: 12px;">
+                            <p style="color: #999999; margin: 0 0 8px; font-size: 12px;">
                                 &copy; 2026 trunc.site. All rights reserved.
                             </p>
+                            <!--EMAIL_FOOTER-->
                         </td>
                     </tr>
                 </table>
