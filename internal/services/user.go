@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
@@ -31,37 +31,37 @@ var (
 )
 
 type UserService struct {
-	db          *storage.PostgresStorage
-	redis       *storage.RedisStorage
-	jwtService  *JWTService
-	smsService  *SMSService
+	db           *storage.PostgresStorage
+	redis        *storage.RedisStorage
+	jwtService   *JWTService
+	smsService   *SMSService
 	emailService *EmailService
-	config      *Config
+	config       *Config
 }
 
 type Config struct {
-	BCryptCost           int
-	OTPExpiryMinutes     int
-	MaxOTPAttempts       int
-	EmailTokenExpiryHours int
+	BCryptCost               int
+	OTPExpiryMinutes         int
+	MaxOTPAttempts           int
+	EmailTokenExpiryHours    int
 	PasswordResetExpiryHours int
 }
 
 type UserRegistrationData struct {
-	User            *models.User
-	EmailToken      string
-	RequiresOTP     bool
-	TempPassword    string // For OAuth users
+	User         *models.User
+	EmailToken   string
+	RequiresOTP  bool
+	TempPassword string // For OAuth users
 }
 
-func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage, 
+func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage,
 	jwtService *JWTService, smsService *SMSService, emailService *EmailService, config *Config) *UserService {
-	
+
 	if config == nil {
 		config = &Config{
 			BCryptCost:               12,
 			OTPExpiryMinutes:         5,
-			MaxOTPAttempts:          3,
+			MaxOTPAttempts:           3,
 			EmailTokenExpiryHours:    24,
 			PasswordResetExpiryHours: 2,
 		}
@@ -107,19 +107,19 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 
 	// Create user
 	user := &models.User{
-		ID:              userID,
-		Name:            req.Name,
-		Email:           req.Email,
-		PasswordHash:    utils.StringPtr(string(hashedPassword)),
-		Phone:           &req.Phone,
-		PhoneVerified:   false,
-		EmailVerified:   false,
-		Provider:        "email",
-		AccountType:     "free",
-		IsActive:        true,
-		IsAdmin:         false,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		ID:            userID,
+		Name:          req.Name,
+		Email:         req.Email,
+		PasswordHash:  utils.StringPtr(string(hashedPassword)),
+		Phone:         &req.Phone,
+		PhoneVerified: false,
+		EmailVerified: false,
+		Provider:      "email",
+		AccountType:   "free",
+		IsActive:      true,
+		IsAdmin:       false,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	// Save user to database
@@ -135,10 +135,10 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 		AnalyticsPublic:    false,
 		EmailNotifications: true,
 		MarketingEmails:    req.MarketingConsent,
-		Timezone:          "UTC",
-		Theme:             "light",
+		Timezone:           "UTC",
+		Theme:              "light",
 	}
-	
+
 	err = u.db.CreateUserPreferences(preferences)
 	if err != nil {
 		// Log error but don't fail user creation
@@ -243,12 +243,12 @@ func (u *UserService) CreateSession(user *models.User, rememberMe bool, ipAddres
 	}
 
 	session := &models.UserSession{
-		ID:         sessionID,
-		UserID:     user.ID,
-		IPAddress:  &ipAddress,
-		UserAgent:  &userAgent,
-		ExpiresAt:  expiresAt,
-		CreatedAt:  time.Now(),
+		ID:        sessionID,
+		UserID:    user.ID,
+		IPAddress: &ipAddress,
+		UserAgent: &userAgent,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
 	}
 
 	err := u.db.CreateSession(session)
@@ -552,7 +552,7 @@ func (u *UserService) UpdateProfile(userID int64, req *models.UpdateProfileReque
 	}
 
 	updateData := make(map[string]interface{})
-	
+
 	if req.Name != nil && *req.Name != user.Name {
 		updateData["name"] = *req.Name
 	}
@@ -580,7 +580,7 @@ func (u *UserService) UpdateProfile(userID int64, req *models.UpdateProfileReque
 			user.PhoneVerified = phoneVerified.(bool)
 		}
 		user.UpdatedAt = time.Now()
-		
+
 		err = u.db.UpdateUser(user)
 		if err != nil {
 			return nil, err
@@ -641,4 +641,3 @@ func (u *UserService) hashPassword(password string) (string, error) {
 	}
 	return string(hashedBytes), nil
 }
-

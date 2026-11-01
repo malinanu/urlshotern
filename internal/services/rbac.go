@@ -360,7 +360,7 @@ func (r *RBACService) GetUserPermissions(userID int64) ([]*models.Permission, er
 	}
 
 	permissionMap := make(map[string]*models.Permission)
-	
+
 	for _, role := range roles {
 		rolePermissions, err := r.GetRolePermissions(role.ID)
 		if err != nil {
@@ -468,7 +468,7 @@ func (r *RBACService) AssignPermissionsToRole(roleID int64, permissionIDs []int6
 			PermissionID: permID,
 			CreatedAt:    time.Now(),
 		}
-		
+
 		// Implementation would save to database
 		rolePermission.ID = time.Now().Unix() // Temporary ID
 	}
@@ -519,26 +519,26 @@ func (r *RBACService) getSystemPermissions() []*models.Permission {
 		{ID: 3, Name: models.PermissionUsersUpdate, DisplayName: "Update Users", Description: "Modify user information", Resource: models.ResourceUsers, Action: models.ActionUpdate, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 4, Name: models.PermissionUsersDelete, DisplayName: "Delete Users", Description: "Delete users", Resource: models.ResourceUsers, Action: models.ActionDelete, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 5, Name: models.PermissionUsersManage, DisplayName: "Manage Users", Description: "Full user management", Resource: models.ResourceUsers, Action: models.ActionManage, IsSystem: true, CreatedAt: now, UpdatedAt: now},
-		
+
 		{ID: 6, Name: models.PermissionURLsCreate, DisplayName: "Create URLs", Description: "Create short URLs", Resource: models.ResourceURLs, Action: models.ActionCreate, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 7, Name: models.PermissionURLsRead, DisplayName: "Read URLs", Description: "View URL information", Resource: models.ResourceURLs, Action: models.ActionRead, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 8, Name: models.PermissionURLsUpdate, DisplayName: "Update URLs", Description: "Modify URL information", Resource: models.ResourceURLs, Action: models.ActionUpdate, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 9, Name: models.PermissionURLsDelete, DisplayName: "Delete URLs", Description: "Delete URLs", Resource: models.ResourceURLs, Action: models.ActionDelete, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 10, Name: models.PermissionURLsManage, DisplayName: "Manage URLs", Description: "Full URL management", Resource: models.ResourceURLs, Action: models.ActionManage, IsSystem: true, CreatedAt: now, UpdatedAt: now},
-		
+
 		{ID: 11, Name: models.PermissionAnalyticsRead, DisplayName: "Read Analytics", Description: "View analytics data", Resource: models.ResourceAnalytics, Action: models.ActionRead, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 12, Name: models.PermissionAnalyticsManage, DisplayName: "Manage Analytics", Description: "Full analytics management", Resource: models.ResourceAnalytics, Action: models.ActionManage, IsSystem: true, CreatedAt: now, UpdatedAt: now},
-		
+
 		{ID: 13, Name: models.PermissionTeamsCreate, DisplayName: "Create Teams", Description: "Create new teams", Resource: models.ResourceTeams, Action: models.ActionCreate, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 14, Name: models.PermissionTeamsRead, DisplayName: "Read Teams", Description: "View team information", Resource: models.ResourceTeams, Action: models.ActionRead, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 15, Name: models.PermissionTeamsUpdate, DisplayName: "Update Teams", Description: "Modify team information", Resource: models.ResourceTeams, Action: models.ActionUpdate, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 16, Name: models.PermissionTeamsDelete, DisplayName: "Delete Teams", Description: "Delete teams", Resource: models.ResourceTeams, Action: models.ActionDelete, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 17, Name: models.PermissionTeamsManage, DisplayName: "Manage Teams", Description: "Full team management", Resource: models.ResourceTeams, Action: models.ActionManage, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 18, Name: models.PermissionTeamsInvite, DisplayName: "Invite Team Members", Description: "Invite users to teams", Resource: models.ResourceTeams, Action: models.ActionInvite, IsSystem: true, CreatedAt: now, UpdatedAt: now},
-		
+
 		{ID: 19, Name: models.PermissionSystemRead, DisplayName: "Read System", Description: "View system information", Resource: models.ResourceSystem, Action: models.ActionRead, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 20, Name: models.PermissionSystemManage, DisplayName: "Manage System", Description: "Full system management", Resource: models.ResourceSystem, Action: models.ActionManage, IsSystem: true, CreatedAt: now, UpdatedAt: now},
-		
+
 		{ID: 21, Name: models.PermissionSettingsRead, DisplayName: "Read Settings", Description: "View settings", Resource: models.ResourceSettings, Action: models.ActionRead, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 22, Name: models.PermissionSettingsUpdate, DisplayName: "Update Settings", Description: "Modify settings", Resource: models.ResourceSettings, Action: models.ActionUpdate, IsSystem: true, CreatedAt: now, UpdatedAt: now},
 		{ID: 23, Name: models.PermissionSettingsManage, DisplayName: "Manage Settings", Description: "Full settings management", Resource: models.ResourceSettings, Action: models.ActionManage, IsSystem: true, CreatedAt: now, UpdatedAt: now},
@@ -548,21 +548,21 @@ func (r *RBACService) getSystemPermissions() []*models.Permission {
 func (r *RBACService) getAdminPermissions() []*models.Permission {
 	allPerms := r.getSystemPermissions()
 	var adminPerms []*models.Permission
-	
+
 	// Admin gets most permissions except system management
 	for _, perm := range allPerms {
 		if perm.Resource != models.ResourceSystem || perm.Action == models.ActionRead {
 			adminPerms = append(adminPerms, perm)
 		}
 	}
-	
+
 	return adminPerms
 }
 
 func (r *RBACService) getUserPermissions() []*models.Permission {
 	allPerms := r.getSystemPermissions()
 	var userPerms []*models.Permission
-	
+
 	// Standard users get basic URL and analytics read permissions
 	allowedPerms := []string{
 		models.PermissionURLsCreate,
@@ -573,7 +573,7 @@ func (r *RBACService) getUserPermissions() []*models.Permission {
 		models.PermissionSettingsRead,
 		models.PermissionSettingsUpdate,
 	}
-	
+
 	for _, perm := range allPerms {
 		for _, allowed := range allowedPerms {
 			if perm.Name == allowed {
@@ -582,6 +582,6 @@ func (r *RBACService) getUserPermissions() []*models.Permission {
 			}
 		}
 	}
-	
+
 	return userPerms
 }

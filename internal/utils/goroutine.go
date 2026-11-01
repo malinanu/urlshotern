@@ -20,11 +20,11 @@ type GoroutineManager struct {
 
 // GoroutineError represents an error that occurred in a goroutine
 type GoroutineError struct {
-	Timestamp   time.Time
-	Operation   string
-	Error       error
-	StackTrace  string
-	Recovered   bool
+	Timestamp  time.Time
+	Operation  string
+	Error      error
+	StackTrace string
+	Recovered  bool
 }
 
 // NewGoroutineManager creates a new goroutine manager
@@ -45,11 +45,11 @@ func (gm *GoroutineManager) Go(operation string, fn func() error) {
 			if r := recover(); r != nil {
 				err := fmt.Errorf("panic: %v", r)
 				gm.recordError(GoroutineError{
-					Timestamp:   time.Now(),
-					Operation:   operation,
-					Error:       err,
-					StackTrace:  string(debug.Stack()),
-					Recovered:   true,
+					Timestamp:  time.Now(),
+					Operation:  operation,
+					Error:      err,
+					StackTrace: string(debug.Stack()),
+					Recovered:  true,
 				})
 				log.Printf("[GOROUTINE PANIC] %s: %v\nStack: %s", operation, r, debug.Stack())
 			}
@@ -75,11 +75,11 @@ func (gm *GoroutineManager) GoWithContext(ctx context.Context, operation string,
 			if r := recover(); r != nil {
 				err := fmt.Errorf("panic: %v", r)
 				gm.recordError(GoroutineError{
-					Timestamp:   time.Now(),
-					Operation:   operation,
-					Error:       err,
-					StackTrace:  string(debug.Stack()),
-					Recovered:   true,
+					Timestamp:  time.Now(),
+					Operation:  operation,
+					Error:      err,
+					StackTrace: string(debug.Stack()),
+					Recovered:  true,
 				})
 				log.Printf("[GOROUTINE PANIC] %s: %v\nStack: %s", operation, r, debug.Stack())
 			}

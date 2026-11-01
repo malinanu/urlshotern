@@ -51,21 +51,21 @@ type PolarCustomer struct {
 }
 
 type PolarCheckoutSession struct {
-	ID                 string                 `json:"id"`
-	Status             string                 `json:"status"` // open, expired, confirmed
-	ClientSecret       string                 `json:"client_secret"`
-	URL                string                 `json:"url"`
-	CustomerID         *string                `json:"customer_id,omitempty"`
-	CustomerEmail      *string                `json:"customer_email,omitempty"`
-	ProductID          string                 `json:"product_id"`
-	ProductPriceID     *string                `json:"product_price_id,omitempty"`
-	SuccessURL         string                 `json:"success_url"`
-	Amount             *int                   `json:"amount,omitempty"`
-	Currency           *string                `json:"currency,omitempty"`
-	SubscriptionID     *string                `json:"subscription_id,omitempty"`
-	Metadata           map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt          time.Time              `json:"created_at"`
-	ExpiresAt          time.Time              `json:"expires_at"`
+	ID             string                 `json:"id"`
+	Status         string                 `json:"status"` // open, expired, confirmed
+	ClientSecret   string                 `json:"client_secret"`
+	URL            string                 `json:"url"`
+	CustomerID     *string                `json:"customer_id,omitempty"`
+	CustomerEmail  *string                `json:"customer_email,omitempty"`
+	ProductID      string                 `json:"product_id"`
+	ProductPriceID *string                `json:"product_price_id,omitempty"`
+	SuccessURL     string                 `json:"success_url"`
+	Amount         *int                   `json:"amount,omitempty"`
+	Currency       *string                `json:"currency,omitempty"`
+	SubscriptionID *string                `json:"subscription_id,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	ExpiresAt      time.Time              `json:"expires_at"`
 }
 
 type PolarSubscription struct {
@@ -161,7 +161,7 @@ func (ps *PolarService) CreateCheckoutSession(productID string, productPriceID *
 	}
 
 	if productPriceID != nil && *productPriceID != "" {
-		// Pass specific price ID, Polar API v1 allows product_price_id at the root 
+		// Pass specific price ID, Polar API v1 allows product_price_id at the root
 		payload["product_price_id"] = *productPriceID
 	} else {
 		// Use product ID
@@ -262,33 +262,33 @@ func (ps *PolarService) GetProduct(productID string) (*PolarProduct, error) {
 
 // PolarDiscount represents a created discount in Polar
 type PolarDiscount struct {
-	ID                 string    `json:"id"`
-	OrganizationID     string    `json:"organization_id"`
-	Name               string    `json:"name"`
-	Code               *string   `json:"code,omitempty"`
-	Type               string    `json:"type"`                 // "percentage" or "fixed"
-	Amount             *int      `json:"amount,omitempty"`     // for fixed type
-	Currency           *string   `json:"currency,omitempty"`  // for fixed type
-	BasisPoints        *int      `json:"basis_points,omitempty"` // for percentage type
-	Duration           string    `json:"duration"`             // "once", "forever", "repeating"
-	DurationInMonths   *int      `json:"duration_in_months,omitempty"`
-	MaxRedemptions     *int      `json:"max_redemptions,omitempty"`
-	StartsAt           *time.Time `json:"starts_at,omitempty"`
-	EndsAt             *time.Time `json:"ends_at,omitempty"`
+	ID               string     `json:"id"`
+	OrganizationID   string     `json:"organization_id"`
+	Name             string     `json:"name"`
+	Code             *string    `json:"code,omitempty"`
+	Type             string     `json:"type"`                   // "percentage" or "fixed"
+	Amount           *int       `json:"amount,omitempty"`       // for fixed type
+	Currency         *string    `json:"currency,omitempty"`     // for fixed type
+	BasisPoints      *int       `json:"basis_points,omitempty"` // for percentage type
+	Duration         string     `json:"duration"`               // "once", "forever", "repeating"
+	DurationInMonths *int       `json:"duration_in_months,omitempty"`
+	MaxRedemptions   *int       `json:"max_redemptions,omitempty"`
+	StartsAt         *time.Time `json:"starts_at,omitempty"`
+	EndsAt           *time.Time `json:"ends_at,omitempty"`
 }
 
 // CreateDiscountPayload represents the required fields to create a discount in Polar
 type CreateDiscountPayload struct {
-	Name             string    `json:"name"`
-	Code             *string   `json:"code,omitempty"`
-	Type             string    `json:"type"`                       // "percentage" or "fixed"
-	BasisPoints      *int      `json:"basis_points,omitempty"`     // 1000 = 10%
-	Amount           *int      `json:"amount,omitempty"`           // 1000 = $10.00
-	Currency         *string   `json:"currency,omitempty"`
-	Duration         string    `json:"duration"`                   // "once", "forever", "repeating"
-	DurationInMonths *int      `json:"duration_in_months,omitempty"`
-	MaxRedemptions   *int      `json:"max_redemptions,omitempty"`
-	Products         []string  `json:"products,omitempty"`         // Make sure this is an array of IDs
+	Name             string     `json:"name"`
+	Code             *string    `json:"code,omitempty"`
+	Type             string     `json:"type"`                   // "percentage" or "fixed"
+	BasisPoints      *int       `json:"basis_points,omitempty"` // 1000 = 10%
+	Amount           *int       `json:"amount,omitempty"`       // 1000 = $10.00
+	Currency         *string    `json:"currency,omitempty"`
+	Duration         string     `json:"duration"` // "once", "forever", "repeating"
+	DurationInMonths *int       `json:"duration_in_months,omitempty"`
+	MaxRedemptions   *int       `json:"max_redemptions,omitempty"`
+	Products         []string   `json:"products,omitempty"` // Make sure this is an array of IDs
 	StartsAt         *time.Time `json:"starts_at,omitempty"`
 	EndsAt           *time.Time `json:"ends_at,omitempty"`
 }

@@ -1863,7 +1863,7 @@ func (p *PostgresStorage) runMicrositeEventRetention() error {
 		}
 		for _, w := range windows {
 			// Table and column names are constants above, never user input.
-			res, err := p.db.ExecContext(ctx, /* #nosec G202 -- identifiers from the constant list above */ `
+			res, err := p.db.ExecContext(ctx /* #nosec G202 -- identifiers from the constant list above */, `
 				DELETE FROM `+t.name+` me
 				USING microsites m, users u
 				WHERE me.microsite_id = m.id

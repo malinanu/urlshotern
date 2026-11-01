@@ -147,7 +147,7 @@ func (g *GeoIPService) LookupIPBatch(ipAddresses []string) map[string]*GeoIPResu
 func (g *GeoIPService) GetCountryName(countryCode string) string {
 	countryNames := map[string]string{
 		"US": "United States",
-		"GB": "United Kingdom", 
+		"GB": "United Kingdom",
 		"DE": "Germany",
 		"FR": "France",
 		"CA": "Canada",
@@ -342,13 +342,13 @@ func (g *GeoIPService) ValidateIPAddress(ipAddress string) bool {
 func (g *GeoIPService) GetClientIPFromHeaders(headers map[string]string, fallbackIP string) string {
 	// Check common headers for real client IP
 	headerKeys := []string{
-		"CF-Connecting-IP",     // Cloudflare
-		"X-Forwarded-For",      // Standard proxy header
-		"X-Real-IP",            // Nginx
-		"X-Client-IP",          // Apache
-		"X-Forwarded",          // General forwarded
-		"X-Cluster-Client-IP",  // Cluster environments
-		"Forwarded-For",        // RFC 7239
+		"CF-Connecting-IP",    // Cloudflare
+		"X-Forwarded-For",     // Standard proxy header
+		"X-Real-IP",           // Nginx
+		"X-Client-IP",         // Apache
+		"X-Forwarded",         // General forwarded
+		"X-Cluster-Client-IP", // Cluster environments
+		"Forwarded-For",       // RFC 7239
 		"Forwarded",           // RFC 7239
 	}
 
@@ -373,7 +373,7 @@ func (g *GeoIPService) GetClientIPFromHeaders(headers map[string]string, fallbac
 func parseForwardedHeader(value string) []string {
 	var ips []string
 	parts := splitAndTrim(value, ",")
-	
+
 	for _, part := range parts {
 		// Remove port if present
 		ip := splitAndTrim(part, ":")[0]
@@ -381,7 +381,7 @@ func parseForwardedHeader(value string) []string {
 			ips = append(ips, ip)
 		}
 	}
-	
+
 	return ips
 }
 
@@ -389,14 +389,14 @@ func parseForwardedHeader(value string) []string {
 func splitAndTrim(s, sep string) []string {
 	var result []string
 	parts := splitString(s, sep)
-	
+
 	for _, part := range parts {
 		trimmed := trimSpace(part)
 		if trimmed != "" {
 			result = append(result, trimmed)
 		}
 	}
-	
+
 	return result
 }
 
@@ -405,17 +405,17 @@ func splitString(s, sep string) []string {
 	if s == "" {
 		return []string{}
 	}
-	
+
 	var result []string
 	start := 0
-	
+
 	for i := 0; i <= len(s)-len(sep); i++ {
 		if s[i:i+len(sep)] == sep {
 			result = append(result, s[start:i])
 			start = i + len(sep)
 		}
 	}
-	
+
 	result = append(result, s[start:])
 	return result
 }
@@ -424,16 +424,16 @@ func splitString(s, sep string) []string {
 func trimSpace(s string) string {
 	start := 0
 	end := len(s)
-	
+
 	// Find start
 	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
 		start++
 	}
-	
+
 	// Find end
 	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
 		end--
 	}
-	
+
 	return s[start:end]
 }

@@ -61,7 +61,7 @@ func DecodeBase62(encoded string) int64 {
 		if charValue == -1 {
 			return -1 // Invalid character
 		}
-		
+
 		power := len(encoded) - i - 1
 		result += int64(charValue) * int64(math.Pow(62, float64(power)))
 	}

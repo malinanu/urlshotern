@@ -122,13 +122,13 @@ func main() {
 		runtime.ReadMemStats(&m)
 
 		stats["runtime"] = map[string]interface{}{
-			"goroutines":     runtime.NumGoroutine(),
-			"heap_alloc_mb":  float64(m.Alloc) / 1024 / 1024,
-			"heap_sys_mb":    float64(m.HeapSys) / 1024 / 1024,
-			"heap_objects":   m.HeapObjects,
-			"gc_runs":        m.NumGC,
-			"last_gc":        time.Unix(0, int64(m.LastGC)),
-			"gc_pause_ns":    m.PauseNs[(m.NumGC+255)%256],
+			"goroutines":    runtime.NumGoroutine(),
+			"heap_alloc_mb": float64(m.Alloc) / 1024 / 1024,
+			"heap_sys_mb":   float64(m.HeapSys) / 1024 / 1024,
+			"heap_objects":  m.HeapObjects,
+			"gc_runs":       m.NumGC,
+			"last_gc":       time.Unix(0, int64(m.LastGC)),
+			"gc_pause_ns":   m.PauseNs[(m.NumGC+255)%256],
 		}
 
 		c.JSON(http.StatusOK, stats)

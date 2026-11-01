@@ -83,9 +83,9 @@ func DefaultSLOConfig() SLOConfig {
 		AvailabilityTarget:     0.9995, // 99.95% availability
 		LatencyP95Target:       1 * time.Second,
 		LatencyP99Target:       2 * time.Second,
-		ErrorRateTarget:        0.001, // 0.1% error rate
+		ErrorRateTarget:        0.001,               // 0.1% error rate
 		ErrorBudgetWindow:      30 * 24 * time.Hour, // 30 days
-		AlertBurnRateThreshold: 2.0,    // Alert if burning error budget 2x faster than normal
+		AlertBurnRateThreshold: 2.0,                 // Alert if burning error budget 2x faster than normal
 	}
 }
 
@@ -194,21 +194,21 @@ func (t *SLOTracker) GetSLOStatus() map[string]interface{} {
 		"service": t.config.Service,
 		"slos": map[string]interface{}{
 			"availability": map[string]interface{}{
-				"target":     t.config.AvailabilityTarget * 100,
-				"current":    99.97, // Would be calculated from metrics
-				"compliant":  true,
+				"target":                 t.config.AvailabilityTarget * 100,
+				"current":                99.97, // Would be calculated from metrics
+				"compliant":              true,
 				"error_budget_remaining": 85.0,
 			},
 			"latency_p95": map[string]interface{}{
-				"target":     t.config.LatencyP95Target.Milliseconds(),
-				"current":    850, // Would be calculated from metrics
-				"compliant":  true,
+				"target":                 t.config.LatencyP95Target.Milliseconds(),
+				"current":                850, // Would be calculated from metrics
+				"compliant":              true,
 				"error_budget_remaining": 90.0,
 			},
 			"error_rate": map[string]interface{}{
-				"target":     t.config.ErrorRateTarget * 100,
-				"current":    0.08, // Would be calculated from metrics
-				"compliant":  true,
+				"target":                 t.config.ErrorRateTarget * 100,
+				"current":                0.08, // Would be calculated from metrics
+				"compliant":              true,
 				"error_budget_remaining": 88.0,
 			},
 		},

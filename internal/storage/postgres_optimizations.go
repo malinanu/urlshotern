@@ -158,11 +158,11 @@ func (p *PostgresStorage) GetAnalyticsOptimized(ctx context.Context, shortCode s
 	`, days)
 
 	var (
-		originalURL     string
-		totalClicks     int64
-		createdAt       time.Time
-		lastClickAt     sql.NullTime
-		dailyClicksJSON sql.NullString
+		originalURL      string
+		totalClicks      int64
+		createdAt        time.Time
+		lastClickAt      sql.NullTime
+		dailyClicksJSON  sql.NullString
 		countryStatsJSON sql.NullString
 	)
 

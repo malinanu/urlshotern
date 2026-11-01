@@ -20,9 +20,9 @@ import (
 // Constants for API key statistics time intervals
 const (
 	statsQueryTimeout = 5 * time.Second // Max time for stats query execution
-	dayInterval       = 1                // Current day
-	weekInterval      = 7                // Last 7 days
-	monthInterval     = 30               // Last 30 days
+	dayInterval       = 1               // Current day
+	weekInterval      = 7               // Last 7 days
+	monthInterval     = 30              // Last 30 days
 )
 
 type APIKeyService struct {
@@ -423,7 +423,7 @@ func (s *APIKeyService) generateAPIKey() (string, string, error) {
 
 	// Create key with prefix
 	plainKey := "us_" + hex.EncodeToString(bytes)
-	
+
 	// Create hash for storage
 	hash := sha256.Sum256([]byte(plainKey))
 	keyHash := hex.EncodeToString(hash[:])

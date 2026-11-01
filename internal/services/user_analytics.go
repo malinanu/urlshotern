@@ -175,78 +175,78 @@ func (s *UserAnalyticsService) GetUserAnalyticsSummary(userID int64, dateRange m
 
 	// Original implementation (commented out due to complexity and model mismatches)
 	/*
-	summary := &models.UserAnalyticsSummary{
-		UserID: userID,
-	}
+		summary := &models.UserAnalyticsSummary{
+			UserID: userID,
+		}
 
-	// Get user info
-	var user models.User
-	err := s.db.Get(&user, "SELECT * FROM users WHERE id = $1", userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-	summary.AccountCreatedAt = user.CreatedAt
-	summary.LastActiveAt = user.LastLoginAt
+		// Get user info
+		var user models.User
+		err := s.db.Get(&user, "SELECT * FROM users WHERE id = $1", userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user: %w", err)
+		}
+		summary.AccountCreatedAt = user.CreatedAt
+		summary.LastActiveAt = user.LastLoginAt
 
-	whereClause, args := s.buildDateRangeClause(dateRange, userID)
+		whereClause, args := s.buildDateRangeClause(dateRange, userID)
 
-	// Get session stats
-	sessionQuery := fmt.Sprintf(`
-		SELECT 
-			COUNT(*) as total_sessions,
-			AVG(duration_minutes) as avg_duration,
-			SUM(duration_minutes) as total_duration,
-			COUNT(DISTINCT DATE(started_at)) as active_days
-		FROM user_sessions 
-		WHERE user_id = $1 %s`, whereClause)
+		// Get session stats
+		sessionQuery := fmt.Sprintf(`
+			SELECT
+				COUNT(*) as total_sessions,
+				AVG(duration_minutes) as avg_duration,
+				SUM(duration_minutes) as total_duration,
+				COUNT(DISTINCT DATE(started_at)) as active_days
+			FROM user_sessions
+			WHERE user_id = $1 %s`, whereClause)
 
-	var sessionStats struct {
-		TotalSessions   int64           `db:"total_sessions"`
-		AvgDuration     sql.NullFloat64 `db:"avg_duration"`
-		TotalDuration   sql.NullFloat64 `db:"total_duration"`
-		ActiveDays      int64           `db:"active_days"`
-	}
+		var sessionStats struct {
+			TotalSessions   int64           `db:"total_sessions"`
+			AvgDuration     sql.NullFloat64 `db:"avg_duration"`
+			TotalDuration   sql.NullFloat64 `db:"total_duration"`
+			ActiveDays      int64           `db:"active_days"`
+		}
 
-	err = s.db.Get(&sessionStats, sessionQuery, args...)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed to get session stats: %w", err)
-	}
+		err = s.db.Get(&sessionStats, sessionQuery, args...)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, fmt.Errorf("failed to get session stats: %w", err)
+		}
 
-	summary.TotalSessions = sessionStats.TotalSessions
-	summary.TotalActiveDays = sessionStats.ActiveDays
-	if sessionStats.AvgDuration.Valid {
-		summary.AvgSessionDuration = sessionStats.AvgDuration.Float64
-	}
-	if sessionStats.TotalDuration.Valid {
-		summary.AvgSessionDuration = sessionStats.TotalDuration.Float64
-	}
+		summary.TotalSessions = sessionStats.TotalSessions
+		summary.TotalActiveDays = sessionStats.ActiveDays
+		if sessionStats.AvgDuration.Valid {
+			summary.AvgSessionDuration = sessionStats.AvgDuration.Float64
+		}
+		if sessionStats.TotalDuration.Valid {
+			summary.AvgSessionDuration = sessionStats.TotalDuration.Float64
+		}
 
-	// Get URL stats
-	urlQuery := fmt.Sprintf(`
-		SELECT 
-			COUNT(*) as total_urls,
-			COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as urls_last_30_days,
-			SUM(click_count) as total_clicks,
-			SUM(click_count) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as clicks_last_30_days
-		FROM urls 
-		WHERE user_id = $1 %s`, strings.ReplaceAll(whereClause, "started_at", "created_at"))
+		// Get URL stats
+		urlQuery := fmt.Sprintf(`
+			SELECT
+				COUNT(*) as total_urls,
+				COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as urls_last_30_days,
+				SUM(click_count) as total_clicks,
+				SUM(click_count) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as clicks_last_30_days
+			FROM urls
+			WHERE user_id = $1 %s`, strings.ReplaceAll(whereClause, "started_at", "created_at"))
 
-	var urlStats struct {
-		TotalURLs       int64 `db:"total_urls"`
-		URLsLast30Days  int64 `db:"urls_last_30_days"`
-		TotalClicks     int64 `db:"total_clicks"`
-		ClicksLast30Days int64 `db:"clicks_last_30_days"`
-	}
+		var urlStats struct {
+			TotalURLs       int64 `db:"total_urls"`
+			URLsLast30Days  int64 `db:"urls_last_30_days"`
+			TotalClicks     int64 `db:"total_clicks"`
+			ClicksLast30Days int64 `db:"clicks_last_30_days"`
+		}
 
-	err = s.db.Get(&urlStats, urlQuery, args...)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed to get URL stats: %w", err)
-	}
+		err = s.db.Get(&urlStats, urlQuery, args...)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, fmt.Errorf("failed to get URL stats: %w", err)
+		}
 
-	summary.TotalURLsCreated = urlStats.TotalURLs
-	summary.TotalClicks = urlStats.TotalClicks
+		summary.TotalURLsCreated = urlStats.TotalURLs
+		summary.TotalClicks = urlStats.TotalClicks
 
-	return summary, nil
+		return summary, nil
 	*/
 }
 
@@ -307,77 +307,77 @@ func (s *UserAnalyticsService) GetUserEngagementMetrics(userID int64, dateRange 
 	}
 
 	metrics := &models.UserEngagementMetrics{
-		RetentionRate:         retentionRate,
-		EngagementScore:       engagementScore,
-		DaysActive:            daysActive,
-		DaysInactive:          daysInactive,
-		LongestStreak:         0, // Would require complex streak calculation
-		CurrentStreak:         0, // Would require complex streak calculation
-		AvgActionsPerSession:  avgActions,
-		FeatureAdoptionRate:   0, // Would require feature usage tracking
-		CollaborationRate:     0, // Would require collaboration data
-		URLSuccessRate:        0, // Would require success criteria
+		RetentionRate:        retentionRate,
+		EngagementScore:      engagementScore,
+		DaysActive:           daysActive,
+		DaysInactive:         daysInactive,
+		LongestStreak:        0, // Would require complex streak calculation
+		CurrentStreak:        0, // Would require complex streak calculation
+		AvgActionsPerSession: avgActions,
+		FeatureAdoptionRate:  0, // Would require feature usage tracking
+		CollaborationRate:    0, // Would require collaboration data
+		URLSuccessRate:       0, // Would require success criteria
 	}
 
 	return metrics, nil
 
 	// Original implementation (commented out due to model field mismatches)
 	/*
-	whereClause, args := s.buildDateRangeClause(dateRange, userID)
+		whereClause, args := s.buildDateRangeClause(dateRange, userID)
 
-	// Get activity counts by type
-	activityQuery := fmt.Sprintf(`
-		SELECT 
-			activity_type,
-			COUNT(*) as count
-		FROM user_activity_logs 
-		WHERE user_id = $1 %s
-		GROUP BY activity_type`, whereClause)
+		// Get activity counts by type
+		activityQuery := fmt.Sprintf(`
+			SELECT
+				activity_type,
+				COUNT(*) as count
+			FROM user_activity_logs
+			WHERE user_id = $1 %s
+			GROUP BY activity_type`, whereClause)
 
-	rows, err := s.db.Query(activityQuery, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get activity counts: %w", err)
-	}
-	defer rows.Close()
-
-	activityCounts := make(map[string]int64)
-	for rows.Next() {
-		var activityType string
-		var count int64
-		if err := rows.Scan(&activityType, &count); err != nil {
-			return nil, fmt.Errorf("failed to scan activity count: %w", err)
+		rows, err := s.db.Query(activityQuery, args...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get activity counts: %w", err)
 		}
-		activityCounts[activityType] = count
-	}
+		defer rows.Close()
 
-	// Map activity types to metrics
-	metrics.LoginCount = activityCounts["user_login"]
-	metrics.URLCreatedCount = activityCounts["url_created"] + activityCounts["url_shortened"]
-	metrics.URLViewedCount = activityCounts["url_clicked"] + activityCounts["url_accessed"]
-	metrics.URLSharedCount = activityCounts["url_shared"]
-	metrics.CommentCount = activityCounts["comment_created"]
-	metrics.BookmarkCount = activityCounts["bookmark_created"]
-	metrics.CollectionCount = activityCounts["collection_created"]
+		activityCounts := make(map[string]int64)
+		for rows.Next() {
+			var activityType string
+			var count int64
+			if err := rows.Scan(&activityType, &count); err != nil {
+				return nil, fmt.Errorf("failed to scan activity count: %w", err)
+			}
+			activityCounts[activityType] = count
+		}
 
-	// Get feature usage
-	featureQuery := fmt.Sprintf(`
-		SELECT DISTINCT activity_type 
-		FROM user_activity_logs 
-		WHERE user_id = $1 %s`, whereClause)
+		// Map activity types to metrics
+		metrics.LoginCount = activityCounts["user_login"]
+		metrics.URLCreatedCount = activityCounts["url_created"] + activityCounts["url_shortened"]
+		metrics.URLViewedCount = activityCounts["url_clicked"] + activityCounts["url_accessed"]
+		metrics.URLSharedCount = activityCounts["url_shared"]
+		metrics.CommentCount = activityCounts["comment_created"]
+		metrics.BookmarkCount = activityCounts["bookmark_created"]
+		metrics.CollectionCount = activityCounts["collection_created"]
 
-	var features []string
-	err = s.db.Select(&features, featureQuery, args...)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("failed to get features used: %w", err)
-	}
-	metrics.FeaturesUsed = features
+		// Get feature usage
+		featureQuery := fmt.Sprintf(`
+			SELECT DISTINCT activity_type
+			FROM user_activity_logs
+			WHERE user_id = $1 %s`, whereClause)
 
-	// Calculate scores
-	metrics.ActivityScore = s.calculateActivityScore(activityCounts)
-	metrics.ConsistencyScore = s.calculateConsistencyScore(userID, dateRange)
-	metrics.DiversityScore = s.calculateDiversityScore(features)
+		var features []string
+		err = s.db.Select(&features, featureQuery, args...)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, fmt.Errorf("failed to get features used: %w", err)
+		}
+		metrics.FeaturesUsed = features
 
-	return metrics, nil
+		// Calculate scores
+		metrics.ActivityScore = s.calculateActivityScore(activityCounts)
+		metrics.ConsistencyScore = s.calculateConsistencyScore(userID, dateRange)
+		metrics.DiversityScore = s.calculateDiversityScore(features)
+
+		return metrics, nil
 	*/
 }
 
@@ -700,7 +700,7 @@ func (s *UserAnalyticsService) calculateActivityScore(activityCounts map[string]
 	for _, count := range activityCounts {
 		total += count
 	}
-	
+
 	if total == 0 {
 		return 0
 	}
@@ -710,7 +710,7 @@ func (s *UserAnalyticsService) calculateActivityScore(activityCounts map[string]
 	if score > 100 {
 		score = 100
 	}
-	
+
 	return score
 }
 
@@ -761,27 +761,27 @@ func (s *UserAnalyticsService) calculateConsistencyScore(userID int64, dateRange
 	if variance == 0 {
 		return 100 // Perfect consistency
 	}
-	
+
 	score := 100 - (variance * 10) // Adjust multiplier as needed
 	if score < 0 {
 		score = 0
 	}
-	
+
 	return score
 }
 
 func (s *UserAnalyticsService) calculateDiversityScore(features []string) float64 {
 	// Score based on number of different features used
 	uniqueFeatures := len(features)
-	
+
 	// Assuming there are ~15 different activity types
 	maxFeatures := 15.0
 	score := (float64(uniqueFeatures) / maxFeatures) * 100
-	
+
 	if score > 100 {
 		score = 100
 	}
-	
+
 	return score
 }
 

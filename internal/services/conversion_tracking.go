@@ -59,11 +59,11 @@ func (c *ConversionTrackingService) CreateConversionGoal(userID int64, request *
 			goal_value, attribution_window, is_active, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
-	
+
 	_, err = c.storage.Exec(query, goal.ID, goal.UserID, goal.GoalName, goal.GoalType,
 		goal.TargetURL, goal.CustomEventName, goal.GoalValue, goal.AttributionWindow,
 		goal.IsActive, goal.CreatedAt, goal.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to save conversion goal: %w", err)
 	}
@@ -80,7 +80,7 @@ func (c *ConversionTrackingService) GetConversionGoals(userID int64) ([]models.C
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`
-	
+
 	rows, err := c.storage.Query(query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conversion goals: %w", err)
@@ -91,11 +91,11 @@ func (c *ConversionTrackingService) GetConversionGoals(userID int64) ([]models.C
 	for rows.Next() {
 		var goal models.ConversionGoal
 		var targetURL, customEventName sql.NullString
-		
+
 		err := rows.Scan(&goal.ID, &goal.UserID, &goal.GoalName, &goal.GoalType,
 			&targetURL, &customEventName, &goal.GoalValue, &goal.AttributionWindow,
 			&goal.IsActive, &goal.CreatedAt, &goal.UpdatedAt)
-		
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan conversion goal: %w", err)
 		}
@@ -157,11 +157,11 @@ func (c *ConversionTrackingService) UpdateConversionGoal(userID, goalID int64, r
 		    goal_value = $5, attribution_window = $6, is_active = $7, updated_at = $8
 		WHERE id = $9 AND user_id = $10
 	`
-	
+
 	_, err = c.storage.Exec(query, goal.GoalName, goal.GoalType, goal.TargetURL,
 		goal.CustomEventName, goal.GoalValue, goal.AttributionWindow, goal.IsActive,
 		goal.UpdatedAt, goalID, userID)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update conversion goal: %w", err)
 	}
@@ -214,7 +214,7 @@ func (c *ConversionTrackingService) TrackConversion(shortCode, userIP, userAgent
 	// Calculate time to conversion if we can find the original click
 	timeToConversion := 0
 	var clickID *int64
-	
+
 	if request.SessionID != "" {
 		if originalClick, err := c.getOriginalClickBySession(shortCode, request.SessionID); err == nil {
 			timeToConversion = int(time.Since(originalClick.ClickedAt).Minutes())
@@ -248,13 +248,13 @@ func (c *ConversionTrackingService) TrackConversion(shortCode, userIP, userAgent
 			attribution_model, time_to_conversion, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
-	
+
 	_, err = c.storage.Exec(query, conversion.ID, conversion.ShortCode, conversion.GoalID,
 		conversion.ConversionID, conversion.ConversionType, conversion.ConversionValue,
 		conversion.UserIP, conversion.UserAgent, conversion.Referrer, conversion.SessionID,
 		conversion.ClickID, conversion.ConversionTime, conversion.AttributionModel,
 		conversion.TimeToConversion, conversion.CreatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to save conversion: %w", err)
 	}
@@ -295,7 +295,7 @@ func (c *ConversionTrackingService) GetConversionStats(userID int64, shortCode s
 		var stat models.ConversionStats
 		err := rows.Scan(&stat.GoalID, &stat.GoalName, &stat.TotalConversions,
 			&stat.TotalValue, &stat.AvgValue, &stat.AvgTimeToConvert)
-		
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan conversion stats: %w", err)
 		}
@@ -343,15 +343,15 @@ func (c *ConversionTrackingService) getConversionGoalByID(goalID, userID int64) 
 		FROM conversion_goals
 		WHERE id = $1 AND user_id = $2
 	`
-	
+
 	var goal models.ConversionGoal
 	var targetURL, customEventName sql.NullString
-	
+
 	err := c.storage.QueryRow(query, goalID, userID).Scan(
 		&goal.ID, &goal.UserID, &goal.GoalName, &goal.GoalType,
 		&targetURL, &customEventName, &goal.GoalValue, &goal.AttributionWindow,
 		&goal.IsActive, &goal.CreatedAt, &goal.UpdatedAt)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("conversion goal not found")
@@ -376,15 +376,15 @@ func (c *ConversionTrackingService) getActiveConversionGoal(goalID int64) (*mode
 		FROM conversion_goals
 		WHERE id = $1 AND is_active = true
 	`
-	
+
 	var goal models.ConversionGoal
 	var targetURL, customEventName sql.NullString
-	
+
 	err := c.storage.QueryRow(query, goalID).Scan(
 		&goal.ID, &goal.UserID, &goal.GoalName, &goal.GoalType,
 		&targetURL, &customEventName, &goal.GoalValue, &goal.AttributionWindow,
 		&goal.IsActive, &goal.CreatedAt, &goal.UpdatedAt)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("conversion goal not found or inactive")
@@ -410,17 +410,17 @@ func (c *ConversionTrackingService) getConversionByID(conversionID string) (*mod
 		FROM conversions
 		WHERE conversion_id = $1
 	`
-	
+
 	var conversion models.Conversion
 	var userIP, userAgent, referrer, sessionID sql.NullString
 	var clickID sql.NullInt64
-	
+
 	err := c.storage.QueryRow(query, conversionID).Scan(
 		&conversion.ID, &conversion.ShortCode, &conversion.GoalID, &conversion.ConversionID,
 		&conversion.ConversionType, &conversion.ConversionValue, &userIP, &userAgent,
 		&referrer, &sessionID, &clickID, &conversion.ConversionTime,
 		&conversion.AttributionModel, &conversion.TimeToConversion, &conversion.CreatedAt)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // Conversion not found, return nil without error
@@ -465,7 +465,7 @@ func (c *ConversionTrackingService) getTotalClicksForURL(shortCode string, days 
 	if err != nil {
 		return 0
 	}
-	
+
 	return totalClicks
 }
 
@@ -476,9 +476,9 @@ func (c *ConversionTrackingService) updateConversionAnalytics(shortCode string, 
 		SET conversions = conversions + 1
 		WHERE short_code = $1
 	`
-	
+
 	c.storage.Exec(query, shortCode)
-	
+
 	// Could also update other analytics tables with conversion data
 }
 
@@ -495,9 +495,9 @@ func GenerateSessionID(userIP, userAgent string) string {
 func (c *ConversionTrackingService) CalculateAttributedConversions(shortCode string, attributionModel string, days int) (map[string]float64, error) {
 	// This is a simplified implementation
 	// In a full implementation, you would analyze the complete customer journey
-	
+
 	conversions := make(map[string]float64)
-	
+
 	query := `
 		SELECT referrer_domain, COUNT(*) as conversion_count
 		FROM conversions c
@@ -512,20 +512,20 @@ func (c *ConversionTrackingService) CalculateAttributedConversions(shortCode str
 		return nil, fmt.Errorf("failed to calculate attributed conversions: %w", err)
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var domain string
 		var count float64
 		if err := rows.Scan(&domain, &count); err != nil {
 			continue
 		}
-		
+
 		switch attributionModel {
 		case "first_click":
 			// Attribute 100% to first touch
 			conversions[domain] = count
 		case "last_click":
-			// Attribute 100% to last touch  
+			// Attribute 100% to last touch
 			conversions[domain] = count
 		case "linear":
 			// Distribute evenly across all touches
@@ -534,7 +534,7 @@ func (c *ConversionTrackingService) CalculateAttributedConversions(shortCode str
 			conversions[domain] = count
 		}
 	}
-	
+
 	return conversions, nil
 }
 
@@ -554,7 +554,7 @@ func (c *ConversionTrackingService) TrackConversionFromRequest(request *models.C
 	return c.TrackConversion("", "", "", "", request)
 }
 
-// GetConversionStatsByGoal gets conversion stats by goal ID  
+// GetConversionStatsByGoal gets conversion stats by goal ID
 func (c *ConversionTrackingService) GetConversionStatsByGoal(goalID, userID int64, days int) ([]models.ConversionStats, error) {
 	// Placeholder implementation - in reality you'd query by goal ID
 	// For now, return empty stats

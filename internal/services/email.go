@@ -292,7 +292,7 @@ func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
 func (e *EmailService) SendContactFormEmail(name, emailAddr, subject, message string) error {
 	// Generate email template for admin
 	adminTemplate := email.ContactFormEmailTemplate(name, emailAddr, subject, message)
-	
+
 	// Send to contact email (admin)
 	contactEmail := "contact@trunc.site"
 	err := e.provider.SendEmail(contactEmail, adminTemplate.Subject, adminTemplate.HTMLBody, adminTemplate.TextBody)

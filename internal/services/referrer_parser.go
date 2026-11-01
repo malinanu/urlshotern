@@ -18,11 +18,11 @@ type ReferrerParsingService struct {
 
 // UTMParameters represents parsed UTM parameters
 type UTMParameters struct {
-	Source     string `json:"utm_source"`
-	Medium     string `json:"utm_medium"`
-	Campaign   string `json:"utm_campaign"`
-	Term       string `json:"utm_term"`
-	Content    string `json:"utm_content"`
+	Source   string `json:"utm_source"`
+	Medium   string `json:"utm_medium"`
+	Campaign string `json:"utm_campaign"`
+	Term     string `json:"utm_term"`
+	Content  string `json:"utm_content"`
 }
 
 // ParsedReferrer represents a parsed referrer with categorization
@@ -40,24 +40,24 @@ type ParsedReferrer struct {
 func NewReferrerParsingService() *ReferrerParsingService {
 	return &ReferrerParsingService{
 		socialMediaDomains: map[string]string{
-			"facebook.com":    "Facebook",
-			"fb.com":          "Facebook",
-			"m.facebook.com":  "Facebook",
-			"twitter.com":     "Twitter/X",
-			"x.com":           "Twitter/X",
-			"t.co":            "Twitter/X",
-			"instagram.com":   "Instagram",
-			"linkedin.com":    "LinkedIn",
-			"youtube.com":     "YouTube",
-			"youtu.be":        "YouTube",
-			"tiktok.com":      "TikTok",
-			"snapchat.com":    "Snapchat",
-			"pinterest.com":   "Pinterest",
-			"reddit.com":      "Reddit",
-			"discord.gg":      "Discord",
-			"telegram.org":    "Telegram",
-			"whatsapp.com":    "WhatsApp",
-			"wa.me":           "WhatsApp",
+			"facebook.com":   "Facebook",
+			"fb.com":         "Facebook",
+			"m.facebook.com": "Facebook",
+			"twitter.com":    "Twitter/X",
+			"x.com":          "Twitter/X",
+			"t.co":           "Twitter/X",
+			"instagram.com":  "Instagram",
+			"linkedin.com":   "LinkedIn",
+			"youtube.com":    "YouTube",
+			"youtu.be":       "YouTube",
+			"tiktok.com":     "TikTok",
+			"snapchat.com":   "Snapchat",
+			"pinterest.com":  "Pinterest",
+			"reddit.com":     "Reddit",
+			"discord.gg":     "Discord",
+			"telegram.org":   "Telegram",
+			"whatsapp.com":   "WhatsApp",
+			"wa.me":          "WhatsApp",
 		},
 		searchEngines: map[string]string{
 			"google.com":     "Google",
@@ -105,10 +105,10 @@ func (r *ReferrerParsingService) ParseReferrer(referrerURL string) *ParsedReferr
 	}
 
 	parsed.Domain = strings.ToLower(u.Host)
-	
+
 	// Remove www. prefix for matching
 	domain := strings.TrimPrefix(parsed.Domain, "www.")
-	
+
 	// Parse UTM parameters
 	parsed.UTMParams = r.parseUTMParameters(u.Query())
 	if parsed.UTMParams != nil && parsed.UTMParams.hasAnyParam() {
@@ -117,7 +117,7 @@ func (r *ReferrerParsingService) ParseReferrer(referrerURL string) *ParsedReferr
 
 	// Categorize referrer
 	parsed.Category, parsed.Platform = r.categorizeReferrer(domain)
-	
+
 	// Extract search query if from search engine
 	if parsed.Category == "search" {
 		parsed.SearchQuery = r.extractSearchQuery(u)
@@ -182,22 +182,22 @@ func (r *ReferrerParsingService) categorizeReferrer(domain string) (category, pl
 // extractSearchQuery extracts search query from search engine URLs
 func (r *ReferrerParsingService) extractSearchQuery(u *url.URL) string {
 	values := u.Query()
-	
+
 	// Google uses 'q' parameter
 	if query := values.Get("q"); query != "" {
 		return query
 	}
-	
+
 	// Bing uses 'q' parameter
 	if query := values.Get("q"); query != "" {
 		return query
 	}
-	
+
 	// Yahoo uses 'p' parameter
 	if query := values.Get("p"); query != "" {
 		return query
 	}
-	
+
 	// DuckDuckGo uses 'q' parameter
 	if query := values.Get("q"); query != "" {
 		return query
@@ -255,24 +255,24 @@ func (r *ReferrerParsingService) extractDomainName(domain string) string {
 
 // Enhanced models for referrer tracking
 type EnhancedReferrerData struct {
-	ShortCode        string         `json:"short_code"`
-	OriginalReferrer string         `json:"original_referrer"`
+	ShortCode        string          `json:"short_code"`
+	OriginalReferrer string          `json:"original_referrer"`
 	ParsedReferrer   *ParsedReferrer `json:"parsed_referrer"`
-	IPAddress        string         `json:"ip_address"`
-	UserAgent        string         `json:"user_agent"`
-	Timestamp        time.Time      `json:"timestamp"`
+	IPAddress        string          `json:"ip_address"`
+	UserAgent        string          `json:"user_agent"`
+	Timestamp        time.Time       `json:"timestamp"`
 }
 
 // ReferrerAnalytics represents aggregated referrer analytics
 type ReferrerAnalytics struct {
-	ShortCode      string                    `json:"short_code"`
-	TotalClicks    int64                     `json:"total_clicks"`
-	Referrers      []models.ReferrerStat     `json:"referrers"`
-	Categories     []ReferrerCategoryStat    `json:"categories"`
-	Campaigns      []CampaignStat            `json:"campaigns"`
-	TopDomains     []DomainStat              `json:"top_domains"`
-	UTMBreakdown   UTMBreakdown              `json:"utm_breakdown"`
-	OrganicVsPaid  OrganicVsPaidStat         `json:"organic_vs_paid"`
+	ShortCode     string                 `json:"short_code"`
+	TotalClicks   int64                  `json:"total_clicks"`
+	Referrers     []models.ReferrerStat  `json:"referrers"`
+	Categories    []ReferrerCategoryStat `json:"categories"`
+	Campaigns     []CampaignStat         `json:"campaigns"`
+	TopDomains    []DomainStat           `json:"top_domains"`
+	UTMBreakdown  UTMBreakdown           `json:"utm_breakdown"`
+	OrganicVsPaid OrganicVsPaidStat      `json:"organic_vs_paid"`
 }
 
 // ReferrerCategoryStat represents statistics by referrer category
@@ -315,16 +315,16 @@ type UTMParamStat struct {
 
 // OrganicVsPaidStat represents organic vs paid traffic breakdown
 type OrganicVsPaidStat struct {
-	OrganicClicks   int64   `json:"organic_clicks"`
-	PaidClicks      int64   `json:"paid_clicks"`
-	OrganicPercent  float64 `json:"organic_percent"`
-	PaidPercent     float64 `json:"paid_percent"`
+	OrganicClicks  int64   `json:"organic_clicks"`
+	PaidClicks     int64   `json:"paid_clicks"`
+	OrganicPercent float64 `json:"organic_percent"`
+	PaidPercent    float64 `json:"paid_percent"`
 }
 
 // ProcessReferrerData processes and stores referrer data
 func (r *ReferrerParsingService) ProcessReferrerData(shortCode, referrerURL, ipAddress, userAgent string) (*EnhancedReferrerData, error) {
 	parsedReferrer := r.ParseReferrer(referrerURL)
-	
+
 	enhancedData := &EnhancedReferrerData{
 		ShortCode:        shortCode,
 		OriginalReferrer: referrerURL,
@@ -340,17 +340,17 @@ func (r *ReferrerParsingService) ProcessReferrerData(shortCode, referrerURL, ipA
 // GetReferrerInsights provides insights about referrer patterns
 func (r *ReferrerParsingService) GetReferrerInsights(referrers []models.ReferrerStat) map[string]interface{} {
 	insights := make(map[string]interface{})
-	
+
 	// Analyze top referrer categories
 	categoryMap := make(map[string]int64)
 	totalClicks := int64(0)
-	
+
 	for _, ref := range referrers {
 		parsed := r.ParseReferrer(ref.Referrer)
 		categoryMap[parsed.Category] += ref.Clicks
 		totalClicks += ref.Clicks
 	}
-	
+
 	// Find dominant referrer category
 	var dominantCategory string
 	var maxClicks int64
@@ -360,19 +360,19 @@ func (r *ReferrerParsingService) GetReferrerInsights(referrers []models.Referrer
 			dominantCategory = category
 		}
 	}
-	
+
 	insights["dominant_category"] = dominantCategory
 	insights["dominant_category_percentage"] = float64(maxClicks) / float64(totalClicks) * 100
 	insights["total_categories"] = len(categoryMap)
-	
+
 	// Analyze organic vs paid
 	organicClicks := categoryMap["search"] + categoryMap["social"] + categoryMap["direct"]
 	paidClicks := totalClicks - organicClicks
-	
+
 	if totalClicks > 0 {
 		insights["organic_percentage"] = float64(organicClicks) / float64(totalClicks) * 100
 		insights["paid_percentage"] = float64(paidClicks) / float64(totalClicks) * 100
 	}
-	
+
 	return insights
 }

@@ -337,6 +337,7 @@ func (r *RedisStorage) LPush(key string, value interface{}) error {
 func (r *RedisStorage) RPop(key string) (string, error) {
 	return r.client.RPop(r.ctx, key).Result()
 }
+
 // IncrWindow increments key and starts a TTL window on the first hit,
 // returning the count within the window (fixed-window rate limiting).
 func (r *RedisStorage) IncrWindow(key string, window time.Duration) (int64, error) {

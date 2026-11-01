@@ -29,13 +29,13 @@ func (s *GlobalSettingsService) GetSetting(key string) (*models.GlobalSetting, e
 
 	var setting models.GlobalSetting
 	var description sql.NullString
-	
+
 	err := s.db.QueryRow(query, key).Scan(
 		&setting.ID, &setting.Key, &setting.Value, &setting.Type,
 		&setting.Category, &setting.DisplayName, &description,
 		&setting.IsPublic, &setting.SortOrder, &setting.CreatedAt, &setting.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("setting '%s' not found", key)
@@ -56,7 +56,7 @@ func (s *GlobalSettingsService) GetSettings(category string, publicOnly bool) ([
 		SELECT id, key, value, type, category, display_name, description, 
 			is_public, sort_order, created_at, updated_at
 		FROM global_settings`
-	
+
 	var conditions []string
 	var args []interface{}
 	argIndex := 1
@@ -154,12 +154,12 @@ func (s *GlobalSettingsService) CreateSetting(req *models.GlobalSettingRequest) 
 
 	now := time.Now()
 	var setting models.GlobalSetting
-	
+
 	err := s.db.QueryRow(query,
 		req.Key, req.Value, req.Type, req.Category, req.DisplayName,
 		req.Description, req.IsPublic, req.SortOrder, now, now,
 	).Scan(&setting.ID, &setting.CreatedAt, &setting.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create setting: %w", err)
 	}
@@ -214,7 +214,7 @@ func (s *GlobalSettingsService) UpdateSetting(key string, req *models.GlobalSett
 	setParts = append(setParts, fmt.Sprintf("is_public = $%d", argIndex))
 	args = append(args, req.IsPublic)
 	argIndex++
-	
+
 	setParts = append(setParts, fmt.Sprintf("sort_order = $%d", argIndex))
 	args = append(args, req.SortOrder)
 	argIndex++
@@ -310,7 +310,7 @@ func (s *GlobalSettingsService) IsMaintenanceMode() bool {
 // GetSiteInfo returns basic site information
 func (s *GlobalSettingsService) GetSiteInfo() map[string]string {
 	result := make(map[string]string)
-	
+
 	// Get basic site info
 	keys := []string{"site_name", "site_tagline", "company_email", "company_phone", "company_address", "meta_description"}
 	for _, key := range keys {

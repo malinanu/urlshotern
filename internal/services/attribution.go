@@ -20,12 +20,12 @@ type AttributionService struct {
 type AttributionModel string
 
 const (
-	FirstTouchAttribution  AttributionModel = "first_touch"
-	LastTouchAttribution   AttributionModel = "last_touch"
-	LinearAttribution      AttributionModel = "linear"
-	TimeDecayAttribution   AttributionModel = "time_decay"
+	FirstTouchAttribution    AttributionModel = "first_touch"
+	LastTouchAttribution     AttributionModel = "last_touch"
+	LinearAttribution        AttributionModel = "linear"
+	TimeDecayAttribution     AttributionModel = "time_decay"
 	PositionBasedAttribution AttributionModel = "position_based"
-	DataDrivenAttribution  AttributionModel = "data_driven"
+	DataDrivenAttribution    AttributionModel = "data_driven"
 )
 
 // TouchpointValue represents the attribution value assigned to a touchpoint
@@ -39,24 +39,24 @@ type TouchpointValue struct {
 
 // AttributionReport represents a comprehensive attribution analysis
 type AttributionReport struct {
-	ConversionID     string                        `json:"conversion_id"`
-	TotalValue       float64                       `json:"total_value"`
-	Journey          models.ConversionJourney      `json:"journey"`
+	ConversionID         string                       `json:"conversion_id"`
+	TotalValue           float64                      `json:"total_value"`
+	Journey              models.ConversionJourney     `json:"journey"`
 	AttributionBreakdown map[string][]TouchpointValue `json:"attribution_breakdown"` // model -> touchpoints
-	ModelComparison  map[string]float64             `json:"model_comparison"`       // model -> total attributed value
-	RecommendedModel string                         `json:"recommended_model"`
+	ModelComparison      map[string]float64           `json:"model_comparison"`      // model -> total attributed value
+	RecommendedModel     string                       `json:"recommended_model"`
 }
 
 // ChannelAttribution represents attribution by marketing channel
 type ChannelAttribution struct {
-	Channel          string                         `json:"channel"`
-	Source           string                         `json:"source"`
-	Medium           string                         `json:"medium"`
-	Touchpoints      int                           `json:"touchpoints"`
-	Conversions      int                           `json:"conversions"`
-	AttributionValue map[string]float64            `json:"attribution_value"` // model -> value
-	ROI              float64                       `json:"roi"`
-	ConversionRate   float64                       `json:"conversion_rate"`
+	Channel          string             `json:"channel"`
+	Source           string             `json:"source"`
+	Medium           string             `json:"medium"`
+	Touchpoints      int                `json:"touchpoints"`
+	Conversions      int                `json:"conversions"`
+	AttributionValue map[string]float64 `json:"attribution_value"` // model -> value
+	ROI              float64            `json:"roi"`
+	ConversionRate   float64            `json:"conversion_rate"`
 }
 
 // NewAttributionService creates a new attribution service
@@ -400,7 +400,7 @@ func (a *AttributionService) applyDataDrivenAttribution(journey *models.Conversi
 
 	for _, touchpoint := range touchpoints {
 		channel := a.getChannelKey(touchpoint)
-		
+
 		// Get historical conversion rate for this channel
 		conversionRate := a.getChannelConversionRate(channel)
 		channelWeights[channel] = conversionRate
@@ -506,7 +506,7 @@ func (a *AttributionService) storeAttributionValues(values []TouchpointValue, mo
 	`
 
 	for _, value := range values {
-		_, err = tx.Exec(insertQuery, value.TouchpointID, value.AttributionModel, 
+		_, err = tx.Exec(insertQuery, value.TouchpointID, value.AttributionModel,
 			value.AttributionValue, value.Weight)
 		if err != nil {
 			return fmt.Errorf("failed to insert attribution value: %w", err)
@@ -626,13 +626,13 @@ func (a *AttributionService) GetChannelAttribution(shortCode string, days int, m
 		}
 
 		channels = append(channels, ChannelAttribution{
-			Channel:        channel,
-			Source:         source,
-			Medium:         medium,
-			Touchpoints:    int(touchpoints),
-			Conversions:    int(conversions),
+			Channel:          channel,
+			Source:           source,
+			Medium:           medium,
+			Touchpoints:      int(touchpoints),
+			Conversions:      int(conversions),
 			AttributionValue: map[string]float64{string(model): attributionValue},
-			ConversionRate: conversionRate,
+			ConversionRate:   conversionRate,
 		})
 	}
 

@@ -14,16 +14,16 @@ import (
 
 // BenchmarkResult holds the results of a benchmark
 type BenchmarkResult struct {
-	Name        string
-	Iterations  int
-	TotalTime   time.Duration
-	AvgTime     time.Duration
-	MinTime     time.Duration
-	MaxTime     time.Duration
-	P95Time     time.Duration
-	P99Time     time.Duration
-	Success     int
-	Failures    int
+	Name       string
+	Iterations int
+	TotalTime  time.Duration
+	AvgTime    time.Duration
+	MinTime    time.Duration
+	MaxTime    time.Duration
+	P95Time    time.Duration
+	P99Time    time.Duration
+	Success    int
+	Failures   int
 }
 
 // Database connection

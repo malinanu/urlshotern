@@ -23,9 +23,9 @@ func NewRedisMsgpackStorage(config *configs.Config) (*RedisMsgpackStorage, error
 		Addr:         fmt.Sprintf("%s:%s", config.RedisHost, config.RedisPort),
 		Password:     config.RedisPassword,
 		DB:           config.RedisDB,
-		PoolSize:     50,  // Optimized connection pool
-		MinIdleConns: 10,  // Maintain minimum idle connections
-		MaxRetries:   3,   // Retry failed operations
+		PoolSize:     50, // Optimized connection pool
+		MinIdleConns: 10, // Maintain minimum idle connections
+		MaxRetries:   3,  // Retry failed operations
 		DialTimeout:  5 * time.Second,
 		ReadTimeout:  3 * time.Second,
 		WriteTimeout: 3 * time.Second,

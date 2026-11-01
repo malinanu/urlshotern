@@ -94,7 +94,7 @@ func BenchmarkBase62Encode(b *testing.B) {
 func BenchmarkBase62Decode(b *testing.B) {
 	encoded := utils.EncodeBase62(123456789)
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		utils.DecodeBase62(encoded)
 	}

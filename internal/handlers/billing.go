@@ -43,7 +43,7 @@ func (bh *BillingHandler) GetSubscription(c *gin.Context) {
 	subscription, err := bh.billingService.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get subscription details",
+			"error":   "Failed to get subscription details",
 			"details": err.Error(),
 		})
 		return
@@ -57,7 +57,7 @@ func (bh *BillingHandler) GetSubscription(c *gin.Context) {
 // GetPlans returns all available subscription plans
 func (bh *BillingHandler) GetPlans(c *gin.Context) {
 	plans := bh.billingService.GetAllPlans()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"plans": plans,
 	})
@@ -74,7 +74,7 @@ func (bh *BillingHandler) GetUsage(c *gin.Context) {
 	usage, err := bh.billingService.CheckUsageLimits(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get usage statistics",
+			"error":   "Failed to get usage statistics",
 			"details": err.Error(),
 		})
 		return
@@ -83,7 +83,7 @@ func (bh *BillingHandler) GetUsage(c *gin.Context) {
 	subscription, err := bh.billingService.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get subscription",
+			"error":   "Failed to get subscription",
 			"details": err.Error(),
 		})
 		return
@@ -92,7 +92,7 @@ func (bh *BillingHandler) GetUsage(c *gin.Context) {
 	plan, err := bh.billingService.GetPlan(subscription.PlanType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get plan details",
+			"error":   "Failed to get plan details",
 			"details": err.Error(),
 		})
 		return
@@ -101,14 +101,14 @@ func (bh *BillingHandler) GetUsage(c *gin.Context) {
 	// Calculate usage percentages for UI
 	urlUsagePercent := 0
 	clickUsagePercent := 0
-	
+
 	if plan.Limits.URLs > 0 {
 		urlUsagePercent = (usage.CurrentURLs * 100) / plan.Limits.URLs
 		if urlUsagePercent > 100 {
 			urlUsagePercent = 100
 		}
 	}
-	
+
 	if plan.Limits.Clicks > 0 {
 		clickUsagePercent = (usage.MonthlyClicks * 100) / plan.Limits.Clicks
 		if clickUsagePercent > 100 {
@@ -117,19 +117,19 @@ func (bh *BillingHandler) GetUsage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"usage": usage,
-		"limits": plan.Limits,
+		"usage":        usage,
+		"limits":       plan.Limits,
 		"subscription": subscription,
-		"plan": plan,
+		"plan":         plan,
 		"usage_percentages": gin.H{
-			"urls": urlUsagePercent,
+			"urls":   urlUsagePercent,
 			"clicks": clickUsagePercent,
 		},
 		"warnings": gin.H{
-			"url_limit_approaching": plan.Limits.URLs > 0 && urlUsagePercent >= 80,
+			"url_limit_approaching":   plan.Limits.URLs > 0 && urlUsagePercent >= 80,
 			"click_limit_approaching": plan.Limits.Clicks > 0 && clickUsagePercent >= 80,
-			"url_limit_reached": plan.Limits.URLs > 0 && usage.CurrentURLs >= plan.Limits.URLs,
-			"click_limit_reached": plan.Limits.Clicks > 0 && usage.MonthlyClicks >= plan.Limits.Clicks,
+			"url_limit_reached":       plan.Limits.URLs > 0 && usage.CurrentURLs >= plan.Limits.URLs,
+			"click_limit_reached":     plan.Limits.Clicks > 0 && usage.MonthlyClicks >= plan.Limits.Clicks,
 		},
 	})
 }
@@ -202,7 +202,7 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 			// fallback in case of db desync
 			planType = req.ProductID
 		}
-		
+
 		coupon, err := bh.billingService.ValidateCoupon(*req.DiscountCode, planType)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -236,10 +236,10 @@ func (bh *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"checkout_url":    checkout.URL,
-		"checkout_id":     checkout.ID,
-		"client_secret":   checkout.ClientSecret,
-		"expires_at":      checkout.ExpiresAt,
+		"checkout_url":  checkout.URL,
+		"checkout_id":   checkout.ID,
+		"client_secret": checkout.ClientSecret,
+		"expires_at":    checkout.ExpiresAt,
 	})
 }
 
@@ -255,7 +255,7 @@ func (bh *BillingHandler) CancelSubscription(c *gin.Context) {
 	subscription, err := bh.billingService.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get subscription",
+			"error":   "Failed to get subscription",
 			"details": err.Error(),
 		})
 		return
@@ -317,7 +317,7 @@ func (bh *BillingHandler) ReactivateSubscription(c *gin.Context) {
 	subscription, err := bh.billingService.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get subscription",
+			"error":   "Failed to get subscription",
 			"details": err.Error(),
 		})
 		return
@@ -332,12 +332,12 @@ func (bh *BillingHandler) ReactivateSubscription(c *gin.Context) {
 
 	err = bh.billingService.UpdateSubscription(userID, map[string]interface{}{
 		"cancel_at_period_end": false,
-		"status": "active",
+		"status":               "active",
 	})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to reactivate subscription",
+			"error":   "Failed to reactivate subscription",
 			"details": err.Error(),
 		})
 		return
@@ -360,7 +360,7 @@ func (bh *BillingHandler) GetBillingHistory(c *gin.Context) {
 	subscription, err := bh.billingService.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get subscription",
+			"error":   "Failed to get subscription",
 			"details": err.Error(),
 		})
 		return
@@ -381,7 +381,7 @@ func (bh *BillingHandler) GetBillingHistory(c *gin.Context) {
 	if err != nil {
 		log.Printf("Failed to fetch orders from Polar: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch billing history",
+			"error":   "Failed to fetch billing history",
 			"details": err.Error(),
 		})
 		return
@@ -401,13 +401,13 @@ func (bh *BillingHandler) GetBillingHistory(c *gin.Context) {
 		invoiceURL := fmt.Sprintf("https://polar.sh/orders/%s", order.ID)
 
 		invoice := gin.H{
-			"id":          order.ID,
-			"amount":      order.Amount,
-			"currency":    order.Currency,
-			"status":      "paid",
-			"created":     order.CreatedAt.Format(time.RFC3339),
-			"description": description,
-			"product_id":  order.ProductID,
+			"id":                 order.ID,
+			"amount":             order.Amount,
+			"currency":           order.Currency,
+			"status":             "paid",
+			"created":            order.CreatedAt.Format(time.RFC3339),
+			"description":        description,
+			"product_id":         order.ProductID,
 			"hosted_invoice_url": invoiceURL,
 		}
 
@@ -437,7 +437,7 @@ func (bh *BillingHandler) UpdatePaymentMethod(c *gin.Context) {
 	subscription, err := bh.billingService.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get subscription",
+			"error":   "Failed to get subscription",
 			"details": err.Error(),
 		})
 		return
@@ -450,8 +450,8 @@ func (bh *BillingHandler) UpdatePaymentMethod(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Payment methods are managed through Polar customer portal",
-		"portal_url": portalURL,
+		"message":           "Payment methods are managed through Polar customer portal",
+		"portal_url":        portalURL,
 		"redirect_required": true,
 	})
 }
@@ -615,9 +615,9 @@ func (bh *BillingHandler) CheckFeatureAccess(feature string) gin.HandlerFunc {
 
 		if !hasAccess {
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "Feature not available in your current plan",
-				"feature": feature,
-				"current_plan": subscription.PlanType,
+				"error":            "Feature not available in your current plan",
+				"feature":          feature,
+				"current_plan":     subscription.PlanType,
 				"upgrade_required": true,
 			})
 			c.Abort()

@@ -20,7 +20,7 @@ type BillingService struct {
 }
 
 type Subscription struct {
-	ID                int64                  `json:"id" gorm:"primaryKey;autoIncrement"`
+	ID               int64                  `json:"id" gorm:"primaryKey;autoIncrement"`
 	UserID           int64                  `json:"user_id" gorm:"not null;index"`
 	PlanType         string                 `json:"plan_type" gorm:"not null"` // free, premium, enterprise
 	Status           string                 `json:"status" gorm:"not null"`    // active, cancelled, expired, trialing
@@ -36,37 +36,37 @@ type Subscription struct {
 }
 
 type Plan struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
-	Currency    string  `json:"currency"`
-	Interval    string  `json:"interval"` // month, year
-	Features    []string `json:"features"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Price       float64    `json:"price"`
+	Currency    string     `json:"currency"`
+	Interval    string     `json:"interval"` // month, year
+	Features    []string   `json:"features"`
 	Limits      PlanLimits `json:"limits"`
 }
 
 type PlanLimits struct {
-	URLs                int  `json:"max_urls"`           // -1 for unlimited
-	Clicks              int  `json:"max_clicks_month"`   // -1 for unlimited
-	Analytics           int  `json:"analytics_days"`     // days of analytics retention
-	CustomDomain        bool `json:"custom_domain"`
-	APIAccess           bool `json:"api_access"`
-	BulkImport          bool `json:"bulk_import"`
-	QRCodes             bool `json:"qr_codes"`
-	CustomShortCodes    bool `json:"custom_short_codes"`
-	TeamMembers         int  `json:"team_members"`       // 0 = none, -1 = unlimited
-	PasswordProtection  bool `json:"password_protection"`
-	Advanced     bool `json:"advanced_features"`
-	MaxPages            int  `json:"max_pages"`          // microsites (/m/<slug>); -1 for unlimited
+	URLs               int  `json:"max_urls"`         // -1 for unlimited
+	Clicks             int  `json:"max_clicks_month"` // -1 for unlimited
+	Analytics          int  `json:"analytics_days"`   // days of analytics retention
+	CustomDomain       bool `json:"custom_domain"`
+	APIAccess          bool `json:"api_access"`
+	BulkImport         bool `json:"bulk_import"`
+	QRCodes            bool `json:"qr_codes"`
+	CustomShortCodes   bool `json:"custom_short_codes"`
+	TeamMembers        int  `json:"team_members"` // 0 = none, -1 = unlimited
+	PasswordProtection bool `json:"password_protection"`
+	Advanced           bool `json:"advanced_features"`
+	MaxPages           int  `json:"max_pages"` // microsites (/m/<slug>); -1 for unlimited
 }
 
 type BillingUsage struct {
-	UserID       int64 `json:"user_id"`
-	CurrentURLs  int   `json:"current_urls"`
-	MonthlyClicks int   `json:"monthly_clicks"`
-	PeriodStart  time.Time `json:"period_start"`
-	PeriodEnd    time.Time `json:"period_end"`
+	UserID        int64     `json:"user_id"`
+	CurrentURLs   int       `json:"current_urls"`
+	MonthlyClicks int       `json:"monthly_clicks"`
+	PeriodStart   time.Time `json:"period_start"`
+	PeriodEnd     time.Time `json:"period_end"`
 }
 
 const (
@@ -275,15 +275,15 @@ func (bs *BillingService) GetUserSubscription(userID int64) (*models.PolarSubscr
 // CreateFreePolarSubscription creates a free subscription for new users
 func (bs *BillingService) CreateFreePolarSubscription(userID int64) (*models.PolarSubscription, error) {
 	subscription := &models.PolarSubscription{
-		UserID:           userID,
-		PolarCustomerID:  fmt.Sprintf("free_user_%d", userID), // Placeholder for free users
-		PolarProductID:   "free_plan",
-		Status:           "active",
-		PlanType:         "free",
-		Benefits:         []models.PolarBenefit{},
-		Metadata:         models.JSONB{"plan": "free"},
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+		UserID:          userID,
+		PolarCustomerID: fmt.Sprintf("free_user_%d", userID), // Placeholder for free users
+		PolarProductID:  "free_plan",
+		Status:          "active",
+		PlanType:        "free",
+		Benefits:        []models.PolarBenefit{},
+		Metadata:        models.JSONB{"plan": "free"},
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	err := bs.db.Create(subscription).Error
@@ -329,36 +329,36 @@ func (bs *BillingService) CheckUsageLimits(userID int64) (*BillingUsage, error) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = bs.GetPlan(subscription.PlanType)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get current month start and end
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
-	
+
 	// Count current URLs
 	var urlCount int64
 	bs.db.Table("url_mappings").Where("user_id = ? AND is_active = true", userID).Count(&urlCount)
-	
+
 	// Count monthly clicks
 	var clickCount int64
 	bs.db.Table("click_events").
 		Joins("JOIN url_mappings ON url_mappings.short_code = click_events.short_code").
 		Where("url_mappings.user_id = ? AND click_events.created_at >= ? AND click_events.created_at <= ?", userID, monthStart, monthEnd).
 		Count(&clickCount)
-	
+
 	usage := &BillingUsage{
-		UserID:       userID,
-		CurrentURLs:  int(urlCount),
+		UserID:        userID,
+		CurrentURLs:   int(urlCount),
 		MonthlyClicks: int(clickCount),
-		PeriodStart:  monthStart,
-		PeriodEnd:    monthEnd,
+		PeriodStart:   monthStart,
+		PeriodEnd:     monthEnd,
 	}
-	
+
 	return usage, nil
 }
 
@@ -368,22 +368,22 @@ func (bs *BillingService) CanCreateURL(userID int64) (bool, string, error) {
 	if err != nil {
 		return false, "Error checking usage limits", err
 	}
-	
+
 	subscription, err := bs.GetUserSubscription(userID)
 	if err != nil {
 		return false, "Error getting subscription", err
 	}
-	
+
 	plan, err := bs.GetPlan(subscription.PlanType)
 	if err != nil {
 		return false, "Error getting plan details", err
 	}
-	
+
 	// Check URL limit
 	if plan.Limits.URLs != -1 && usage.CurrentURLs >= plan.Limits.URLs {
 		return false, fmt.Sprintf("URL limit reached (%d/%d). Upgrade to create more URLs.", usage.CurrentURLs, plan.Limits.URLs), nil
 	}
-	
+
 	return true, "", nil
 }
 
@@ -435,22 +435,22 @@ func (bs *BillingService) CanProcessClick(userID int64) (bool, string, error) {
 	if err != nil {
 		return false, "Error checking usage limits", err
 	}
-	
+
 	subscription, err := bs.GetUserSubscription(userID)
 	if err != nil {
 		return false, "Error getting subscription", err
 	}
-	
+
 	plan, err := bs.GetPlan(subscription.PlanType)
 	if err != nil {
 		return false, "Error getting plan details", err
 	}
-	
+
 	// Check click limit
 	if plan.Limits.Clicks != -1 && usage.MonthlyClicks >= plan.Limits.Clicks {
 		return false, fmt.Sprintf("Monthly click limit reached (%d/%d). Upgrade for more capacity.", usage.MonthlyClicks, plan.Limits.Clicks), nil
 	}
-	
+
 	return true, "", nil
 }
 
@@ -568,13 +568,13 @@ func (bs *BillingService) GetSubscriptionHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	
+
 	subscription, err := bs.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get subscription"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, subscription)
 }
 
@@ -589,28 +589,28 @@ func (bs *BillingService) GetUsageHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	
+
 	usage, err := bs.CheckUsageLimits(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get usage"})
 		return
 	}
-	
+
 	subscription, err := bs.GetUserSubscription(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get subscription"})
 		return
 	}
-	
+
 	plan, err := bs.GetPlan(subscription.PlanType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get plan"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"usage": usage,
-		"limits": plan.Limits,
+		"usage":        usage,
+		"limits":       plan.Limits,
 		"subscription": subscription,
 	})
 }
@@ -621,13 +621,13 @@ func (bs *BillingService) CreateCheckoutHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	
+
 	var req struct {
 		PlanID     string `json:"plan_id" binding:"required"`
 		SuccessURL string `json:"success_url"`
 		CancelURL  string `json:"cancel_url"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -645,7 +645,7 @@ func (bs *BillingService) CreateCheckoutHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"checkout_url": checkoutURL})
 }
 
@@ -655,16 +655,16 @@ func (bs *BillingService) CancelSubscriptionHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	
+
 	err := bs.UpdateSubscription(userID, map[string]interface{}{
 		"cancel_at_end": true,
-		"updated_at":   time.Now(),
+		"updated_at":    time.Now(),
 	})
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "Subscription will be cancelled at the end of the current period"})
 }
