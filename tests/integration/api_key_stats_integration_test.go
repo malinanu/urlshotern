@@ -46,7 +46,7 @@ func TestAPIKeyStatsEndpoint_NewKey(t *testing.T) {
 
 	// Step 3: IMMEDIATELY request stats (key has NO usage yet)
 	req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/api-keys/%s/stats", apiKeyID), nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	setTestAuth(req, token)
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -95,7 +95,7 @@ func TestAPIKeyStatsEndpoint_WithUsage(t *testing.T) {
 
 	// Request stats
 	req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/api-keys/%s/stats", apiKeyID), nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	setTestAuth(req, token)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -137,7 +137,7 @@ func TestAPIKeyStatsEndpoint_Unauthorized(t *testing.T) {
 
 	// User B tries to access User A's API key stats
 	req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/api-keys/%s/stats", apiKeyIDUserA), nil)
-	req.Header.Set("Authorization", "Bearer "+tokenB)
+	setTestAuth(req, tokenB)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -170,7 +170,7 @@ func TestAPIKeyStatsEndpoint_AllFailures(t *testing.T) {
 
 	// Request stats
 	req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/api-keys/%s/stats", apiKeyID), nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	setTestAuth(req, token)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -243,19 +243,56 @@ func setupAPIKeyStatsTestRouter(db *storage.PostgresStorage, config *configs.Con
 }
 
 func createUserAndLogin(t *testing.T, router *gin.Engine, db *storage.PostgresStorage) (string, int64) {
-	// For testing, create a simple user record
-	userID := time.Now().Unix() // Use timestamp as unique user ID
+	t.Helper()
+
+	// api_keys.user_id references users(id), so the user has to exist. The ID is
+	// in Unix nanoseconds: a Unix-second ID collided between tests that ran
+	// within the same second.
+	now := time.Now()
+	userID := now.UnixNano()
+	require.NoError(t, db.CreateUser(&models.User{
+		ID:          userID,
+		Name:        "API key stats test user",
+		Email:       fmt.Sprintf("api-key-stats-%d@example.com", userID),
+		Provider:    "local",
+		AccountType: "free",
+		IsActive:    true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}))
+
+	// The calling test closes its own connection in a defer, which runs before
+	// t.Cleanup, so clean up through a fresh one. Deleting the user cascades to
+	// its API keys and their usage rows.
+	cfg := getTestConfig()
+	t.Cleanup(func() {
+		cleanup, err := storage.NewPostgresStorage(cfg)
+		if err != nil {
+			t.Logf("cleanup: could not reconnect to remove test user %d: %v", userID, err)
+			return
+		}
+		defer cleanup.Close()
+		if _, err := cleanup.Exec(`DELETE FROM users WHERE id = $1`, userID); err != nil {
+			t.Logf("cleanup: could not remove test user %d: %v", userID, err)
+		}
+	})
 
 	// Return mock JWT token (in real implementation, this would be a valid JWT)
 	// For testing, we use the X-Test-User-ID header instead
 	return fmt.Sprintf("test-token-%d", userID), userID
 }
 
-func createAPIKey(t *testing.T, router *gin.Engine, token string, name string) (uuid.UUID, string) {
-	// Extract user ID from token
+// setTestAuth authenticates a request the way setupAPIKeyStatsTestRouter's mock
+// middleware expects: the user ID comes from the X-Test-User-ID header, which
+// is derived here from the "test-token-<id>" token.
+func setTestAuth(req *http.Request, token string) {
 	var userID int64
-	fmt.Sscanf(token, "test-token-%d", &userID)
+	_, _ = fmt.Sscanf(token, "test-token-%d", &userID)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("X-Test-User-ID", fmt.Sprintf("%d", userID))
+}
 
+func createAPIKey(t *testing.T, router *gin.Engine, token string, name string) (uuid.UUID, string) {
 	reqBody := map[string]interface{}{
 		"name":        name,
 		"description": "Test API key",
@@ -265,14 +302,13 @@ func createAPIKey(t *testing.T, router *gin.Engine, token string, name string) (
 	body, _ := json.Marshal(reqBody)
 
 	req := httptest.NewRequest("POST", "/api/v1/api-keys", bytes.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("X-Test-User-ID", fmt.Sprintf("%d", userID))
+	setTestAuth(req, token)
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusOK, w.Code, "Failed to create API key: %s", w.Body.String())
+	require.Equal(t, http.StatusCreated, w.Code, "Failed to create API key: %s", w.Body.String())
 
 	var response models.CreateAPIKeyResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)

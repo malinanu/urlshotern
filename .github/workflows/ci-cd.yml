@@ -76,6 +76,31 @@ jobs:
         go mod download
         cd frontend && npm ci
 
+    - name: Prepare database schema
+      env:
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: test
+        PGPASSWORD: test
+        PGDATABASE: urlshortener_test
+        PGOPTIONS: --client-min-messages=warning
+      run: |
+        # The Postgres service starts empty, but the app and its integration tests
+        # expect the schema that docker-compose loads at init. The full migration
+        # chain can't be replayed on an empty database (migration 003 expects an
+        # existing production schema), so load the base schema files instead.
+        # configs/billing_schema.sql needs generate_snowflake_id(), which is not
+        # defined anywhere in the repo (the app generates IDs in Go), so define a
+        # stand-in for the tests.
+        psql -v ON_ERROR_STOP=1 -q <<'SQL'
+        CREATE OR REPLACE FUNCTION generate_snowflake_id() RETURNS bigint LANGUAGE sql AS $$
+          SELECT (extract(epoch FROM clock_timestamp()) * 1000)::bigint * 4096 + floor(random() * 4096)::bigint
+        $$;
+        SQL
+        sed '/^\\c /d' configs/database.sql | psql -v ON_ERROR_STOP=1 -q
+        psql -v ON_ERROR_STOP=1 -q -f configs/auth_schema.sql
+        psql -v ON_ERROR_STOP=1 -q -f configs/billing_schema.sql
+
     - name: Run Go tests
       env:
         DB_HOST: localhost
@@ -84,6 +109,7 @@ jobs:
         DB_PASSWORD: test
         DB_NAME: urlshortener_test
         DB_SSLMODE: disable
+        DATABASE_URL: postgres://test:test@localhost:5432/urlshortener_test?sslmode=disable
         REDIS_HOST: localhost
         REDIS_PORT: 6379
         JWT_SECRET: test-secret
@@ -134,6 +160,7 @@ jobs:
         name: codecov-umbrella
 
     - name: Security scan with Gosec
+      if: always()
       run: |
         go install github.com/securego/gosec/v2/cmd/gosec@latest
         gosec -fmt sarif -out gosec.sarif ./... || true
