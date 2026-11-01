@@ -7,6 +7,7 @@
     "build": "cross-env SKIP_LINT=true TURBOPACK=0 next build",
     "start": "next start",
     "lint": "eslint",
+    "type-check": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true npm run build",
     "analyze:server": "cross-env ANALYZE=true BUNDLE_ANALYZE=server npm run build",
     "analyze:browser": "cross-env ANALYZE=true BUNDLE_ANALYZE=browser npm run build"

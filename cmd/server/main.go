@@ -210,7 +210,7 @@ func main() {
 
 	// Trust only the nginx/Cloudflare proxy layer — never raw client headers.
 	// Cloudflare IPv4 ranges + loopback for local Docker networking.
-	router.SetTrustedProxies([]string{
+	if err := router.SetTrustedProxies([]string{
 		"127.0.0.1", "::1", "172.16.0.0/12", // Docker / loopback
 		"103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22",
 		"104.16.0.0/13", "104.24.0.0/14", "108.162.192.0/18",
@@ -220,7 +220,11 @@ func main() {
 		// Cloudflare IPv6
 		"2400:cb00::/32", "2606:4700::/32", "2803:f800::/32",
 		"2405:b500::/32", "2405:8100::/32", "2a06:98c0::/29", "2c0f:f248::/32",
-	})
+	}); err != nil {
+		// The list is constant, so this only fires if it is edited into an invalid
+		// state. Failing here beats silently trusting (or distrusting) every proxy.
+		log.Fatalf("invalid trusted proxy list: %v", err)
+	}
 
 	// Setup all routes
 	routes.SetupRoutes(router, handler, authMiddleware, config)
@@ -232,6 +236,9 @@ func main() {
 	srv := &http.Server{
 		Addr:    ":" + config.ServerPort,
 		Handler: router,
+		// Bound how long a client may take to send its request headers
+		// (Slowloris). Bodies and responses are left unbounded on purpose.
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Start server in a goroutine
