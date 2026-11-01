@@ -179,7 +179,7 @@ func (h *AuthHandlers) SendOTP(c *gin.Context) {
 
 	middleware.LogInfo(c, "OTP sent successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "OTP sent successfully",
+		"message":    "OTP sent successfully",
 		"expires_at": verification.ExpiresAt,
 	})
 }
@@ -208,7 +208,7 @@ func (h *AuthHandlers) VerifyOTP(c *gin.Context) {
 
 	middleware.LogInfo(c, "Phone number verified successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Phone number verified successfully",
+		"message":  "Phone number verified successfully",
 		"verified": true,
 	})
 }
@@ -345,7 +345,7 @@ func (h *AuthHandlers) UpdatePreferences(c *gin.Context) {
 
 	middleware.LogInfo(c, "User preferences updated successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Preferences updated successfully",
+		"message":     "Preferences updated successfully",
 		"preferences": updatedPreferences,
 	})
 }
@@ -449,7 +449,7 @@ func (h *AuthHandlers) ResendOTP(c *gin.Context) {
 
 	middleware.LogInfo(c, "OTP resent successfully")
 	c.JSON(http.StatusOK, gin.H{
-		"message": "OTP sent successfully",
+		"message":    "OTP sent successfully",
 		"expires_at": verification.ExpiresAt,
 	})
 }
@@ -752,9 +752,9 @@ func (h *AuthHandlers) GetCMSTemplates(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"templates": templates,
-		"total":      totalCount,
-		"limit":      limit,
-		"offset":     offset,
+		"total":     totalCount,
+		"limit":     limit,
+		"offset":    offset,
 	})
 }
 

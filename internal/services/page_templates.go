@@ -35,13 +35,13 @@ func (s *PageTemplateService) GetPageTemplate(slug string) (*models.PageTemplate
 	var description sql.NullString
 	var fields sql.NullString
 	var previewURL sql.NullString
-	
+
 	err := s.db.QueryRow(query, slug).Scan(
 		&template.ID, &template.Name, &template.Slug, &description,
 		&template.Content, &fields, &previewURL, &template.IsActive,
 		&template.SortOrder, &template.CreatedAt, &template.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("page template '%s' not found", slug)
@@ -72,13 +72,13 @@ func (s *PageTemplateService) GetPageTemplateByID(id int64) (*models.PageTemplat
 	var description sql.NullString
 	var fields sql.NullString
 	var previewURL sql.NullString
-	
+
 	err := s.db.QueryRow(query, id).Scan(
 		&template.ID, &template.Name, &template.Slug, &description,
 		&template.Content, &fields, &previewURL, &template.IsActive,
 		&template.SortOrder, &template.CreatedAt, &template.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("page template with ID %d not found", id)
@@ -104,7 +104,7 @@ func (s *PageTemplateService) ListPageTemplates(activeOnly bool) ([]*models.Page
 	query := `
 		SELECT id, name, slug, description, content, fields, preview_url, is_active, sort_order, created_at, updated_at
 		FROM page_templates`
-	
+
 	if activeOnly {
 		query += " WHERE is_active = true"
 	}
@@ -122,7 +122,7 @@ func (s *PageTemplateService) ListPageTemplates(activeOnly bool) ([]*models.Page
 		var description sql.NullString
 		var fields sql.NullString
 		var previewURL sql.NullString
-		
+
 		err := rows.Scan(
 			&template.ID, &template.Name, &template.Slug, &description,
 			&template.Content, &fields, &previewURL, &template.IsActive,
@@ -162,12 +162,12 @@ func (s *PageTemplateService) CreatePageTemplate(name, slug, content string, des
 
 	now := time.Now()
 	var template models.PageTemplate
-	
+
 	err := s.db.QueryRow(query,
 		name, slug, description, content, fields, previewURL,
 		true, 0, now, now,
 	).Scan(&template.ID, &template.CreatedAt, &template.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create page template: %w", err)
 	}

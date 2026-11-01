@@ -31,17 +31,17 @@ type ShortenerService struct {
 func NewShortenerService(db *storage.PostgresStorage, redis *storage.RedisStorage, config *configs.Config) *ShortenerService {
 	// Initialize Snowflake ID generator
 	utils.InitializeSnowflake(config.NodeID)
-	
+
 	service := &ShortenerService{
 		db:     db,
 		redis:  redis,
 		config: config,
 	}
-	
+
 	// Initialize analytics service
 	service.analytics = NewAnalyticsService(db)
 	service.analytics.SetRedis(redis)
-	
+
 	return service
 }
 
@@ -111,7 +111,7 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 			return nil, err
 		}
 		shortCode = request.CustomCode
-		
+
 		// Check if custom code already exists
 		exists, err := s.db.ShortCodeExists(shortCode)
 		if err != nil {
@@ -122,7 +122,7 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 		}
 	} else {
 		shortCode = utils.EncodeBase62(id)
-		
+
 		// Ensure uniqueness (very unlikely collision with Snowflake IDs)
 		for attempts := 0; attempts < 3; attempts++ {
 			exists, err := s.db.ShortCodeExists(shortCode)
@@ -132,7 +132,7 @@ func (s *ShortenerService) ShortenURL(request *models.ShortenRequest, clientIP s
 			if !exists {
 				break
 			}
-			
+
 			// Generate new ID and encode (collision handling)
 			id, err = utils.GenerateID()
 			if err != nil {
@@ -290,7 +290,7 @@ func (s *ShortenerService) GetURLByShortCode(shortCode string) (*models.URL, err
 	// For now, return simulated URL
 	now := time.Now()
 	userID := int64(1) // Simulated user ID
-	
+
 	return &models.URL{
 		ID:          1,
 		ShortCode:   shortCode,
@@ -342,7 +342,6 @@ func (s *ShortenerService) DeleteURL(shortCode string) error {
 	return nil
 }
 
-
 // RecordClick records a click event for analytics.
 // isBot should be determined by the caller (handler) before invoking this.
 func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer string, isBot bool) error {
@@ -393,12 +392,12 @@ func (s *ShortenerService) RecordClick(shortCode, clientIP, userAgent, referrer 
 
 	// Increment cached click count for faster analytics
 	s.redis.IncrementClickCount(shortCode)
-	
+
 	// Broadcast real-time click event if real-time service is available
 	if s.realtime != nil {
 		s.realtime.BroadcastClick(shortCode, clientIP, userAgent, referrer)
 	}
-	
+
 	// Record attribution touchpoint if attribution service is available
 	if s.attribution != nil {
 		go func() {
@@ -497,11 +496,11 @@ func (s *ShortenerService) getCountryFromIP(ipAddress string) string {
 
 // Custom errors
 var (
-	ErrInvalidURL                    = &ServiceError{Message: "invalid URL"}
-	ErrInvalidURLScheme             = &ServiceError{Message: "URL must use http or https scheme"}
-	ErrSelfReferentialURL           = &ServiceError{Message: "cannot shorten URLs to this domain"}
-	ErrInvalidCustomCodeLength      = &ServiceError{Message: "custom code must be 3-10 characters long"}
-	ErrInvalidCustomCodeCharacters  = &ServiceError{Message: "custom code can only contain letters, numbers"}
+	ErrInvalidURL                  = &ServiceError{Message: "invalid URL"}
+	ErrInvalidURLScheme            = &ServiceError{Message: "URL must use http or https scheme"}
+	ErrSelfReferentialURL          = &ServiceError{Message: "cannot shorten URLs to this domain"}
+	ErrInvalidCustomCodeLength     = &ServiceError{Message: "custom code must be 3-10 characters long"}
+	ErrInvalidCustomCodeCharacters = &ServiceError{Message: "custom code can only contain letters, numbers"}
 	ErrReservedCustomCode          = &ServiceError{Message: "custom code is reserved"}
 	ErrCustomCodeAlreadyExists     = &ServiceError{Message: "custom code already exists"}
 )
@@ -525,7 +524,7 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	
+
 	rows, err := s.db.Query(query, userID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query user URLs: %w", err)
@@ -566,7 +565,7 @@ func (s *ShortenerService) GetUserURLs(userID int64, offset, limit int) ([]*mode
 
 		// Build short URL
 		url.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, url.ShortCode)
-		
+
 		urls = append(urls, &url)
 	}
 
@@ -593,7 +592,7 @@ func (s *ShortenerService) GetAllURLsAdmin(offset, limit int, userID int64) ([]*
 		ORDER BY u.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
-	
+
 	rows, err := s.db.Query(query, limit, offset, userID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query all URLs: %w", err)
@@ -645,7 +644,7 @@ func (s *ShortenerService) GetAllURLsAdmin(offset, limit int, userID int64) ([]*
 
 		// Build short URL
 		url.ShortURL = fmt.Sprintf("%s/%s", s.config.BaseURL, url.ShortCode)
-		
+
 		urls = append(urls, &url)
 	}
 
@@ -663,7 +662,7 @@ func (s *ShortenerService) GetAllURLsAdmin(offset, limit int, userID int64) ([]*
 // DeleteUserURL deletes a URL belonging to a specific user
 func (s *ShortenerService) DeleteUserURL(userID int64, shortCode string) error {
 	query := `UPDATE url_mappings SET is_active = FALSE WHERE short_code = $1 AND user_id = $2 AND is_active = TRUE`
-	
+
 	result, err := s.db.Exec(query, shortCode, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete URL: %w", err)
@@ -701,13 +700,13 @@ func (s *ShortenerService) UpdateUserURL(userID int64, shortCode string, req *mo
 		FROM url_mappings 
 		WHERE short_code = $1 AND is_active = TRUE
 	`
-	
+
 	err := s.db.QueryRow(checkQuery, shortCode).Scan(
 		&existingURL.ID, &existingURL.ShortCode, &existingURL.OriginalURL, &existingURL.CreatedAt,
 		&expiresAt, &existingURL.ClickCount, &existingURL.IsActive,
 		&userIDDB, &isPublicDB, &customAlias, &title, &description,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, storage.ErrURLNotFound
 	}
@@ -798,7 +797,7 @@ func (s *ShortenerService) UpdateUserURL(userID int64, shortCode string, req *mo
 
 	// Add WHERE clause parameters
 	args = append(args, shortCode, userID)
-	
+
 	updateQuery := fmt.Sprintf(
 		"UPDATE url_mappings SET %s WHERE short_code = $%d AND user_id = $%d AND is_active = TRUE",
 		strings.Join(updates, ", "), argIndex, argIndex+1,
@@ -855,7 +854,7 @@ func (s *ShortenerService) recordAttributionTouchpoint(shortCode, clientIP, user
 
 	// Create touchpoint data
 	touchpoint := &models.AttributionTouchpoint{
-		SessionID:       generateSessionID(clientIP, userAgent), // Generate session ID from IP and UA
+		SessionID:      generateSessionID(clientIP, userAgent), // Generate session ID from IP and UA
 		ShortCode:      shortCode,
 		UserIP:         clientIP,
 		UserAgent:      userAgent,
@@ -879,7 +878,7 @@ func (s *ShortenerService) recordAttributionTouchpoint(shortCode, clientIP, user
 // generateSessionID creates a session ID from IP and user agent
 func generateSessionID(ip, userAgent string) string {
 	h := sha256.Sum256([]byte(ip + userAgent + fmt.Sprintf("%d", time.Now().Unix()/3600))) // 1-hour sessions
-	return hex.EncodeToString(h[:])[:16] // Use first 16 characters
+	return hex.EncodeToString(h[:])[:16]                                                   // Use first 16 characters
 }
 
 // determineChannel categorizes the traffic channel from referrer
@@ -887,9 +886,9 @@ func determineChannel(referrer string) string {
 	if referrer == "" {
 		return "direct"
 	}
-	
+
 	lowerRef := strings.ToLower(referrer)
-	
+
 	// Social media channels
 	socialDomains := []string{"facebook", "twitter", "linkedin", "instagram", "youtube", "pinterest", "tiktok", "snapchat"}
 	for _, domain := range socialDomains {
@@ -897,7 +896,7 @@ func determineChannel(referrer string) string {
 			return "social"
 		}
 	}
-	
+
 	// Search engines
 	searchDomains := []string{"google", "bing", "yahoo", "duckduckgo", "baidu"}
 	for _, domain := range searchDomains {
@@ -905,12 +904,12 @@ func determineChannel(referrer string) string {
 			return "search"
 		}
 	}
-	
+
 	// Email
 	if strings.Contains(lowerRef, "mail") || strings.Contains(lowerRef, "email") {
 		return "email"
 	}
-	
+
 	return "referral"
 }
 
@@ -944,12 +943,12 @@ func extractUTMParam(referrer, param string) string {
 	if referrer == "" {
 		return ""
 	}
-	
+
 	parsedURL, err := url.Parse(referrer)
 	if err != nil {
 		return ""
 	}
-	
+
 	return parsedURL.Query().Get(param)
 }
 

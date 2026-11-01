@@ -8,46 +8,46 @@ import (
 
 // PolarSubscription represents a subscription managed by Polar
 type PolarSubscription struct {
-	ID                  int64      `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserID              int64      `json:"user_id" gorm:"not null;index;uniqueIndex:idx_user_polar_sub"`
-	PolarCustomerID     string     `json:"polar_customer_id" gorm:"not null;index"`
-	PolarSubscriptionID *string    `json:"polar_subscription_id,omitempty" gorm:"index;uniqueIndex:idx_user_polar_sub"`
-	PolarProductID      string     `json:"polar_product_id" gorm:"not null"`
-	PolarPriceID        *string    `json:"polar_price_id,omitempty"`
-	PolarCheckoutID     *string    `json:"polar_checkout_id,omitempty"`
-	Status              string     `json:"status" gorm:"not null;index"` // active, cancelled, incomplete, incomplete_expired, trialing, past_due
-	PlanType            string     `json:"plan_type" gorm:"not null"`    // free, premium, enterprise
-	BillingCycle        *string    `json:"billing_cycle,omitempty"`      // month, year
-	CurrentPeriodStart  *time.Time `json:"current_period_start,omitempty"`
-	CurrentPeriodEnd    *time.Time `json:"current_period_end,omitempty"`
-	CancelAt            *time.Time `json:"cancel_at,omitempty"`
-	CancelAtPeriodEnd   bool       `json:"cancel_at_period_end" gorm:"default:false"`
-	CancelledAt         *time.Time `json:"cancelled_at,omitempty"`
-	EndedAt             *time.Time `json:"ended_at,omitempty"`
-	TrialStart          *time.Time `json:"trial_start,omitempty"`
-	TrialEnd            *time.Time `json:"trial_end,omitempty"`
+	ID                  int64       `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserID              int64       `json:"user_id" gorm:"not null;index;uniqueIndex:idx_user_polar_sub"`
+	PolarCustomerID     string      `json:"polar_customer_id" gorm:"not null;index"`
+	PolarSubscriptionID *string     `json:"polar_subscription_id,omitempty" gorm:"index;uniqueIndex:idx_user_polar_sub"`
+	PolarProductID      string      `json:"polar_product_id" gorm:"not null"`
+	PolarPriceID        *string     `json:"polar_price_id,omitempty"`
+	PolarCheckoutID     *string     `json:"polar_checkout_id,omitempty"`
+	Status              string      `json:"status" gorm:"not null;index"` // active, cancelled, incomplete, incomplete_expired, trialing, past_due
+	PlanType            string      `json:"plan_type" gorm:"not null"`    // free, premium, enterprise
+	BillingCycle        *string     `json:"billing_cycle,omitempty"`      // month, year
+	CurrentPeriodStart  *time.Time  `json:"current_period_start,omitempty"`
+	CurrentPeriodEnd    *time.Time  `json:"current_period_end,omitempty"`
+	CancelAt            *time.Time  `json:"cancel_at,omitempty"`
+	CancelAtPeriodEnd   bool        `json:"cancel_at_period_end" gorm:"default:false"`
+	CancelledAt         *time.Time  `json:"cancelled_at,omitempty"`
+	EndedAt             *time.Time  `json:"ended_at,omitempty"`
+	TrialStart          *time.Time  `json:"trial_start,omitempty"`
+	TrialEnd            *time.Time  `json:"trial_end,omitempty"`
 	Benefits            BenefitList `json:"benefits" gorm:"type:jsonb"`
 	Metadata            JSONB       `json:"metadata,omitempty" gorm:"type:jsonb"`
-	CreatedAt           time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt           time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	CreatedAt           time.Time   `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt           time.Time   `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // PolarProduct represents a product/plan in Polar (cached locally)
 type PolarProduct struct {
-	ID               string       `json:"id" gorm:"primaryKey"`
-	PolarProductID   string       `json:"polar_product_id" gorm:"uniqueIndex;not null"`
-	Name             string       `json:"name" gorm:"not null"`
-	Description      string       `json:"description"`
-	PlanType         string       `json:"plan_type" gorm:"not null"` // free, premium, enterprise
-	IsRecurring      bool         `json:"is_recurring" gorm:"default:true"`
-	Prices           PriceList    `json:"prices" gorm:"type:jsonb"`
-	Features         StringList   `json:"features" gorm:"type:jsonb"`
-	Benefits         BenefitList  `json:"benefits" gorm:"type:jsonb"`
-	OrganizationID   string       `json:"organization_id" gorm:"not null"`
-	IsArchived       bool         `json:"is_archived" gorm:"default:false"`
-	CreatedAt        time.Time    `json:"created_at"`
-	UpdatedAt        time.Time    `json:"updated_at" gorm:"autoUpdateTime"`
-	LastSyncedAt     time.Time    `json:"last_synced_at" gorm:"autoUpdateTime"`
+	ID             string      `json:"id" gorm:"primaryKey"`
+	PolarProductID string      `json:"polar_product_id" gorm:"uniqueIndex;not null"`
+	Name           string      `json:"name" gorm:"not null"`
+	Description    string      `json:"description"`
+	PlanType       string      `json:"plan_type" gorm:"not null"` // free, premium, enterprise
+	IsRecurring    bool        `json:"is_recurring" gorm:"default:true"`
+	Prices         PriceList   `json:"prices" gorm:"type:jsonb"`
+	Features       StringList  `json:"features" gorm:"type:jsonb"`
+	Benefits       BenefitList `json:"benefits" gorm:"type:jsonb"`
+	OrganizationID string      `json:"organization_id" gorm:"not null"`
+	IsArchived     bool        `json:"is_archived" gorm:"default:false"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at" gorm:"autoUpdateTime"`
+	LastSyncedAt   time.Time   `json:"last_synced_at" gorm:"autoUpdateTime"`
 }
 
 // PolarWebhookEvent stores webhook events for debugging and idempotency
@@ -68,17 +68,17 @@ type PolarWebhookEvent struct {
 
 // PolarPrice represents a price point for a product
 type PolarPrice struct {
-	ID              string  `json:"id"`
-	PriceAmount     int     `json:"price_amount"`      // Amount in cents
-	PriceCurrency   string  `json:"price_currency"`    // USD, EUR, etc.
+	ID                string `json:"id"`
+	PriceAmount       int    `json:"price_amount"`                 // Amount in cents
+	PriceCurrency     string `json:"price_currency"`               // USD, EUR, etc.
 	RecurringInterval string `json:"recurring_interval,omitempty"` // month, year
-	IsArchived      bool    `json:"is_archived"`
+	IsArchived        bool   `json:"is_archived"`
 }
 
 // PolarBenefit represents a benefit granted to a subscription
 type PolarBenefit struct {
 	ID          string `json:"id"`
-	Type        string `json:"type"`        // custom, articles, discord, github_repository, etc.
+	Type        string `json:"type"` // custom, articles, discord, github_repository, etc.
 	Description string `json:"description"`
 	Properties  JSONB  `json:"properties,omitempty"`
 }

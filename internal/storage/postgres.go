@@ -149,9 +149,10 @@ func (p *PostgresStorage) initTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_click_events_is_bot ON click_events(is_bot)`,
 		// Fix: coupons.id was created without a sequence (BIGINT PRIMARY KEY, no default).
 		// GORM's autoIncrement omits id from INSERT, so we need the DB to supply a default.
+		// The tables come from migration 018, so skip on a fresh database that doesn't have them yet.
 		`CREATE SEQUENCE IF NOT EXISTS coupons_id_seq`,
 		`DO $$ BEGIN
-			IF NOT EXISTS (
+			IF to_regclass('coupons') IS NOT NULL AND NOT EXISTS (
 				SELECT 1 FROM information_schema.columns
 				WHERE table_name='coupons' AND column_name='id'
 				  AND column_default IS NOT NULL
@@ -162,7 +163,7 @@ func (p *PostgresStorage) initTables() error {
 		END $$`,
 		`CREATE SEQUENCE IF NOT EXISTS coupon_redemptions_id_seq`,
 		`DO $$ BEGIN
-			IF NOT EXISTS (
+			IF to_regclass('coupon_redemptions') IS NOT NULL AND NOT EXISTS (
 				SELECT 1 FROM information_schema.columns
 				WHERE table_name='coupon_redemptions' AND column_name='id'
 				  AND column_default IS NOT NULL
@@ -819,7 +820,12 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
-		`ALTER TABLE teams ALTER COLUMN slug DROP NOT NULL`,
+		// slug only exists on databases that ran migration 014
+		`DO $$ BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='teams' AND column_name='slug') THEN
+				ALTER TABLE teams ALTER COLUMN slug DROP NOT NULL;
+			END IF;
+		END $$`,
 		`CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id)`,
 
 		`CREATE TABLE IF NOT EXISTS team_members (
@@ -855,7 +861,12 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS token VARCHAR(255)`,
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'pending'`,
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
-		`ALTER TABLE team_invitations ALTER COLUMN invitation_token DROP NOT NULL`,
+		// invitation_token only exists on databases that ran migration 014
+		`DO $$ BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='team_invitations' AND column_name='invitation_token') THEN
+				ALTER TABLE team_invitations ALTER COLUMN invitation_token DROP NOT NULL;
+			END IF;
+		END $$`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_team_id ON team_invitations(team_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_token ON team_invitations(token)`,
 	}
@@ -1877,7 +1888,7 @@ func (p *PostgresStorage) runMicrositeEventRetention() error {
 		}
 		for _, w := range windows {
 			// Table and column names are constants above, never user input.
-			res, err := p.db.ExecContext(ctx, /* #nosec G202 -- identifiers from the constant list above */ `
+			res, err := p.db.ExecContext(ctx /* #nosec G202 -- identifiers from the constant list above */, `
 				DELETE FROM `+t.name+` me
 				USING microsites m, users u
 				WHERE me.microsite_id = m.id

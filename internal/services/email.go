@@ -382,7 +382,7 @@ func (e *EmailService) Unsubscribe(token string) (string, error) {
 func (e *EmailService) SendContactFormEmail(name, emailAddr, subject, message string) error {
 	// Generate email template for admin
 	adminTemplate := email.ContactFormEmailTemplate(name, emailAddr, subject, message)
-	
+
 	// Send to contact email (admin)
 	contactEmail := "contact@trunc.site"
 	err := e.deliver(contactEmail, adminTemplate.Subject, adminTemplate.HTMLBody, adminTemplate.TextBody, false)

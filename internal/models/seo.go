@@ -54,26 +54,26 @@ type URLRedirect struct {
 
 // SEOAnalysis represents an SEO analysis result
 type SEOAnalysisDB struct {
-	ID               int64     `json:"id" db:"id"`
-	PageID           *int64    `json:"page_id" db:"page_id"`
-	URL              string    `json:"url" db:"url"`
-	Title            string    `json:"title" db:"title"`
-	MetaDescription  string    `json:"meta_description" db:"meta_description"`
-	H1Tags           string    `json:"h1_tags" db:"h1_tags"`           // JSON array
-	H2Tags           string    `json:"h2_tags" db:"h2_tags"`           // JSON array
-	ImageAltCount    int       `json:"image_alt_count" db:"image_alt_count"`
-	WordCount        int       `json:"word_count" db:"word_count"`
-	InternalLinks    int       `json:"internal_links" db:"internal_links"`
-	ExternalLinks    int       `json:"external_links" db:"external_links"`
-	MobileFriendly   bool      `json:"mobile_friendly" db:"mobile_friendly"`
-	LoadingSpeed     float64   `json:"loading_speed" db:"loading_speed"`
-	SSLEnabled       bool      `json:"ssl_enabled" db:"ssl_enabled"`
-	SchemaMarkup     string    `json:"schema_markup" db:"schema_markup"` // JSON object
-	Score            int       `json:"score" db:"score"`
-	Issues           string    `json:"issues" db:"issues"`                     // JSON array
-	Recommendations  string    `json:"recommendations" db:"recommendations"`   // JSON array
-	CreatedBy        int64     `json:"created_by" db:"created_by"`
-	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	ID              int64     `json:"id" db:"id"`
+	PageID          *int64    `json:"page_id" db:"page_id"`
+	URL             string    `json:"url" db:"url"`
+	Title           string    `json:"title" db:"title"`
+	MetaDescription string    `json:"meta_description" db:"meta_description"`
+	H1Tags          string    `json:"h1_tags" db:"h1_tags"` // JSON array
+	H2Tags          string    `json:"h2_tags" db:"h2_tags"` // JSON array
+	ImageAltCount   int       `json:"image_alt_count" db:"image_alt_count"`
+	WordCount       int       `json:"word_count" db:"word_count"`
+	InternalLinks   int       `json:"internal_links" db:"internal_links"`
+	ExternalLinks   int       `json:"external_links" db:"external_links"`
+	MobileFriendly  bool      `json:"mobile_friendly" db:"mobile_friendly"`
+	LoadingSpeed    float64   `json:"loading_speed" db:"loading_speed"`
+	SSLEnabled      bool      `json:"ssl_enabled" db:"ssl_enabled"`
+	SchemaMarkup    string    `json:"schema_markup" db:"schema_markup"` // JSON object
+	Score           int       `json:"score" db:"score"`
+	Issues          string    `json:"issues" db:"issues"`                   // JSON array
+	Recommendations string    `json:"recommendations" db:"recommendations"` // JSON array
+	CreatedBy       int64     `json:"created_by" db:"created_by"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 }
 
 // RobotsTxt represents the robots.txt configuration

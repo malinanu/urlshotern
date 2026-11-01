@@ -27,16 +27,16 @@ import (
 )
 
 type AuthService struct {
-	userService    *UserService
-	jwtService     *JWTService
-	smsService     *SMSService
-	emailService   *EmailService
-	db             *storage.PostgresStorage
-	redis          *storage.RedisStorage
-	config         *configs.Config
-	googleConfig   *oauth2.Config
-	githubConfig   *oauth2.Config
-	campaignService *CampaignService // optional, set after init to avoid circular dependency
+	userService         *UserService
+	jwtService          *JWTService
+	smsService          *SMSService
+	emailService        *EmailService
+	db                  *storage.PostgresStorage
+	redis               *storage.RedisStorage
+	config              *configs.Config
+	googleConfig        *oauth2.Config
+	githubConfig        *oauth2.Config
+	campaignService     *CampaignService     // optional, set after init to avoid circular dependency
 	accountDeletedHooks []func(userID int64) // run after an account is deleted
 }
 

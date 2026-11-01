@@ -88,20 +88,20 @@ func (w *VirusTotalWorker) processNextTask() {
 
 	if isSpam {
 		log.Printf("ALERT: URL %s flagged as spam in background check!", task.OriginalURL)
-		
+
 		// Find URLs in DB and disable them
 		rows, err := w.db.Query("SELECT short_code, user_id FROM url_mappings WHERE original_url = $1", task.OriginalURL)
 		if err != nil {
 			log.Printf("Error fetching URL mappings for %s: %v", task.OriginalURL, err)
 			return
 		}
-		
+
 		type targetURL struct {
 			ShortCode string
 			UserID    *int64
 		}
 		var targets []targetURL
-		
+
 		for rows.Next() {
 			var t targetURL
 			if err := rows.Scan(&t.ShortCode, &t.UserID); err != nil {
@@ -141,27 +141,27 @@ func (w *VirusTotalWorker) processNextTask() {
 func (w *VirusTotalWorker) backgroundSubmitAndCheck(targetUrl string) (bool, error) {
 	data := url.Values{}
 	data.Set("url", targetUrl)
-	
+
 	postReq, err := http.NewRequest("POST", "https://www.virustotal.com/api/v3/urls", strings.NewReader(data.Encode()))
 	if err != nil {
 		return false, fmt.Errorf("error creating VT POST request: %w", err)
 	}
-	
+
 	postReq.Header.Add("x-apikey", w.apiKey)
 	postReq.Header.Add("accept", "application/json")
 	postReq.Header.Add("content-type", "application/x-www-form-urlencoded")
-	
+
 	client := &http.Client{Timeout: 10 * time.Second}
 	postResp, err := client.Do(postReq)
 	if err != nil {
 		return false, fmt.Errorf("error submitting URL to VT: %w", err)
 	}
 	defer postResp.Body.Close()
-	
+
 	if postResp.StatusCode == http.StatusTooManyRequests {
 		return false, fmt.Errorf("rate limit hit during POST")
 	}
-	
+
 	if postResp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("VT submission returned status %d", postResp.StatusCode)
 	}
@@ -174,7 +174,7 @@ func (w *VirusTotalWorker) backgroundSubmitAndCheck(targetUrl string) (bool, err
 	if err := json.NewDecoder(postResp.Body).Decode(&postResult); err != nil {
 		return false, fmt.Errorf("failed to parse VT submission response: %w", err)
 	}
-	
+
 	analysisID := postResult.Data.ID
 	if analysisID == "" {
 		return false, fmt.Errorf("VT submission returned empty analysis ID")
@@ -189,7 +189,7 @@ func (w *VirusTotalWorker) backgroundSubmitAndCheck(targetUrl string) (bool, err
 	}
 	pollReq.Header.Add("x-apikey", w.apiKey)
 	pollReq.Header.Add("accept", "application/json")
-	
+
 	pollResp, err := client.Do(pollReq)
 	if err != nil {
 		return false, fmt.Errorf("failed to poll VT API: %w", err)
@@ -211,11 +211,11 @@ func (w *VirusTotalWorker) backgroundSubmitAndCheck(targetUrl string) (bool, err
 			} `json:"attributes"`
 		} `json:"data"`
 	}
-	
+
 	if err := json.NewDecoder(pollResp.Body).Decode(&pollResult); err != nil {
 		return false, fmt.Errorf("failed to parse VT poll response: %w", err)
 	}
-	
+
 	if pollResult.Data.Attributes.Status == "completed" {
 		stats := pollResult.Data.Attributes.Stats
 		if stats.Malicious > 0 || stats.Suspicious > 0 {

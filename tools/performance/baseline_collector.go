@@ -16,23 +16,23 @@ import (
 
 // PerformanceBaseline represents a snapshot of performance metrics
 type PerformanceBaseline struct {
-	Timestamp     time.Time              `json:"timestamp"`
-	Period        string                 `json:"period"`
-	Metrics       map[string]MetricStats `json:"metrics"`
-	Endpoints     map[string]EndpointMetrics `json:"endpoints"`
-	Infrastructure InfraMetrics           `json:"infrastructure"`
-	Cost          CostMetrics            `json:"cost"`
+	Timestamp      time.Time                  `json:"timestamp"`
+	Period         string                     `json:"period"`
+	Metrics        map[string]MetricStats     `json:"metrics"`
+	Endpoints      map[string]EndpointMetrics `json:"endpoints"`
+	Infrastructure InfraMetrics               `json:"infrastructure"`
+	Cost           CostMetrics                `json:"cost"`
 }
 
 // MetricStats contains statistical information about a metric
 type MetricStats struct {
-	P50    float64 `json:"p50"`
-	P95    float64 `json:"p95"`
-	P99    float64 `json:"p99"`
-	Mean   float64 `json:"mean"`
-	Min    float64 `json:"min"`
-	Max    float64 `json:"max"`
-	Count  int64   `json:"count"`
+	P50   float64 `json:"p50"`
+	P95   float64 `json:"p95"`
+	P99   float64 `json:"p99"`
+	Mean  float64 `json:"mean"`
+	Min   float64 `json:"min"`
+	Max   float64 `json:"max"`
+	Count int64   `json:"count"`
 }
 
 // EndpointMetrics contains performance metrics for a specific endpoint
@@ -117,10 +117,10 @@ func collectBaseline(config *Config) (*PerformanceBaseline, error) {
 	defer cancel()
 
 	baseline := &PerformanceBaseline{
-		Timestamp:      time.Now(),
-		Period:         fmt.Sprintf("%dh", config.LookbackHours),
-		Metrics:        make(map[string]MetricStats),
-		Endpoints:      make(map[string]EndpointMetrics),
+		Timestamp: time.Now(),
+		Period:    fmt.Sprintf("%dh", config.LookbackHours),
+		Metrics:   make(map[string]MetricStats),
+		Endpoints: make(map[string]EndpointMetrics),
 	}
 
 	// Collect endpoint metrics

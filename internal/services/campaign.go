@@ -22,11 +22,11 @@ import (
 
 // CampaignService manages promotional campaigns.
 type CampaignService struct {
-	db           *storage.PostgresStorage
-	config       *configs.Config
-	emailService *EmailService
-	smsService   *SMSService
-	httpClient   *http.Client
+	db            *storage.PostgresStorage
+	config        *configs.Config
+	emailService  *EmailService
+	smsService    *SMSService
+	httpClient    *http.Client
 	openRouterKey string
 }
 

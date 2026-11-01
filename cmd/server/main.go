@@ -105,7 +105,7 @@ func main() {
 	pageTemplateService := services.NewPageTemplateService(db, contentBlockService, globalSettingsService)
 	// Set real-time service on shortener for click broadcasting
 	shortenerService.SetRealtimeService(realtimeAnalyticsService)
-	
+
 	// Set attribution service on shortener for attribution tracking
 	shortenerService.SetAttributionService(attributionService)
 

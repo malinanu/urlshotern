@@ -90,7 +90,7 @@ func SetupRoutes(
 	commonStaticFiles := []string{
 		"/manifest.json", "/robots.txt", "/sitemap.xml",
 		"/favicon.ico", "/sw.js", "/apple-touch-icon.png",
-		"/google26c27f314cce952a.html","/BingSiteAuth.xml",
+		"/google26c27f314cce952a.html", "/BingSiteAuth.xml",
 	}
 	for _, file := range commonStaticFiles {
 		filePath := file // Capture for closure
@@ -204,10 +204,10 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 // setupAuthRoutes configures authentication routes
 func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, authMiddleware *middleware.AuthMiddleware) {
 	auth := router.Group("/api/v1/auth")
-	
+
 	// Apply auth-specific rate limiting
 	auth.Use(middleware.RateLimitMiddleware(middleware.AuthRateLimit))
-	
+
 	// Google OAuth (before rate limit since these are redirects)
 	auth.GET("/google", authHandlers.GoogleLogin)
 	auth.GET("/google/callback", authHandlers.GoogleCallback)
@@ -229,7 +229,7 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 	auth.POST("/register", authHandlers.Register)
 	auth.POST("/login", authHandlers.Login)
 	auth.POST("/refresh", authHandlers.RefreshToken)
-	
+
 	// OTP routes (more restrictive rate limiting)
 	otpGroup := auth.Group("/otp")
 	otpGroup.Use(middleware.RateLimitMiddleware(middleware.OTPRateLimit))
@@ -238,7 +238,7 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 		otpGroup.POST("/verify", authHandlers.VerifyOTP)
 		otpGroup.POST("/resend", authHandlers.ResendOTP)
 	}
-	
+
 	// Email verification routes
 	auth.GET("/verify-email", authHandlers.VerifyEmail)
 
@@ -248,7 +248,7 @@ func setupAuthRoutes(router *gin.Engine, authHandlers *handlers.AuthHandlers, au
 
 	// Protected auth routes (require authentication)
 	protected := auth.Group("/")
-	protected.Use(authMiddleware.RequireAuth())  // Re-enabled authentication middleware
+	protected.Use(authMiddleware.RequireAuth()) // Re-enabled authentication middleware
 	{
 		protected.GET("/profile", authHandlers.GetProfile)
 		protected.PUT("/profile", authHandlers.UpdateProfile)
@@ -277,16 +277,16 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	api.GET("/my-urls", handler.GetUserURLs)
 	api.DELETE("/my-urls/:shortCode", handler.DeleteURL)
 	api.PUT("/my-urls/:shortCode", handler.UpdateURL)
-	
+
 	// Enhanced analytics for authenticated users
 	billing := handler.GetBillingService()
 	// own enforces that the caller owns the :shortCode before any per-link
 	// analytics/insights handler runs (prevents IDOR). Admins bypass it.
 	own := middleware.RequireURLOwnership(handler.GetShortenerService())
 	api.GET("/analytics/:shortCode/trends", own, handler.GetClickTrends)
-	api.GET("/analytics/:shortCode/advanced",           own, handler.AdvancedAnalyticsHandlers.GetAdvancedAnalytics)
-	api.GET("/analytics/:shortCode/device",             own, handler.AdvancedAnalyticsHandlers.GetDeviceAnalytics)
-	api.GET("/analytics/:shortCode/referrers",          own, handler.AdvancedAnalyticsHandlers.GetReferrerAnalytics)
+	api.GET("/analytics/:shortCode/advanced", own, handler.AdvancedAnalyticsHandlers.GetAdvancedAnalytics)
+	api.GET("/analytics/:shortCode/device", own, handler.AdvancedAnalyticsHandlers.GetDeviceAnalytics)
+	api.GET("/analytics/:shortCode/referrers", own, handler.AdvancedAnalyticsHandlers.GetReferrerAnalytics)
 	// Pro+ features
 	api.GET("/analytics/:shortCode/geographic",
 		own,
@@ -317,23 +317,23 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 		middleware.CheckPlanFeature(billing, middleware.FeatureLiveMap),
 		handler.AdvancedAnalyticsHandlers.GetMapAnalytics)
 	api.GET("/dashboard/stats", handler.GetUserDashboardStats)
-	
+
 	// Billing and subscription routes
 	setupBillingRoutes(api, handler)
-	
+
 	// Conversion tracking routes
 	setupConversionTrackingRoutes(api, handler)
-	
+
 	// A/B testing routes
 	setupABTestingRoutes(api, handler)
-	
+
 	// Attribution routes
 	setupAttributionRoutes(api, handler)
-	
+
 	// Real-time analytics WebSocket and stats
 	api.GET("/realtime/ws", handler.RealtimeHandlers.HandleWebSocket)
 	api.GET("/realtime/stats", handler.RealtimeHandlers.GetRealtimeStats)
-	
+
 	// User analytics routes
 	setupUserAnalyticsRoutes(api, handler)
 
@@ -589,14 +589,14 @@ func setupCampaignRoutes(admin *gin.RouterGroup, handler *handlers.Handler) {
 // setupConversionTrackingRoutes configures conversion tracking routes
 func setupConversionTrackingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	conversion := api.Group("/conversions")
-	
+
 	// Conversion goal management
 	conversion.POST("/goals", handler.ConversionHandlers.CreateConversionGoal)
 	conversion.GET("/goals", handler.ConversionHandlers.GetConversionGoals)
 	conversion.GET("/goals/:goalId", handler.ConversionHandlers.GetConversionGoal)
 	conversion.PUT("/goals/:goalId", handler.ConversionHandlers.UpdateConversionGoal)
 	conversion.DELETE("/goals/:goalId", handler.ConversionHandlers.DeleteConversionGoal)
-	
+
 	// Conversion tracking
 	conversion.POST("/track", handler.ConversionHandlers.TrackConversion)
 	conversion.GET("/goals/:goalId/stats", handler.ConversionHandlers.GetConversionStats)
@@ -606,19 +606,19 @@ func setupConversionTrackingRoutes(api *gin.RouterGroup, handler *handlers.Handl
 // setupABTestingRoutes configures A/B testing routes
 func setupABTestingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	abtest := api.Group("/ab-tests")
-	
+
 	// A/B test management
 	abtest.POST("/", handler.ABTestHandlers.CreateABTest)
 	abtest.GET("/", handler.ABTestHandlers.GetABTests)
 	abtest.GET("/:testId", handler.ABTestHandlers.GetABTest)
 	abtest.POST("/:testId/start", handler.ABTestHandlers.StartABTest)
 	abtest.POST("/:testId/stop", handler.ABTestHandlers.StopABTest)
-	
+
 	// A/B test participation and results
 	abtest.GET("/:testId/variant", handler.ABTestHandlers.GetABTestVariant)
 	abtest.POST("/:testId/conversion", handler.ABTestHandlers.RecordConversion)
 	abtest.GET("/:testId/results", handler.ABTestHandlers.GetABTestResults)
-	
+
 	// Enhanced statistical analysis
 	abtest.GET("/:testId/sequential", handler.ABTestHandlers.GetSequentialTestResults)
 	abtest.GET("/:testId/power", handler.ABTestHandlers.GetPowerAnalysis)
@@ -628,15 +628,15 @@ func setupABTestingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 // setupAttributionRoutes configures attribution and multi-touch analytics routes
 func setupAttributionRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	attribution := api.Group("/attribution")
-	
+
 	// Touchpoint management
 	attribution.POST("/touchpoints", handler.AttributionHandlers.RecordTouchpoint)
-	
+
 	// Conversion journey analysis
 	attribution.GET("/journey/:conversionId", handler.AttributionHandlers.GetConversionJourney)
 	attribution.GET("/report/:conversionId", handler.AttributionHandlers.GetAttributionReport)
 	attribution.POST("/calculate/:conversionId", handler.AttributionHandlers.CalculateAttribution)
-	
+
 	// Channel attribution analysis
 	attribution.GET("/channels/:shortCode", handler.AttributionHandlers.GetChannelAttribution)
 	attribution.GET("/compare/:shortCode", handler.AttributionHandlers.CompareAttributionModels)
@@ -646,15 +646,15 @@ func setupAttributionRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 // setupBillingRoutes configures billing and subscription routes
 func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	billing := api.Group("/billing")
-	
+
 	// Subscription management
 	billing.GET("/subscription", handler.BillingHandlers.GetSubscription)
 	billing.GET("/plans", handler.BillingHandlers.GetPlans)
 	billing.GET("/usage", handler.BillingHandlers.GetUsage)
-	
+
 	// Discount Validation
 	billing.GET("/coupons/validate", handler.BillingHandlers.ValidateCouponHandler)
-	
+
 	// Checkout and payment
 	billing.POST("/checkout", handler.BillingHandlers.CreateCheckoutSession)
 	billing.POST("/cancel-subscription", handler.BillingHandlers.CancelSubscription)
@@ -674,7 +674,7 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 
 	// Webhooks (no auth required for Polar webhooks)
 	api.POST("/webhooks/polar", handler.PolarWebhookHandler.HandleWebhook)
-	
+
 	// Custom domain management (requires custom_domain feature)
 	customDomain := api.Group("/custom-domains")
 	customDomain.Use(handler.BillingHandlers.CheckFeatureAccess("custom_domain"))
@@ -881,7 +881,7 @@ func setupStaticRoutes(router *gin.Engine, extraRoutes ...string) {
 	router.NoRoute(func(c *gin.Context) {
 		// Only handle non-API routes
 		if !strings.HasPrefix(c.Request.URL.Path, "/api/") &&
-		   !strings.HasPrefix(c.Request.URL.Path, "/health") {
+			!strings.HasPrefix(c.Request.URL.Path, "/health") {
 			// Check if it's a short code (single segment, no extension)
 			pathSegments := strings.Split(strings.Trim(c.Request.URL.Path, "/"), "/")
 			if len(pathSegments) == 1 && !strings.Contains(pathSegments[0], ".") {
@@ -920,16 +920,16 @@ func extractBaseHost(baseURL string) string {
 // setupUserAnalyticsRoutes configures user analytics routes
 func setupUserAnalyticsRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	analytics := api.Group("/user-analytics")
-	
+
 	// User analytics summary and metrics
 	analytics.GET("/summary", handler.AnalyticsHandlers.GetUserAnalyticsSummary)
 	analytics.GET("/engagement", handler.AnalyticsHandlers.GetUserEngagementMetrics)
 	analytics.GET("/dashboard/:period", handler.AnalyticsHandlers.GetDashboardAnalytics)
-	
+
 	// Activity logging and tracking
 	analytics.GET("/activity-log", handler.AnalyticsHandlers.GetUserActivityLog)
 	analytics.POST("/log-activity", handler.AnalyticsHandlers.LogUserActivity)
-	
+
 	// Session management
 	analytics.POST("/start-session", handler.AnalyticsHandlers.StartSession)
 	analytics.POST("/end-session", handler.AnalyticsHandlers.EndSession)

@@ -93,9 +93,9 @@ func ensureMigrationsTable(db *sql.DB) {
 }
 
 type migration struct {
-	version int64
-	name    string
-	upFile  string
+	version  int64
+	name     string
+	upFile   string
 	downFile string
 }
 

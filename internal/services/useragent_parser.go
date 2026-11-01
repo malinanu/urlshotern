@@ -106,34 +106,34 @@ func (u *UserAgentService) DetectBot(userAgentString string) *BotInfo {
 
 	// Common bot patterns
 	botPatterns := map[string]*BotInfo{
-		"Googlebot":        {"Googlebot", "search_engine", "Google's web crawler"},
-		"Bingbot":          {"Bingbot", "search_engine", "Microsoft Bing's web crawler"},
-		"Slurp":            {"Yahoo! Slurp", "search_engine", "Yahoo's web crawler"},
-		"DuckDuckBot":      {"DuckDuckBot", "search_engine", "DuckDuckGo's web crawler"},
-		"Baiduspider":      {"Baiduspider", "search_engine", "Baidu's web crawler"},
-		"YandexBot":        {"YandexBot", "search_engine", "Yandex's web crawler"},
+		"Googlebot":           {"Googlebot", "search_engine", "Google's web crawler"},
+		"Bingbot":             {"Bingbot", "search_engine", "Microsoft Bing's web crawler"},
+		"Slurp":               {"Yahoo! Slurp", "search_engine", "Yahoo's web crawler"},
+		"DuckDuckBot":         {"DuckDuckBot", "search_engine", "DuckDuckGo's web crawler"},
+		"Baiduspider":         {"Baiduspider", "search_engine", "Baidu's web crawler"},
+		"YandexBot":           {"YandexBot", "search_engine", "Yandex's web crawler"},
 		"facebookexternalhit": {"Facebook Bot", "social_media", "Facebook's link preview crawler"},
-		"Twitterbot":       {"Twitterbot", "social_media", "Twitter's link preview crawler"},
-		"LinkedInBot":      {"LinkedInBot", "social_media", "LinkedIn's link preview crawler"},
-		"WhatsApp":         {"WhatsApp Bot", "social_media", "WhatsApp's link preview crawler"},
-		"TelegramBot":      {"TelegramBot", "social_media", "Telegram's link preview crawler"},
-		"DiscordBot":       {"DiscordBot", "social_media", "Discord's link preview crawler"},
-		"Applebot":         {"Applebot", "search_engine", "Apple's web crawler for Siri and Spotlight"},
-		"AhrefsBot":        {"AhrefsBot", "seo", "Ahrefs SEO tool crawler"},
-		"MJ12bot":          {"MJ12bot", "seo", "Majestic SEO crawler"},
-		"SemrushBot":       {"SemrushBot", "seo", "SEMrush SEO tool crawler"},
-		"DotBot":           {"DotBot", "seo", "Moz SEO tool crawler"},
-		"UptimeRobot":      {"UptimeRobot", "monitoring", "Website uptime monitoring service"},
-		"Pingdom":          {"Pingdom", "monitoring", "Website monitoring service"},
-		"StatusCake":       {"StatusCake", "monitoring", "Website monitoring service"},
-		"Postman":          {"Postman", "development", "API development and testing tool"},
-		"curl":             {"cURL", "development", "Command-line HTTP client"},
-		"wget":             {"wget", "development", "Command-line web retrieval tool"},
-		"python-requests":  {"Python Requests", "development", "Python HTTP library"},
+		"Twitterbot":          {"Twitterbot", "social_media", "Twitter's link preview crawler"},
+		"LinkedInBot":         {"LinkedInBot", "social_media", "LinkedIn's link preview crawler"},
+		"WhatsApp":            {"WhatsApp Bot", "social_media", "WhatsApp's link preview crawler"},
+		"TelegramBot":         {"TelegramBot", "social_media", "Telegram's link preview crawler"},
+		"DiscordBot":          {"DiscordBot", "social_media", "Discord's link preview crawler"},
+		"Applebot":            {"Applebot", "search_engine", "Apple's web crawler for Siri and Spotlight"},
+		"AhrefsBot":           {"AhrefsBot", "seo", "Ahrefs SEO tool crawler"},
+		"MJ12bot":             {"MJ12bot", "seo", "Majestic SEO crawler"},
+		"SemrushBot":          {"SemrushBot", "seo", "SEMrush SEO tool crawler"},
+		"DotBot":              {"DotBot", "seo", "Moz SEO tool crawler"},
+		"UptimeRobot":         {"UptimeRobot", "monitoring", "Website uptime monitoring service"},
+		"Pingdom":             {"Pingdom", "monitoring", "Website monitoring service"},
+		"StatusCake":          {"StatusCake", "monitoring", "Website monitoring service"},
+		"Postman":             {"Postman", "development", "API development and testing tool"},
+		"curl":                {"cURL", "development", "Command-line HTTP client"},
+		"wget":                {"wget", "development", "Command-line web retrieval tool"},
+		"python-requests":     {"Python Requests", "development", "Python HTTP library"},
 	}
 
 	userAgentLower := strings.ToLower(userAgentString)
-	
+
 	for pattern, botInfo := range botPatterns {
 		if strings.Contains(userAgentLower, strings.ToLower(pattern)) {
 			return botInfo
@@ -155,11 +155,11 @@ func (u *UserAgentService) getDeviceType(ua *user_agent.UserAgent, userAgentStri
 	if u.isTablet(userAgentString) {
 		return "tablet"
 	}
-	
+
 	if ua.Mobile() {
 		return "mobile"
 	}
-	
+
 	return "desktop"
 }
 
@@ -171,19 +171,19 @@ func (u *UserAgentService) isTablet(userAgentString string) bool {
 		"fonepad", "transformer", "tf101", "tf201", "tf300t", "tf700t", "tf701t",
 		"surface", "sm-t", "sm-p", "pixel c",
 	}
-	
+
 	for _, keyword := range tabletKeywords {
 		if strings.Contains(userAgentLower, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 func (u *UserAgentService) normalizeOSName(osName string) string {
 	osName = strings.ToLower(osName)
-	
+
 	if strings.Contains(osName, "windows") {
 		return "Windows"
 	} else if strings.Contains(osName, "mac") || strings.Contains(osName, "darwin") {
@@ -203,13 +203,13 @@ func (u *UserAgentService) normalizeOSName(osName string) string {
 	} else if osName == "" {
 		return "Unknown"
 	}
-	
+
 	return strings.Title(osName)
 }
 
 func (u *UserAgentService) normalizeBrowserName(browserName string) string {
 	browserName = strings.ToLower(browserName)
-	
+
 	if strings.Contains(browserName, "chrome") {
 		return "Chrome"
 	} else if strings.Contains(browserName, "firefox") {
@@ -229,13 +229,13 @@ func (u *UserAgentService) normalizeBrowserName(browserName string) string {
 	} else if browserName == "" {
 		return "Unknown"
 	}
-	
+
 	return strings.Title(browserName)
 }
 
 func (u *UserAgentService) getBrowserEngine(ua *user_agent.UserAgent, userAgentString string) string {
 	userAgentLower := strings.ToLower(userAgentString)
-	
+
 	if strings.Contains(userAgentLower, "webkit") {
 		if strings.Contains(userAgentLower, "blink") || strings.Contains(userAgentLower, "chrome") {
 			return "Blink"
@@ -250,13 +250,13 @@ func (u *UserAgentService) getBrowserEngine(ua *user_agent.UserAgent, userAgentS
 	} else if strings.Contains(userAgentLower, "presto") {
 		return "Presto"
 	}
-	
+
 	return "Unknown"
 }
 
 func (u *UserAgentService) extractDeviceInfo(userAgentString, osName string) (brand, model string) {
 	userAgentLower := strings.ToLower(userAgentString)
-	
+
 	// iOS devices
 	if osName == "iOS" {
 		if strings.Contains(userAgentLower, "iphone") {
@@ -268,12 +268,12 @@ func (u *UserAgentService) extractDeviceInfo(userAgentString, osName string) (br
 		}
 		return "Apple", "Unknown iOS Device"
 	}
-	
+
 	// Android devices
 	if osName == "Android" {
 		return u.extractAndroidDevice(userAgentString)
 	}
-	
+
 	return "", ""
 }
 
@@ -311,9 +311,9 @@ func (u *UserAgentService) extractAndroidDevice(userAgentString string) (brand, 
 		"google":   "Google",
 		"nokia":    "Nokia",
 	}
-	
+
 	userAgentLower := strings.ToLower(userAgentString)
-	
+
 	for pattern, brandName := range devicePatterns {
 		if strings.Contains(userAgentLower, pattern) {
 			// Try to extract more specific model information
@@ -324,20 +324,20 @@ func (u *UserAgentService) extractAndroidDevice(userAgentString string) (brand, 
 			return brandName, model
 		}
 	}
-	
+
 	return "Unknown", "Android Device"
 }
 
 func (u *UserAgentService) extractAndroidModel(userAgentString, brand string) string {
 	// This is a simplified model extraction - in practice you'd have more sophisticated patterns
 	userAgentLower := strings.ToLower(userAgentString)
-	
+
 	// Look for model patterns after the brand name
 	re := regexp.MustCompile(brand + `[^;)]*([A-Z0-9\-]+)`)
 	if matches := re.FindStringSubmatch(userAgentLower); len(matches) > 1 {
 		return matches[1]
 	}
-	
+
 	return ""
 }
 

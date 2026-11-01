@@ -11,7 +11,7 @@ type URLShare struct {
 	SharerID       int64      `json:"sharer_id" db:"sharer_id"`
 	SharedWithType string     `json:"shared_with_type" db:"shared_with_type"` // user, team, public
 	SharedWithID   *int64     `json:"shared_with_id,omitempty" db:"shared_with_id"`
-	ShareType      string     `json:"share_type" db:"share_type"`       // view, edit, admin
+	ShareType      string     `json:"share_type" db:"share_type"` // view, edit, admin
 	ExpiresAt      *time.Time `json:"expires_at,omitempty" db:"expires_at"`
 	IsActive       bool       `json:"is_active" db:"is_active"`
 	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
@@ -29,26 +29,26 @@ type URLShareInfo struct {
 
 // URLComment represents a comment on a URL
 type URLComment struct {
-	ID         int64      `json:"id" db:"id"`
-	URLID      int64      `json:"url_id" db:"url_id"`
-	UserID     int64      `json:"user_id" db:"user_id"`
-	Content    string     `json:"content" db:"content"`
-	ParentID   *int64     `json:"parent_id,omitempty" db:"parent_id"` // For threaded comments
-	IsEdited   bool       `json:"is_edited" db:"is_edited"`
-	IsDeleted  bool       `json:"is_deleted" db:"is_deleted"`
-	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at" db:"updated_at"`
-	DeletedAt  *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+	ID        int64      `json:"id" db:"id"`
+	URLID     int64      `json:"url_id" db:"url_id"`
+	UserID    int64      `json:"user_id" db:"user_id"`
+	Content   string     `json:"content" db:"content"`
+	ParentID  *int64     `json:"parent_id,omitempty" db:"parent_id"` // For threaded comments
+	IsEdited  bool       `json:"is_edited" db:"is_edited"`
+	IsDeleted bool       `json:"is_deleted" db:"is_deleted"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
 // URLCommentInfo represents detailed comment information
 type URLCommentInfo struct {
 	*URLComment
-	User        *PublicUser        `json:"user"`
-	Replies     []*URLCommentInfo  `json:"replies,omitempty"`
-	ReplyCount  int                `json:"reply_count"`
-	CanEdit     bool               `json:"can_edit"`
-	CanDelete   bool               `json:"can_delete"`
+	User       *PublicUser       `json:"user"`
+	Replies    []*URLCommentInfo `json:"replies,omitempty"`
+	ReplyCount int               `json:"reply_count"`
+	CanEdit    bool              `json:"can_edit"`
+	CanDelete  bool              `json:"can_delete"`
 }
 
 // URLActivity represents activity/event logs for a URL
@@ -84,8 +84,8 @@ type URLBookmark struct {
 // URLBookmarkInfo represents detailed bookmark information
 type URLBookmarkInfo struct {
 	*URLBookmark
-	URL     *URL      `json:"url"`
-	TagList []string  `json:"tag_list"`
+	URL     *URL     `json:"url"`
+	TagList []string `json:"tag_list"`
 }
 
 // URLFavorite represents a user's favorite URLs
@@ -125,12 +125,12 @@ type URLCollectionItem struct {
 // URLCollectionInfo represents detailed collection information
 type URLCollectionInfo struct {
 	*URLCollection
-	URLCount    int     `json:"url_count"`
-	URLs        []*URL  `json:"urls,omitempty"`
-	Owner       *PublicUser `json:"owner"`
-	Team        *Team   `json:"team,omitempty"`
-	CanEdit     bool    `json:"can_edit"`
-	CanDelete   bool    `json:"can_delete"`
+	URLCount  int         `json:"url_count"`
+	URLs      []*URL      `json:"urls,omitempty"`
+	Owner     *PublicUser `json:"owner"`
+	Team      *Team       `json:"team,omitempty"`
+	CanEdit   bool        `json:"can_edit"`
+	CanDelete bool        `json:"can_delete"`
 }
 
 // URLNote represents a private note on a URL
@@ -228,16 +228,16 @@ type UpdateNoteRequest struct {
 
 // URLCollaborationSummary represents collaboration summary for a URL
 type URLCollaborationSummary struct {
-	URLID          int64              `json:"url_id"`
-	ShareCount     int                `json:"share_count"`
-	CommentCount   int                `json:"comment_count"`
-	BookmarkCount  int                `json:"bookmark_count"`
-	FavoriteCount  int                `json:"favorite_count"`
-	NoteCount      int                `json:"note_count"`
-	RecentActivity []*URLActivityInfo `json:"recent_activity"`
-	TopContributors []*PublicUser     `json:"top_contributors"`
-	IsSharedWithMe bool              `json:"is_shared_with_me"`
-	MyPermissions  []string          `json:"my_permissions"`
+	URLID           int64              `json:"url_id"`
+	ShareCount      int                `json:"share_count"`
+	CommentCount    int                `json:"comment_count"`
+	BookmarkCount   int                `json:"bookmark_count"`
+	FavoriteCount   int                `json:"favorite_count"`
+	NoteCount       int                `json:"note_count"`
+	RecentActivity  []*URLActivityInfo `json:"recent_activity"`
+	TopContributors []*PublicUser      `json:"top_contributors"`
+	IsSharedWithMe  bool               `json:"is_shared_with_me"`
+	MyPermissions   []string           `json:"my_permissions"`
 }
 
 // UserCollaborationStats represents user collaboration statistics
@@ -266,49 +266,49 @@ const (
 	SharedWithPublic = "public"
 
 	// Activity types
-	ActivityURLCreated    = "url_created"
-	ActivityURLUpdated    = "url_updated"
-	ActivityURLDeleted    = "url_deleted"
-	ActivityURLShared     = "url_shared"
-	ActivityShareRevoked  = "share_revoked"
-	ActivityCommentAdded  = "comment_added"
-	ActivityCommentEdited = "comment_edited"
-	ActivityCommentDeleted = "comment_deleted"
-	ActivityBookmarked    = "bookmarked"
-	ActivityUnbookmarked  = "unbookmarked"
-	ActivityFavorited     = "favorited"
-	ActivityUnfavorited   = "unfavorited"
-	ActivityNoteAdded     = "note_added"
-	ActivityNoteUpdated   = "note_updated"
-	ActivityNoteDeleted   = "note_deleted"
-	ActivityCollectionCreated = "collection_created"
-	ActivityCollectionUpdated = "collection_updated"
-	ActivityCollectionDeleted = "collection_deleted"
-	ActivityAddedToCollection = "added_to_collection"
+	ActivityURLCreated            = "url_created"
+	ActivityURLUpdated            = "url_updated"
+	ActivityURLDeleted            = "url_deleted"
+	ActivityURLShared             = "url_shared"
+	ActivityShareRevoked          = "share_revoked"
+	ActivityCommentAdded          = "comment_added"
+	ActivityCommentEdited         = "comment_edited"
+	ActivityCommentDeleted        = "comment_deleted"
+	ActivityBookmarked            = "bookmarked"
+	ActivityUnbookmarked          = "unbookmarked"
+	ActivityFavorited             = "favorited"
+	ActivityUnfavorited           = "unfavorited"
+	ActivityNoteAdded             = "note_added"
+	ActivityNoteUpdated           = "note_updated"
+	ActivityNoteDeleted           = "note_deleted"
+	ActivityCollectionCreated     = "collection_created"
+	ActivityCollectionUpdated     = "collection_updated"
+	ActivityCollectionDeleted     = "collection_deleted"
+	ActivityAddedToCollection     = "added_to_collection"
 	ActivityRemovedFromCollection = "removed_from_collection"
 
 	// Default colors for collections
-	ColorRed     = "#ef4444"
-	ColorOrange  = "#f97316"
-	ColorYellow  = "#eab308"
-	ColorGreen   = "#22c55e"
-	ColorBlue    = "#3b82f6"
-	ColorIndigo  = "#6366f1"
-	ColorPurple  = "#a855f7"
-	ColorPink    = "#ec4899"
-	ColorGray    = "#6b7280"
+	ColorRed    = "#ef4444"
+	ColorOrange = "#f97316"
+	ColorYellow = "#eab308"
+	ColorGreen  = "#22c55e"
+	ColorBlue   = "#3b82f6"
+	ColorIndigo = "#6366f1"
+	ColorPurple = "#a855f7"
+	ColorPink   = "#ec4899"
+	ColorGray   = "#6b7280"
 
 	// Default icons for collections
-	IconFolder     = "folder"
-	IconStar       = "star"
-	IconHeart      = "heart"
-	IconBookmark   = "bookmark"
-	IconTag        = "tag"
-	IconDocument   = "document"
-	IconLink       = "link"
-	IconGlobe      = "globe"
-	IconUsers      = "users"
-	IconLightbulb  = "lightbulb"
+	IconFolder    = "folder"
+	IconStar      = "star"
+	IconHeart     = "heart"
+	IconBookmark  = "bookmark"
+	IconTag       = "tag"
+	IconDocument  = "document"
+	IconLink      = "link"
+	IconGlobe     = "globe"
+	IconUsers     = "users"
+	IconLightbulb = "lightbulb"
 )
 
 // Permission helpers

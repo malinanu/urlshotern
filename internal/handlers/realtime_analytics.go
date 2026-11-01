@@ -26,9 +26,9 @@ func (h *RealtimeAnalyticsHandler) HandleWebSocket(c *gin.Context) {
 // GetRealtimeStats returns real-time statistics about active connections
 func (h *RealtimeAnalyticsHandler) GetRealtimeStats(c *gin.Context) {
 	stats := gin.H{
-		"active_clients":     h.realtimeService.GetActiveClients(),
+		"active_clients":       h.realtimeService.GetActiveClients(),
 		"active_subscriptions": h.realtimeService.GetActiveSubscriptions(),
 	}
-	
+
 	c.JSON(http.StatusOK, stats)
 }

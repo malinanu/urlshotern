@@ -11,13 +11,13 @@ import (
 )
 
 type ContentBlockService struct {
-	db *storage.PostgresStorage
+	db                    *storage.PostgresStorage
 	globalSettingsService *GlobalSettingsService
 }
 
 func NewContentBlockService(db *storage.PostgresStorage, globalSettingsService *GlobalSettingsService) *ContentBlockService {
 	return &ContentBlockService{
-		db: db,
+		db:                    db,
 		globalSettingsService: globalSettingsService,
 	}
 }
@@ -33,7 +33,7 @@ func (s *ContentBlockService) GetContentBlock(identifier string) (*models.Conten
 		&block.ID, &block.Name, &block.Identifier, &block.Content,
 		&block.Type, &block.IsActive, &block.SortOrder, &block.CreatedAt, &block.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("content block '%s' not found", identifier)
@@ -55,7 +55,7 @@ func (s *ContentBlockService) GetContentBlockByID(id int64) (*models.ContentBloc
 		&block.ID, &block.Name, &block.Identifier, &block.Content,
 		&block.Type, &block.IsActive, &block.SortOrder, &block.CreatedAt, &block.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("content block with ID %d not found", id)
@@ -71,7 +71,7 @@ func (s *ContentBlockService) ListContentBlocks(blockType string, activeOnly boo
 	baseQuery := `
 		SELECT id, name, identifier, content, type, is_active, sort_order, created_at, updated_at
 		FROM content_blocks`
-	
+
 	var conditions []string
 	var args []interface{}
 	argIndex := 1
@@ -130,12 +130,12 @@ func (s *ContentBlockService) CreateContentBlock(req *models.ContentBlockRequest
 
 	now := time.Now()
 	var block models.ContentBlock
-	
+
 	err := s.db.QueryRow(query,
 		req.Name, req.Identifier, req.Content, req.Type,
 		req.IsActive, req.SortOrder, now, now,
 	).Scan(&block.ID, &block.CreatedAt, &block.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create content block: %w", err)
 	}
@@ -228,13 +228,13 @@ func (s *ContentBlockService) RenderContentBlock(identifier string) (string, err
 // renderTemplate performs simple template variable substitution
 func (s *ContentBlockService) renderTemplate(content string, variables map[string]string) string {
 	result := content
-	
+
 	// Replace {{variable}} patterns with actual values
 	for key, value := range variables {
 		placeholder := fmt.Sprintf("{{%s}}", key)
 		result = strings.ReplaceAll(result, placeholder, value)
 	}
-	
+
 	return result
 }
 
@@ -266,7 +266,7 @@ func (s *ContentBlockService) RenderMultipleBlocks(identifiers []string) (map[st
 	}
 
 	result := make(map[string]string)
-	
+
 	for _, identifier := range identifiers {
 		block, err := s.GetContentBlock(identifier)
 		if err != nil {

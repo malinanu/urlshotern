@@ -222,7 +222,7 @@ func (h *AnalyticsHandlers) LogUserActivity(c *gin.Context) {
 	var req struct {
 		ActivityType string                 `json:"activity_type" binding:"required"`
 		Description  string                 `json:"description"`
-		URLId        *string                `json:"url_id,omitempty"`  // Changed to string to match ResourceID
+		URLId        *string                `json:"url_id,omitempty"` // Changed to string to match ResourceID
 		Metadata     map[string]interface{} `json:"metadata,omitempty"`
 	}
 
@@ -248,7 +248,7 @@ func (h *AnalyticsHandlers) LogUserActivity(c *gin.Context) {
 		UserID:       userID.(int64),
 		SessionID:    sessionIDStr,
 		ActivityType: req.ActivityType,
-		ResourceType: "url", // Default resource type
+		ResourceType: "url",        // Default resource type
 		Action:       "manual_log", // Default action
 		Description:  req.Description,
 		ResourceID:   req.URLId,
@@ -287,7 +287,7 @@ func (h *AnalyticsHandlers) StartSession(c *gin.Context) {
 	}
 
 	var req struct {
-		DeviceInfo *string `json:"device_info,omitempty"`  // Changed to match UserSession model
+		DeviceInfo *string `json:"device_info,omitempty"` // Changed to match UserSession model
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -311,14 +311,14 @@ func (h *AnalyticsHandlers) StartSession(c *gin.Context) {
 
 	// Convert UserSession to AnalyticsSession for analytics service
 	analyticsSession := &models.AnalyticsSession{
-		ID:            sessionUUID.String(),
-		UserID:        &userIDInt,
-		StartTime:     time.Now(),
-		IPAddress:     &clientIP,
-		UserAgent:     &userAgent,
-		IsActive:      true,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		ID:        sessionUUID.String(),
+		UserID:    &userIDInt,
+		StartTime: time.Now(),
+		IPAddress: &clientIP,
+		UserAgent: &userAgent,
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	err := h.analyticsService.StartUserSession(analyticsSession)
@@ -446,12 +446,11 @@ func (h *AnalyticsHandlers) parseUserAgentSimple(activity *models.UserActivityLo
 	activity.OS = &os
 }
 
-
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && (s[:len(substr)+1] == substr+" " || 
-		s[len(s)-len(substr)-1:] == " "+substr || 
-		findSubstring(s, substr))))
+	return len(s) >= len(substr) && (s == substr ||
+		(len(s) > len(substr) && (s[:len(substr)+1] == substr+" " ||
+			s[len(s)-len(substr)-1:] == " "+substr ||
+			findSubstring(s, substr))))
 }
 
 func findSubstring(s, substr string) bool {

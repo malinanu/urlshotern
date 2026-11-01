@@ -319,18 +319,18 @@ func (h *ABTestingHandler) GetSampleSizeCalculator(c *gin.Context) {
 
 	// Calculate sample size recommendation
 	sampleSize := h.abTestService.RecommendSampleSize(baselineRate, minEffect, confidence, power)
-	
+
 	// Calculate test duration estimates
 	estimatedDaysLow := calculateTestDuration(sampleSize, baselineRate*0.8)  // Conservative estimate
 	estimatedDaysHigh := calculateTestDuration(sampleSize, baselineRate*1.2) // Optimistic estimate
 
 	c.JSON(http.StatusOK, gin.H{
 		"sample_size_per_variant": sampleSize,
-		"total_sample_size":      sampleSize * 2, // Assuming 2 variants
-		"baseline_rate":          baselineRate,
-		"minimum_effect":         minEffect,
-		"confidence_level":       confidence,
-		"power":                  power,
+		"total_sample_size":       sampleSize * 2, // Assuming 2 variants
+		"baseline_rate":           baselineRate,
+		"minimum_effect":          minEffect,
+		"confidence_level":        confidence,
+		"power":                   power,
 		"estimated_duration": gin.H{
 			"low_traffic_days":  estimatedDaysLow,
 			"high_traffic_days": estimatedDaysHigh,
@@ -348,15 +348,15 @@ func calculateTestDuration(sampleSize int64, dailyConversions float64) int {
 	if dailyConversions <= 0 {
 		return 0
 	}
-	
+
 	// Estimate daily sessions based on conversion rate
 	// Assuming a reasonable conversion rate to session ratio
 	dailySessions := dailyConversions / 0.05 // Assuming 5% conversion rate
-	
+
 	if dailySessions <= 0 {
 		return 0
 	}
-	
+
 	days := float64(sampleSize) / dailySessions
 	return int(math.Ceil(days))
 }
@@ -408,11 +408,11 @@ func (h *ABTestingHandler) GetPowerAnalysis(c *gin.Context) {
 
 	// Calculate current power
 	currentPower := h.calculatePower(control.ConversionRate, best.ConversionRate, int64(control.Sessions), int64(best.Sessions), 95.0)
-	
+
 	// Calculate power for different effect sizes
 	powerCurve := make(map[string]float64)
 	effectSizes := []float64{0.01, 0.02, 0.05, 0.1, 0.15, 0.2}
-	
+
 	for _, effect := range effectSizes {
 		testRate := control.ConversionRate * (1 + effect)
 		if testRate <= 1.0 {
@@ -422,9 +422,9 @@ func (h *ABTestingHandler) GetPowerAnalysis(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"current_power":    currentPower,
-		"observed_effect":  observedEffect,
-		"power_curve":      powerCurve,
+		"current_power":   currentPower,
+		"observed_effect": observedEffect,
+		"power_curve":     powerCurve,
 		"sample_sizes": gin.H{
 			"control": control.Sessions,
 			"variant": best.Sessions,
@@ -480,32 +480,32 @@ func (h *ABTestingHandler) calculateSampleSize(baselineRate, minEffect, confiden
 	if baselineRate <= 0 || baselineRate >= 1 {
 		return 0
 	}
-	
+
 	alpha := 1 - (confidence / 100)
 	beta := 1 - (power / 100)
-	
+
 	// Approximate inverse normal function
 	zAlpha := h.normalInverse(1 - alpha/2)
 	zBeta := h.normalInverse(1 - beta)
-	
+
 	p1 := baselineRate
 	p2 := baselineRate * (1 + minEffect)
-	
+
 	if p2 >= 1 {
 		p2 = 0.99 // Cap at 99%
 	}
-	
+
 	pooledP := (p1 + p2) / 2
-	
-	numerator := math.Pow(zAlpha*math.Sqrt(2*pooledP*(1-pooledP)) + zBeta*math.Sqrt(p1*(1-p1)+p2*(1-p2)), 2)
+
+	numerator := math.Pow(zAlpha*math.Sqrt(2*pooledP*(1-pooledP))+zBeta*math.Sqrt(p1*(1-p1)+p2*(1-p2)), 2)
 	denominator := math.Pow(p2-p1, 2)
-	
+
 	if denominator == 0 {
 		return 0
 	}
-	
+
 	sampleSize := numerator / denominator
-	
+
 	return int64(math.Ceil(sampleSize))
 }
 
@@ -514,7 +514,7 @@ func (h *ABTestingHandler) normalInverse(p float64) float64 {
 	if p <= 0.5 {
 		return -h.normalInverse(1 - p)
 	}
-	
+
 	// Beasley-Springer-Moro approximation
 	c0 := 2.515517
 	c1 := 0.802853
@@ -522,8 +522,8 @@ func (h *ABTestingHandler) normalInverse(p float64) float64 {
 	d1 := 1.432788
 	d2 := 0.189269
 	d3 := 0.001308
-	
+
 	t := math.Sqrt(-2 * math.Log(1-p))
-	
+
 	return t - (c0+c1*t+c2*t*t)/(1+d1*t+d2*t*t+d3*t*t*t)
 }

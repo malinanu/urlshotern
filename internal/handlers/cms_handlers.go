@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
 	"github.com/URLshorter/url-shortener/internal/utils"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type CMSHandlers struct {
@@ -545,8 +545,8 @@ func (h *CMSHandlers) PublishStaticPage(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Page " + action + " successfully",
-		"page":         updatedPage,
-		"updated_by":   user.ID,
+		"message":    "Page " + action + " successfully",
+		"page":       updatedPage,
+		"updated_by": user.ID,
 	})
 }

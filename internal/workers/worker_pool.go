@@ -16,23 +16,23 @@ type Task struct {
 
 // WorkerPool manages a pool of goroutines for async task processing
 type WorkerPool struct {
-	workers    int
-	taskQueue  chan Task
-	wg         sync.WaitGroup
-	ctx        context.Context
-	cancel     context.CancelFunc
-	mu         sync.RWMutex
-	stopped    bool
-	metrics    *PoolMetrics
+	workers   int
+	taskQueue chan Task
+	wg        sync.WaitGroup
+	ctx       context.Context
+	cancel    context.CancelFunc
+	mu        sync.RWMutex
+	stopped   bool
+	metrics   *PoolMetrics
 }
 
 // PoolMetrics tracks worker pool statistics
 type PoolMetrics struct {
-	TasksProcessed   int64
-	TasksFailed      int64
-	TasksInQueue     int64
-	ActiveWorkers    int32
-	mu               sync.RWMutex
+	TasksProcessed int64
+	TasksFailed    int64
+	TasksInQueue   int64
+	ActiveWorkers  int32
+	mu             sync.RWMutex
 }
 
 // NewWorkerPool creates a new worker pool with the specified number of workers

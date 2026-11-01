@@ -175,7 +175,7 @@ func (c *CollaborationService) UpdateShare(shareID int64, req *models.UpdateShar
 	if req.IsActive != nil && !*req.IsActive {
 		action = models.ActivityShareRevoked
 	}
-	
+
 	c.logActivity(share.URLID, &userID, action, "Share permissions updated", map[string]interface{}{
 		"share_id":   shareID,
 		"share_type": share.ShareType,
@@ -293,7 +293,7 @@ func (c *CollaborationService) GetCommentInfo(commentID int64, requestorID int64
 	// Implementation would query database
 	// For now, return simulated comment
 	user, _ := c.userService.GetUserByID(requestorID)
-	
+
 	return &models.URLCommentInfo{
 		URLComment: &models.URLComment{
 			ID:        commentID,
@@ -526,7 +526,7 @@ func (c *CollaborationService) GetUserCollections(userID int64) ([]*models.URLCo
 	// Implementation would query database
 	// For now, return simulated collections
 	user, _ := c.userService.GetUserByID(userID)
-	
+
 	collections := []*models.URLCollectionInfo{
 		{
 			URLCollection: &models.URLCollection{
@@ -555,7 +555,7 @@ func (c *CollaborationService) GetCollectionInfo(collectionID int64, requestorID
 	// Implementation would query database
 	// For now, return simulated collection
 	user, _ := c.userService.GetUserByID(requestorID)
-	
+
 	return &models.URLCollectionInfo{
 		URLCollection: &models.URLCollection{
 			ID:          collectionID,
@@ -660,7 +660,7 @@ func (c *CollaborationService) GetURLActivity(urlID int64, userID int64, limit i
 	// Implementation would query database
 	// For now, return simulated activity
 	user, _ := c.userService.GetUserByID(userID)
-	
+
 	activities := []*models.URLActivityInfo{
 		{
 			URLActivity: &models.URLActivity{
@@ -695,7 +695,7 @@ func (c *CollaborationService) GetCollaborationSummary(urlID int64, userID int64
 	// Check user's permissions
 	permissions := []string{"view"}
 	isSharedWithMe := false
-	
+
 	// Get user's share if exists
 	share, _ := c.getUserShareForURL(urlID, userID)
 	if share != nil {
@@ -805,4 +805,3 @@ func (c *CollaborationService) sendShareNotification(share *models.URLShare, mes
 }
 
 // Helper functions
-

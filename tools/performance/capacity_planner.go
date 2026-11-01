@@ -12,14 +12,14 @@ import (
 
 // CapacityPlan represents a capacity planning forecast
 type CapacityPlan struct {
-	GeneratedAt       time.Time          `json:"generated_at"`
-	LookbackDays      int                `json:"lookback_days"`
-	ForecastDays      int                `json:"forecast_days"`
-	Scenario          string             `json:"scenario"`
-	CurrentState      ResourceState      `json:"current_state"`
-	Forecast          []ForecastPeriod   `json:"forecast"`
-	Recommendations   []Recommendation   `json:"recommendations"`
-	CostProjection    CostProjection     `json:"cost_projection"`
+	GeneratedAt     time.Time        `json:"generated_at"`
+	LookbackDays    int              `json:"lookback_days"`
+	ForecastDays    int              `json:"forecast_days"`
+	Scenario        string           `json:"scenario"`
+	CurrentState    ResourceState    `json:"current_state"`
+	Forecast        []ForecastPeriod `json:"forecast"`
+	Recommendations []Recommendation `json:"recommendations"`
+	CostProjection  CostProjection   `json:"cost_projection"`
 }
 
 // ResourceState represents current resource utilization
@@ -35,24 +35,24 @@ type ResourceState struct {
 
 // ForecastPeriod represents projected capacity needs for a time period
 type ForecastPeriod struct {
-	Date                  time.Time `json:"date"`
-	ProjectedRPS          float64   `json:"projected_rps"`
-	ProjectedCPU          float64   `json:"projected_cpu"`
-	ProjectedMemory       float64   `json:"projected_memory"`
-	ProjectedStorageGB    float64   `json:"projected_storage_gb"`
-	RequiredInstances     int       `json:"required_instances"`
-	CapacityMargin        float64   `json:"capacity_margin"`
-	ScalingActionNeeded   bool      `json:"scaling_action_needed"`
+	Date                time.Time `json:"date"`
+	ProjectedRPS        float64   `json:"projected_rps"`
+	ProjectedCPU        float64   `json:"projected_cpu"`
+	ProjectedMemory     float64   `json:"projected_memory"`
+	ProjectedStorageGB  float64   `json:"projected_storage_gb"`
+	RequiredInstances   int       `json:"required_instances"`
+	CapacityMargin      float64   `json:"capacity_margin"`
+	ScalingActionNeeded bool      `json:"scaling_action_needed"`
 }
 
 // Recommendation represents a capacity recommendation
 type Recommendation struct {
-	Date        time.Time `json:"date"`
-	Priority    string    `json:"priority"`
-	Action      string    `json:"action"`
-	Description string    `json:"description"`
-	Impact      string    `json:"impact"`
-	EstimatedCost float64 `json:"estimated_cost"`
+	Date          time.Time `json:"date"`
+	Priority      string    `json:"priority"`
+	Action        string    `json:"action"`
+	Description   string    `json:"description"`
+	Impact        string    `json:"impact"`
+	EstimatedCost float64   `json:"estimated_cost"`
 }
 
 // CostProjection represents projected costs
@@ -65,37 +65,37 @@ type CostProjection struct {
 
 // GrowthScenario defines traffic growth assumptions
 type GrowthScenario struct {
-	Name               string
-	MonthlyGrowthRate  float64 // Percentage
+	Name                string
+	MonthlyGrowthRate   float64 // Percentage
 	StorageGrowthRateGB float64 // GB per month
 }
 
 var scenarios = map[string]GrowthScenario{
 	"conservative": {
-		Name:               "Conservative",
-		MonthlyGrowthRate:  10.0,
+		Name:                "Conservative",
+		MonthlyGrowthRate:   10.0,
 		StorageGrowthRateGB: 5.0,
 	},
 	"expected": {
-		Name:               "Expected",
-		MonthlyGrowthRate:  20.0,
+		Name:                "Expected",
+		MonthlyGrowthRate:   20.0,
 		StorageGrowthRateGB: 10.0,
 	},
 	"optimistic": {
-		Name:               "Optimistic",
-		MonthlyGrowthRate:  35.0,
+		Name:                "Optimistic",
+		MonthlyGrowthRate:   35.0,
 		StorageGrowthRateGB: 20.0,
 	},
 }
 
 type Config struct {
-	InputFile     string
-	OutputFile    string
-	ForecastDays  int
-	Scenario      string
-	SafetyMargin  float64
-	CPUThreshold  float64
-	MemThreshold  float64
+	InputFile       string
+	OutputFile      string
+	ForecastDays    int
+	Scenario        string
+	SafetyMargin    float64
+	CPUThreshold    float64
+	MemThreshold    float64
 	CostPerInstance float64
 }
 
@@ -169,11 +169,11 @@ func generateCapacityPlan(currentState *ResourceState, config *Config) *Capacity
 	scenario := scenarios[config.Scenario]
 
 	plan := &CapacityPlan{
-		GeneratedAt:  time.Now(),
-		ForecastDays: config.ForecastDays,
-		Scenario:     scenario.Name,
-		CurrentState: *currentState,
-		Forecast:     make([]ForecastPeriod, 0),
+		GeneratedAt:     time.Now(),
+		ForecastDays:    config.ForecastDays,
+		Scenario:        scenario.Name,
+		CurrentState:    *currentState,
+		Forecast:        make([]ForecastPeriod, 0),
 		Recommendations: make([]Recommendation, 0),
 	}
 
@@ -200,7 +200,7 @@ func generateCapacityPlan(currentState *ResourceState, config *Config) *Capacity
 		requiredInstances = int(math.Ceil(float64(requiredInstances) * config.SafetyMargin))
 
 		// Calculate capacity margin
-		capacityMargin := float64(requiredInstances) / float64(currentState.InstanceCount) - 1.0
+		capacityMargin := float64(requiredInstances)/float64(currentState.InstanceCount) - 1.0
 
 		// Determine if scaling needed
 		scalingNeeded := requiredInstances > currentState.InstanceCount

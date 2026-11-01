@@ -86,11 +86,11 @@ var safeHTTPClient = &http.Client{
 }
 
 type DomainService struct {
-	db              *storage.PostgresStorage
-	redis           *storage.RedisStorage
-	config          *configs.Config
+	db               *storage.PostgresStorage
+	redis            *storage.RedisStorage
+	config           *configs.Config
 	analyticsService *AnalyticsService
-	userService     *UserService
+	userService      *UserService
 }
 
 // NewDomainService creates a new domain service
@@ -243,9 +243,9 @@ func (d *DomainService) GetDomainVerificationInfo(domainID int64) (*models.Domai
 
 	if domain.IsVerified {
 		return &models.DomainVerificationResponse{
-			Domain:            domain.Domain,
-			Status:            "verified",
-			Instructions:      "Domain is already verified",
+			Domain:              domain.Domain,
+			Status:              "verified",
+			Instructions:        "Domain is already verified",
 			VerificationMethods: []models.VerificationMethod{},
 		}, nil
 	}
@@ -668,7 +668,7 @@ func (d *DomainService) checkDNSResolution(domain string) models.DomainStatusChe
 	_, err := net.LookupHost(domain)
 	status := models.CheckStatusPass
 	message := "DNS resolution successful"
-	
+
 	if err != nil {
 		status = models.CheckStatusFail
 		message = fmt.Sprintf("DNS resolution failed: %v", err)
@@ -780,4 +780,3 @@ func (d *DomainService) getDomainURLCount(domainID int64) (int, error) {
 	// For now, return 0
 	return 0, nil
 }
-

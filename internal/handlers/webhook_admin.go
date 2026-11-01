@@ -32,14 +32,14 @@ func (h *WebhookAdminHandler) ReplayWebhook(c *gin.Context) {
 	err := h.retryWorker.RetryWebhookManually(c.Request.Context(), eventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to replay webhook",
+			"error":   "Failed to replay webhook",
 			"details": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Webhook replayed successfully",
+		"message":  "Webhook replayed successfully",
 		"event_id": eventID,
 	})
 }
@@ -56,15 +56,15 @@ func (h *WebhookAdminHandler) GetDeadLetterQueue(c *gin.Context) {
 	events, err := h.retryWorker.GetDeadLetterEvents(c.Request.Context(), limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve dead letter queue",
+			"error":   "Failed to retrieve dead letter queue",
 			"details": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"count": len(events),
-		"limit": limit,
+		"count":  len(events),
+		"limit":  limit,
 		"events": events,
 	})
 }
@@ -75,7 +75,7 @@ func (h *WebhookAdminHandler) GetWebhookMetrics(c *gin.Context) {
 	metrics, err := h.retryWorker.GetRetryMetrics(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to retrieve webhook metrics",
+			"error":   "Failed to retrieve webhook metrics",
 			"details": err.Error(),
 		})
 		return

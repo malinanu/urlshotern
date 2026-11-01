@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/gin-gonic/gin"
 )
 
 type GlobalSettingsHandlers struct {
@@ -33,10 +33,10 @@ func (h *GlobalSettingsHandlers) GetPublicSettings(c *gin.Context) {
 func (h *GlobalSettingsHandlers) GetSiteInfo(c *gin.Context) {
 	info := h.settingsService.GetSiteInfo()
 	socialLinks := h.settingsService.GetSocialLinks()
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"site_info":     info,
-		"social_links":  socialLinks,
+		"site_info":    info,
+		"social_links": socialLinks,
 	})
 }
 
@@ -201,7 +201,7 @@ func (h *GlobalSettingsHandlers) BulkUpdateSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Settings updated successfully",
+		"message":       "Settings updated successfully",
 		"updated_count": len(req),
 	})
 }
@@ -209,7 +209,7 @@ func (h *GlobalSettingsHandlers) BulkUpdateSettings(c *gin.Context) {
 // CheckMaintenanceMode checks if site is in maintenance mode
 func (h *GlobalSettingsHandlers) CheckMaintenanceMode(c *gin.Context) {
 	isMaintenanceMode := h.settingsService.IsMaintenanceMode()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"maintenance_mode": isMaintenanceMode,
 	})

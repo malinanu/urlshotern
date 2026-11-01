@@ -43,19 +43,19 @@ func (a *ABTestingService) CreateABTest(userID int64, request *models.CreateABTe
 	}
 
 	test := &models.ABTest{
-		ID:             id,
-		UserID:         userID,
-		TestName:       request.TestName,
-		TestType:       request.TestType,
-		Status:         "draft",
-		TrafficSplit:   request.TrafficSplit,
-		StartDate:      request.StartDate,
-		EndDate:        request.EndDate,
-		SampleSize:     request.SampleSize,
-		Confidence:     request.Confidence,
-		IsActive:       false,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:           id,
+		UserID:       userID,
+		TestName:     request.TestName,
+		TestType:     request.TestType,
+		Status:       "draft",
+		TrafficSplit: request.TrafficSplit,
+		StartDate:    request.StartDate,
+		EndDate:      request.EndDate,
+		SampleSize:   request.SampleSize,
+		Confidence:   request.Confidence,
+		IsActive:     false,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	// Insert the A/B test
@@ -478,43 +478,43 @@ func (a *ABTestingService) calculateStatisticalSignificance(results []*models.Va
 
 	// Pooled proportion
 	pPooled := (float64(control.Conversions) + float64(bestVariant.Conversions)) / (float64(n1) + float64(n2))
-	
+
 	// Standard error
 	se := math.Sqrt(pPooled * (1 - pPooled) * (1/float64(n1) + 1/float64(n2)))
-	
+
 	if se == 0 {
 		return &models.SignificanceResult{IsSignificant: false}
 	}
 
 	// Z-score
 	zScore := (p2 - p1) / se
-	
+
 	// Convert to p-value (two-tailed test)
 	pValue := 2 * (1 - a.normalCDF(math.Abs(zScore)))
-	
+
 	// Check significance
 	alpha := 1 - (confidence / 100)
 	isSignificant := pValue < alpha
 
 	// Calculate confidence interval for difference
 	confidenceInterval := a.calculateConfidenceInterval(p1, p2, int64(n1), int64(n2), confidence)
-	
+
 	// Calculate effect size (Cohen's h for proportions)
 	effectSize := a.calculateCohenH(p1, p2)
-	
+
 	// Calculate minimum detectable effect
 	mde := a.calculateMDE(int64(n1), int64(n2), confidence, 80.0) // 80% power
-	
+
 	return &models.SignificanceResult{
-		IsSignificant:       isSignificant,
-		PValue:             pValue,
-		ZScore:             zScore,
-		ControlCR:          p1,
-		VariantCR:          p2,
-		Improvement:        ((p2 - p1) / p1) * 100, // Percentage improvement
-		EffectSize:         effectSize,
-		ConfidenceInterval: confidenceInterval,
-		MinDetectableEffect: mde,
+		IsSignificant:            isSignificant,
+		PValue:                   pValue,
+		ZScore:                   zScore,
+		ControlCR:                p1,
+		VariantCR:                p2,
+		Improvement:              ((p2 - p1) / p1) * 100, // Percentage improvement
+		EffectSize:               effectSize,
+		ConfidenceInterval:       confidenceInterval,
+		MinDetectableEffect:      mde,
 		SampleSizeRecommendation: a.RecommendSampleSize(p1, 0.05, confidence, 80.0), // 5% relative improvement
 	}
 }
@@ -597,29 +597,29 @@ func (a *ABTestingService) sumConversions(results []*models.VariantResult) int {
 func (a *ABTestingService) calculateOverallCR(results []*models.VariantResult) float64 {
 	totalSessions := a.sumSessions(results)
 	totalConversions := a.sumConversions(results)
-	
+
 	if totalSessions == 0 {
 		return 0
 	}
-	
+
 	return float64(totalConversions) / float64(totalSessions)
 }
 
 // calculateConfidenceInterval calculates the confidence interval for the difference in conversion rates
 func (a *ABTestingService) calculateConfidenceInterval(p1, p2 float64, n1, n2 int64, confidence float64) [2]float64 {
 	diff := p2 - p1
-	
+
 	// Standard error for difference of proportions
 	se1 := math.Sqrt((p1 * (1 - p1)) / float64(n1))
 	se2 := math.Sqrt((p2 * (1 - p2)) / float64(n2))
 	seDiff := math.Sqrt(se1*se1 + se2*se2)
-	
+
 	// Calculate z-score for confidence level
 	alpha := 1 - (confidence / 100)
 	zAlpha := a.normalInverse(1 - alpha/2)
-	
+
 	margin := zAlpha * seDiff
-	
+
 	return [2]float64{diff - margin, diff + margin}
 }
 
@@ -628,10 +628,10 @@ func (a *ABTestingService) calculateCohenH(p1, p2 float64) float64 {
 	if p1 <= 0 || p1 >= 1 || p2 <= 0 || p2 >= 1 {
 		return 0 // Invalid proportions
 	}
-	
+
 	phi1 := 2 * math.Asin(math.Sqrt(p1))
 	phi2 := 2 * math.Asin(math.Sqrt(p2))
-	
+
 	return phi2 - phi1
 }
 
@@ -640,17 +640,17 @@ func (a *ABTestingService) calculateMDE(n1, n2 int64, confidence, power float64)
 	if n1 == 0 || n2 == 0 {
 		return 0
 	}
-	
+
 	alpha := 1 - (confidence / 100)
 	beta := 1 - (power / 100)
-	
+
 	zAlpha := a.normalInverse(1 - alpha/2)
 	zBeta := a.normalInverse(1 - beta)
-	
+
 	// Assuming equal sample sizes and baseline conversion rate around 0.1
 	p := 0.1
 	pooledSE := math.Sqrt(2 * p * (1 - p) / float64(n1))
-	
+
 	return (zAlpha + zBeta) * pooledSE
 }
 
@@ -659,31 +659,31 @@ func (a *ABTestingService) RecommendSampleSize(baselineRate, minEffect, confiden
 	if baselineRate <= 0 || baselineRate >= 1 {
 		return 0
 	}
-	
+
 	alpha := 1 - (confidence / 100)
 	beta := 1 - (power / 100)
-	
+
 	zAlpha := a.normalInverse(1 - alpha/2)
 	zBeta := a.normalInverse(1 - beta)
-	
+
 	p1 := baselineRate
 	p2 := baselineRate * (1 + minEffect)
-	
+
 	if p2 >= 1 {
 		p2 = 0.99 // Cap at 99%
 	}
-	
+
 	pooledP := (p1 + p2) / 2
-	
-	numerator := math.Pow(zAlpha*math.Sqrt(2*pooledP*(1-pooledP)) + zBeta*math.Sqrt(p1*(1-p1)+p2*(1-p2)), 2)
+
+	numerator := math.Pow(zAlpha*math.Sqrt(2*pooledP*(1-pooledP))+zBeta*math.Sqrt(p1*(1-p1)+p2*(1-p2)), 2)
 	denominator := math.Pow(p2-p1, 2)
-	
+
 	if denominator == 0 {
 		return 0
 	}
-	
+
 	sampleSize := numerator / denominator
-	
+
 	return int64(math.Ceil(sampleSize))
 }
 
@@ -692,7 +692,7 @@ func (a *ABTestingService) normalInverse(p float64) float64 {
 	if p <= 0.5 {
 		return -a.normalInverse(1 - p)
 	}
-	
+
 	// Beasley-Springer-Moro approximation
 	c0 := 2.515517
 	c1 := 0.802853
@@ -700,9 +700,9 @@ func (a *ABTestingService) normalInverse(p float64) float64 {
 	d1 := 1.432788
 	d2 := 0.189269
 	d3 := 0.001308
-	
+
 	t := math.Sqrt(-2 * math.Log(1-p))
-	
+
 	return t - (c0+c1*t+c2*t*t)/(1+d1*t+d2*t*t+d3*t*t*t)
 }
 
@@ -712,7 +712,7 @@ func (a *ABTestingService) CalculateSequentialTest(testID, userID int64) (*model
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Find control and test variants
 	var control, test *models.VariantResult
 	for _, variant := range results.VariantResults {
@@ -722,41 +722,41 @@ func (a *ABTestingService) CalculateSequentialTest(testID, userID int64) (*model
 			test = variant
 		}
 	}
-	
+
 	if control == nil || test == nil {
 		return nil, fmt.Errorf("control or test variant not found")
 	}
-	
+
 	// Sequential probability ratio test boundaries
-	alpha := 0.05  // Type I error
-	beta := 0.20   // Type II error (80% power)
-	
+	alpha := 0.05 // Type I error
+	beta := 0.20  // Type II error (80% power)
+
 	logA := math.Log(beta / (1 - alpha))
 	logB := math.Log((1 - beta) / alpha)
-	
+
 	// Current log-likelihood ratio
 	n1, x1 := control.Sessions, control.Conversions
 	n2, x2 := test.Sessions, test.Conversions
-	
+
 	if n1 == 0 || n2 == 0 {
 		return &models.SequentialTestResult{
-			CanStop:      false,
-			Decision:     "continue",
-			Confidence:   0,
-			Reason:       "Insufficient data",
+			CanStop:    false,
+			Decision:   "continue",
+			Confidence: 0,
+			Reason:     "Insufficient data",
 		}, nil
 	}
-	
+
 	p1 := float64(x1) / float64(n1)
 	p2 := float64(x2) / float64(n2)
-	
+
 	// Calculate log-likelihood ratio
 	logLR := a.calculateLogLikelihoodRatio(x1, n1, x2, n2, p1, p2)
-	
+
 	var decision string
 	var confidence float64
 	var canStop bool
-	
+
 	if logLR >= logB {
 		decision = "test_wins"
 		confidence = 95.0
@@ -770,15 +770,15 @@ func (a *ABTestingService) CalculateSequentialTest(testID, userID int64) (*model
 		confidence = 0
 		canStop = false
 	}
-	
+
 	return &models.SequentialTestResult{
-		CanStop:     canStop,
-		Decision:    decision,
-		Confidence:  confidence,
-		LogLR:       logLR,
-		UpperBound:  logB,
-		LowerBound:  logA,
-		Reason:      a.getSequentialTestReason(decision, logLR, logA, logB),
+		CanStop:    canStop,
+		Decision:   decision,
+		Confidence: confidence,
+		LogLR:      logLR,
+		UpperBound: logB,
+		LowerBound: logA,
+		Reason:     a.getSequentialTestReason(decision, logLR, logA, logB),
 	}, nil
 }
 
@@ -787,17 +787,17 @@ func (a *ABTestingService) calculateLogLikelihoodRatio(x1, n1, x2, n2 int, p1, p
 	if p1 == 0 || p1 == 1 || p2 == 0 || p2 == 1 {
 		return 0
 	}
-	
+
 	// Under H0: p1 = p2 = p_pooled
 	pPooled := float64(x1+x2) / float64(n1+n2)
-	
+
 	// Under H1: p1 != p2
 	logL1 := float64(x1)*math.Log(p1) + float64(n1-x1)*math.Log(1-p1) +
-			 float64(x2)*math.Log(p2) + float64(n2-x2)*math.Log(1-p2)
-	
+		float64(x2)*math.Log(p2) + float64(n2-x2)*math.Log(1-p2)
+
 	logL0 := float64(x1)*math.Log(pPooled) + float64(n1-x1)*math.Log(1-pPooled) +
-			 float64(x2)*math.Log(pPooled) + float64(n2-x2)*math.Log(1-pPooled)
-	
+		float64(x2)*math.Log(pPooled) + float64(n2-x2)*math.Log(1-pPooled)
+
 	return logL1 - logL0
 }
 

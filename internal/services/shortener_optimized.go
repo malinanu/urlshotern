@@ -21,14 +21,14 @@ import (
 
 // OptimizedShortenerService is an optimized version with worker pools and context timeouts
 type OptimizedShortenerService struct {
-	db                *storage.PostgresStorage
-	redis             *storage.RedisStorage
-	config            *configs.Config
-	analytics         *AnalyticsService
-	realtime          *RealtimeAnalyticsService
-	attribution       *AttributionService
-	workerPool        *workers.WorkerPool
-	bloomFilter       *utils.BloomFilter
+	db          *storage.PostgresStorage
+	redis       *storage.RedisStorage
+	config      *configs.Config
+	analytics   *AnalyticsService
+	realtime    *RealtimeAnalyticsService
+	attribution *AttributionService
+	workerPool  *workers.WorkerPool
+	bloomFilter *utils.BloomFilter
 }
 
 // NewOptimizedShortenerService creates an optimized shortener service
@@ -383,15 +383,15 @@ func (s *OptimizedShortenerService) recordAttributionTouchpointOptimized(ctx con
 	}
 
 	touchpoint := &models.AttributionTouchpoint{
-		SessionID:       generateSessionID(clientIP, userAgent),
-		ShortCode:       shortCode,
-		UserIP:          clientIP,
-		UserAgent:       userAgent,
-		Referrer:        referrer,
-		CampaignSource:  extractSource(referrer),
-		CampaignMedium:  extractMedium(referrer),
-		CampaignName:    extractCampaign(referrer),
-		TouchpointTime:  time.Now(),
+		SessionID:      generateSessionID(clientIP, userAgent),
+		ShortCode:      shortCode,
+		UserIP:         clientIP,
+		UserAgent:      userAgent,
+		Referrer:       referrer,
+		CampaignSource: extractSource(referrer),
+		CampaignMedium: extractMedium(referrer),
+		CampaignName:   extractCampaign(referrer),
+		TouchpointTime: time.Now(),
 	}
 
 	if err := s.attribution.RecordTouchpoint(touchpoint); err != nil {
