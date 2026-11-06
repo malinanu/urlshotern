@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
 import {
   Link2,
@@ -292,17 +293,24 @@ export default function FeaturesPage() {
 
               {/* Mobile Phone Mockup */}
               <div className="lg:col-span-6 flex justify-center">
-                <div className="w-full max-w-sm rounded-[2.5rem] bg-zinc-950 border-4 border-zinc-800 p-6 shadow-2xl relative overflow-hidden">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                  className="w-full max-w-sm rounded-[2.5rem] bg-zinc-950 border-4 border-zinc-800 p-6 shadow-2xl relative overflow-hidden"
+                >
                   <div className="w-24 h-4 bg-zinc-800 rounded-full mx-auto mb-6"></div>
                   
                   <div className="text-center">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 mx-auto p-0.5 mb-3 shadow-md">
                       <div className="w-full h-full bg-zinc-900 rounded-full flex items-center justify-center font-bold text-lg text-white">
-                        MJ
+                        AR
                       </div>
                     </div>
-                    <div className="text-base font-bold text-white">Malin Jayaweera</div>
-                    <div className="text-xs text-zinc-400">Founder & Managing Director</div>
+                    <div className="text-base font-bold text-white">Alex Rivera</div>
+                    <div className="text-xs text-zinc-400">Chief Marketing Officer · Apex Global</div>
                     <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
                       Executive Obsidian
                     </span>
@@ -313,20 +321,20 @@ export default function FeaturesPage() {
                       <span>📥 Save Contact to Phone</span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-center">
-                      ✉️ Email: malin@threelogiq.com
+                      ✉️ Email: alex.rivera@apexcloud.io
                     </div>
                     <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-center">
-                      🌐 Portfolio & Company Site
+                      🌐 Website: apexcloud.io
                     </div>
                     <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-center">
-                      💼 LinkedIn Profile
+                      💼 LinkedIn: /in/alex-rivera-apex
                     </div>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-zinc-900 text-center text-[10px] text-zinc-500">
                     Powered by Trunc Micro-Landing Pages
                   </div>
-                </div>
+                </motion.div>
               </div>
 
             </div>

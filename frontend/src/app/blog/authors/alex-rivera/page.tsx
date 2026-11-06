@@ -2,9 +2,9 @@ import Link from 'next/link';
 import Layout from '@/components/layout/Layout';
 import { posts } from '@/app/blog/posts';
 
-const authorPosts = posts.filter((p) => p.authorSlug === 'malin-jayaweera');
+const authorPosts = posts.filter((p) => p.authorSlug === 'alex-rivera');
 
-export default function MalinJayaweeraAuthorPage() {
+export default function AlexRiveraAuthorPage() {
   return (
     <Layout>
       <div className="bg-background min-h-screen">
@@ -16,13 +16,13 @@ export default function MalinJayaweeraAuthorPage() {
             </Link>
             <div className="flex items-center gap-6">
               <div className="flex-shrink-0 w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-3xl font-bold text-primary select-none">
-                MJ
+                AR
               </div>
               <div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
-                  Malin Jayaweera
+                  Alex Rivera
                 </h1>
-                <p className="text-muted-foreground mt-1 text-lg">Founder &amp; CEO at Trunc</p>
+                <p className="text-muted-foreground mt-1 text-lg">Lead Infrastructure Architect at Trunc</p>
               </div>
             </div>
           </div>
@@ -32,34 +32,17 @@ export default function MalinJayaweeraAuthorPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="prose prose-neutral dark:prose-invert max-w-none">
             <p className="text-foreground/80 leading-relaxed text-base">
-              Malin Jayaweera is the founder and CEO of Trunc, a free URL shortener with real-time
-              click analytics, custom branded domains, QR code generation, and AI-powered insights.
-              He has spent over a decade building marketing infrastructure and analytics tools for
-              growth teams across e-commerce, SaaS, and media.
+              Alex Rivera is a lead infrastructure architect at Trunc, specializing in global edge redirection,
+              click analytics telemetry, and digital business card platforms. They have spent over a decade
+              building high-throughput web infrastructure and developer tooling for scaling teams.
             </p>
             <p className="text-foreground/80 leading-relaxed text-base mt-4">
-              Before starting Trunc, Malin worked as a software engineer and growth lead at several
-              early-stage startups, where he repeatedly found that marketers were paying for expensive
-              link management tools that offered less transparency than they deserved. Trunc was built
-              to fix that — giving every team, from solo creators to enterprise marketing departments,
-              full analytics from day one without the enterprise price tag.
+              Before joining Trunc, Alex led infrastructure at several high-growth startups, focusing on
+              sub-millisecond latency, DNS routing, and distributed Redis architectures.
             </p>
             <p className="text-foreground/80 leading-relaxed text-base mt-4">
-              Malin writes about URL management, link analytics, and evidence-based digital marketing
-              strategy. His writing draws on real data from the Trunc platform and first-hand experience
-              running campaigns across paid search, email, and social.
-            </p>
-            <p className="text-foreground/80 leading-relaxed text-base mt-4">
-              His articles cover the full spectrum of link management: from practical how-to guides on
-              shortening URLs and tracking affiliate links, to in-depth comparisons of URL shortener
-              platforms, to developer tutorials on integrating link shortening via REST API. Every piece
-              is grounded in real platform data and tested workflows rather than generic marketing advice.
-            </p>
-            <p className="text-foreground/80 leading-relaxed text-base mt-4">
-              Outside of writing, Malin focuses on building features that close the gap between
-              enterprise-grade analytics and free-tier accessibility — including Trunc's AI Insights
-              engine, which analyses click patterns to surface actionable recommendations for marketers
-              who do not have a data team behind them.
+              Alex writes about URL management, link analytics, QR code vector workflows, and evidence-based digital marketing
+              architecture.
             </p>
           </div>
 
@@ -80,7 +63,7 @@ export default function MalinJayaweeraAuthorPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="border-t border-border pt-10">
             <h2 className="text-xl font-bold text-foreground mb-6">
-              Articles by Malin Jayaweera
+              Articles by Alex Rivera
             </h2>
             <div className="space-y-6">
               {authorPosts.map((post) => (

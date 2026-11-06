@@ -166,12 +166,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 p-0.5 shadow-sm">
                   <div className="w-full h-full bg-card rounded-full flex items-center justify-center font-bold text-xs text-foreground">
-                    MJ
+                    AR
                   </div>
                 </div>
                 <div>
                   <div className="text-sm font-bold text-foreground">{post.author}</div>
-                  <div className="text-xs text-muted-foreground">Founder & Tech Lead</div>
+                  <div className="text-xs text-muted-foreground">Lead Infrastructure Architect</div>
                 </div>
               </div>
 
@@ -209,14 +209,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <div className="border-t border-border pt-10">
             <div className="flex flex-col sm:flex-row items-start gap-5 bg-card rounded-2xl p-6 sm:p-8 border border-border shadow-md">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-indigo-600 text-primary-foreground flex items-center justify-center text-xl font-bold shrink-0 shadow-md">
-                MJ
+                AR
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-primary mb-1">About the Author</p>
                 <div className="text-lg font-bold text-foreground">{post.author}</div>
-                <p className="text-xs text-muted-foreground mt-0.5 mb-3">Founder & Lead Engineer at Trunc</p>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-3">Lead Infrastructure Architect at Trunc</p>
                 <p className="text-sm text-foreground/80 leading-relaxed">
-                  Malin is the founder of Trunc and has spent over a decade building marketing, DNS, and analytics tools for growth teams. He writes about URL management, digital business cards, link telemetry, and developer infrastructure.
+                  Alex is a lead infrastructure architect at Trunc and has spent over a decade building marketing, DNS, and analytics tools for growth teams. They write about URL management, digital business cards, link telemetry, and developer infrastructure.
                 </p>
               </div>
             </div>

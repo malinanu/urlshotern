@@ -106,12 +106,12 @@ export default function BlogPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 p-0.5 shadow-sm">
                           <div className="w-full h-full bg-card rounded-full flex items-center justify-center font-bold text-xs text-foreground">
-                            MJ
+                            AR
                           </div>
                         </div>
                         <div>
                           <div className="text-xs font-bold text-foreground">{featuredPost.author}</div>
-                          <div className="text-[11px] text-muted-foreground">Founder & Lead Engineer</div>
+                          <div className="text-[11px] text-muted-foreground">Lead Infrastructure Architect</div>
                         </div>
                       </div>
 

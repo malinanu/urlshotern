@@ -39,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/terms`, lastModified: new Date('2026-03-20'), changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/dmca`, lastModified: new Date('2026-10-27'), changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/blog`, lastModified: new Date('2026-04-12'), changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${SITE_URL}/blog/authors/malin-jayaweera`, lastModified: new Date('2026-04-12'), changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/blog/authors/alex-rivera`, lastModified: new Date('2026-04-12'), changeFrequency: 'monthly', priority: 0.6 },
     ...posts.map((post) => ({
       url: `${SITE_URL}/blog/${post.slug}`,
       lastModified: new Date(post.updatedAt ?? post.publishedAt),
