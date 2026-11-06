@@ -860,6 +860,12 @@ func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler, extraRoute
 		router.GET(routePath, routeHandler)
 		router.HEAD(routePath, routeHandler)
 
+		// When microsites are enabled, /m/:slug is already registered by setupMicrositePublicRoutes.
+		// In Gin, a catch-all /*path conflicts with a named parameter :slug under the same /m/ prefix.
+		if routePath == "/m" && handler != nil && handler.MicrositeHandlers != nil {
+			continue
+		}
+
 		// Handle sub-routes with /*path
 		subRouteHandler := func(c *gin.Context) {
 			c.Header("Cache-Control", "public, max-age=3600")
