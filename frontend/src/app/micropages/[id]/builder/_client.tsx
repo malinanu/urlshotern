@@ -95,8 +95,8 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
         if (!data.social_links) data.social_links = [];
         if (!data.links) data.links = [];
         setPage(data);
-      } catch (err: any) {
-        setError(err.message || 'Error loading builder');
+      } catch (err: unknown) {
+        setError((err as Error).message || 'Error loading builder');
       } finally {
         setLoading(false);
       }
@@ -146,8 +146,8 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
       setPage(updated);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error saving changes');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Error saving changes');
     } finally {
       setSaving(false);
     }

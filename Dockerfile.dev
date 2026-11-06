@@ -37,6 +37,8 @@ RUN cd frontend && \
     NEXT_PUBLIC_ENABLE_MICROSITES=${NEXT_PUBLIC_ENABLE_MICROSITES} \
     BASE_URL=${BASE_URL} \
     NODE_ENV=${NODE_ENV} \
+    NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS="--max-old-space-size=2048" \
     npm run build
 
 # Create static directory and copy built frontend
