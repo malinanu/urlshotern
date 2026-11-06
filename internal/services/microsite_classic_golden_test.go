@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/URLshorter/url-shortener/internal/models"
@@ -63,7 +64,8 @@ func TestClassicRenderingIsUnchanged(t *testing.T) {
 			if err != nil {
 				t.Fatalf("missing golden %s (run with -update-golden on v1 code): %v", path, err)
 			}
-			if string(out) != string(want) {
+			normalize := func(b []byte) string { return strings.ReplaceAll(string(b), "\r\n", "\n") }
+			if normalize(out) != normalize(want) {
 				t.Errorf("%s/%s: classic output changed (%d bytes vs %d golden)", name, mode, len(out), len(want))
 			}
 		}

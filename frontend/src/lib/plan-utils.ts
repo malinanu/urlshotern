@@ -1,6 +1,7 @@
 export const PLAN_NAMES = {
   free: 'Free',
   premium: 'Premium',
+  growth: 'Growth',
   enterprise: 'Enterprise',
 } as const;
 

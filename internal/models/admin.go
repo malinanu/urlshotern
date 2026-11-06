@@ -100,7 +100,7 @@ type CreateUserAdminRequest struct {
 	Email              string  `json:"email" validate:"required,email"`
 	Password           *string `json:"password,omitempty" validate:"omitempty,min=8"`
 	Phone              *string `json:"phone,omitempty"`
-	AccountType        string  `json:"account_type" validate:"required,oneof=free premium enterprise"`
+	AccountType        string  `json:"account_type" validate:"required,oneof=free premium growth enterprise"`
 	RoleIDs            []int64 `json:"role_ids" validate:"required,min=1"`
 	SendInvite         bool    `json:"send_invite"`          // If true, send invitation email
 	EmailVerified      bool    `json:"email_verified"`       // Admin can pre-verify email
@@ -130,7 +130,7 @@ type GetUserRolesResponse struct {
 
 // UpdateAccountTypeRequest represents account type update request
 type UpdateAccountTypeRequest struct {
-	AccountType string `json:"account_type" validate:"required,oneof=free premium enterprise"`
+	AccountType string `json:"account_type" validate:"required,oneof=free premium growth enterprise"`
 }
 
 // RBAC Audit Models

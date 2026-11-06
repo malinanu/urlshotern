@@ -15,7 +15,7 @@ export interface PolarProduct {
   polar_product_id: string;
   name: string;
   description: string;
-  plan_type: 'free' | 'premium' | 'enterprise';
+  plan_type: 'free' | 'premium' | 'growth' | 'enterprise';
   is_recurring: boolean;
   prices: PolarPrice[];
   features: string[];
@@ -60,7 +60,7 @@ export interface PolarSubscription {
   polar_price_id?: string;
   polar_checkout_id?: string;
   status: 'active' | 'cancelled' | 'incomplete' | 'incomplete_expired' | 'trialing' | 'past_due';
-  plan_type: 'free' | 'premium' | 'enterprise';
+  plan_type: 'free' | 'premium' | 'growth' | 'enterprise';
   billing_cycle?: 'month' | 'year';
   current_period_start?: string;
   current_period_end?: string;

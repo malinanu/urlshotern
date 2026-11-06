@@ -74,19 +74,40 @@ export default function PricingPage() {
       return { price: '$0', period: '/month' };
     }
 
+    const growthMonthlyId = '9b551ce6-f962-4b54-ae74-15b3c5b39cb6';
+    const growthYearlyId = '3525a2c9-b4b9-4912-8a62-74125b1fd7ea';
+
     let product = polarProducts.find(
-      (p: PolarProduct) => p.plan_type === planType && p.is_recurring && (!p.name.includes('Yearly') && !p.name.includes('yearly'))
+      (p: PolarProduct) =>
+        (p.plan_type === planType ||
+          (planType === 'growth' && (p.polar_product_id === growthMonthlyId || p.id === growthMonthlyId))) &&
+        p.is_recurring &&
+        !p.name.includes('Yearly') &&
+        !p.name.includes('yearly')
     );
 
     if (billingInterval === 'year') {
       const yearlyMatch = polarProducts.find(
-        (p: PolarProduct) => p.plan_type === planType && (p.name.includes('Yearly') || p.name.includes('yearly')) && p.is_recurring
+        (p: PolarProduct) =>
+          (p.plan_type === planType ||
+            (planType === 'growth' && (p.polar_product_id === growthYearlyId || p.id === growthYearlyId))) &&
+          (p.name.includes('Yearly') || p.name.includes('yearly')) &&
+          p.is_recurring
       );
       if (yearlyMatch) product = yearlyMatch;
     }
 
     if (!product && polarProducts.length > 0) {
-      product = polarProducts.find((p: PolarProduct) => p.plan_type === planType && p.is_recurring);
+      product = polarProducts.find(
+        (p: PolarProduct) =>
+          (p.plan_type === planType ||
+            (planType === 'growth' &&
+              (p.polar_product_id === growthMonthlyId ||
+                p.polar_product_id === growthYearlyId ||
+                p.id === growthMonthlyId ||
+                p.id === growthYearlyId))) &&
+          p.is_recurring
+      );
     }
 
     if (!product || productsLoading || !product.prices || product.prices.length === 0) {
@@ -94,6 +115,11 @@ export default function PricingPage() {
         return billingInterval === 'year'
           ? { price: '$9', period: '/month (billed annually)' }
           : { price: '$12', period: '/month' };
+      }
+      if (planType === 'growth') {
+        return billingInterval === 'year'
+          ? { price: '$19', period: '/month (billed annually)' }
+          : { price: '$24', period: '/month' };
       }
       if (planType === 'enterprise') {
         return billingInterval === 'year'
@@ -153,7 +179,7 @@ export default function PricingPage() {
       name: PLAN_NAMES.premium,
       planType: 'premium',
       ...getPriceDisplay('premium'),
-      badge: 'Most Popular',
+      badge: 'Pro',
       description: 'For growing creators, marketers, and businesses wanting brand authority.',
       features: [
         'Unlimited Short URLs',
@@ -170,6 +196,29 @@ export default function PricingPage() {
         'Team workspaces & seats',
       ],
       cta: `Upgrade to ${PLAN_NAMES.premium}`,
+      popular: false,
+    },
+    {
+      name: PLAN_NAMES.growth,
+      planType: 'growth',
+      ...getPriceDisplay('growth'),
+      badge: 'Most Popular',
+      description: 'For scaling teams, marketing squads, and high-growth digital businesses.',
+      features: [
+        'Unlimited Short URLs',
+        '5 Custom Vanity Domains included',
+        'Dynamic Vector QR Codes (SVG/PNG)',
+        'Unlimited click telemetry retention',
+        'All 10 handcrafted vCard templates',
+        '5 Team Member seats with RBAC',
+        'Password & Expiration security gates',
+        'Priority queue & chat support',
+      ],
+      notIncluded: [
+        'White-label custom branding',
+        'Dedicated SLA & custom SSO/SAML',
+      ],
+      cta: `Upgrade to ${PLAN_NAMES.growth}`,
       popular: true,
     },
     {
@@ -177,14 +226,14 @@ export default function PricingPage() {
       planType: 'enterprise',
       ...getPriceDisplay('enterprise'),
       badge: 'Power Scale',
-      description: 'For teams and organizations requiring multi-domain fleets and API scale.',
+      description: 'For teams and organizations requiring multi-domain fleets, white-label branding, and dedicated infrastructure.',
       features: [
         'Unlimited Short URLs',
-        '5 Custom Branded Domains included',
-        'White-label branding on micro-pages',
-        'Lifetime unlimited telemetry history',
-        'All 10 handcrafted vCard templates',
-        '5 Team Member seats with RBAC',
+        'Unlimited Custom Branded Domains',
+        'Custom Branded Dynamic QR Codes',
+        'Unlimited telemetry + Warehouse export',
+        'White-Label Hubs with zero Trunc branding',
+        'Custom Team Members & Roles (SSO/SAML)',
         'Full REST API & Webhook triggers',
         'Dedicated SLA & 24/7 priority support',
       ],
@@ -275,7 +324,7 @@ export default function PricingPage() {
         {/* Pricing Cards Grid */}
         <section className="py-16 sm:py-24 border-b border-border">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
               {tiers.map((tier) => (
                 <div
                   key={tier.name}

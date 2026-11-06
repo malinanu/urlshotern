@@ -73,6 +73,7 @@ type BillingUsage struct {
 const (
 	PlanNameFree       = "Free"
 	PlanNamePremium    = "Premium"
+	PlanNameGrowth     = "Growth"
 	PlanNameEnterprise = "Enterprise"
 )
 
@@ -139,6 +140,38 @@ var PredefinedPlans = map[string]Plan{
 			PasswordProtection: true,
 			Advanced:           true,
 			MaxPages:           10,
+		},
+	},
+	"growth": {
+		ID:          "growth",
+		Name:        PlanNameGrowth,
+		Description: "For scaling teams and high-growth businesses",
+		Price:       24.00,
+		Currency:    "usd",
+		Interval:    "month",
+		Features: []string{
+			"Unlimited short links",
+			"5 Custom vanity domains",
+			"Dynamic Vector QR codes (SVG/PNG)",
+			"All 10 handcrafted vCard templates",
+			"Unlimited click telemetry history",
+			"5 Team collaboration seats with RBAC",
+			"Password protection & link expiration gates",
+			"Priority queue & chat support",
+		},
+		Limits: PlanLimits{
+			URLs:               -1,
+			Clicks:             -1,
+			Analytics:          -1,
+			CustomDomain:       true,
+			APIAccess:          true,
+			BulkImport:         true,
+			QRCodes:            true,
+			CustomShortCodes:   true,
+			TeamMembers:        5,
+			PasswordProtection: true,
+			Advanced:           true,
+			MaxPages:           -1,
 		},
 	},
 	"enterprise": {
@@ -208,6 +241,38 @@ var PredefinedPlans = map[string]Plan{
 			PasswordProtection: true,
 			Advanced:           true,
 			MaxPages:           10,
+		},
+	},
+	"growth_yearly": {
+		ID:          "growth_yearly",
+		Name:        PlanNameGrowth + " (Yearly)",
+		Description: "For scaling teams and high-growth businesses (2 months free)",
+		Price:       240.00,
+		Currency:    "usd",
+		Interval:    "year",
+		Features: []string{
+			"Unlimited short links",
+			"5 Custom vanity domains",
+			"Dynamic Vector QR codes (SVG/PNG)",
+			"All 10 handcrafted vCard templates",
+			"Unlimited click telemetry history",
+			"5 Team collaboration seats with RBAC",
+			"Password protection & link expiration gates",
+			"Priority queue & chat support",
+		},
+		Limits: PlanLimits{
+			URLs:               -1,
+			Clicks:             -1,
+			Analytics:          -1,
+			CustomDomain:       true,
+			APIAccess:          true,
+			BulkImport:         true,
+			QRCodes:            true,
+			CustomShortCodes:   true,
+			TeamMembers:        5,
+			PasswordProtection: true,
+			Advanced:           true,
+			MaxPages:           -1,
 		},
 	},
 	"enterprise_yearly": {
@@ -307,9 +372,11 @@ func (bs *BillingService) GetPlan(planID string) (*Plan, error) {
 var planOrder = map[string]int{
 	"free":              0,
 	"premium":           1,
-	"enterprise":        2,
-	"premium_yearly":    3,
-	"enterprise_yearly": 4,
+	"growth":            2,
+	"enterprise":        3,
+	"premium_yearly":    4,
+	"growth_yearly":     5,
+	"enterprise_yearly": 6,
 }
 
 // GetAllPlans returns all available plans in a stable order.

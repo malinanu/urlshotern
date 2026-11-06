@@ -73,7 +73,7 @@ interface BillingData {
 }
 
 // Tier order used to decide whether a plan card is an upgrade or a downgrade
-const PLAN_RANK: Record<string, number> = { free: 0, premium: 1, enterprise: 2 };
+const PLAN_RANK: Record<string, number> = { free: 0, premium: 1, growth: 2, enterprise: 3 };
 
 // Strip the interval suffix so 'enterprise_yearly' and 'enterprise' compare as the same tier
 const baseTier = (planId: string) => planId.replace('_yearly', '');
@@ -768,7 +768,7 @@ function BillingContent() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                   {plans.filter(p => p.interval === billingInterval || p.id === 'free').map((plan) => {
                     const currentTier = baseTier(billingData.subscription.plan_type);
                     const planTier = baseTier(plan.id);

@@ -1377,9 +1377,9 @@ func (p *PostgresStorage) SyncAccountTypeFromSubscription(userID int64) (string,
 		SELECT plan_type FROM polar_subscriptions
 		WHERE user_id = $1
 		  AND status IN ('active', 'trialing')
-		  AND plan_type IN ('premium', 'enterprise')
+		  AND plan_type IN ('premium', 'growth', 'enterprise')
 		  AND (current_period_end IS NULL OR current_period_end > NOW())
-		ORDER BY CASE plan_type WHEN 'enterprise' THEN 2 WHEN 'premium' THEN 1 END DESC
+		ORDER BY CASE plan_type WHEN 'enterprise' THEN 3 WHEN 'growth' THEN 2 WHEN 'premium' THEN 1 END DESC
 		LIMIT 1
 	`, userID).Scan(&planType)
 

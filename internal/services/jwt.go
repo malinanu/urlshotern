@@ -189,6 +189,8 @@ func (j *JWTService) getUserRole(user *models.User) string {
 	switch user.AccountType {
 	case "premium":
 		return "premium_user"
+	case "growth":
+		return "growth_user"
 	case "enterprise":
 		return "enterprise_user"
 	default:

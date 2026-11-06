@@ -476,6 +476,10 @@ func (ps *PolarService) DeterminePlanType(product PolarProduct) string {
 		"c4009092-2fae-40f3-bf93-ab4eec754d72": // Premium Yearly
 		log.Printf("[Polar] Plan type for %s matched by ID: premium", product.Name)
 		return "premium"
+	case "9b551ce6-f962-4b54-ae74-15b3c5b39cb6", // Growth (monthly)
+		"3525a2c9-b4b9-4912-8a62-74125b1fd7ea": // Growth Yearly
+		log.Printf("[Polar] Plan type for %s matched by ID: growth", product.Name)
+		return "growth"
 	case "ba93fc32-a360-4929-aaeb-d35fef1ae6ed", // Enterprise (monthly)
 		"ece4b9ae-fe9b-4021-b207-9d063d0b3c52": // Enterprise Yearly
 		log.Printf("[Polar] Plan type for %s matched by ID: enterprise", product.Name)
@@ -491,6 +495,9 @@ func (ps *PolarService) DeterminePlanType(product PolarProduct) string {
 	if strings.Contains(nameLower, "free") {
 		log.Printf("[Polar] Plan type for %s inferred from name: free", product.Name)
 		return "free"
+	} else if strings.Contains(nameLower, "growth") || strings.Contains(nameLower, "team") {
+		log.Printf("[Polar] Plan type for %s inferred from name: growth", product.Name)
+		return "growth"
 	} else if strings.Contains(nameLower, "pro") || strings.Contains(nameLower, "professional") {
 		log.Printf("[Polar] Plan type for %s inferred from name: premium", product.Name)
 		return "premium"
@@ -629,7 +636,7 @@ func stringValue(s *string) string {
 }
 
 // planTier maps plan types to a numeric tier for comparison.
-var planTier = map[string]int{"free": 0, "premium": 1, "enterprise": 2}
+var planTier = map[string]int{"free": 0, "premium": 1, "growth": 2, "enterprise": 3}
 
 // SyncUserSubscriptionFromPolar fetches the active subscriptions from Polar for the user's
 // customer ID, picks the highest-tier one (handles simultaneous active subscriptions during

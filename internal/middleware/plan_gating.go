@@ -39,6 +39,11 @@ var planFeatures = map[string][]string{
 		FeatureRealtime, FeatureLiveMap, FeatureBotFilter, FeatureCSVExport,
 		FeatureMicrositeForms,
 	},
+	"growth": {
+		FeatureCityGeo, FeatureTimeSeries, FeatureHeatmap, FeatureUTM,
+		FeatureRealtime, FeatureLiveMap, FeatureBotFilter, FeatureCSVExport,
+		FeatureMicrositeForms, FeatureRemoveBranding,
+	},
 	"enterprise": {
 		FeatureCityGeo, FeatureTimeSeries, FeatureHeatmap, FeatureUTM,
 		FeatureRealtime, FeatureLiveMap, FeatureBotFilter, FeatureCSVExport,
