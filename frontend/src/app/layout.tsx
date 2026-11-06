@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CookieConsent } from "@/components/CookieConsent";
+import { ConsentScripts } from "@/components/ConsentScripts";
 import { JsonLd } from "@/components/JsonLd";
 import "./globals.css";
 
@@ -14,14 +14,20 @@ import "./globals.css";
 // Prefer BACKEND_URL (the in-network backend address) on the server.
 const API_BASE_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-const geistSans = Geist({
+// Fonts are self-hosted from public/fonts (Geist, SIL OFL 1.1): no request to
+// Google Fonts at build or run time.
+const geistSans = localFont({
+  src: "../../public/fonts/Geist-Variable.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../../public/fonts/GeistMono-Variable.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
 async function fetchSiteSettings(): Promise<Record<string, string>> {
@@ -121,7 +127,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Fonts are self-hosted via next/font (Geist), so no external font
+        {/* Fonts are self-hosted via next/font/local (Geist), so no external font
             preconnect is needed. */}
 
         {/* Theme initialization must run before first paint to prevent flash */}
@@ -129,20 +135,8 @@ export default function RootLayout({
           __html: `(function(){try{var t=localStorage.getItem('theme');var r=document.documentElement;r.classList.remove('light','dark');if(t==='dark'){r.classList.add('dark')}else if(t==='light'){r.classList.add('light')}else{if(window.matchMedia('(prefers-color-scheme: dark)').matches){r.classList.add('dark')}else{r.classList.add('light')}}}catch(e){}})();`
         }} />
 
-        {/* Google Analytics — lazyOnload so it never competes with LCP/INP.
-            gtag-init only queues into dataLayer, so it is safe before gtag.js. */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-KERP09FSLV"
-          strategy="lazyOnload"
-        />
-        <Script id="gtag-init" strategy="lazyOnload" dangerouslySetInnerHTML={{
-          __html: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-KERP09FSLV');
-          `,
-        }} />
+        {/* Google Analytics, Ahrefs and Contentsquare session replay are loaded by
+            <ConsentScripts /> only after the visitor opts in via the cookie banner. */}
 
         {/* Structured Data — WebSite, Organization, SoftwareApplication */}
         <JsonLd data={{
@@ -187,20 +181,6 @@ export default function RootLayout({
           "featureList": "URL shortening, Click analytics, Custom domains, QR code generation, A/B testing, AI insights, Team collaboration, API access"
         }} />
 
-        {/* Ahrefs Analytics — deferred to protect Core Web Vitals */}
-        <Script
-          src="https://analytics.ahrefs.com/analytics.js"
-          data-key="wh1b55CvCXjzUDz3SMYYWw"
-          strategy="lazyOnload"
-        />
-
-        {/* ContentSquare session recording — deferred via next/script lazyOnload
-            instead of a render-blocking sync <script> */}
-        <Script
-          src="https://t.contentsquare.net/uxa/0ac352c074f83.js"
-          strategy="lazyOnload"
-        />
-
         {/* Service Worker Registration */}
         <script dangerouslySetInnerHTML={{
           __html: `
@@ -228,6 +208,7 @@ export default function RootLayout({
               {children}
               <PWAInstallPrompt />
               <CookieConsent />
+              <ConsentScripts />
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>

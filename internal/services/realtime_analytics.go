@@ -14,24 +14,24 @@ import (
 
 // RealtimeAnalyticsService handles real-time analytics via WebSocket connections
 type RealtimeAnalyticsService struct {
-	db              *storage.PostgresStorage
-	cache           *storage.RedisStorage
+	db               *storage.PostgresStorage
+	cache            *storage.RedisStorage
 	analyticsService *AnalyticsService
-	
+
 	// WebSocket connection management
-	clients         map[*websocket.Conn]bool
-	clientsMutex    sync.RWMutex
-	upgrader        websocket.Upgrader
-	
+	clients      map[*websocket.Conn]bool
+	clientsMutex sync.RWMutex
+	upgrader     websocket.Upgrader
+
 	// Subscription management
-	subscriptions   map[string]map[*websocket.Conn]bool // shortCode -> connections
-	subMutex        sync.RWMutex
-	
+	subscriptions map[string]map[*websocket.Conn]bool // shortCode -> connections
+	subMutex      sync.RWMutex
+
 	// Broadcasting
-	broadcast       chan *models.RealtimeUpdate
-	register        chan *websocket.Conn
-	unregister      chan *websocket.Conn
-	
+	broadcast  chan *models.RealtimeUpdate
+	register   chan *websocket.Conn
+	unregister chan *websocket.Conn
+
 	// Context for shutdown
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -39,7 +39,7 @@ type RealtimeAnalyticsService struct {
 
 // RealtimeUpdate represents a real-time analytics update
 type RealtimeUpdate struct {
-	Type      string      `json:"type"`      // "click", "analytics_update", "conversion"
+	Type      string      `json:"type"` // "click", "analytics_update", "conversion"
 	ShortCode string      `json:"short_code"`
 	Data      interface{} `json:"data"`
 	Timestamp time.Time   `json:"timestamp"`
@@ -48,18 +48,18 @@ type RealtimeUpdate struct {
 // NewRealtimeAnalyticsService creates a new real-time analytics service
 func NewRealtimeAnalyticsService(db *storage.PostgresStorage, cache *storage.RedisStorage, analyticsService *AnalyticsService) *RealtimeAnalyticsService {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	service := &RealtimeAnalyticsService{
-		db:              db,
-		cache:           cache,
+		db:               db,
+		cache:            cache,
 		analyticsService: analyticsService,
-		clients:         make(map[*websocket.Conn]bool),
-		subscriptions:   make(map[string]map[*websocket.Conn]bool),
-		broadcast:       make(chan *models.RealtimeUpdate, 1000),
-		register:        make(chan *websocket.Conn),
-		unregister:      make(chan *websocket.Conn),
-		ctx:             ctx,
-		cancel:          cancel,
+		clients:          make(map[*websocket.Conn]bool),
+		subscriptions:    make(map[string]map[*websocket.Conn]bool),
+		broadcast:        make(chan *models.RealtimeUpdate, 1000),
+		register:         make(chan *websocket.Conn),
+		unregister:       make(chan *websocket.Conn),
+		ctx:              ctx,
+		cancel:           cancel,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				// In production, implement proper origin checking
@@ -69,13 +69,13 @@ func NewRealtimeAnalyticsService(db *storage.PostgresStorage, cache *storage.Red
 			WriteBufferSize: 1024,
 		},
 	}
-	
+
 	// Start the hub
 	go service.hub()
-	
+
 	// Start periodic analytics updates
 	go service.periodicUpdates()
-	
+
 	return service
 }
 
@@ -86,22 +86,22 @@ func (r *RealtimeAnalyticsService) HandleWebSocket(w http.ResponseWriter, req *h
 		log.Printf("WebSocket upgrade error: %v", err)
 		return
 	}
-	
+
 	// Register the new client
 	r.register <- conn
-	
+
 	defer func() {
 		r.unregister <- conn
 		conn.Close()
 	}()
-	
+
 	// Set connection timeouts
 	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	conn.SetPongHandler(func(string) error {
 		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
-	
+
 	// Handle incoming messages (subscriptions)
 	for {
 		var msg models.WebSocketMessage
@@ -112,7 +112,7 @@ func (r *RealtimeAnalyticsService) HandleWebSocket(w http.ResponseWriter, req *h
 			}
 			break
 		}
-		
+
 		r.handleMessage(conn, &msg)
 	}
 }
@@ -133,12 +133,12 @@ func (r *RealtimeAnalyticsService) handleMessage(conn *websocket.Conn, msg *mode
 func (r *RealtimeAnalyticsService) subscribe(conn *websocket.Conn, shortCode string) {
 	r.subMutex.Lock()
 	defer r.subMutex.Unlock()
-	
+
 	if r.subscriptions[shortCode] == nil {
 		r.subscriptions[shortCode] = make(map[*websocket.Conn]bool)
 	}
 	r.subscriptions[shortCode][conn] = true
-	
+
 	// Send initial analytics data
 	go r.sendInitialAnalytics(conn, shortCode)
 }
@@ -147,7 +147,7 @@ func (r *RealtimeAnalyticsService) subscribe(conn *websocket.Conn, shortCode str
 func (r *RealtimeAnalyticsService) unsubscribe(conn *websocket.Conn, shortCode string) {
 	r.subMutex.Lock()
 	defer r.subMutex.Unlock()
-	
+
 	if r.subscriptions[shortCode] != nil {
 		delete(r.subscriptions[shortCode], conn)
 		if len(r.subscriptions[shortCode]) == 0 {
@@ -162,14 +162,14 @@ func (r *RealtimeAnalyticsService) sendInitialAnalytics(conn *websocket.Conn, sh
 	if err != nil {
 		return
 	}
-	
+
 	update := &models.RealtimeUpdate{
 		Type:      "initial_analytics",
 		ShortCode: shortCode,
 		Data:      analytics,
 		Timestamp: time.Now(),
 	}
-	
+
 	conn.WriteJSON(update)
 }
 
@@ -177,7 +177,7 @@ func (r *RealtimeAnalyticsService) sendInitialAnalytics(conn *websocket.Conn, sh
 func (r *RealtimeAnalyticsService) hub() {
 	ticker := time.NewTicker(54 * time.Second) // Send ping every 54 seconds
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case conn := <-r.register:
@@ -185,13 +185,13 @@ func (r *RealtimeAnalyticsService) hub() {
 			r.clients[conn] = true
 			r.clientsMutex.Unlock()
 			log.Println("Client connected to real-time analytics")
-			
+
 		case conn := <-r.unregister:
 			r.clientsMutex.Lock()
 			if _, ok := r.clients[conn]; ok {
 				delete(r.clients, conn)
 				r.clientsMutex.Unlock()
-				
+
 				// Remove from all subscriptions
 				r.subMutex.Lock()
 				for shortCode, conns := range r.subscriptions {
@@ -201,15 +201,15 @@ func (r *RealtimeAnalyticsService) hub() {
 					}
 				}
 				r.subMutex.Unlock()
-				
+
 				log.Println("Client disconnected from real-time analytics")
 			} else {
 				r.clientsMutex.Unlock()
 			}
-			
+
 		case update := <-r.broadcast:
 			r.broadcastUpdate(update)
-			
+
 		case <-ticker.C:
 			// Send ping to all clients to keep connections alive
 			r.clientsMutex.RLock()
@@ -229,7 +229,7 @@ func (r *RealtimeAnalyticsService) hub() {
 				}
 			}
 			r.clientsMutex.RUnlock()
-			
+
 		case <-r.ctx.Done():
 			return
 		}
@@ -244,14 +244,14 @@ func (r *RealtimeAnalyticsService) broadcastUpdate(update *models.RealtimeUpdate
 		r.subMutex.RUnlock()
 		return
 	}
-	
+
 	// Make a copy of subscribers to avoid holding the lock too long
 	conns := make([]*websocket.Conn, 0, len(subscribers))
 	for conn := range subscribers {
 		conns = append(conns, conn)
 	}
 	r.subMutex.RUnlock()
-	
+
 	// Send to all subscribers
 	for _, conn := range conns {
 		select {
@@ -275,7 +275,7 @@ func (r *RealtimeAnalyticsService) BroadcastClick(shortCode, clientIP, userAgent
 	// Get geographic and device info for the click
 	geoData := r.analyticsService.getGeographicData(clientIP)
 	deviceData := r.analyticsService.getDeviceData(userAgent)
-	
+
 	clickData := models.RealtimeClickData{
 		ShortCode: shortCode,
 		ClientIP:  clientIP,
@@ -288,14 +288,14 @@ func (r *RealtimeAnalyticsService) BroadcastClick(shortCode, clientIP, userAgent
 		OS:        deviceData.OS,
 		Timestamp: time.Now(),
 	}
-	
+
 	update := &models.RealtimeUpdate{
 		Type:      "click",
 		ShortCode: shortCode,
 		Data:      clickData,
 		Timestamp: time.Now(),
 	}
-	
+
 	select {
 	case r.broadcast <- update:
 	case <-time.After(100 * time.Millisecond):
@@ -312,7 +312,7 @@ func (r *RealtimeAnalyticsService) BroadcastConversion(shortCode string, convers
 		Data:      conversion,
 		Timestamp: time.Now(),
 	}
-	
+
 	select {
 	case r.broadcast <- update:
 	case <-time.After(100 * time.Millisecond):
@@ -324,7 +324,7 @@ func (r *RealtimeAnalyticsService) BroadcastConversion(shortCode string, convers
 func (r *RealtimeAnalyticsService) periodicUpdates() {
 	ticker := time.NewTicker(30 * time.Second) // Update every 30 seconds
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -343,21 +343,21 @@ func (r *RealtimeAnalyticsService) sendPeriodicUpdates() {
 		shortCodes = append(shortCodes, shortCode)
 	}
 	r.subMutex.RUnlock()
-	
+
 	for _, shortCode := range shortCodes {
 		go func(sc string) {
 			analytics, err := r.analyticsService.GetAnalytics(sc, 1) // Last 24 hours for real-time
 			if err != nil {
 				return
 			}
-			
+
 			update := &models.RealtimeUpdate{
 				Type:      "analytics_update",
 				ShortCode: sc,
 				Data:      analytics,
 				Timestamp: time.Now(),
 			}
-			
+
 			select {
 			case r.broadcast <- update:
 			case <-time.After(100 * time.Millisecond):
@@ -371,7 +371,7 @@ func (r *RealtimeAnalyticsService) sendPeriodicUpdates() {
 func (r *RealtimeAnalyticsService) GetActiveSubscriptions() map[string]int {
 	r.subMutex.RLock()
 	defer r.subMutex.RUnlock()
-	
+
 	result := make(map[string]int)
 	for shortCode, conns := range r.subscriptions {
 		result[shortCode] = len(conns)
@@ -389,7 +389,7 @@ func (r *RealtimeAnalyticsService) GetActiveClients() int {
 // Shutdown gracefully shuts down the real-time analytics service
 func (r *RealtimeAnalyticsService) Shutdown() {
 	r.cancel()
-	
+
 	// Close all client connections
 	r.clientsMutex.RLock()
 	for conn := range r.clients {

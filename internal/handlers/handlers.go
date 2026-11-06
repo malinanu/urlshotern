@@ -19,38 +19,38 @@ import (
 )
 
 type Handler struct {
-	shortenerService       *services.ShortenerService
-	analyticsService       *services.AnalyticsService
-	advancedAnalyticsService *services.AdvancedAnalyticsService
+	shortenerService          *services.ShortenerService
+	analyticsService          *services.AnalyticsService
+	advancedAnalyticsService  *services.AdvancedAnalyticsService
 	conversionTrackingService *services.ConversionTrackingService
-	abTestingService       *services.ABTestingService
-	realtimeService        *services.RealtimeAnalyticsService
-	attributionService     *services.AttributionService
-	billingService         *services.BillingService  // Added for usage limit enforcement
-	botDetector            *services.BotDetectionService
-	db                     *storage.PostgresStorage  // Database storage for monitoring
-	AuthHandlers           *AuthHandlers
-	AnalyticsHandlers      *AnalyticsHandlers
-	ConversionHandlers     *ConversionTrackingHandler
-	ABTestHandlers         *ABTestingHandler
-	RealtimeHandlers       *RealtimeAnalyticsHandler
-	BillingHandlers        *BillingHandler
-	APIKeyHandlers         *APIKeyHandler
-	PolarWebhookHandler    *PolarWebhookHandler
+	abTestingService          *services.ABTestingService
+	realtimeService           *services.RealtimeAnalyticsService
+	attributionService        *services.AttributionService
+	billingService            *services.BillingService // Added for usage limit enforcement
+	botDetector               *services.BotDetectionService
+	db                        *storage.PostgresStorage // Database storage for monitoring
+	AuthHandlers              *AuthHandlers
+	AnalyticsHandlers         *AnalyticsHandlers
+	ConversionHandlers        *ConversionTrackingHandler
+	ABTestHandlers            *ABTestingHandler
+	RealtimeHandlers          *RealtimeAnalyticsHandler
+	BillingHandlers           *BillingHandler
+	APIKeyHandlers            *APIKeyHandler
+	PolarWebhookHandler       *PolarWebhookHandler
 	AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler
-	AttributionHandlers    *AttributionHandler
-	CMSHandlers            *CMSHandlers
-	AdminRBACHandlers      *AdminRBACHandlers  // RBAC user and role management
-	AdminCouponHandlers    *AdminCouponHandlers
-	ContactHandlers        *ContactHandlers
-	AIInsightsHandlers     *AIInsightsHandler
-	DomainHandlers         *DomainHandlers
-	BrandingHandlers       *BrandingHandler
-	TeamHandlers           *TeamHandlers
-	GlobalSettingsHandlers *GlobalSettingsHandlers
-	CampaignHandlers       *CampaignHandlers
-	MicroPageHandlers      *MicroPageHandlers
-	MicrositeHandlers      *MicrositeHandlers // nil unless ENABLE_MICROSITES=true
+AttributionHandlers       *AttributionHandler
+	CMSHandlers               *CMSHandlers
+	AdminRBACHandlers         *AdminRBACHandlers // RBAC user and role management
+	AdminCouponHandlers       *AdminCouponHandlers
+	ContactHandlers           *ContactHandlers
+	AIInsightsHandlers        *AIInsightsHandler
+	DomainHandlers            *DomainHandlers
+	BrandingHandlers          *BrandingHandler
+	TeamHandlers              *TeamHandlers
+	GlobalSettingsHandlers    *GlobalSettingsHandlers
+	CampaignHandlers          *CampaignHandlers
+	MicroPageHandlers         *MicroPageHandlers
+	MicrositeHandlers         *MicrositeHandlers // nil unless ENABLE_MICROSITES=true
 }
 
 // NewHandler creates a new handler instance
@@ -70,35 +70,35 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 	billingHandler := NewBillingHandler(gormDB, config)
 
 	return &Handler{
-		shortenerService:       shortenerService,
-		analyticsService:       analyticsService,
-		advancedAnalyticsService: advancedAnalyticsService,
+		shortenerService:          shortenerService,
+		analyticsService:          analyticsService,
+		advancedAnalyticsService:  advancedAnalyticsService,
 		conversionTrackingService: conversionService,
-		abTestingService:       abTestService,
-		realtimeService:        realtimeService,
-		attributionService:     attributionService,
-		billingService:         billingHandler.billingService,  // Store billing service for usage limit checks
-		botDetector:            botDetector,
-		db:                     db,  // Store database for monitoring
-		AuthHandlers:           authHandlers,
-		AnalyticsHandlers:      analyticsHandlers,
-		ConversionHandlers:     NewConversionTrackingHandler(conversionService),
-		ABTestHandlers:         NewABTestingHandler(abTestService),
-		RealtimeHandlers:       NewRealtimeAnalyticsHandler(realtimeService),
-		BillingHandlers:        billingHandler,
-		APIKeyHandlers:         NewAPIKeyHandler(apiKeyService),
-		PolarWebhookHandler:    NewPolarWebhookHandler(gormDB, billingHandler.billingService),
+		abTestingService:          abTestService,
+		realtimeService:           realtimeService,
+		attributionService:        attributionService,
+		billingService:            billingHandler.billingService, // Store billing service for usage limit checks
+		botDetector:               botDetector,
+		db:                        db, // Store database for monitoring
+		AuthHandlers:              authHandlers,
+		AnalyticsHandlers:         analyticsHandlers,
+		ConversionHandlers:        NewConversionTrackingHandler(conversionService),
+		ABTestHandlers:            NewABTestingHandler(abTestService),
+		RealtimeHandlers:          NewRealtimeAnalyticsHandler(realtimeService),
+		BillingHandlers:           billingHandler,
+		APIKeyHandlers:            NewAPIKeyHandler(apiKeyService),
+		PolarWebhookHandler:       NewPolarWebhookHandler(gormDB, billingHandler.billingService),
 		AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService),
-		AttributionHandlers:    NewAttributionHandler(attributionService),
-		CMSHandlers:            cmsHandlers,
-		AdminRBACHandlers:      adminRBACHandlers,
-		AdminCouponHandlers:    NewAdminCouponHandlers(gormDB, billingHandler.billingService.GetPolarService()),
-		ContactHandlers:        NewContactHandlers(authHandlers.GetEmailService()),
-		AIInsightsHandlers:     NewAIInsightsHandler(aiInsightsService),
-		DomainHandlers:         NewDomainHandlers(domainService),
-		BrandingHandlers:       NewBrandingHandler(brandingService),
-		TeamHandlers:           teamHandlers,
-		MicroPageHandlers:      microPageHandlers,
+AttributionHandlers:       NewAttributionHandler(attributionService),
+		CMSHandlers:               cmsHandlers,
+		AdminRBACHandlers:         adminRBACHandlers,
+		AdminCouponHandlers:       NewAdminCouponHandlers(gormDB, billingHandler.billingService.GetPolarService()),
+		ContactHandlers:           NewContactHandlers(authHandlers.GetEmailService()),
+		AIInsightsHandlers:        NewAIInsightsHandler(aiInsightsService),
+		DomainHandlers:            NewDomainHandlers(domainService),
+		BrandingHandlers:          NewBrandingHandler(brandingService),
+		TeamHandlers:              teamHandlers,
+		MicroPageHandlers:         microPageHandlers,
 		GlobalSettingsHandlers: func() *GlobalSettingsHandlers {
 			if globalSettingsService != nil {
 				return NewGlobalSettingsHandlers(globalSettingsService)
@@ -187,7 +187,7 @@ func (h *Handler) GoroutineStats(c *gin.Context) {
 // ShortenURL handles URL shortening requests
 func (h *Handler) ShortenURL(c *gin.Context) {
 	var request models.ShortenRequest
-	
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_request",
@@ -297,12 +297,12 @@ func (h *Handler) RedirectURL(c *gin.Context) {
 	}
 
 	if err != nil {
-		// Browser request → redirect to 404 page
+		// Browser request â†’ redirect to 404 page
 		if strings.Contains(c.GetHeader("Accept"), "text/html") {
 			c.Redirect(http.StatusFound, "/not-found")
 			return
 		}
-		// API/curl request → keep JSON response
+		// API/curl request â†’ keep JSON response
 		statusCode := http.StatusNotFound
 		errorType := "not_found"
 
@@ -374,7 +374,7 @@ func buildOGPage(m *models.URLMapping) string {
 	// For the inline <script>, embed the destination as a JSON string literal.
 	// encoding/json escapes ", \, and (with HTML escaping on by default) < > &,
 	// so a destination URL cannot break out of the JS string or close the
-	// <script> element — closing the stored-XSS vector on this origin.
+	// <script> element â€” closing the stored-XSS vector on this origin.
 	destJSON, err := json.Marshal(m.OriginalURL)
 	if err != nil {
 		destJSON = []byte(`""`)
@@ -457,7 +457,7 @@ func (h *Handler) CheckPassword(c *gin.Context) {
 		return
 	}
 	if mapping.PasswordHash == nil {
-		// No password needed — just return the URL
+		// No password needed â€” just return the URL
 		c.JSON(http.StatusOK, gin.H{"redirect_url": mapping.OriginalURL})
 		return
 	}
@@ -484,7 +484,7 @@ func (h *Handler) CheckPassword(c *gin.Context) {
 // GetAnalytics handles analytics requests
 func (h *Handler) GetAnalytics(c *gin.Context) {
 	shortCode := c.Param("shortCode")
-	
+
 	if shortCode == "" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_short_code",
@@ -509,7 +509,7 @@ func (h *Handler) GetAnalytics(c *gin.Context) {
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		errorType := "internal_error"
-		
+
 		if err == storage.ErrURLNotFound {
 			statusCode = http.StatusNotFound
 			errorType = "not_found"
@@ -528,7 +528,7 @@ func (h *Handler) GetAnalytics(c *gin.Context) {
 // GetAdvancedAnalytics handles advanced analytics requests with detailed breakdowns
 func (h *Handler) GetAdvancedAnalytics(c *gin.Context) {
 	shortCode := c.Param("shortCode")
-	
+
 	if shortCode == "" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_short_code",
@@ -553,7 +553,7 @@ func (h *Handler) GetAdvancedAnalytics(c *gin.Context) {
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		errorType := "internal_error"
-		
+
 		if err == storage.ErrURLNotFound {
 			statusCode = http.StatusNotFound
 			errorType = "not_found"
@@ -573,7 +573,7 @@ func (h *Handler) GetAdvancedAnalytics(c *gin.Context) {
 func (h *Handler) GetClickTrends(c *gin.Context) {
 	shortCode := c.Param("shortCode")
 	period := c.DefaultQuery("period", "day")
-	
+
 	if shortCode == "" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_short_code",
@@ -615,7 +615,7 @@ func (h *Handler) GetDashboardStats(c *gin.Context) {
 // BatchShortenURLs handles batch URL shortening (for future extension)
 func (h *Handler) BatchShortenURLs(c *gin.Context) {
 	var requests []models.ShortenRequest
-	
+
 	if err := c.ShouldBindJSON(&requests); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_request",
@@ -633,14 +633,14 @@ func (h *Handler) BatchShortenURLs(c *gin.Context) {
 	}
 
 	clientIP := getClientIP(c)
-	
+
 	// Get user ID if authenticated (optional)
 	userID, _ := middleware.GetUserID(c)
 	var userIDPtr *int64
 	if userID > 0 {
 		userIDPtr = &userID
 	}
-	
+
 	var responses []models.ShortenResponse
 	var errors []models.ErrorResponse
 
@@ -698,10 +698,10 @@ func (h *Handler) GetUserURLs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"urls":       urls,
-		"total":      total,
-		"page":       page,
-		"limit":      limit,
+		"urls":        urls,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
 		"total_pages": (total + int64(limit) - 1) / int64(limit),
 	})
 }
@@ -719,7 +719,7 @@ func (h *Handler) GetAllURLsAdmin(c *gin.Context) {
 	}
 
 	offset := (page - 1) * limit
-	
+
 	// Optional user filter
 	userIDStr := c.Query("user_id")
 	var filterUserID int64 = 0
@@ -863,7 +863,7 @@ func (h *Handler) GetUserDashboardStats(c *gin.Context) {
 }
 
 // getClientIP extracts the real client IP from the request.
-// When behind Cloudflare, CF-Connecting-IP is the only trustworthy source —
+// When behind Cloudflare, CF-Connecting-IP is the only trustworthy source â€”
 // it cannot be spoofed by end users. X-Forwarded-For and X-Real-IP are
 // user-controlled and must not be used for security decisions (rate limiting, etc.).
 func getClientIP(c *gin.Context) string {

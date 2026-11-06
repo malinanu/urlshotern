@@ -12,14 +12,14 @@ import (
 
 type CollaborationHandlers struct {
 	collaborationService *services.CollaborationService
-	rbacService         *services.RBACService
+	rbacService          *services.RBACService
 }
 
 // NewCollaborationHandlers creates new collaboration handlers
 func NewCollaborationHandlers(collaborationService *services.CollaborationService, rbacService *services.RBACService) *CollaborationHandlers {
 	return &CollaborationHandlers{
 		collaborationService: collaborationService,
-		rbacService:         rbacService,
+		rbacService:          rbacService,
 	}
 }
 

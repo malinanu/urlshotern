@@ -88,7 +88,7 @@ func (f *FreeGeoIPService) LookupIP(ipAddress string) (*GeoIPResult, error) {
 // tryIPAPI tries ip-api.com (completely free)
 func (f *FreeGeoIPService) tryIPAPI(ipAddress string) *GeoIPResult {
 	url := fmt.Sprintf("http://ip-api.com/json/%s", ipAddress)
-	
+
 	resp, err := f.client.Get(url)
 	if err != nil {
 		return nil
@@ -133,7 +133,7 @@ func (f *FreeGeoIPService) tryIPAPI(ipAddress string) *GeoIPResult {
 // tryIPInfo tries ipinfo.io (50,000 requests/month free)
 func (f *FreeGeoIPService) tryIPInfo(ipAddress string) *GeoIPResult {
 	url := fmt.Sprintf("https://ipinfo.io/%s/json", ipAddress)
-	
+
 	resp, err := f.client.Get(url)
 	if err != nil {
 		return nil
@@ -181,7 +181,7 @@ func (f *FreeGeoIPService) tryIPStack(ipAddress string) *GeoIPResult {
 	// Note: You would need to sign up for a free API key at ipstack.com
 	// For demo purposes, this is a placeholder implementation
 	// url := fmt.Sprintf("http://api.ipstack.com/%s?access_key=YOUR_FREE_API_KEY", ipAddress)
-	
+
 	// For now, return nil to fall back to other services
 	return nil
 }
@@ -189,7 +189,7 @@ func (f *FreeGeoIPService) tryIPStack(ipAddress string) *GeoIPResult {
 // LookupIPBatch performs batch lookups with rate limiting for free services
 func (f *FreeGeoIPService) LookupIPBatch(ipAddresses []string) map[string]*GeoIPResult {
 	results := make(map[string]*GeoIPResult)
-	
+
 	// Implement rate limiting for free services (max 45 requests per minute for ip-api)
 	rateLimiter := time.NewTicker(1500 * time.Millisecond) // ~40 requests per minute
 	defer rateLimiter.Stop()
@@ -198,7 +198,7 @@ func (f *FreeGeoIPService) LookupIPBatch(ipAddresses []string) map[string]*GeoIP
 		if i > 0 {
 			<-rateLimiter.C // Wait for rate limiter
 		}
-		
+
 		if result, err := f.LookupIP(ip); err == nil {
 			results[ip] = result
 		} else {
@@ -213,7 +213,7 @@ func (f *FreeGeoIPService) LookupIPBatch(ipAddresses []string) map[string]*GeoIP
 func (f *FreeGeoIPService) isPrivateIP(ip net.IP) bool {
 	privateRanges := []string{
 		"10.0.0.0/8",
-		"172.16.0.0/12", 
+		"172.16.0.0/12",
 		"192.168.0.0/16",
 		"127.0.0.0/8",
 		"169.254.0.0/16",
@@ -260,7 +260,7 @@ func (f *FreeGeoIPService) getCountryName(countryCode string) string {
 		"AE": "United Arab Emirates", "IL": "Israel", "GR": "Greece", "PT": "Portugal",
 		"BE": "Belgium", "AT": "Austria", "CH": "Switzerland", "IE": "Ireland", "CZ": "Czech Republic",
 	}
-	
+
 	if name, exists := countryNames[countryCode]; exists {
 		return name
 	}
@@ -281,7 +281,7 @@ func parseFloat(s string) (float64, error) {
 	var result float64
 	var sign float64 = 1
 	i := 0
-	
+
 	// Handle negative numbers
 	if len(s) > 0 && s[0] == '-' {
 		sign = -1
@@ -289,19 +289,19 @@ func parseFloat(s string) (float64, error) {
 	} else if len(s) > 0 && s[0] == '+' {
 		i = 1
 	}
-	
+
 	// Parse integer part
 	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
 		result = result*10 + float64(s[i]-'0')
 		i++
 	}
-	
+
 	// Parse decimal part
 	if i < len(s) && s[i] == '.' {
 		i++
 		decimal := float64(0)
 		factor := float64(0.1)
-		
+
 		for i < len(s) && s[i] >= '0' && s[i] <= '9' {
 			decimal += float64(s[i]-'0') * factor
 			factor *= 0.1
@@ -309,7 +309,7 @@ func parseFloat(s string) (float64, error) {
 		}
 		result += decimal
 	}
-	
+
 	return result * sign, nil
 }
 

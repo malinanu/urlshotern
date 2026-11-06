@@ -33,8 +33,8 @@ var AuthRateLimit = RateLimitConfig{
 
 // OTPRateLimit for OTP endpoints (more restrictive)
 var OTPRateLimit = RateLimitConfig{
-	RequestsPerSecond: 1,  // 1 request per second
-	Burst:             3,  // Allow burst of 3
+	RequestsPerSecond: 1, // 1 request per second
+	Burst:             3, // Allow burst of 3
 	Duration:          time.Minute * 5,
 }
 

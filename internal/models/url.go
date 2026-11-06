@@ -62,21 +62,21 @@ type UpdateOGRequest struct {
 
 // ShortenResponse represents the response for URL shortening
 type ShortenResponse struct {
-	ShortCode   string    `json:"short_code"`
-	ShortURL    string    `json:"short_url"`
-	OriginalURL string    `json:"original_url"`
-	CreatedAt   time.Time `json:"created_at"`
+	ShortCode   string     `json:"short_code"`
+	ShortURL    string     `json:"short_url"`
+	OriginalURL string     `json:"original_url"`
+	CreatedAt   time.Time  `json:"created_at"`
 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 }
 
 // AnalyticsResponse represents analytics data for a short URL
 type AnalyticsResponse struct {
-	ShortCode    string    `json:"short_code"`
-	OriginalURL  string    `json:"original_url"`
-	TotalClicks  int64     `json:"total_clicks"`
-	CreatedAt    time.Time `json:"created_at"`
-	LastClickAt  *time.Time `json:"last_click_at,omitempty"`
-	DailyClicks  []DailyClick `json:"daily_clicks,omitempty"`
+	ShortCode    string        `json:"short_code"`
+	OriginalURL  string        `json:"original_url"`
+	TotalClicks  int64         `json:"total_clicks"`
+	CreatedAt    time.Time     `json:"created_at"`
+	LastClickAt  *time.Time    `json:"last_click_at,omitempty"`
+	DailyClicks  []DailyClick  `json:"daily_clicks,omitempty"`
 	CountryStats []CountryStat `json:"country_stats,omitempty"`
 }
 
@@ -151,11 +151,11 @@ type UserURLResponse struct {
 
 // UserDashboardStats represents user-specific dashboard statistics
 type UserDashboardStats struct {
-	TotalURLs    int64 `json:"total_urls"`
-	TotalClicks  int64 `json:"total_clicks"`
-	ActiveURLs   int64 `json:"active_urls"`
-	TodayClicks  int64 `json:"today_clicks"`
-	MonthClicks  int64 `json:"month_clicks"`
+	TotalURLs   int64 `json:"total_urls"`
+	TotalClicks int64 `json:"total_clicks"`
+	ActiveURLs  int64 `json:"active_urls"`
+	TodayClicks int64 `json:"today_clicks"`
+	MonthClicks int64 `json:"month_clicks"`
 }
 
 // ClickTrend represents click trends over time
@@ -199,21 +199,21 @@ type OSStat struct {
 
 // GeographicAnalytics represents detailed geographic analytics
 type GeographicAnalytics struct {
-	ShortCode      string           `json:"short_code"`
-	TotalClicks    int64           `json:"total_clicks"`
-	Countries      []CountryDetail  `json:"countries"`
-	Regions        []RegionDetail   `json:"regions"`
-	Cities         []CityDetail     `json:"cities"`
-	MapData        []MapPoint       `json:"map_data"`
+	ShortCode   string          `json:"short_code"`
+	TotalClicks int64           `json:"total_clicks"`
+	Countries   []CountryDetail `json:"countries"`
+	Regions     []RegionDetail  `json:"regions"`
+	Cities      []CityDetail    `json:"cities"`
+	MapData     []MapPoint      `json:"map_data"`
 }
 
 // CountryDetail represents detailed country analytics
 type CountryDetail struct {
-	CountryCode string  `json:"country_code"`
-	CountryName string  `json:"country_name"`
-	Clicks      int64   `json:"clicks"`
-	Percentage  float64 `json:"percentage"`
-	UniqueIPs   int64   `json:"unique_ips"`
+	CountryCode string     `json:"country_code"`
+	CountryName string     `json:"country_name"`
+	Clicks      int64      `json:"clicks"`
+	Percentage  float64    `json:"percentage"`
+	UniqueIPs   int64      `json:"unique_ips"`
 	LastClick   *time.Time `json:"last_click,omitempty"`
 }
 
@@ -249,12 +249,12 @@ type MapPoint struct {
 
 // TimeAnalytics represents comprehensive time-based analytics
 type TimeAnalytics struct {
-	ShortCode       string           `json:"short_code"`
-	HourlyPattern   []HourlyClick    `json:"hourly_pattern"`
-	WeeklyPattern   []WeekdayClick   `json:"weekly_pattern"`
-	MonthlyTrend    []MonthlyClick   `json:"monthly_trend"`
-	HeatmapData     []HeatmapPoint   `json:"heatmap_data"`
-	PeakTimes       PeakTimeInfo     `json:"peak_times"`
+	ShortCode     string         `json:"short_code"`
+	HourlyPattern []HourlyClick  `json:"hourly_pattern"`
+	WeeklyPattern []WeekdayClick `json:"weekly_pattern"`
+	MonthlyTrend  []MonthlyClick `json:"monthly_trend"`
+	HeatmapData   []HeatmapPoint `json:"heatmap_data"`
+	PeakTimes     PeakTimeInfo   `json:"peak_times"`
 }
 
 // HourlyClick represents clicks by hour of day
@@ -265,9 +265,9 @@ type HourlyClick struct {
 
 // WeekdayClick represents clicks by day of week
 type WeekdayClick struct {
-	Weekday int   `json:"weekday"` // 0-6 (Sunday-Saturday)
+	Weekday int    `json:"weekday"` // 0-6 (Sunday-Saturday)
 	Day     string `json:"day"`     // Sunday, Monday, etc.
-	Clicks  int64 `json:"clicks"`
+	Clicks  int64  `json:"clicks"`
 }
 
 // MonthlyClick represents clicks by month
@@ -278,8 +278,8 @@ type MonthlyClick struct {
 
 // HeatmapPoint represents a point in the time heatmap
 type HeatmapPoint struct {
-	Date   string `json:"date"`   // YYYY-MM-DD format
-	Hour   int    `json:"hour"`   // 0-23
+	Date   string `json:"date"` // YYYY-MM-DD format
+	Hour   int    `json:"hour"` // 0-23
 	Clicks int64  `json:"clicks"`
 }
 
@@ -295,13 +295,13 @@ type PeakTimeInfo struct {
 
 // DeviceAnalytics represents comprehensive device analytics
 type DeviceAnalytics struct {
-	ShortCode     string               `json:"short_code"`
-	DeviceTypes   []DeviceTypeStat     `json:"device_types"`
-	DeviceBrands  []DeviceBrandStat    `json:"device_brands"`
-	DeviceModels  []DeviceModelStat    `json:"device_models"`
-	OSStats       []OSDetailStat       `json:"operating_systems"`
-	BrowserStats  []BrowserDetailStat  `json:"browsers"`
-	ScreenSizes   []ScreenSizeStat     `json:"screen_sizes"`
+	ShortCode    string              `json:"short_code"`
+	DeviceTypes  []DeviceTypeStat    `json:"device_types"`
+	DeviceBrands []DeviceBrandStat   `json:"device_brands"`
+	DeviceModels []DeviceModelStat   `json:"device_models"`
+	OSStats      []OSDetailStat      `json:"operating_systems"`
+	BrowserStats []BrowserDetailStat `json:"browsers"`
+	ScreenSizes  []ScreenSizeStat    `json:"screen_sizes"`
 }
 
 // DeviceTypeStat represents device type statistics
@@ -376,7 +376,7 @@ type ConversionGoal struct {
 	GoalType          string    `json:"goal_type" db:"goal_type"` // url_visit, custom_event, form_submit, purchase
 	TargetURL         *string   `json:"target_url,omitempty" db:"target_url"`
 	CustomEventName   *string   `json:"custom_event_name,omitempty" db:"custom_event_name"`
-	GoalValue         float64   `json:"goal_value" db:"goal_value"` // monetary value
+	GoalValue         float64   `json:"goal_value" db:"goal_value"`                 // monetary value
 	AttributionWindow int       `json:"attribution_window" db:"attribution_window"` // days
 	IsActive          bool      `json:"is_active" db:"is_active"`
 	CreatedAt         time.Time `json:"created_at" db:"created_at"`
@@ -406,41 +406,41 @@ type UpdateConversionGoalRequest struct {
 
 // Conversion represents a conversion event
 type Conversion struct {
-	ID                int64     `json:"id" db:"id"`
-	ShortCode         string    `json:"short_code" db:"short_code"`
-	GoalID            int64     `json:"goal_id" db:"goal_id"`
-	ConversionID      string    `json:"conversion_id" db:"conversion_id"`
-	ConversionType    string    `json:"conversion_type" db:"conversion_type"`
-	ConversionValue   float64   `json:"conversion_value" db:"conversion_value"`
-	UserIP            string    `json:"user_ip,omitempty" db:"user_ip"`
-	UserAgent         string    `json:"user_agent,omitempty" db:"user_agent"`
-	Referrer          string    `json:"referrer,omitempty" db:"referrer"`
-	SessionID         string    `json:"session_id,omitempty" db:"session_id"`
-	ClickID           *int64    `json:"click_id,omitempty" db:"click_id"`
-	ConversionTime    time.Time `json:"conversion_time" db:"conversion_time"`
-	AttributionModel  string    `json:"attribution_model" db:"attribution_model"`
-	TimeToConversion  int       `json:"time_to_conversion" db:"time_to_conversion"` // minutes
-	CreatedAt         time.Time `json:"created_at" db:"created_at"`
+	ID               int64     `json:"id" db:"id"`
+	ShortCode        string    `json:"short_code" db:"short_code"`
+	GoalID           int64     `json:"goal_id" db:"goal_id"`
+	ConversionID     string    `json:"conversion_id" db:"conversion_id"`
+	ConversionType   string    `json:"conversion_type" db:"conversion_type"`
+	ConversionValue  float64   `json:"conversion_value" db:"conversion_value"`
+	UserIP           string    `json:"user_ip,omitempty" db:"user_ip"`
+	UserAgent        string    `json:"user_agent,omitempty" db:"user_agent"`
+	Referrer         string    `json:"referrer,omitempty" db:"referrer"`
+	SessionID        string    `json:"session_id,omitempty" db:"session_id"`
+	ClickID          *int64    `json:"click_id,omitempty" db:"click_id"`
+	ConversionTime   time.Time `json:"conversion_time" db:"conversion_time"`
+	AttributionModel string    `json:"attribution_model" db:"attribution_model"`
+	TimeToConversion int       `json:"time_to_conversion" db:"time_to_conversion"` // minutes
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
 }
 
 // ConversionTrackingRequest represents a request to track a conversion
 type ConversionTrackingRequest struct {
-	GoalID          int64   `json:"goal_id" binding:"required"`
-	ConversionID    string  `json:"conversion_id" binding:"required"`
-	ConversionValue float64 `json:"conversion_value"`
-	SessionID       string  `json:"session_id"`
+	GoalID          int64                  `json:"goal_id" binding:"required"`
+	ConversionID    string                 `json:"conversion_id" binding:"required"`
+	ConversionValue float64                `json:"conversion_value"`
+	SessionID       string                 `json:"session_id"`
 	CustomData      map[string]interface{} `json:"custom_data,omitempty"`
 }
 
 // ConversionStats represents conversion statistics
 type ConversionStats struct {
-	GoalID            int64   `json:"goal_id"`
-	GoalName          string  `json:"goal_name"`
-	TotalConversions  int64   `json:"total_conversions"`
-	ConversionRate    float64 `json:"conversion_rate"` // percentage
-	TotalValue        float64 `json:"total_value"`
-	AvgValue          float64 `json:"avg_value"`
-	AvgTimeToConvert  float64 `json:"avg_time_to_convert"` // minutes
+	GoalID           int64   `json:"goal_id"`
+	GoalName         string  `json:"goal_name"`
+	TotalConversions int64   `json:"total_conversions"`
+	ConversionRate   float64 `json:"conversion_rate"` // percentage
+	TotalValue       float64 `json:"total_value"`
+	AvgValue         float64 `json:"avg_value"`
+	AvgTimeToConvert float64 `json:"avg_time_to_convert"` // minutes
 }
 
 // A/B Testing Models
@@ -452,8 +452,8 @@ type ABTest struct {
 	TestName         string     `json:"test_name" db:"test_name"`
 	TestType         string     `json:"test_type" db:"test_type"`
 	Description      *string    `json:"description,omitempty" db:"description"`
-	ShortCodeA       string     `json:"short_code_a" db:"short_code_a"` // Control
-	ShortCodeB       string     `json:"short_code_b" db:"short_code_b"` // Variant
+	ShortCodeA       string     `json:"short_code_a" db:"short_code_a"`   // Control
+	ShortCodeB       string     `json:"short_code_b" db:"short_code_b"`   // Variant
 	TrafficSplit     string     `json:"traffic_split" db:"traffic_split"` // JSON configuration
 	StartDate        *time.Time `json:"start_date,omitempty" db:"start_date"`
 	EndDate          *time.Time `json:"end_date,omitempty" db:"end_date"`
@@ -471,19 +471,19 @@ type ABTest struct {
 
 // CreateABTestRequest represents a request to create an A/B test
 type CreateABTestRequest struct {
-	TestName         string                        `json:"test_name" binding:"required,min=1,max=100"`
-	TestType         string                        `json:"test_type" binding:"required"`
-	Description      *string                       `json:"description,omitempty"`
-	ShortCodeA       string                        `json:"short_code_a" binding:"required"`
-	ShortCodeB       string                        `json:"short_code_b" binding:"required"`
-	TrafficSplit     string                        `json:"traffic_split"`
-	StartDate        *time.Time                    `json:"start_date,omitempty"`
-	EndDate          *time.Time                    `json:"end_date,omitempty"`
-	SampleSize       int                           `json:"sample_size" binding:"min=10,max=100000"`
-	Confidence       float64                       `json:"confidence"`
-	MinSampleSize    int                           `json:"min_sample_size" binding:"min=10,max=100000"`
-	ConversionGoalID *int64                        `json:"conversion_goal_id,omitempty"`
-	Variants         []CreateABTestVariantRequest  `json:"variants" binding:"required,min=2"`
+	TestName         string                       `json:"test_name" binding:"required,min=1,max=100"`
+	TestType         string                       `json:"test_type" binding:"required"`
+	Description      *string                      `json:"description,omitempty"`
+	ShortCodeA       string                       `json:"short_code_a" binding:"required"`
+	ShortCodeB       string                       `json:"short_code_b" binding:"required"`
+	TrafficSplit     string                       `json:"traffic_split"`
+	StartDate        *time.Time                   `json:"start_date,omitempty"`
+	EndDate          *time.Time                   `json:"end_date,omitempty"`
+	SampleSize       int                          `json:"sample_size" binding:"min=10,max=100000"`
+	Confidence       float64                      `json:"confidence"`
+	MinSampleSize    int                          `json:"min_sample_size" binding:"min=10,max=100000"`
+	ConversionGoalID *int64                       `json:"conversion_goal_id,omitempty"`
+	Variants         []CreateABTestVariantRequest `json:"variants" binding:"required,min=2"`
 }
 
 // UpdateABTestRequest represents a request to update an A/B test
@@ -499,73 +499,73 @@ type UpdateABTestRequest struct {
 
 // ABTestResult represents A/B test results for a specific variant and date
 type ABTestResult struct {
-	ID              int64     `json:"id" db:"id"`
-	TestID          int64     `json:"test_id" db:"test_id"`
-	Variant         string    `json:"variant" db:"variant"` // 'A' or 'B'
-	Date            time.Time `json:"date" db:"date"`
-	Clicks          int       `json:"clicks" db:"clicks"`
-	Conversions     int       `json:"conversions" db:"conversions"`
-	ConversionRate  float64   `json:"conversion_rate" db:"conversion_rate"`
-	Revenue         float64   `json:"revenue" db:"revenue"`
-	UniqueVisitors  int       `json:"unique_visitors" db:"unique_visitors"`
-	BounceRate      float64   `json:"bounce_rate" db:"bounce_rate"`
-	AvgTimeOnSite   int       `json:"avg_time_on_site" db:"avg_time_on_site"`
-	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+	ID             int64     `json:"id" db:"id"`
+	TestID         int64     `json:"test_id" db:"test_id"`
+	Variant        string    `json:"variant" db:"variant"` // 'A' or 'B'
+	Date           time.Time `json:"date" db:"date"`
+	Clicks         int       `json:"clicks" db:"clicks"`
+	Conversions    int       `json:"conversions" db:"conversions"`
+	ConversionRate float64   `json:"conversion_rate" db:"conversion_rate"`
+	Revenue        float64   `json:"revenue" db:"revenue"`
+	UniqueVisitors int       `json:"unique_visitors" db:"unique_visitors"`
+	BounceRate     float64   `json:"bounce_rate" db:"bounce_rate"`
+	AvgTimeOnSite  int       `json:"avg_time_on_site" db:"avg_time_on_site"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // ABTestSummary represents a summary of A/B test performance
 type ABTestSummary struct {
-	Test            ABTest                 `json:"test"`
-	VariantA        ABTestVariantSummary   `json:"variant_a"`
-	VariantB        ABTestVariantSummary   `json:"variant_b"`
-	StatisticalData ABTestStatisticalData  `json:"statistical_data"`
-	IsSignificant   bool                   `json:"is_significant"`
-	Recommendation  string                 `json:"recommendation"`
+	Test            ABTest                `json:"test"`
+	VariantA        ABTestVariantSummary  `json:"variant_a"`
+	VariantB        ABTestVariantSummary  `json:"variant_b"`
+	StatisticalData ABTestStatisticalData `json:"statistical_data"`
+	IsSignificant   bool                  `json:"is_significant"`
+	Recommendation  string                `json:"recommendation"`
 }
 
 // ABTestVariantSummary represents performance summary for a test variant
 type ABTestVariantSummary struct {
-	Variant           string  `json:"variant"`
-	ShortCode         string  `json:"short_code"`
-	TotalClicks       int64   `json:"total_clicks"`
-	TotalConversions  int64   `json:"total_conversions"`
-	ConversionRate    float64 `json:"conversion_rate"`
-	TotalRevenue      float64 `json:"total_revenue"`
-	AvgOrderValue     float64 `json:"avg_order_value"`
-	UniqueVisitors    int64   `json:"unique_visitors"`
-	BounceRate        float64 `json:"bounce_rate"`
-	AvgTimeOnSite     float64 `json:"avg_time_on_site"`
+	Variant          string  `json:"variant"`
+	ShortCode        string  `json:"short_code"`
+	TotalClicks      int64   `json:"total_clicks"`
+	TotalConversions int64   `json:"total_conversions"`
+	ConversionRate   float64 `json:"conversion_rate"`
+	TotalRevenue     float64 `json:"total_revenue"`
+	AvgOrderValue    float64 `json:"avg_order_value"`
+	UniqueVisitors   int64   `json:"unique_visitors"`
+	BounceRate       float64 `json:"bounce_rate"`
+	AvgTimeOnSite    float64 `json:"avg_time_on_site"`
 }
 
 // ABTestStatisticalData represents statistical analysis of A/B test
 type ABTestStatisticalData struct {
-	SampleSizeA      int64   `json:"sample_size_a"`
-	SampleSizeB      int64   `json:"sample_size_b"`
-	ConfidenceLevel  float64 `json:"confidence_level"`
-	PValue           float64 `json:"p_value"`
-	ZScore           float64 `json:"z_score"`
-	MarginOfError    float64 `json:"margin_of_error"`
+	SampleSizeA       int64   `json:"sample_size_a"`
+	SampleSizeB       int64   `json:"sample_size_b"`
+	ConfidenceLevel   float64 `json:"confidence_level"`
+	PValue            float64 `json:"p_value"`
+	ZScore            float64 `json:"z_score"`
+	MarginOfError     float64 `json:"margin_of_error"`
 	MinimumDetectable float64 `json:"minimum_detectable_effect"`
-	TestPower        float64 `json:"test_power"`
+	TestPower         float64 `json:"test_power"`
 }
 
 // Attribution Models
 
 // AttributionTouchpoint represents a marketing touchpoint in the customer journey
 type AttributionTouchpoint struct {
-	ID              int64      `json:"id" db:"id"`
-	SessionID       string     `json:"session_id" db:"session_id"`
-	ShortCode       string     `json:"short_code" db:"short_code"`
-	UserIP          string     `json:"user_ip,omitempty" db:"user_ip"`
-	UserAgent       string     `json:"user_agent,omitempty" db:"user_agent"`
-	Referrer        string     `json:"referrer,omitempty" db:"referrer"`
-	CampaignSource  string     `json:"campaign_source,omitempty" db:"campaign_source"`
-	CampaignMedium  string     `json:"campaign_medium,omitempty" db:"campaign_medium"`
-	CampaignName    string     `json:"campaign_name,omitempty" db:"campaign_name"`
-	TouchpointOrder int        `json:"touchpoint_order" db:"touchpoint_order"`
-	TouchpointTime  time.Time  `json:"touchpoint_time" db:"touchpoint_time"`
-	ConversionID    *string    `json:"conversion_id,omitempty" db:"conversion_id"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	ID              int64     `json:"id" db:"id"`
+	SessionID       string    `json:"session_id" db:"session_id"`
+	ShortCode       string    `json:"short_code" db:"short_code"`
+	UserIP          string    `json:"user_ip,omitempty" db:"user_ip"`
+	UserAgent       string    `json:"user_agent,omitempty" db:"user_agent"`
+	Referrer        string    `json:"referrer,omitempty" db:"referrer"`
+	CampaignSource  string    `json:"campaign_source,omitempty" db:"campaign_source"`
+	CampaignMedium  string    `json:"campaign_medium,omitempty" db:"campaign_medium"`
+	CampaignName    string    `json:"campaign_name,omitempty" db:"campaign_name"`
+	TouchpointOrder int       `json:"touchpoint_order" db:"touchpoint_order"`
+	TouchpointTime  time.Time `json:"touchpoint_time" db:"touchpoint_time"`
+	ConversionID    *string   `json:"conversion_id,omitempty" db:"conversion_id"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 }
 
 // ConversionJourney represents the complete customer journey to conversion
@@ -582,7 +582,7 @@ type ConversionJourney struct {
 
 // RealtimeUpdate represents a real-time analytics update sent via WebSocket
 type RealtimeUpdate struct {
-	Type      string      `json:"type"`       // "click", "analytics_update", "conversion"
+	Type      string      `json:"type"` // "click", "analytics_update", "conversion"
 	ShortCode string      `json:"short_code"`
 	Data      interface{} `json:"data"`
 	Timestamp time.Time   `json:"timestamp"`
@@ -590,7 +590,7 @@ type RealtimeUpdate struct {
 
 // WebSocketMessage represents incoming WebSocket messages from clients
 type WebSocketMessage struct {
-	Type      string `json:"type"`       // "subscribe", "unsubscribe", "ping"
+	Type      string `json:"type"` // "subscribe", "unsubscribe", "ping"
 	ShortCode string `json:"short_code,omitempty"`
 }
 
@@ -653,27 +653,27 @@ type VariantResult struct {
 
 // SignificanceResult represents statistical significance analysis
 type SignificanceResult struct {
-	IsSignificant              bool      `json:"is_significant"`
-	PValue                     float64   `json:"p_value"`
-	ZScore                     float64   `json:"z_score"`
-	ControlCR                  float64   `json:"control_conversion_rate"`
-	VariantCR                  float64   `json:"variant_conversion_rate"`
-	Improvement                float64   `json:"improvement_percentage"`
-	EffectSize                 float64   `json:"effect_size"`                    // Cohen's h
-	ConfidenceInterval         [2]float64 `json:"confidence_interval"`           // [lower, upper] bounds
-	MinDetectableEffect        float64   `json:"minimum_detectable_effect"`
-	SampleSizeRecommendation   int64     `json:"sample_size_recommendation"`
+	IsSignificant            bool       `json:"is_significant"`
+	PValue                   float64    `json:"p_value"`
+	ZScore                   float64    `json:"z_score"`
+	ControlCR                float64    `json:"control_conversion_rate"`
+	VariantCR                float64    `json:"variant_conversion_rate"`
+	Improvement              float64    `json:"improvement_percentage"`
+	EffectSize               float64    `json:"effect_size"`         // Cohen's h
+	ConfidenceInterval       [2]float64 `json:"confidence_interval"` // [lower, upper] bounds
+	MinDetectableEffect      float64    `json:"minimum_detectable_effect"`
+	SampleSizeRecommendation int64      `json:"sample_size_recommendation"`
 }
 
 // SequentialTestResult represents results from sequential testing for early stopping
 type SequentialTestResult struct {
-	CanStop      bool    `json:"can_stop"`
-	Decision     string  `json:"decision"`      // "continue", "test_wins", "control_wins"
-	Confidence   float64 `json:"confidence"`
-	LogLR        float64 `json:"log_likelihood_ratio"`
-	UpperBound   float64 `json:"upper_bound"`   // Upper decision boundary
-	LowerBound   float64 `json:"lower_bound"`   // Lower decision boundary
-	Reason       string  `json:"reason"`        // Human-readable explanation
+	CanStop    bool    `json:"can_stop"`
+	Decision   string  `json:"decision"` // "continue", "test_wins", "control_wins"
+	Confidence float64 `json:"confidence"`
+	LogLR      float64 `json:"log_likelihood_ratio"`
+	UpperBound float64 `json:"upper_bound"` // Upper decision boundary
+	LowerBound float64 `json:"lower_bound"` // Lower decision boundary
+	Reason     string  `json:"reason"`      // Human-readable explanation
 }
 
 // CreateABTestVariantRequest represents a variant in an A/B test creation request
@@ -702,18 +702,18 @@ type URL struct {
 
 // URLAnalytics represents comprehensive analytics for a URL
 type URLAnalytics struct {
-	ShortCode        string             `json:"short_code"`
-	OriginalURL      string             `json:"original_url"`
-	TotalClicks      int64              `json:"total_clicks"`
-	UniqueClicks     int64              `json:"unique_clicks"`
-	CreatedAt        time.Time          `json:"created_at"`
-	LastClickAt      *time.Time         `json:"last_click_at,omitempty"`
-	ClickTrends      []ClickTrend       `json:"click_trends"`
-	ReferrerStats    []ReferrerStat     `json:"referrer_stats"`
-	GeographicStats  []CountryDetail    `json:"geographic_stats"`
-	DeviceStats      []DeviceTypeStat   `json:"device_stats"`
-	BrowserStats     []BrowserStat      `json:"browser_stats"`
-	OSStats          []OSStat           `json:"os_stats"`
-	HourlyPattern    []HourlyClick      `json:"hourly_pattern"`
-	WeeklyPattern    []WeekdayClick     `json:"weekly_pattern"`
+	ShortCode       string           `json:"short_code"`
+	OriginalURL     string           `json:"original_url"`
+	TotalClicks     int64            `json:"total_clicks"`
+	UniqueClicks    int64            `json:"unique_clicks"`
+	CreatedAt       time.Time        `json:"created_at"`
+	LastClickAt     *time.Time       `json:"last_click_at,omitempty"`
+	ClickTrends     []ClickTrend     `json:"click_trends"`
+	ReferrerStats   []ReferrerStat   `json:"referrer_stats"`
+	GeographicStats []CountryDetail  `json:"geographic_stats"`
+	DeviceStats     []DeviceTypeStat `json:"device_stats"`
+	BrowserStats    []BrowserStat    `json:"browser_stats"`
+	OSStats         []OSStat         `json:"os_stats"`
+	HourlyPattern   []HourlyClick    `json:"hourly_pattern"`
+	WeeklyPattern   []WeekdayClick   `json:"weekly_pattern"`
 }

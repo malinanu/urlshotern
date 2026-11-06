@@ -51,8 +51,8 @@ func GenerateSnowflakeID() (int64, error) {
 
 // Custom errors
 var (
-	ErrSnowflakeInitFailed      = &SnowflakeError{Message: "failed to initialize Snowflake"}
-	ErrSnowflakeNotInitialized  = &SnowflakeError{Message: "Snowflake not initialized"}
+	ErrSnowflakeInitFailed     = &SnowflakeError{Message: "failed to initialize Snowflake"}
+	ErrSnowflakeNotInitialized = &SnowflakeError{Message: "Snowflake not initialized"}
 )
 
 type SnowflakeError struct {

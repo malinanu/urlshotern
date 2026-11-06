@@ -13,10 +13,10 @@ import (
 
 // AdvancedAnalyticsService handles enhanced analytics operations
 type AdvancedAnalyticsService struct {
-	storage           *storage.PostgresStorage
-	geoIPService      *FreeGeoIPService
-	userAgentService  *UserAgentService
-	referrerService   *ReferrerParsingService
+	storage          *storage.PostgresStorage
+	geoIPService     *FreeGeoIPService
+	userAgentService *UserAgentService
+	referrerService  *ReferrerParsingService
 }
 
 // NewAdvancedAnalyticsService creates a new advanced analytics service
@@ -33,7 +33,7 @@ func NewAdvancedAnalyticsService(storage *storage.PostgresStorage) *AdvancedAnal
 func (a *AdvancedAnalyticsService) ProcessEnhancedClickEvent(clickEvent *models.ClickEvent) error {
 	// Parse user agent for device information using our free service
 	deviceInfo := a.userAgentService.ParseUserAgent(clickEvent.UserAgent)
-	
+
 	// Get geographic information using our free GeoIP service
 	geoInfo, err := a.geoIPService.LookupIP(clickEvent.IPAddress)
 	if err != nil {
@@ -43,48 +43,48 @@ func (a *AdvancedAnalyticsService) ProcessEnhancedClickEvent(clickEvent *models.
 			CountryName: a.geoIPService.getCountryName(clickEvent.CountryCode),
 		}
 	}
-	
+
 	// Parse referrer for detailed analytics using our enhanced referrer service
 	referrerData, err := a.referrerService.ProcessReferrerData(
-		clickEvent.ShortCode, 
-		clickEvent.Referrer, 
-		clickEvent.IPAddress, 
+		clickEvent.ShortCode,
+		clickEvent.Referrer,
+		clickEvent.IPAddress,
 		clickEvent.UserAgent,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to process referrer data: %w", err)
 	}
-	
+
 	// Extract time-based information
 	timeInfo := a.extractTimeInfo(clickEvent.ClickedAt)
-	
+
 	// Begin transaction to ensure all analytics are updated atomically
 	tx, err := a.storage.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
-	
+
 	// Update geographic analytics
 	if err := a.updateGeographicAnalytics(tx, clickEvent.ShortCode, geoInfo); err != nil {
 		return fmt.Errorf("failed to update geographic analytics: %w", err)
 	}
-	
+
 	// Update device analytics
 	if err := a.updateDeviceAnalytics(tx, clickEvent.ShortCode, deviceInfo, clickEvent.IPAddress); err != nil {
 		return fmt.Errorf("failed to update device analytics: %w", err)
 	}
-	
+
 	// Update time analytics
 	if err := a.updateTimeAnalytics(tx, clickEvent.ShortCode, timeInfo, clickEvent.IPAddress); err != nil {
 		return fmt.Errorf("failed to update time analytics: %w", err)
 	}
-	
+
 	// Update referrer analytics
 	if err := a.updateReferrerAnalytics(tx, clickEvent.ShortCode, referrerData); err != nil {
 		return fmt.Errorf("failed to update referrer analytics: %w", err)
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -106,12 +106,12 @@ type ReferrerInfo struct {
 
 // TimeInfo represents time-based information
 type TimeInfo struct {
-	Date        time.Time
-	HourOfDay   int
-	DayOfWeek   int
-	DayOfMonth  int
-	Month       int
-	Year        int
+	Date       time.Time
+	HourOfDay  int
+	DayOfWeek  int
+	DayOfMonth int
+	Month      int
+	Year       int
 }
 
 // Note: parseUserAgent is now handled by UserAgentService
@@ -123,20 +123,20 @@ func (a *AdvancedAnalyticsService) parseReferrer(referrerURL string) ReferrerInf
 	info := ReferrerInfo{
 		URL: referrerURL,
 	}
-	
+
 	if referrerURL == "" {
 		info.Type = "direct"
 		return info
 	}
-	
+
 	parsedURL, err := url.Parse(referrerURL)
 	if err != nil {
 		info.Type = "unknown"
 		return info
 	}
-	
+
 	info.Domain = parsedURL.Host
-	
+
 	// Extract UTM parameters
 	query := parsedURL.Query()
 	info.CampaignSource = query.Get("utm_source")
@@ -144,7 +144,7 @@ func (a *AdvancedAnalyticsService) parseReferrer(referrerURL string) ReferrerInf
 	info.CampaignName = query.Get("utm_campaign")
 	info.CampaignTerm = query.Get("utm_term")
 	info.CampaignContent = query.Get("utm_content")
-	
+
 	// Determine referrer type
 	domain := strings.ToLower(info.Domain)
 	if strings.Contains(domain, "google") || strings.Contains(domain, "bing") || strings.Contains(domain, "yahoo") || strings.Contains(domain, "duckduckgo") {
@@ -158,7 +158,7 @@ func (a *AdvancedAnalyticsService) parseReferrer(referrerURL string) ReferrerInf
 	} else {
 		info.Type = "referral"
 	}
-	
+
 	return info
 }
 
@@ -187,8 +187,8 @@ func (a *AdvancedAnalyticsService) updateGeographicAnalytics(tx *sql.Tx, shortCo
 			last_click = NOW(),
 			updated_at = NOW()
 	`
-	
-	_, err := tx.Exec(query, shortCode, geoInfo.CountryCode, geoInfo.CountryName, 
+
+	_, err := tx.Exec(query, shortCode, geoInfo.CountryCode, geoInfo.CountryName,
 		geoInfo.Region, geoInfo.City, geoInfo.Latitude, geoInfo.Longitude)
 	return err
 }
@@ -207,7 +207,7 @@ func (a *AdvancedAnalyticsService) updateDeviceAnalytics(tx *sql.Tx, shortCode s
 			last_click = NOW(),
 			updated_at = NOW()
 	`
-	
+
 	_, err := tx.Exec(query, shortCode, deviceInfo.DeviceType, deviceInfo.DeviceBrand,
 		deviceInfo.DeviceModel, deviceInfo.OSName, deviceInfo.OSVersion,
 		deviceInfo.BrowserName, deviceInfo.BrowserVersion, deviceInfo.ScreenResolution,
@@ -227,7 +227,7 @@ func (a *AdvancedAnalyticsService) updateTimeAnalytics(tx *sql.Tx, shortCode str
 			unique_ips = time_analytics.unique_ips + 1,
 			updated_at = NOW()
 	`
-	
+
 	_, err := tx.Exec(query, shortCode, timeInfo.Date, timeInfo.HourOfDay,
 		timeInfo.DayOfWeek, timeInfo.DayOfMonth, timeInfo.Month, timeInfo.Year)
 	return err
@@ -236,7 +236,7 @@ func (a *AdvancedAnalyticsService) updateTimeAnalytics(tx *sql.Tx, shortCode str
 // updateReferrerAnalytics updates or inserts referrer analytics data
 func (a *AdvancedAnalyticsService) updateReferrerAnalytics(tx *sql.Tx, shortCode string, referrerData *EnhancedReferrerData) error {
 	parsed := referrerData.ParsedReferrer
-	
+
 	// Extract UTM parameters if they exist
 	utmSource, utmMedium, utmCampaign, utmTerm, utmContent := "", "", "", "", ""
 	if parsed.UTMParams != nil {
@@ -246,7 +246,7 @@ func (a *AdvancedAnalyticsService) updateReferrerAnalytics(tx *sql.Tx, shortCode
 		utmTerm = parsed.UTMParams.Term
 		utmContent = parsed.UTMParams.Content
 	}
-	
+
 	query := `
 		INSERT INTO referrer_analytics (
 			short_code, referrer_domain, referrer_url, referrer_type, 
@@ -260,7 +260,7 @@ func (a *AdvancedAnalyticsService) updateReferrerAnalytics(tx *sql.Tx, shortCode
 			last_click = NOW(),
 			updated_at = NOW()
 	`
-	
+
 	_, err := tx.Exec(query, shortCode, parsed.Domain, parsed.OriginalReferrer,
 		parsed.Category, utmSource, utmMedium, utmCampaign, utmTerm, utmContent)
 	return err
@@ -273,7 +273,7 @@ func (a *AdvancedAnalyticsService) GetAdvancedAnalytics(shortCode string, days i
 	if err != nil {
 		return nil, fmt.Errorf("failed to get URL mapping: %w", err)
 	}
-	
+
 	response := &models.AdvancedAnalyticsResponse{
 		ShortCode:   mapping.ShortCode,
 		OriginalURL: mapping.OriginalURL,
@@ -281,31 +281,31 @@ func (a *AdvancedAnalyticsService) GetAdvancedAnalytics(shortCode string, days i
 		CreatedAt:   mapping.CreatedAt,
 		LastUpdated: time.Now(),
 	}
-	
+
 	// Get geographic analytics
 	geographic, err := a.GetGeographicAnalytics(shortCode, days)
 	if err == nil {
 		response.Geographic = *geographic
 	}
-	
+
 	// Get time analytics
 	timeData, err := a.GetTimeAnalytics(shortCode, days)
 	if err == nil {
 		response.TimeData = *timeData
 	}
-	
+
 	// Get device analytics
 	deviceData, err := a.GetDeviceAnalytics(shortCode, days)
 	if err == nil {
 		response.DeviceData = *deviceData
 	}
-	
+
 	// Get referrer analytics
 	referrers, err := a.GetReferrerAnalytics(shortCode, days)
 	if err == nil {
 		response.Referrers = referrers
 	}
-	
+
 	return response, nil
 }
 
@@ -336,7 +336,7 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 		return nil, fmt.Errorf("failed to query referrer analytics: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var referrers []models.ReferrerStat
 	var totalClicks int64
 	categoryMap := make(map[string]int64)
@@ -346,31 +346,31 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 	utmMediums := make(map[string]int64)
 	utmCampaigns := make(map[string]int64)
 	organicClicks := int64(0)
-	
+
 	for rows.Next() {
 		var domain, url, refType, source, medium, campaign, term, content sql.NullString
 		var clicks, uniqueClicks int64
 		var lastClick time.Time
-		
+
 		err := rows.Scan(&domain, &url, &refType, &source, &medium, &campaign, &term, &content, &clicks, &uniqueClicks, &lastClick)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan referrer row: %w", err)
 		}
-		
+
 		referrer := models.ReferrerStat{
 			Referrer: url.String,
 			Clicks:   clicks,
 		}
 		referrers = append(referrers, referrer)
 		totalClicks += clicks
-		
+
 		// Categorize referrers
 		category := refType.String
 		if category == "" {
 			category = "other"
 		}
 		categoryMap[category] += clicks
-		
+
 		// Track campaigns
 		if source.Valid && source.String != "" {
 			key := fmt.Sprintf("%s|%s|%s", campaign.String, source.String, medium.String)
@@ -382,7 +382,7 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 				}
 			}
 			campaignMap[key].Clicks += clicks
-			
+
 			// UTM breakdown
 			utmSources[source.String] += clicks
 			if medium.Valid {
@@ -394,7 +394,7 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 		} else {
 			organicClicks += clicks
 		}
-		
+
 		// Track domains
 		if domain.Valid {
 			parsed := a.referrerService.ParseReferrer(url.String)
@@ -408,7 +408,7 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 			domainMap[domainKey].Clicks += clicks
 		}
 	}
-	
+
 	// Convert maps to slices and calculate percentages
 	categories := make([]ReferrerCategoryStat, 0, len(categoryMap))
 	for category, clicks := range categoryMap {
@@ -419,19 +419,19 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 			Percentage: percentage,
 		})
 	}
-	
+
 	campaigns := make([]CampaignStat, 0, len(campaignMap))
 	for _, campaign := range campaignMap {
 		campaign.Percentage = float64(campaign.Clicks) / float64(totalClicks) * 100
 		campaigns = append(campaigns, *campaign)
 	}
-	
+
 	domains := make([]DomainStat, 0, len(domainMap))
 	for _, domain := range domainMap {
 		domain.Percentage = float64(domain.Clicks) / float64(totalClicks) * 100
 		domains = append(domains, *domain)
 	}
-	
+
 	// Create UTM breakdown
 	sources := make([]UTMParamStat, 0, len(utmSources))
 	for source, clicks := range utmSources {
@@ -441,7 +441,7 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 			Percentage: float64(clicks) / float64(totalClicks) * 100,
 		})
 	}
-	
+
 	mediums := make([]UTMParamStat, 0, len(utmMediums))
 	for medium, clicks := range utmMediums {
 		mediums = append(mediums, UTMParamStat{
@@ -450,7 +450,7 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 			Percentage: float64(clicks) / float64(totalClicks) * 100,
 		})
 	}
-	
+
 	campaignsList := make([]UTMParamStat, 0, len(utmCampaigns))
 	for campaign, clicks := range utmCampaigns {
 		campaignsList = append(campaignsList, UTMParamStat{
@@ -459,9 +459,9 @@ func (a *AdvancedAnalyticsService) GetEnhancedReferrerAnalytics(shortCode string
 			Percentage: float64(clicks) / float64(totalClicks) * 100,
 		})
 	}
-	
+
 	paidClicks := totalClicks - organicClicks
-	
+
 	return &ReferrerAnalytics{
 		ShortCode:   shortCode,
 		TotalClicks: totalClicks,
@@ -506,20 +506,20 @@ func (a *AdvancedAnalyticsService) GetUTMCampaignAnalytics(shortCode string, day
 		return nil, fmt.Errorf("failed to query UTM campaigns: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var campaigns []CampaignStat
 	totalClicks := int64(0)
-	
+
 	// First pass to calculate total
 	for rows.Next() {
 		var campaign, source, medium sql.NullString
 		var clicks int64
-		
+
 		err := rows.Scan(&campaign, &source, &medium, &clicks)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan UTM campaign row: %w", err)
 		}
-		
+
 		campaigns = append(campaigns, CampaignStat{
 			Campaign: campaign.String,
 			Source:   source.String,
@@ -528,12 +528,12 @@ func (a *AdvancedAnalyticsService) GetUTMCampaignAnalytics(shortCode string, day
 		})
 		totalClicks += clicks
 	}
-	
+
 	// Second pass to calculate percentages
 	for i := range campaigns {
 		campaigns[i].Percentage = float64(campaigns[i].Clicks) / float64(totalClicks) * 100
 	}
-	
+
 	return campaigns, nil
 }
 
@@ -569,10 +569,10 @@ func (a *AdvancedAnalyticsService) GetReferrerInsights(shortCode string, days in
 			Clicks:   count,
 		})
 	}
-	
+
 	// Use our referrer service to generate insights
 	insights := a.referrerService.GetReferrerInsights(referrers)
-	
+
 	// Add additional insights specific to this URL
 	additionalQuery := `
 		SELECT 
@@ -584,19 +584,19 @@ func (a *AdvancedAnalyticsService) GetReferrerInsights(shortCode string, days in
 		WHERE short_code = $1 
 		  AND created_at >= NOW() - INTERVAL '%d days'
 	`
-	
+
 	var uniqueDomains, totalRecords, utmClicks, totalClicks int64
 	err = a.storage.QueryRow(fmt.Sprintf(additionalQuery, days), shortCode).Scan(&uniqueDomains, &totalRecords, &utmClicks, &totalClicks)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("failed to query referrer insights: %w", err)
 	}
-	
+
 	insights["unique_referring_domains"] = uniqueDomains
 	insights["total_referrer_records"] = totalRecords
 	if totalClicks > 0 {
 		insights["utm_tracking_percentage"] = float64(utmClicks) / float64(totalClicks) * 100
 	}
-	
+
 	return insights, nil
 }
 
@@ -605,7 +605,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 	geo := &models.GeographicAnalytics{
 		ShortCode: shortCode,
 	}
-	
+
 	// Get total clicks
 	err := a.storage.QueryRow(
 		`SELECT COALESCE(SUM(clicks), 0) FROM geographic_analytics WHERE short_code = $1`,
@@ -614,7 +614,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total geographic clicks: %w", err)
 	}
-	
+
 	// Get country details
 	countryQuery := `
 		SELECT country_code, country_name, SUM(clicks) as clicks, COUNT(DISTINCT id) as unique_locations, MAX(last_click) as last_click
@@ -624,7 +624,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 		ORDER BY clicks DESC
 		LIMIT 20
 	`
-	
+
 	rows, err := a.storage.Query(fmt.Sprintf(countryQuery, days), shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -643,7 +643,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 			}
 		}
 	}
-	
+
 	// Get city details with coordinates for mapping
 	cityQuery := `
 		SELECT country_code, region, city, latitude, longitude, SUM(clicks) as clicks
@@ -654,7 +654,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 		ORDER BY clicks DESC
 		LIMIT 50
 	`
-	
+
 	rows, err = a.storage.Query(fmt.Sprintf(cityQuery, days), shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -667,7 +667,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 					city.Percentage = float64(city.Clicks) / float64(geo.TotalClicks) * 100
 				}
 				geo.Cities = append(geo.Cities, city)
-				
+
 				// Add to map data if coordinates are available
 				if city.Latitude != nil && city.Longitude != nil {
 					mapPoint.Latitude = *city.Latitude
@@ -680,7 +680,7 @@ func (a *AdvancedAnalyticsService) GetGeographicAnalytics(shortCode string, days
 			}
 		}
 	}
-	
+
 	return geo, nil
 }
 
@@ -689,7 +689,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 	timeAnalytics := &models.TimeAnalytics{
 		ShortCode: shortCode,
 	}
-	
+
 	// Get hourly pattern
 	hourlyQuery := `
 		SELECT hour_of_day, SUM(clicks) as clicks
@@ -698,7 +698,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 		GROUP BY hour_of_day
 		ORDER BY hour_of_day
 	`
-	
+
 	rows, err := a.storage.Query(fmt.Sprintf(hourlyQuery, days), shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -709,7 +709,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 			}
 		}
 	}
-	
+
 	// Get weekly pattern
 	weeklyQuery := `
 		SELECT day_of_week, SUM(clicks) as clicks
@@ -718,7 +718,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 		GROUP BY day_of_week
 		ORDER BY day_of_week
 	`
-	
+
 	weekdays := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 	rows, err = a.storage.Query(fmt.Sprintf(weeklyQuery, days), shortCode)
 	if err == nil {
@@ -733,7 +733,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 			}
 		}
 	}
-	
+
 	// Get heatmap data (last 30 days)
 	heatmapQuery := `
 		SELECT click_date, hour_of_day, SUM(clicks) as clicks
@@ -741,7 +741,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 		WHERE short_code = $1 AND click_date >= CURRENT_DATE - INTERVAL '30 days'
 		ORDER BY click_date, hour_of_day
 	`
-	
+
 	rows, err = a.storage.Query(heatmapQuery, shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -754,7 +754,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 			}
 		}
 	}
-	
+
 	// Get peak times
 	peakQuery := `
 		SELECT hour_of_day, day_of_week, MAX(clicks) as max_clicks
@@ -764,7 +764,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 		ORDER BY max_clicks DESC
 		LIMIT 1
 	`
-	
+
 	err = a.storage.QueryRow(fmt.Sprintf(peakQuery, days), shortCode).Scan(
 		&timeAnalytics.PeakTimes.PeakHour,
 		&timeAnalytics.PeakTimes.PeakWeekday,
@@ -773,7 +773,7 @@ func (a *AdvancedAnalyticsService) GetTimeAnalytics(shortCode string, days int) 
 	if err == nil && timeAnalytics.PeakTimes.PeakWeekday >= 0 && timeAnalytics.PeakTimes.PeakWeekday < len(weekdays) {
 		timeAnalytics.PeakTimes.PeakDay = weekdays[timeAnalytics.PeakTimes.PeakWeekday]
 	}
-	
+
 	return timeAnalytics, nil
 }
 
@@ -782,7 +782,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 	deviceAnalytics := &models.DeviceAnalytics{
 		ShortCode: shortCode,
 	}
-	
+
 	// Get total clicks for percentage calculations
 	var totalClicks int64
 	err := a.storage.QueryRow(
@@ -792,7 +792,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total device clicks: %w", err)
 	}
-	
+
 	// Get device type statistics
 	deviceTypeQuery := `
 		SELECT device_type, SUM(clicks) as clicks
@@ -801,7 +801,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 		GROUP BY device_type
 		ORDER BY clicks DESC
 	`
-	
+
 	rows, err := a.storage.Query(fmt.Sprintf(deviceTypeQuery, days), shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -815,7 +815,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 			}
 		}
 	}
-	
+
 	// Get browser statistics
 	browserQuery := `
 		SELECT browser_name, browser_version, SUM(clicks) as clicks
@@ -826,7 +826,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 		ORDER BY clicks DESC
 		LIMIT 20
 	`
-	
+
 	rows, err = a.storage.Query(fmt.Sprintf(browserQuery, days), shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -840,7 +840,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 			}
 		}
 	}
-	
+
 	// Get OS statistics
 	osQuery := `
 		SELECT os_name, os_version, SUM(clicks) as clicks
@@ -851,7 +851,7 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 		ORDER BY clicks DESC
 		LIMIT 20
 	`
-	
+
 	rows, err = a.storage.Query(fmt.Sprintf(osQuery, days), shortCode)
 	if err == nil {
 		defer rows.Close()
@@ -865,14 +865,14 @@ func (a *AdvancedAnalyticsService) GetDeviceAnalytics(shortCode string, days int
 			}
 		}
 	}
-	
+
 	return deviceAnalytics, nil
 }
 
 // getReferrerAnalytics retrieves referrer analytics data
 func (a *AdvancedAnalyticsService) GetReferrerAnalytics(shortCode string, days int) ([]models.ReferrerStat, error) {
 	var referrers []models.ReferrerStat
-	
+
 	query := `
 		SELECT referrer_domain, SUM(clicks) as clicks
 		FROM referrer_analytics
@@ -888,13 +888,13 @@ func (a *AdvancedAnalyticsService) GetReferrerAnalytics(shortCode string, days i
 		return nil, fmt.Errorf("failed to get referrer analytics: %w", err)
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var referrer models.ReferrerStat
 		if err := rows.Scan(&referrer.Referrer, &referrer.Clicks); err == nil {
 			referrers = append(referrers, referrer)
 		}
 	}
-	
+
 	return referrers, nil
 }

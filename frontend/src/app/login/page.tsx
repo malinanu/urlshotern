@@ -113,6 +113,7 @@ function LoginForm() {
                     {...register('email')}
                     id="email"
                     type="email"
+                    data-cs-mask
                     autoComplete="email"
                     className={clsx(
                       'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',
@@ -138,6 +139,7 @@ function LoginForm() {
                     {...register('password')}
                     id="password"
                     type={showPassword ? 'text' : 'password'}
+                    data-cs-mask
                     autoComplete="current-password"
                     className={clsx(
                       'w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground bg-background',

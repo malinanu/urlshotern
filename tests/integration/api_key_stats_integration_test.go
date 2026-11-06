@@ -189,23 +189,23 @@ func TestAPIKeyStatsEndpoint_AllFailures(t *testing.T) {
 
 func getTestConfig() *configs.Config {
 	return &configs.Config{
-		DBHost:     getEnvOrDefault("DB_HOST", "localhost"),
-		DBPort:     getEnvOrDefault("DB_PORT", "5432"),
-		DBUser:     getEnvOrDefault("DB_USER", "urlshortener"),
-		DBPassword: getEnvOrDefault("DB_PASSWORD", "password"),
-		DBName:     getEnvOrDefault("DB_NAME", "urlshortener_db"),
-		DBMaxConns:          10,
-		DBMaxIdleConns:      5,
-		DBConnMaxLifetime:   300,
-		DBConnMaxIdleTime:   60,
-		RedisHost:           "localhost",
-		RedisPort:           "6379",
-		RedisPassword:       "",
-		RedisDB:             0,
-		JWTSecret:           "test-secret-key",
-		JWTIssuer:           "urlshortener-test",
-		Environment:         "test",
-		NodeID:              1,
+		DBHost:            getEnvOrDefault("DB_HOST", "localhost"),
+		DBPort:            getEnvOrDefault("DB_PORT", "5432"),
+		DBUser:            getEnvOrDefault("DB_USER", "urlshortener"),
+		DBPassword:        getEnvOrDefault("DB_PASSWORD", "password"),
+		DBName:            getEnvOrDefault("DB_NAME", "urlshortener_db"),
+		DBMaxConns:        10,
+		DBMaxIdleConns:    5,
+		DBConnMaxLifetime: 300,
+		DBConnMaxIdleTime: 60,
+		RedisHost:         "localhost",
+		RedisPort:         "6379",
+		RedisPassword:     "",
+		RedisDB:           0,
+		JWTSecret:         "test-secret-key",
+		JWTIssuer:         "urlshortener-test",
+		Environment:       "test",
+		NodeID:            1,
 	}
 }
 
@@ -224,11 +224,16 @@ func setupAPIKeyStatsTestRouter(db *storage.PostgresStorage, config *configs.Con
 	{
 		// Mock authentication middleware for testing
 		api.Use(func(c *gin.Context) {
-			// Extract user_id from custom header for testing
-			userID := c.GetHeader("X-Test-User-ID")
-			if userID != "" {
-				var id int64
-				fmt.Sscanf(userID, "%d", &id)
+			// Extract user_id from the custom test header, or from the mock
+			// "Bearer test-token-<id>" token returned by createUserAndLogin
+			var id int64
+			// A malformed value just leaves id at 0, i.e. unauthenticated
+			if userID := c.GetHeader("X-Test-User-ID"); userID != "" {
+				_, _ = fmt.Sscanf(userID, "%d", &id)
+			} else {
+				_, _ = fmt.Sscanf(c.GetHeader("Authorization"), "Bearer test-token-%d", &id)
+			}
+			if id != 0 {
 				c.Set("user_id", id)
 			}
 			c.Next()
@@ -243,8 +248,20 @@ func setupAPIKeyStatsTestRouter(db *storage.PostgresStorage, config *configs.Con
 }
 
 func createUserAndLogin(t *testing.T, router *gin.Engine, db *storage.PostgresStorage) (string, int64) {
-	// For testing, create a simple user record
-	userID := time.Now().Unix() // Use timestamp as unique user ID
+	// For testing, create a simple user record. api_keys.user_id references users(id),
+	// so the row must exist. Nanoseconds keep IDs unique across tests in the same second.
+	userID := time.Now().UnixNano()
+	now := time.Now()
+	require.NoError(t, db.CreateUser(&models.User{
+		ID:          userID,
+		Name:        "API Key Test",
+		Email:       fmt.Sprintf("apikey-test-%d@example.com", userID),
+		Provider:    "email",
+		AccountType: "free",
+		IsActive:    true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}), "Failed to create test user")
 
 	// Return mock JWT token (in real implementation, this would be a valid JWT)
 	// For testing, we use the X-Test-User-ID header instead
@@ -272,7 +289,7 @@ func createAPIKey(t *testing.T, router *gin.Engine, token string, name string) (
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusOK, w.Code, "Failed to create API key: %s", w.Body.String())
+	require.Equal(t, http.StatusCreated, w.Code, "Failed to create API key: %s", w.Body.String())
 
 	var response models.CreateAPIKeyResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)

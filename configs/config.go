@@ -9,22 +9,22 @@ import (
 
 type Config struct {
 	// Server Configuration
-	ServerPort string
-	ServerHost string
-	BaseURL    string
+	ServerPort  string
+	ServerHost  string
+	BaseURL     string
 	Environment string
 
 	// Database Configuration
-	DBHost              string
-	DBPort              string
-	DBUser              string
-	DBPassword          string
-	DBName              string
-	DBSSLMode           string
-	DBMaxConns          int
-	DBMaxIdleConns      int
-	DBConnMaxLifetime   int // in seconds
-	DBConnMaxIdleTime   int // in seconds
+	DBHost            string
+	DBPort            string
+	DBUser            string
+	DBPassword        string
+	DBName            string
+	DBSSLMode         string
+	DBMaxConns        int
+	DBMaxIdleConns    int
+	DBConnMaxLifetime int // in seconds
+	DBConnMaxIdleTime int // in seconds
 
 	// Redis Configuration
 	RedisHost         string
@@ -85,9 +85,9 @@ type Config struct {
 	TextLKSenderID string
 
 	// SMS — Twilio (international numbers)
-	TwilioAccountSID  string
-	TwilioAuthToken   string
-	TwilioFromNumber  string
+	TwilioAccountSID   string
+	TwilioAuthToken    string
+	TwilioFromNumber   string
 	TwilioWhatsAppFrom string // e.g. "whatsapp:+14155238886"
 
 	// Admin Panel Control
@@ -172,9 +172,9 @@ func LoadConfig() (*Config, error) {
 		TextLKSenderID: getEnv("TEXTLK_SENDER_ID", "TRUNC"),
 
 		// SMS — Twilio (international numbers)
-		TwilioAccountSID:  getEnv("TWILIO_ACCOUNT_SID", ""),
-		TwilioAuthToken:   getEnv("TWILIO_AUTH_TOKEN", ""),
-		TwilioFromNumber:  getEnv("TWILIO_FROM_NUMBER", ""),
+		TwilioAccountSID:   getEnv("TWILIO_ACCOUNT_SID", ""),
+		TwilioAuthToken:    getEnv("TWILIO_AUTH_TOKEN", ""),
+		TwilioFromNumber:   getEnv("TWILIO_FROM_NUMBER", ""),
 		TwilioWhatsAppFrom: getEnv("TWILIO_WHATSAPP_FROM", ""),
 
 		// Admin Panel Control (default: false for security)

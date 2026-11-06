@@ -20,8 +20,8 @@ var publicStatsCache = struct {
 const publicStatsTTL = 5 * time.Minute
 
 type AnalyticsService struct {
-	db             *storage.PostgresStorage
-	redis          *storage.RedisStorage
+	db              *storage.PostgresStorage
+	redis           *storage.RedisStorage
 	advancedService *AdvancedAnalyticsService
 }
 
@@ -100,7 +100,7 @@ func (a *AnalyticsService) GetURLAnalytics(shortCode string) (*models.URLAnalyti
 	// Implementation would query database for comprehensive analytics
 	// For now, return simulated comprehensive analytics
 	now := time.Now()
-	
+
 	return &models.URLAnalytics{
 		ShortCode:    shortCode,
 		OriginalURL:  "https://example.com/some-url",
@@ -288,21 +288,21 @@ func (a *AnalyticsService) GetDashboardStats() (*models.DashboardStats, error) {
 // GetClickTrends retrieves click trends over time
 func (a *AnalyticsService) GetClickTrends(shortCode string, period string) ([]models.ClickTrend, error) {
 	var trends []models.ClickTrend
-	
+
 	// Determine the date range based on period
 	switch period {
 	case "hour":
-		_ = "YYYY-MM-DD HH24:00:00"  // dateFormat for future use
-		_ = "24 hours"                // intervalClause for future use
+		_ = "YYYY-MM-DD HH24:00:00" // dateFormat for future use
+		_ = "24 hours"              // intervalClause for future use
 	case "day":
-		_ = "YYYY-MM-DD"             // dateFormat for future use  
-		_ = "30 days"                // intervalClause for future use
+		_ = "YYYY-MM-DD" // dateFormat for future use
+		_ = "30 days"    // intervalClause for future use
 	case "week":
-		_ = "IYYY-IW"                // dateFormat for future use
-		_ = "12 weeks"               // intervalClause for future use
+		_ = "IYYY-IW"  // dateFormat for future use
+		_ = "12 weeks" // intervalClause for future use
 	case "month":
-		_ = "YYYY-MM"                // dateFormat for future use
-		_ = "12 months"              // intervalClause for future use
+		_ = "YYYY-MM"   // dateFormat for future use
+		_ = "12 months" // intervalClause for future use
 	default:
 		return nil, fmt.Errorf("invalid period: %s", period)
 	}
@@ -323,10 +323,10 @@ func (a *AnalyticsService) GetClickTrends(shortCode string, period string) ([]mo
 // GetTopReferrers retrieves top referrers for a short code
 func (a *AnalyticsService) GetTopReferrers(shortCode string, limit int) ([]models.ReferrerStat, error) {
 	var referrers []models.ReferrerStat
-	
+
 	// This would query the click_events table for referrer statistics
 	// Implementation would be similar to the country stats in postgres.go
-	
+
 	return referrers, nil
 }
 
@@ -337,10 +337,10 @@ func (a *AnalyticsService) GetUserAgentStats(shortCode string) (*models.UserAgen
 		Devices:  []models.DeviceStat{},
 		OS:       []models.OSStat{},
 	}
-	
+
 	// This would parse user agent strings and categorize them
 	// You might use a library like github.com/mssola/user_agent for this
-	
+
 	return stats, nil
 }
 
@@ -349,7 +349,7 @@ func (a *AnalyticsService) InvalidateAnalyticsCache(shortCode string) error {
 	if a.redis == nil {
 		return nil
 	}
-	
+
 	// Remove cached analytics
 	return a.redis.DeleteURLMapping(fmt.Sprintf("analytics:%s", shortCode))
 }
@@ -383,7 +383,7 @@ func (a *AnalyticsService) getDeviceData(userAgent string) *DeviceData {
 	// like github.com/mssola/user_agent or similar
 	return &DeviceData{
 		DeviceType: "Unknown",
-		Browser:    "Unknown", 
+		Browser:    "Unknown",
 		OS:         "Unknown",
 	}
 }

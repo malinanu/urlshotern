@@ -10,20 +10,20 @@ import (
 
 // APIKey represents an API key in the system
 type APIKey struct {
-	ID          uuid.UUID     `json:"id" db:"id"`
-	UserID      int64         `json:"user_id" db:"user_id"`
-	KeyHash     string        `json:"-" db:"key_hash"` // Never expose the hash
-	KeyPrefix   string        `json:"key_prefix" db:"key_prefix"`
-	Name        string        `json:"name" db:"name"`
-	Description *string       `json:"description" db:"description"`
-	Permissions StringArray   `json:"permissions" db:"permissions"`
-	RateLimit   int           `json:"rate_limit" db:"rate_limit"`
-	LastUsedAt  *time.Time    `json:"last_used_at" db:"last_used_at"`
-	LastUsedIP  *string       `json:"last_used_ip" db:"last_used_ip"`
-	ExpiresAt   *time.Time    `json:"expires_at" db:"expires_at"`
-	IsActive    bool          `json:"is_active" db:"is_active"`
-	CreatedAt   time.Time     `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at" db:"updated_at"`
+	ID          uuid.UUID   `json:"id" db:"id"`
+	UserID      int64       `json:"user_id" db:"user_id"`
+	KeyHash     string      `json:"-" db:"key_hash"` // Never expose the hash
+	KeyPrefix   string      `json:"key_prefix" db:"key_prefix"`
+	Name        string      `json:"name" db:"name"`
+	Description *string     `json:"description" db:"description"`
+	Permissions StringArray `json:"permissions" db:"permissions"`
+	RateLimit   int         `json:"rate_limit" db:"rate_limit"`
+	LastUsedAt  *time.Time  `json:"last_used_at" db:"last_used_at"`
+	LastUsedIP  *string     `json:"last_used_ip" db:"last_used_ip"`
+	ExpiresAt   *time.Time  `json:"expires_at" db:"expires_at"`
+	IsActive    bool        `json:"is_active" db:"is_active"`
+	CreatedAt   time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at" db:"updated_at"`
 }
 
 // StringArray is a custom type for handling PostgreSQL text arrays
@@ -63,7 +63,7 @@ type CreateAPIKeyRequest struct {
 // CreateAPIKeyResponse represents the response when creating a new API key
 type CreateAPIKeyResponse struct {
 	APIKey    *APIKey `json:"api_key"`
-	PlainKey  string  `json:"plain_key"`  // Only returned once during creation
+	PlainKey  string  `json:"plain_key"` // Only returned once during creation
 	KeyPrefix string  `json:"key_prefix"`
 }
 

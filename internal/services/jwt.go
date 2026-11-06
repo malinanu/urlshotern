@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/URLshorter/url-shortener/internal/models"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
@@ -185,7 +185,7 @@ func (j *JWTService) getUserRole(user *models.User) string {
 	if user.IsAdmin {
 		return "admin"
 	}
-	
+
 	switch user.AccountType {
 	case "premium":
 		return "premium_user"

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/storage"
@@ -28,40 +28,57 @@ var (
 	ErrOTPExpired         = errors.New("Your verification code has expired. Please request a new one.")
 	ErrTooManyOTPAttempts = errors.New("Too many incorrect attempts. Please wait a few minutes and try again.")
 	ErrTokenUsed          = errors.New("This link has already been used. Please request a new one if needed.")
+	ErrAgeRestricted      = errors.New("We're sorry, but we can't create an account for you at this time.")
+	ErrAgeRequired        = errors.New("Please confirm your date of birth to create an account.")
 )
 
+// CheckSignupAge validates a YYYY-MM-DD date of birth for a new account (COPPA).
+// It returns utils.ErrInvalidDOB for bad input and ErrAgeRestricted for anyone under 13.
+func CheckSignupAge(dobStr string) (dob time.Time, isMinor bool, err error) {
+	now := time.Now()
+	dob, err = utils.ParseDOB(dobStr, now)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	age := utils.AgeOn(dob, now)
+	if age < utils.MinSignupAge {
+		return time.Time{}, false, ErrAgeRestricted
+	}
+	return dob, age < utils.AdultAge, nil
+}
+
 type UserService struct {
-	db          *storage.PostgresStorage
-	redis       *storage.RedisStorage
-	jwtService  *JWTService
-	smsService  *SMSService
+	db           *storage.PostgresStorage
+	redis        *storage.RedisStorage
+	jwtService   *JWTService
+	smsService   *SMSService
 	emailService *EmailService
-	config      *Config
+	config       *Config
 }
 
 type Config struct {
-	BCryptCost           int
-	OTPExpiryMinutes     int
-	MaxOTPAttempts       int
-	EmailTokenExpiryHours int
+	BCryptCost               int
+	OTPExpiryMinutes         int
+	MaxOTPAttempts           int
+	EmailTokenExpiryHours    int
 	PasswordResetExpiryHours int
 }
 
 type UserRegistrationData struct {
-	User            *models.User
-	EmailToken      string
-	RequiresOTP     bool
-	TempPassword    string // For OAuth users
+	User         *models.User
+	EmailToken   string
+	RequiresOTP  bool
+	TempPassword string // For OAuth users
 }
 
-func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage, 
+func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage,
 	jwtService *JWTService, smsService *SMSService, emailService *EmailService, config *Config) *UserService {
-	
+
 	if config == nil {
 		config = &Config{
 			BCryptCost:               12,
 			OTPExpiryMinutes:         5,
-			MaxOTPAttempts:          3,
+			MaxOTPAttempts:           3,
 			EmailTokenExpiryHours:    24,
 			PasswordResetExpiryHours: 2,
 		}
@@ -79,6 +96,12 @@ func NewUserService(db *storage.PostgresStorage, redis *storage.RedisStorage,
 
 // CreateUser creates a new user account
 func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistrationData, error) {
+	// Age gate before touching the database (COPPA)
+	dob, isMinor, err := CheckSignupAge(req.DateOfBirth)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if email already exists
 	existingUser, err := u.GetUserByEmail(req.Email)
 	if err == nil && existingUser != nil {
@@ -106,20 +129,24 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 	}
 
 	// Create user
+	now := time.Now()
 	user := &models.User{
-		ID:              userID,
-		Name:            req.Name,
-		Email:           req.Email,
-		PasswordHash:    utils.StringPtr(string(hashedPassword)),
-		Phone:           &req.Phone,
-		PhoneVerified:   false,
-		EmailVerified:   false,
-		Provider:        "email",
-		AccountType:     "free",
-		IsActive:        true,
-		IsAdmin:         false,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		ID:            userID,
+		Name:          req.Name,
+		Email:         req.Email,
+		PasswordHash:  utils.StringPtr(string(hashedPassword)),
+		Phone:         &req.Phone,
+		PhoneVerified: false,
+		EmailVerified: false,
+		Provider:      "email",
+		AccountType:   "free",
+		IsActive:      true,
+		IsAdmin:       false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+		DateOfBirth:   &dob,
+		IsMinor:       isMinor,
+		AgeVerifiedAt: &now,
 	}
 
 	// Save user to database
@@ -134,11 +161,11 @@ func (u *UserService) CreateUser(req *models.RegisterRequest) (*UserRegistration
 		DefaultExpiration:  nil, // No expiration by default
 		AnalyticsPublic:    false,
 		EmailNotifications: true,
-		MarketingEmails:    req.MarketingConsent,
-		Timezone:          "UTC",
-		Theme:             "light",
+		MarketingEmails:    req.MarketingConsent && !isMinor, // no marketing to minors
+		Timezone:           "UTC",
+		Theme:              "light",
 	}
-	
+
 	err = u.db.CreateUserPreferences(preferences)
 	if err != nil {
 		// Log error but don't fail user creation
@@ -243,12 +270,12 @@ func (u *UserService) CreateSession(user *models.User, rememberMe bool, ipAddres
 	}
 
 	session := &models.UserSession{
-		ID:         sessionID,
-		UserID:     user.ID,
-		IPAddress:  &ipAddress,
-		UserAgent:  &userAgent,
-		ExpiresAt:  expiresAt,
-		CreatedAt:  time.Now(),
+		ID:        sessionID,
+		UserID:    user.ID,
+		IPAddress: &ipAddress,
+		UserAgent: &userAgent,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
 	}
 
 	err := u.db.CreateSession(session)
@@ -552,7 +579,7 @@ func (u *UserService) UpdateProfile(userID int64, req *models.UpdateProfileReque
 	}
 
 	updateData := make(map[string]interface{})
-	
+
 	if req.Name != nil && *req.Name != user.Name {
 		updateData["name"] = *req.Name
 	}
@@ -580,7 +607,7 @@ func (u *UserService) UpdateProfile(userID int64, req *models.UpdateProfileReque
 			user.PhoneVerified = phoneVerified.(bool)
 		}
 		user.UpdatedAt = time.Now()
-		
+
 		err = u.db.UpdateUser(user)
 		if err != nil {
 			return nil, err
@@ -641,4 +668,3 @@ func (u *UserService) hashPassword(password string) (string, error) {
 	}
 	return string(hashedBytes), nil
 }
-

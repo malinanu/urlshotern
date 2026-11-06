@@ -9,15 +9,15 @@ import (
 
 // MetricsCollector collects application metrics
 type MetricsCollector struct {
-	mu                sync.RWMutex
-	requestDurations  map[string][]time.Duration
-	requestCounts     map[string]int64
-	errorCounts       map[string]int64
-	cacheHits         int64
-	cacheMisses       int64
-	activeGoroutines  int64
-	databaseQueries   int64
-	slowQueries       int64
+	mu               sync.RWMutex
+	requestDurations map[string][]time.Duration
+	requestCounts    map[string]int64
+	errorCounts      map[string]int64
+	cacheHits        int64
+	cacheMisses      int64
+	activeGoroutines int64
+	databaseQueries  int64
+	slowQueries      int64
 }
 
 var globalMetrics = &MetricsCollector{
@@ -122,12 +122,12 @@ func (m *MetricsCollector) GetStats() map[string]interface{} {
 		avg := sum / time.Duration(len(durations))
 
 		endpointStats[endpoint] = map[string]interface{}{
-			"count":    m.requestCounts[endpoint],
-			"errors":   m.errorCounts[endpoint],
-			"avg_ms":   avg.Milliseconds(),
-			"p50_ms":   p50.Milliseconds(),
-			"p95_ms":   p95.Milliseconds(),
-			"p99_ms":   p99.Milliseconds(),
+			"count":      m.requestCounts[endpoint],
+			"errors":     m.errorCounts[endpoint],
+			"avg_ms":     avg.Milliseconds(),
+			"p50_ms":     p50.Milliseconds(),
+			"p95_ms":     p95.Milliseconds(),
+			"p99_ms":     p99.Milliseconds(),
 			"error_rate": float64(m.errorCounts[endpoint]) / float64(m.requestCounts[endpoint]) * 100,
 		}
 	}

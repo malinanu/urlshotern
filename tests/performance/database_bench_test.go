@@ -3,8 +3,10 @@ package performance
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -14,16 +16,16 @@ import (
 
 // BenchmarkResult holds the results of a benchmark
 type BenchmarkResult struct {
-	Name        string
-	Iterations  int
-	TotalTime   time.Duration
-	AvgTime     time.Duration
-	MinTime     time.Duration
-	MaxTime     time.Duration
-	P95Time     time.Duration
-	P99Time     time.Duration
-	Success     int
-	Failures    int
+	Name       string
+	Iterations int
+	TotalTime  time.Duration
+	AvgTime    time.Duration
+	MinTime    time.Duration
+	MaxTime    time.Duration
+	P95Time    time.Duration
+	P99Time    time.Duration
+	Success    int
+	Failures   int
 }
 
 // Database connection
@@ -32,6 +34,12 @@ var db *sql.DB
 func setupDB() error {
 	var err error
 	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" && os.Getenv("DB_HOST") != "" {
+		// Same DB_* variables the app and CI use
+		dbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			url.QueryEscape(os.Getenv("DB_USER")), url.QueryEscape(os.Getenv("DB_PASSWORD")),
+			os.Getenv("DB_HOST"), envOr("DB_PORT", "5432"), os.Getenv("DB_NAME"), envOr("DB_SSLMODE", "disable"))
+	}
 	if dbURL == "" {
 		// Default connection for local testing (SSL disabled)
 		// SECURITY: This default is for local development only
@@ -59,7 +67,21 @@ func teardownDB() {
 	}
 }
 
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func TestMain(m *testing.M) {
+	flag.Parse()
+	// This package only has benchmarks: a plain `go test ./...` (as in CI) runs
+	// none of them, so it shouldn't need a database.
+	if f := flag.Lookup("test.bench"); f == nil || f.Value.String() == "" {
+		os.Exit(m.Run())
+	}
+
 	if err := setupDB(); err != nil {
 		fmt.Printf("Failed to setup database: %v\n", err)
 		os.Exit(1)

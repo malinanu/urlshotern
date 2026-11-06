@@ -24,7 +24,7 @@ func NewAttributionHandler(attributionService *services.AttributionService) *Att
 // RecordTouchpoint records a touchpoint in the customer journey
 func (h *AttributionHandler) RecordTouchpoint(c *gin.Context) {
 	var touchpoint models.AttributionTouchpoint
-	
+
 	if err := c.ShouldBindJSON(&touchpoint); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "invalid_request",
@@ -48,7 +48,7 @@ func (h *AttributionHandler) RecordTouchpoint(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message":      "Touchpoint recorded successfully",
+		"message":       "Touchpoint recorded successfully",
 		"touchpoint_id": touchpoint.ID,
 	})
 }
@@ -96,12 +96,12 @@ func (h *AttributionHandler) CalculateAttribution(c *gin.Context) {
 
 	// Validate attribution model
 	validModels := map[string]bool{
-		"first_touch":     true,
-		"last_touch":      true,
-		"linear":          true,
-		"time_decay":      true,
-		"position_based":  true,
-		"data_driven":     true,
+		"first_touch":    true,
+		"last_touch":     true,
+		"linear":         true,
+		"time_decay":     true,
+		"position_based": true,
+		"data_driven":    true,
 	}
 
 	if !validModels[modelStr] {
@@ -122,10 +122,10 @@ func (h *AttributionHandler) CalculateAttribution(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"conversion_id":      conversionID,
-		"attribution_model":  modelStr,
-		"touchpoint_values":  touchpointValues,
-		"total_touchpoints":  len(touchpointValues),
+		"conversion_id":     conversionID,
+		"attribution_model": modelStr,
+		"touchpoint_values": touchpointValues,
+		"total_touchpoints": len(touchpointValues),
 	})
 }
 
@@ -175,12 +175,12 @@ func (h *AttributionHandler) GetChannelAttribution(c *gin.Context) {
 
 	// Validate attribution model
 	validModels := map[string]bool{
-		"first_touch":     true,
-		"last_touch":      true,
-		"linear":          true,
-		"time_decay":      true,
-		"position_based":  true,
-		"data_driven":     true,
+		"first_touch":    true,
+		"last_touch":     true,
+		"linear":         true,
+		"time_decay":     true,
+		"position_based": true,
+		"data_driven":    true,
 	}
 
 	if !validModels[modelStr] {
@@ -201,9 +201,9 @@ func (h *AttributionHandler) GetChannelAttribution(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"short_code":         shortCode,
-		"attribution_model":  modelStr,
-		"days":              days,
+		"short_code":          shortCode,
+		"attribution_model":   modelStr,
+		"days":                days,
 		"channel_attribution": channelAttribution,
 	})
 }
@@ -235,13 +235,13 @@ func (h *AttributionHandler) CompareAttributionModels(c *gin.Context) {
 	}
 
 	comparison := make(map[string]interface{})
-	
+
 	for _, model := range models {
 		channelData, err := h.attributionService.GetChannelAttribution(shortCode, days, model)
 		if err != nil {
 			continue // Skip failed models
 		}
-		
+
 		// Calculate total attributed value for this model
 		totalValue := 0.0
 		for _, channel := range channelData {
@@ -249,17 +249,17 @@ func (h *AttributionHandler) CompareAttributionModels(c *gin.Context) {
 				totalValue += value
 			}
 		}
-		
+
 		comparison[string(model)] = gin.H{
 			"total_attributed_value": totalValue,
-			"top_channels":          channelData[:min(len(channelData), 5)],
+			"top_channels":           channelData[:min(len(channelData), 5)],
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"short_code":        shortCode,
+		"short_code":       shortCode,
 		"days":             days,
-		"model_comparison":  comparison,
+		"model_comparison": comparison,
 		"recommendation":   "Use position_based for multi-touch journeys, linear for equal weighting",
 	})
 }
@@ -285,13 +285,13 @@ func (h *AttributionHandler) GetAttributionInsights(c *gin.Context) {
 	// For now, return basic insights structure
 	insights := gin.H{
 		"short_code": shortCode,
-		"days":      days,
+		"days":       days,
 		"insights": gin.H{
 			"avg_touchpoints_per_conversion": 0.0,
 			"avg_time_to_conversion_hours":   0.0,
-			"most_effective_model":          "linear",
-			"top_converting_channels":       []string{},
-			"attribution_distribution":     gin.H{},
+			"most_effective_model":           "linear",
+			"top_converting_channels":        []string{},
+			"attribution_distribution":       gin.H{},
 		},
 	}
 

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/gin-gonic/gin"
 )
 
 // APIKeyAuthMiddleware validates API key authentication

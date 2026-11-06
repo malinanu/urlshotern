@@ -57,7 +57,7 @@ func CheckURLSpam(targetUrl string, apiKey string) (SpamStatus, error) {
 
 		stats := result.Data.Attributes.LastAnalysisStats
 		if stats.Malicious > 0 || stats.Suspicious > 0 {
-			return SpamStatusSpam, nil 
+			return SpamStatusSpam, nil
 		}
 		return SpamStatusSafe, nil
 	}
@@ -72,4 +72,3 @@ func CheckURLSpam(targetUrl string, apiKey string) (SpamStatus, error) {
 
 	return SpamStatusUnknown, nil
 }
-

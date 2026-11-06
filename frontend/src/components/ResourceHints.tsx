@@ -16,12 +16,8 @@ export function ResourceHints() {
   useEffect(() => {
     // Only preconnect on good network conditions
     if (networkQuality === 'high' || networkQuality === 'medium') {
-      // API preconnect
+      // API preconnect (fonts are self-hosted, so no third-party font hosts)
       addPreconnect(API_BASE_URL);
-
-      // Google Fonts (if using)
-      addDnsPrefetch('https://fonts.googleapis.com');
-      addDnsPrefetch('https://fonts.gstatic.com');
     }
   }, [networkQuality]);
 
@@ -41,21 +37,6 @@ function addPreconnect(url: string) {
   link.rel = 'preconnect';
   link.href = url;
   link.crossOrigin = 'anonymous';
-  document.head.appendChild(link);
-}
-
-/**
- * Add DNS prefetch link
- */
-function addDnsPrefetch(url: string) {
-  if (typeof window === 'undefined') return;
-
-  const existing = document.querySelector(`link[rel="dns-prefetch"][href="${url}"]`);
-  if (existing) return;
-
-  const link = document.createElement('link');
-  link.rel = 'dns-prefetch';
-  link.href = url;
   document.head.appendChild(link);
 }
 

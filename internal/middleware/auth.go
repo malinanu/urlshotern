@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/URLshorter/url-shortener/internal/models"
 	"github.com/URLshorter/url-shortener/internal/services"
+	"github.com/gin-gonic/gin"
 )
 
 type AuthMiddleware struct {
@@ -443,7 +443,6 @@ func IsAdmin(c *gin.Context) bool {
 	return false
 }
 
-
 // SecurityHeaders adds security headers to all responses
 func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -454,7 +453,7 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-		
+
 		c.Next()
 	}
 }

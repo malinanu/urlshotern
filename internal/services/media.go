@@ -45,13 +45,13 @@ func (s *MediaService) UploadFile(userID int64, fileHeader *multipart.FileHeader
 	// Generate unique filename
 	ext := filepath.Ext(fileHeader.Filename)
 	filename := fmt.Sprintf("%s_%s%s", uuid.New().String(), generateMD5Hash(fileHeader.Filename), ext)
-	
+
 	// Determine file type
 	fileType := s.getFileType(fileHeader.Header.Get("Content-Type"))
-	
+
 	// Create full file path
 	fullPath := filepath.Join(s.uploadPath, fileType, filename)
-	
+
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return nil, fmt.Errorf("failed to create upload directory: %w", err)
@@ -173,9 +173,9 @@ func (s *MediaService) ListMediaFiles(userID int64, fileType string, limit, offs
 	selectQuery := fmt.Sprintf(`
 		SELECT id, user_id, filename, original_name, file_path, file_url, file_size, 
 			mime_type, file_type, width, height, alt, caption, is_public, created_at, updated_at
-		%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, 
+		%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
 		baseQuery, argIndex, argIndex+1)
-	
+
 	args = append(args, limit, offset)
 
 	rows, err := s.db.Query(selectQuery, args...)
@@ -225,7 +225,7 @@ func (s *MediaService) UpdateMediaFile(id, userID int64, alt, caption *string, i
 	}
 
 	args = append(args, id, userID)
-	query := fmt.Sprintf("UPDATE media_files SET %s WHERE id = $%d AND user_id = $%d", 
+	query := fmt.Sprintf("UPDATE media_files SET %s WHERE id = $%d AND user_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	result, err := s.db.Exec(query, args...)
@@ -328,11 +328,11 @@ func (s *MediaService) ValidateFile(fileHeader *multipart.FileHeader) error {
 	// Check file extension
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 	allowedExts := map[string]bool{
-		".jpg":  true, ".jpeg": true, ".png": true, ".gif": true, ".svg": true,
-		".pdf":  true, ".doc": true, ".docx": true, ".txt": true,
-		".mp4":  true, ".avi": true, ".mov": true,
-		".mp3":  true, ".wav": true,
-		".zip":  true, ".rar": true,
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".svg": true,
+		".pdf": true, ".doc": true, ".docx": true, ".txt": true,
+		".mp4": true, ".avi": true, ".mov": true,
+		".mp3": true, ".wav": true,
+		".zip": true, ".rar": true,
 	}
 
 	if !allowedExts[ext] {

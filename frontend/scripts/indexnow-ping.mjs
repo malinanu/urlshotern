@@ -19,6 +19,7 @@ const staticPaths = [
   '/api-docs',
   '/privacy',
   '/terms',
+  '/dmca',
   '/blog',
 ];
 

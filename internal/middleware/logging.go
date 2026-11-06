@@ -38,8 +38,8 @@ func GetRequestIDFromParam(param gin.LogFormatterParams) string {
 func LogError(c *gin.Context, err error, message string) {
 	requestID := GetRequestID(c)
 	userID, _ := GetUserID(c)
-	
-	log.Printf("ERROR [%s] user_id=%d message=%s error=%v path=%s method=%s", 
+
+	log.Printf("ERROR [%s] user_id=%d message=%s error=%v path=%s method=%s",
 		requestID, userID, message, err, c.Request.URL.Path, c.Request.Method)
 }
 
@@ -47,7 +47,7 @@ func LogError(c *gin.Context, err error, message string) {
 func LogInfo(c *gin.Context, message string) {
 	requestID := GetRequestID(c)
 	userID, _ := GetUserID(c)
-	
-	log.Printf("INFO [%s] user_id=%d message=%s path=%s method=%s", 
+
+	log.Printf("INFO [%s] user_id=%d message=%s path=%s method=%s",
 		requestID, userID, message, c.Request.URL.Path, c.Request.Method)
 }

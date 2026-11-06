@@ -42,7 +42,7 @@ type CircuitBreakerConfig struct {
 	Timeout                time.Duration // Time to wait before half-open
 	ReadyToTrip            func(counts Counts) bool
 	OnStateChange          func(name string, from CircuitState, to CircuitState)
-	MaxConsecutiveFailures uint32 // Consecutive failures before opening
+	MaxConsecutiveFailures uint32  // Consecutive failures before opening
 	MaxFailureRatio        float64 // Failure ratio before opening
 }
 

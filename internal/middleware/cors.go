@@ -11,12 +11,12 @@ import (
 func CORSMiddleware() gin.HandlerFunc {
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{
-		"http://localhost:3000",    // Next.js development server
-		"http://localhost:3001",    // Alternative port
-		"http://localhost:8080",    // Static frontend served from Go backend
-		"https://trunc.site",       // Production frontend
-		"https://www.trunc.site",   // Production frontend with www
-		"https://api.trunc.site",   // Production API subdomain
+		"http://localhost:3000",  // Next.js development server
+		"http://localhost:3001",  // Alternative port
+		"http://localhost:8080",  // Static frontend served from Go backend
+		"https://trunc.site",     // Production frontend
+		"https://www.trunc.site", // Production frontend with www
+		"https://api.trunc.site", // Production API subdomain
 	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{

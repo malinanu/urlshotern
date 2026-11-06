@@ -24,6 +24,10 @@ type User struct {
 	LastLoginAt   *time.Time `json:"last_login_at" db:"last_login_at"`
 	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
+	// COPPA age gate: set at signup, never exposed over the API
+	DateOfBirth   *time.Time `json:"-" db:"date_of_birth"`
+	IsMinor       bool       `json:"-" db:"is_minor"`
+	AgeVerifiedAt *time.Time `json:"-" db:"age_verified_at"`
 }
 
 // PublicUser represents user data safe for public consumption
@@ -138,6 +142,7 @@ type RegisterRequest struct {
 	Email            string `json:"email" validate:"required,email"`
 	Password         string `json:"password" validate:"required,min=8"`
 	Phone            string `json:"phone" validate:"required,min=10,max=20"`
+	DateOfBirth      string `json:"date_of_birth" validate:"required"` // YYYY-MM-DD
 	TermsAccepted    bool   `json:"terms_accepted" validate:"required,eq=true"`
 	MarketingConsent bool   `json:"marketing_consent"`
 }

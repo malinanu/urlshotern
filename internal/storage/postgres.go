@@ -149,9 +149,10 @@ func (p *PostgresStorage) initTables() error {
 		`CREATE INDEX IF NOT EXISTS idx_click_events_is_bot ON click_events(is_bot)`,
 		// Fix: coupons.id was created without a sequence (BIGINT PRIMARY KEY, no default).
 		// GORM's autoIncrement omits id from INSERT, so we need the DB to supply a default.
+		// The tables come from migration 018, so skip on a fresh database that doesn't have them yet.
 		`CREATE SEQUENCE IF NOT EXISTS coupons_id_seq`,
 		`DO $$ BEGIN
-			IF NOT EXISTS (
+			IF to_regclass('coupons') IS NOT NULL AND NOT EXISTS (
 				SELECT 1 FROM information_schema.columns
 				WHERE table_name='coupons' AND column_name='id'
 				  AND column_default IS NOT NULL
@@ -162,7 +163,7 @@ func (p *PostgresStorage) initTables() error {
 		END $$`,
 		`CREATE SEQUENCE IF NOT EXISTS coupon_redemptions_id_seq`,
 		`DO $$ BEGIN
-			IF NOT EXISTS (
+			IF to_regclass('coupon_redemptions') IS NOT NULL AND NOT EXISTS (
 				SELECT 1 FROM information_schema.columns
 				WHERE table_name='coupon_redemptions' AND column_name='id'
 				  AND column_default IS NOT NULL
@@ -545,6 +546,18 @@ func (p *PostgresStorage) initAuthenticationTables() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_api_key_usage_api_key_id ON api_key_usage(api_key_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage(created_at)`,
+
+		// COPPA age gate (also in migration 048)
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth   DATE`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_minor        BOOLEAN NOT NULL DEFAULT FALSE`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_verified_at TIMESTAMP WITH TIME ZONE`,
+
+		// CAN-SPAM suppression list (also in migration 048)
+		`CREATE TABLE IF NOT EXISTS email_suppressions (
+			email VARCHAR(320) PRIMARY KEY,
+			reason VARCHAR(50) NOT NULL DEFAULT 'unsubscribe',
+			created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+		)`,
 	}
 
 	for _, query := range queries {
@@ -843,7 +856,12 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NOT NULL DEFAULT ''`,
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
 		`ALTER TABLE teams ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
-		`ALTER TABLE teams ALTER COLUMN slug DROP NOT NULL`,
+		// slug only exists on databases that ran migration 014
+		`DO $$ BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='teams' AND column_name='slug') THEN
+				ALTER TABLE teams ALTER COLUMN slug DROP NOT NULL;
+			END IF;
+		END $$`,
 		`CREATE INDEX IF NOT EXISTS idx_teams_owner_id ON teams(owner_id)`,
 
 		`CREATE TABLE IF NOT EXISTS team_members (
@@ -879,7 +897,12 @@ func (p *PostgresStorage) initAdvancedAnalyticsTables() error {
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS token VARCHAR(255)`,
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'pending'`,
 		`ALTER TABLE team_invitations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
-		`ALTER TABLE team_invitations ALTER COLUMN invitation_token DROP NOT NULL`,
+		// invitation_token only exists on databases that ran migration 014
+		`DO $$ BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='team_invitations' AND column_name='invitation_token') THEN
+				ALTER TABLE team_invitations ALTER COLUMN invitation_token DROP NOT NULL;
+			END IF;
+		END $$`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_team_id ON team_invitations(team_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_team_invitations_token ON team_invitations(token)`,
 	}
@@ -1313,13 +1336,15 @@ func (p *PostgresStorage) ShortCodeExists(shortCode string) (bool, error) {
 // CreateUser creates a new user in the database
 func (p *PostgresStorage) CreateUser(user *models.User) error {
 	query := `
-		INSERT INTO users (id, name, email, phone, password_hash, email_verified, phone_verified, 
-			              provider, provider_id, avatar_url, account_type, is_active, is_admin, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		INSERT INTO users (id, name, email, phone, password_hash, email_verified, phone_verified,
+			              provider, provider_id, avatar_url, account_type, is_active, is_admin, created_at, updated_at,
+			              date_of_birth, is_minor, age_verified_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	`
 	_, err := p.Exec(query, user.ID, user.Name, user.Email, user.Phone, user.PasswordHash,
 		user.EmailVerified, user.PhoneVerified, user.Provider, user.ProviderID, user.AvatarURL,
-		user.AccountType, user.IsActive, user.IsAdmin, user.CreatedAt, user.UpdatedAt)
+		user.AccountType, user.IsActive, user.IsAdmin, user.CreatedAt, user.UpdatedAt,
+		user.DateOfBirth, user.IsMinor, user.AgeVerifiedAt)
 	return err
 }
 
@@ -1899,7 +1924,7 @@ func (p *PostgresStorage) runMicrositeEventRetention() error {
 		}
 		for _, w := range windows {
 			// Table and column names are constants above, never user input.
-			res, err := p.db.ExecContext(ctx, /* #nosec G202 -- identifiers from the constant list above */ `
+			res, err := p.db.ExecContext(ctx /* #nosec G202 -- identifiers from the constant list above */, `
 				DELETE FROM `+t.name+` me
 				USING microsites m, users u
 				WHERE me.microsite_id = m.id

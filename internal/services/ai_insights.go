@@ -17,13 +17,13 @@ import (
 )
 
 const (
-	openRouterURL    = "https://openrouter.ai/api/v1/chat/completions"
+	openRouterURL = "https://openrouter.ai/api/v1/chat/completions"
 	// google/gemma-3-4b-it:free — free tier model.
 	// NOTE: Gemma does NOT support the system role; system prompt is merged into user message.
-	openRouterModel      = "google/gemma-3-4b-it:free"
-	insightCacheTTL      = time.Hour
-	insightMaxTokens     = 512
-	openRouterMaxRetries = 3
+	openRouterModel          = "google/gemma-3-4b-it:free"
+	insightCacheTTL          = time.Hour
+	insightMaxTokens         = 512
+	openRouterMaxRetries     = 3
 	openRouterRetryBaseDelay = 3 * time.Second
 )
 
@@ -238,9 +238,9 @@ func (s *AIInsightsService) generateAndSave(shortCode string, userID int64, insi
 // ─── OpenRouter API ───────────────────────────────────────────────────────────
 
 type openRouterRequest struct {
-	Model     string          `json:"model"`
-	Messages  []chatMessage   `json:"messages"`
-	MaxTokens int             `json:"max_tokens"`
+	Model     string        `json:"model"`
+	Messages  []chatMessage `json:"messages"`
+	MaxTokens int           `json:"max_tokens"`
 }
 
 type chatMessage struct {

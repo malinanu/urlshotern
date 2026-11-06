@@ -48,14 +48,14 @@ func NewRedisClusterStorage(config *configs.Config) (*RedisClusterStorage, error
 	clusterConfig := &RedisClusterConfig{
 		Addrs:              addrs,
 		Password:           config.RedisPassword,
-		PoolSize:           100,               // Increased from default 10
-		MinIdleConns:       10,                // Maintain warm connections
-		MaxRetries:         3,                 // Retry failed operations
-		PoolTimeout:        5 * time.Second,   // Wait time for connection from pool
-		IdleTimeout:        5 * time.Minute,   // Close idle connections
-		IdleCheckFrequency: 1 * time.Minute,   // Check for idle connections
-		ReadTimeout:        3 * time.Second,   // Network read timeout
-		WriteTimeout:       3 * time.Second,   // Network write timeout
+		PoolSize:           100,             // Increased from default 10
+		MinIdleConns:       10,              // Maintain warm connections
+		MaxRetries:         3,               // Retry failed operations
+		PoolTimeout:        5 * time.Second, // Wait time for connection from pool
+		IdleTimeout:        5 * time.Minute, // Close idle connections
+		IdleCheckFrequency: 1 * time.Minute, // Check for idle connections
+		ReadTimeout:        3 * time.Second, // Network read timeout
+		WriteTimeout:       3 * time.Second, // Network write timeout
 	}
 
 	rdb := redis.NewClusterClient(&redis.ClusterOptions{

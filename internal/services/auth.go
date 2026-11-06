@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"strconv"
@@ -26,16 +27,16 @@ import (
 )
 
 type AuthService struct {
-	userService    *UserService
-	jwtService     *JWTService
-	smsService     *SMSService
-	emailService   *EmailService
-	db             *storage.PostgresStorage
-	redis          *storage.RedisStorage
-	config         *configs.Config
-	googleConfig   *oauth2.Config
-	githubConfig   *oauth2.Config
-	campaignService *CampaignService // optional, set after init to avoid circular dependency
+	userService         *UserService
+	jwtService          *JWTService
+	smsService          *SMSService
+	emailService        *EmailService
+	db                  *storage.PostgresStorage
+	redis               *storage.RedisStorage
+	config              *configs.Config
+	googleConfig        *oauth2.Config
+	githubConfig        *oauth2.Config
+	campaignService     *CampaignService     // optional, set after init to avoid circular dependency
 	accountDeletedHooks []func(userID int64) // run after an account is deleted
 }
 
@@ -423,17 +424,24 @@ type githubEmail struct {
 	Verified bool   `json:"verified"`
 }
 
-// GenerateOAuthState generates a random state for CSRF protection and stores it in Redis
-func (a *AuthService) GenerateOAuthState() (string, error) {
+// GenerateOAuthState generates a random state for CSRF protection and stores it in Redis.
+// dob is the already age-checked date of birth from the signup form ("" for a plain login);
+// it rides along with the state so a brand-new OAuth account can pass the COPPA age gate.
+func (a *AuthService) GenerateOAuthState(dob string) (string, error) {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", fmt.Errorf("failed to generate state: %w", err)
 	}
 	state := hex.EncodeToString(bytes)
 
+	value := "1"
+	if dob != "" {
+		value = "dob:" + dob
+	}
+
 	// Store state in Redis with 10 minute TTL
 	key := fmt.Sprintf("oauth_state:%s", state)
-	err := a.redis.Set(key, "1", 10*time.Minute)
+	err := a.redis.Set(key, value, 10*time.Minute)
 	if err != nil {
 		return "", fmt.Errorf("failed to store state: %w", err)
 	}
@@ -441,16 +449,31 @@ func (a *AuthService) GenerateOAuthState() (string, error) {
 	return state, nil
 }
 
-// ValidateOAuthState checks if the state exists in Redis and deletes it
-func (a *AuthService) ValidateOAuthState(state string) bool {
+// ValidateOAuthState checks if the state exists in Redis and deletes it.
+// It returns the date of birth stored with the state ("" if none).
+func (a *AuthService) ValidateOAuthState(state string) (dob string, ok bool) {
 	key := fmt.Sprintf("oauth_state:%s", state)
-	_, err := a.redis.Get(key)
+	value, err := a.redis.Get(key)
 	if err != nil {
-		return false
+		return "", false
 	}
 	// Delete state after validation (one-time use)
 	_ = a.redis.Del(key)
-	return true
+	return strings.TrimPrefix(value, "dob:"), true
+}
+
+// applySignupAge sets the COPPA age-gate fields on a new OAuth user.
+func applySignupAge(user *models.User, dobStr string) error {
+	if dobStr == "" || dobStr == "1" {
+		return ErrAgeRequired
+	}
+	dob, isMinor, err := CheckSignupAge(dobStr)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	user.DateOfBirth, user.IsMinor, user.AgeVerifiedAt = &dob, isMinor, &now
+	return nil
 }
 
 // GetGoogleAuthURL returns Google OAuth authorization URL
@@ -465,7 +488,7 @@ func (a *AuthService) GetGithubAuthURL(state string) string {
 
 // HandleGoogleCallback exchanges the authorization code for tokens, fetches user info,
 // and finds or creates the user in the database
-func (a *AuthService) HandleGoogleCallback(code string, ipAddress, userAgent string) (*models.AuthResponse, error) {
+func (a *AuthService) HandleGoogleCallback(code, dob string, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// Exchange authorization code for token
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -542,6 +565,9 @@ func (a *AuthService) HandleGoogleCallback(code string, ipAddress, userAgent str
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}
+		if err := applySignupAge(user, dob); err != nil {
+			return nil, err
+		}
 
 		if err := a.db.CreateUser(user); err != nil {
 			return nil, fmt.Errorf("failed to create user: %w", err)
@@ -615,7 +641,7 @@ func (a *AuthService) HandleGoogleCallback(code string, ipAddress, userAgent str
 
 // HandleGithubCallback exchanges the authorization code for tokens, fetches user info,
 // and finds or creates the user in the database
-func (a *AuthService) HandleGithubCallback(code string, ipAddress, userAgent string) (*models.AuthResponse, error) {
+func (a *AuthService) HandleGithubCallback(code, dob string, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -716,6 +742,9 @@ func (a *AuthService) HandleGithubCallback(code string, ipAddress, userAgent str
 			IsAdmin:       false,
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
+		}
+		if err := applySignupAge(user, dob); err != nil {
+			return nil, err
 		}
 
 		if err := a.db.CreateUser(user); err != nil {
