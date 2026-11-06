@@ -833,7 +833,6 @@ func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler, extraRoute
 		"/blog",
 		"/campaigns",
 		"/micropages",
-		"/micropages/builder",
 		"/m",
 	}
 	frontendRoutes = append(frontendRoutes, extraRoutes...)
