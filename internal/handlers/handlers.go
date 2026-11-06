@@ -38,7 +38,7 @@ type Handler struct {
 	APIKeyHandlers            *APIKeyHandler
 	PolarWebhookHandler       *PolarWebhookHandler
 	AdvancedAnalyticsHandlers *AdvancedAnalyticsHandler
-AttributionHandlers       *AttributionHandler
+	AttributionHandlers       *AttributionHandler
 	CMSHandlers               *CMSHandlers
 	AdminRBACHandlers         *AdminRBACHandlers // RBAC user and role management
 	AdminCouponHandlers       *AdminCouponHandlers
@@ -89,7 +89,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		APIKeyHandlers:            NewAPIKeyHandler(apiKeyService),
 		PolarWebhookHandler:       NewPolarWebhookHandler(gormDB, billingHandler.billingService),
 		AdvancedAnalyticsHandlers: NewAdvancedAnalyticsHandler(advancedAnalyticsService),
-AttributionHandlers:       NewAttributionHandler(attributionService),
+		AttributionHandlers:       NewAttributionHandler(attributionService),
 		CMSHandlers:               cmsHandlers,
 		AdminRBACHandlers:         adminRBACHandlers,
 		AdminCouponHandlers:       NewAdminCouponHandlers(gormDB, billingHandler.billingService.GetPolarService()),

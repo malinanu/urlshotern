@@ -285,7 +285,6 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	api.DELETE("/my-urls/:shortCode", handler.DeleteURL)
 	api.PUT("/my-urls/:shortCode", handler.UpdateURL)
 
-
 	// MicroPage management
 	if handler.MicroPageHandlers != nil {
 		api.POST("/micropages", handler.MicroPageHandlers.CreateMicroPage)
@@ -294,7 +293,6 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 		api.PUT("/micropages/:id", handler.MicroPageHandlers.UpdateMicroPage)
 		api.DELETE("/micropages/:id", handler.MicroPageHandlers.DeleteMicroPage)
 	}
-	
 
 	// Enhanced analytics for authenticated users
 	billing := handler.GetBillingService()
