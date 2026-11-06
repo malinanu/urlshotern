@@ -307,14 +307,33 @@ MIT License - see LICENSE file for details.
 4. Add tests
 5. Submit a pull request
 
+## Troubleshooting & Operations
+
+For complete step-by-step diagnostic procedures, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+### Quick Diagnostics
+
+| Symptom | Common Cause | Quick Resolution |
+| :--- | :--- | :--- |
+| **Database Connection Refused** | PostgreSQL service not running or wrong credentials | Verify `DATABASE_URL` in `.env`; run `docker compose up -d postgres` |
+| **Redis Connection Failed** | Redis service stopped or port conflict on 6379 | Check Redis container status: `docker compose ps redis` |
+| **Migrations Failing** | Out-of-order schema or missing database permissions | Follow the [Migration Guide](docs/MIGRATION_GUIDE.md) or inspect `configs/migrations/` |
+| **Frontend 404 on API calls** | `NEXT_PUBLIC_API_URL` missing or pointing to wrong port | Ensure `NEXT_PUBLIC_API_URL=http://localhost:8080` in `frontend/.env.local` |
+| **Port Conflict on 8080** | Another process binding to 8080 | Update `PORT` in `.env` or stop conflicting container |
+
+For deployment troubleshooting and 404 routing fixes, see [DEPLOYMENT_FIX.md](DEPLOYMENT_FIX.md).
+For secrets and credential rotation procedures, see [docs/SECRETS_ROTATION.md](docs/SECRETS_ROTATION.md).
+
 ## Documentation
 
 - [CLAUDE.md](CLAUDE.md) - Development guidelines and common commands
-- [SECURITY_UPDATE.md](SECURITY_UPDATE.md) - Latest security updates and fixes
-- [docs/MIGRATIONS.md](docs/MIGRATIONS.md) - Database migration guide
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Comprehensive troubleshooting guide
+- [docs/SECRETS_ROTATION.md](docs/SECRETS_ROTATION.md) - Secret rotation and key management procedures
+- [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Database schema migration and rollbacks
 - [docs/ROLLBACK_PROCEDURES.md](docs/ROLLBACK_PROCEDURES.md) - Rollback procedures
 - [docs/MICROSITES.md](docs/MICROSITES.md) - Micro-landing pages & digital vCards (enabling, routes, safety)
 - [docker/README_PGBOUNCER.md](docker/README_PGBOUNCER.md) - Connection pooling guide
+- [SECURITY_UPDATE.md](SECURITY_UPDATE.md) - Security updates and Snyk patch history
 
 ## Support
 
