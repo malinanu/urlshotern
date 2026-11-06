@@ -37,12 +37,12 @@ func (h *MicrositeHandlers) ServeMicrositePage(c *gin.Context) {
 						h.publicError(c, services.ErrMicrositeNotFound)
 						return
 					}
-					if h.serveMicroPageHTML(c, mp) {
+					if h.serveMicroPageHTML(c) {
 						return
 					}
 				}
 			}
-			if h.serveMicroPageHTML(c, nil) {
+			if h.serveMicroPageHTML(c) {
 				return
 			}
 		}
@@ -420,30 +420,13 @@ func firstNonEmptyStr(vals ...string) string {
 	return ""
 }
 
-
-// serveMicroPageHTML serves the static SPA for micro-pages (/m/:slug)
-func (h *MicrositeHandlers) serveMicroPageHTML(c *gin.Context, mp *models.MicroPageResponse) bool {
+// serveMicroPageHTML serves the static SPA for micro-pages (/m/:slug).
+func (h *MicrositeHandlers) serveMicroPageHTML(c *gin.Context) bool {
 	placeholderPath := filepath.Join("./static", "m", "_placeholder.html")
 	if _, err := os.Stat(placeholderPath); err == nil {
-		if mp == nil {
-			c.Header("Cache-Control", "public, max-age=60")
-			c.File(placeholderPath)
-			return true
-		}
-
-		data, err := os.ReadFile(placeholderPath)
-		if err == nil {
-			content := string(data)
-			if mp.Title != "" {
-				escapedTitle := html.EscapeString(mp.Title + " | Digital vCard")
-				content = strings.Replace(content, "<title>Micro-Page Not Found | Trunc</title>", "<title>"+escapedTitle+"</title>", 1)
-				content = strings.Replace(content, "<title>Micro-Landing Pages | Trunc</title>", "<title>"+escapedTitle+"</title>", 1)
-			}
-			c.Header("Cache-Control", "public, max-age=60")
-			c.Header("X-Content-Type-Options", "nosniff")
-			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(content))
-			return true
-		}
+		c.Header("Cache-Control", "public, max-age=60")
+		c.File(placeholderPath)
+		return true
 	}
 
 	indexPath := filepath.Join("./static", "index.html")

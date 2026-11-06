@@ -23,16 +23,16 @@ const (
 
 // MicrositeHandlers serves the page builder API and the public /m/<slug> pages.
 type MicrositeHandlers struct {
-	sites       *services.MicrositeService
-	analytics   *services.MicrositeAnalyticsService
-	assets      *services.MicrositeAssetService
-	billing     *services.BillingService
-	shortener   *services.ShortenerService
-	botDetector *services.BotDetectionService
-	uaParser    *services.UserAgentService
-	refParser   *services.ReferrerParsingService
-	baseURL     string
-	uploadRoot  string
+	sites             *services.MicrositeService
+	analytics         *services.MicrositeAnalyticsService
+	assets            *services.MicrositeAssetService
+	billing           *services.BillingService
+	shortener         *services.ShortenerService
+	botDetector       *services.BotDetectionService
+	uaParser          *services.UserAgentService
+	refParser         *services.ReferrerParsingService
+	baseURL           string
+	uploadRoot        string
 	forms             *services.MicrositeFormService // nil: form blocks render but submissions are refused
 	microPages        *services.MicroPageService
 	microPageHandlers *MicroPageHandlers
@@ -42,9 +42,9 @@ type MicrositeHandlers struct {
 func (h *MicrositeHandlers) SetForms(forms *services.MicrositeFormService) { h.forms = forms }
 
 // SetMicroPageHandlers wires the micro-page service and handlers for /m/:slug fallback.
-func (h *MicrositeHandlers) SetMicroPageHandlers(microPages *services.MicroPageService, handlers *MicroPageHandlers) {
+func (h *MicrositeHandlers) SetMicroPageHandlers(microPages *services.MicroPageService, mph *MicroPageHandlers) {
 	h.microPages = microPages
-	h.microPageHandlers = handlers
+	h.microPageHandlers = mph
 }
 
 // NewMicrositeHandlers wires the microsite handlers. Any of billing,
