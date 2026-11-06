@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import Layout from '@/components/layout/Layout';
 import {
@@ -17,11 +16,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Layers,
-  Code2,
-  FileText,
   Smartphone,
-  Check,
-  X,
 } from 'lucide-react';
 import { useCMSPage, getContentBlock } from '@/hooks/useCMSPage';
 
@@ -38,8 +33,6 @@ export default function FeaturesPage() {
     tagline:
       'Everything you need to create branded short links, dynamic QR codes, digital vCards, and real-time analytics. Powered by global edge routing.',
   });
-
-  const [activeAnchor, setActiveAnchor] = useState<string>('shortener');
 
   return (
     <Layout>
@@ -80,7 +73,6 @@ export default function FeaturesPage() {
                   <a
                     key={pill.id}
                     href={`#${pill.id}`}
-                    onClick={() => setActiveAnchor(pill.id)}
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium border border-border bg-card/60 hover:bg-muted text-foreground transition-all"
                   >
                     <Icon className="h-3.5 w-3.5 text-primary" />

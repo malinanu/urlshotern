@@ -10,19 +10,16 @@ import {
   Sparkles,
   ShieldCheck,
   Zap,
-  Globe2,
   ChevronDown,
-  ArrowRight,
-  HelpCircle,
   Lock,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProducts, type PolarProduct, formatPrice } from '@/lib/polar';
+import { getProducts, type PolarProduct, type PolarPrice, formatPrice } from '@/lib/polar';
 import { PLAN_NAMES } from '@/lib/plan-utils';
 import { cn } from '@/lib/utils';
 
 export default function PricingPage() {
-  const { isAuthenticated, getAccessToken } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
@@ -78,18 +75,18 @@ export default function PricingPage() {
     }
 
     let product = polarProducts.find(
-      (p: any) => p.plan_type === planType && p.is_recurring && (!p.name.includes('Yearly') && !p.name.includes('yearly'))
+      (p: PolarProduct) => p.plan_type === planType && p.is_recurring && (!p.name.includes('Yearly') && !p.name.includes('yearly'))
     );
 
     if (billingInterval === 'year') {
       const yearlyMatch = polarProducts.find(
-        (p: any) => p.plan_type === planType && (p.name.includes('Yearly') || p.name.includes('yearly')) && p.is_recurring
+        (p: PolarProduct) => p.plan_type === planType && (p.name.includes('Yearly') || p.name.includes('yearly')) && p.is_recurring
       );
       if (yearlyMatch) product = yearlyMatch;
     }
 
     if (!product && polarProducts.length > 0) {
-      product = polarProducts.find((p: any) => p.plan_type === planType && p.is_recurring);
+      product = polarProducts.find((p: PolarProduct) => p.plan_type === planType && p.is_recurring);
     }
 
     if (!product || productsLoading || !product.prices || product.prices.length === 0) {
@@ -107,7 +104,7 @@ export default function PricingPage() {
     }
 
     const activePrice = product.prices.find(
-      (p: any) => !p.is_archived && p.recurring_interval === billingInterval
+      (p: PolarPrice) => !p.is_archived && p.recurring_interval === billingInterval
     );
 
     if (activePrice) {
@@ -117,7 +114,7 @@ export default function PricingPage() {
       };
     }
 
-    const fallbackPrice = product.prices.find((p: any) => !p.is_archived);
+    const fallbackPrice = product.prices.find((p: PolarPrice) => !p.is_archived);
     if (fallbackPrice) {
       return {
         price: formatPrice(fallbackPrice.price_amount, fallbackPrice.price_currency),

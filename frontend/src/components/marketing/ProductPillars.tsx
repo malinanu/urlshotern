@@ -8,7 +8,6 @@ import {
   Contact,
   BarChart3,
   ArrowRight,
-  ShieldCheck,
   CheckCircle2,
   Globe2,
   Smartphone,
