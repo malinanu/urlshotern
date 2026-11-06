@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ShieldCheck, Zap, QrCode, Globe2 } from 'lucide-react';
 import URLShortener from '@/components/URLShortener';
 import { Reveal } from '@/components/motion/Reveal';
 import HeroAnalyticsPreview from './HeroAnalyticsPreview';
@@ -12,8 +12,7 @@ import HeroAnalyticsPreview from './HeroAnalyticsPreview';
 export default function Hero() {
   return (
     <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20 lg:pt-24 lg:pb-28">
-      {/* Decorative background layers. pointer-events-none so they never trap
-          clicks; motion is gated by prefers-reduced-motion in CSS. */}
+      {/* Decorative background layers */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-60" aria-hidden />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora animate-aurora" aria-hidden />
 
@@ -22,28 +21,48 @@ export default function Hero() {
           <Reveal>
             <Link
               href="/features"
-              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs sm:text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
             >
               <Sparkles className="h-4 w-4" />
-              New. AI insights on every link
+              The Modern Connections & Link Platform
             </Link>
           </Reveal>
 
           <Reveal delay={0.05}>
-            <h1 className="mt-5 text-balance text-[2rem] font-bold tracking-tighter text-foreground sm:mt-6 sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.05]">
-              Short links that{' '}
-              <span className="bg-gradient-to-r from-primary to-sky-400 bg-clip-text text-transparent">
-                tell you everything
+            <h1 className="mt-5 text-balance text-[2.25rem] font-extrabold tracking-tight text-foreground sm:mt-6 sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.05]">
+              Every connection starts with a{' '}
+              <span className="bg-gradient-to-r from-primary via-sky-400 to-indigo-400 bg-clip-text text-transparent">
+                smarter link
               </span>
             </h1>
           </Reveal>
 
           <Reveal delay={0.1}>
-            <p className="mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:mt-5 sm:text-xl">
-              Turn long URLs into fast, trackable links with real time click
-              analytics, custom domains, and QR codes. Free to start, no credit
-              card.
+            <p className="mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:mt-5 sm:text-lg leading-relaxed">
+              Shorten links, generate dynamic QR codes, and create high-converting digital vCards. Powered by sub-15ms global edge routing and real-time telemetry.
             </p>
+          </Reveal>
+
+          {/* Value Badge Chips */}
+          <Reveal delay={0.12}>
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border">
+                <Globe2 className="h-3.5 w-3.5 text-primary" />
+                Custom Domains
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border">
+                <QrCode className="h-3.5 w-3.5 text-primary" />
+                Dynamic QR
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border">
+                <Zap className="h-3.5 w-3.5 text-primary" />
+                Sub-15ms Edge
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                VirusTotal Verified
+              </span>
+            </div>
           </Reveal>
 
           <Reveal delay={0.15}>

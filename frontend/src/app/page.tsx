@@ -2,6 +2,7 @@ import Layout from '@/components/layout/Layout';
 import MotionProvider from '@/components/motion/MotionProvider';
 import Hero from '@/components/marketing/Hero';
 import TrustStrip from '@/components/marketing/TrustStrip';
+import ProductPillars from '@/components/marketing/ProductPillars';
 import FeaturesBento from '@/components/marketing/FeaturesBento';
 import HowItWorks from '@/components/marketing/HowItWorks';
 import FromTheBlog from '@/components/marketing/FromTheBlog';
@@ -13,6 +14,7 @@ export default function HomePage() {
       <MotionProvider>
         <Hero />
         <TrustStrip />
+        <ProductPillars />
         <FeaturesBento />
         <HowItWorks />
         <FromTheBlog />
