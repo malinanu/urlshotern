@@ -33,11 +33,19 @@ type MicrositeHandlers struct {
 	refParser   *services.ReferrerParsingService
 	baseURL     string
 	uploadRoot  string
-	forms       *services.MicrositeFormService // nil: form blocks render but submissions are refused
+	forms             *services.MicrositeFormService // nil: form blocks render but submissions are refused
+	microPages        *services.MicroPageService
+	microPageHandlers *MicroPageHandlers
 }
 
 // SetForms wires the form submission service.
 func (h *MicrositeHandlers) SetForms(forms *services.MicrositeFormService) { h.forms = forms }
+
+// SetMicroPageHandlers wires the micro-page service and handlers for /m/:slug fallback.
+func (h *MicrositeHandlers) SetMicroPageHandlers(microPages *services.MicroPageService, handlers *MicroPageHandlers) {
+	h.microPages = microPages
+	h.microPageHandlers = handlers
+}
 
 // NewMicrositeHandlers wires the microsite handlers. Any of billing,
 // shortener, botDetector may be nil (features degrade gracefully).

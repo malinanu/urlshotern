@@ -61,7 +61,7 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push(`/login?redirect=/micropages/${pageId}/builder`);
+      router.push(`/login?redirect=${encodeURIComponent(`/micropages/builder?id=${pageId}`)}`);
     }
   }, [authLoading, isAuthenticated, pageId, router]);
 

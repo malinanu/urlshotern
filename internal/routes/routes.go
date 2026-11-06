@@ -748,6 +748,7 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 func setupMicrositePublicRoutes(router *gin.Engine, h *handlers.MicrositeHandlers) {
 	router.GET("/m/:slug", h.ServeMicrositePage)
 	router.GET("/m/:slug/vcard", h.ServeMicrositeVCard)
+	router.GET("/m/:slug/contact.vcf", h.ServeMicrositeVCard)
 	router.GET("/m/:slug/ics", h.ServeMicrositeICS)
 	router.POST("/m/:slug/submit",
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
@@ -832,6 +833,7 @@ func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler, extraRoute
 		"/blog",
 		"/campaigns",
 		"/micropages",
+		"/micropages/builder",
 		"/m",
 	}
 	frontendRoutes = append(frontendRoutes, extraRoutes...)
@@ -884,6 +886,14 @@ func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler, extraRoute
 			}
 
 			fullPath := routePath + subPath
+
+			if routePath == "/m" {
+				placeholderPath := filepath.Join("./static", "m", "_placeholder.html")
+				if _, err := os.Stat(placeholderPath); err == nil {
+					c.File(placeholderPath)
+					return
+				}
+			}
 
 			// Try to serve the specific HTML file for this sub-route
 			htmlPath := filepath.Join("./static", fullPath+".html")

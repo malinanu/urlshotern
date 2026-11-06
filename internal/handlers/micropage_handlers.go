@@ -18,6 +18,10 @@ func NewMicroPageHandlers(service *services.MicroPageService) *MicroPageHandlers
 	return &MicroPageHandlers{service: service}
 }
 
+func (h *MicroPageHandlers) GetService() *services.MicroPageService {
+	return h.service
+}
+
 func (h *MicroPageHandlers) parseUserID(c *gin.Context) (int64, bool) {
 	val, exists := c.Get("user_id")
 	if !exists {

@@ -149,9 +149,9 @@ export default function MicroPagesDashboard() {
 
       const created = await res.json();
       setIsCreateOpen(false);
-      router.push(`/micropages/${created.id}/builder`);
-    } catch (err: any) {
-      setCreateError(err.message || 'Error creating micro-page');
+      router.push(`/micropages/builder?id=${created.id}`);
+    } catch (err: unknown) {
+      setCreateError((err as Error).message || 'Error creating micro-page');
     } finally {
       setCreating(false);
     }
@@ -349,7 +349,7 @@ export default function MicroPagesDashboard() {
                   {/* Actions Footer */}
                   <div className="p-3 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between gap-1">
                     <Link
-                      href={`/micropages/${p.id}/builder`}
+                      href={`/micropages/builder?id=${p.id}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors"
                     >
                       <PencilSquareIcon className="w-3.5 h-3.5" />

@@ -144,6 +144,9 @@ func main() {
 			)
 			forms := services.NewMicrositeFormService(db, redis, emailService, config.JWTSecret, config.BaseURL)
 			handler.MicrositeHandlers.SetForms(forms)
+			if handler.MicroPageHandlers != nil {
+				handler.MicrositeHandlers.SetMicroPageHandlers(handler.MicroPageHandlers.GetService(), handler.MicroPageHandlers)
+			}
 			if err := forms.Ready(); err != nil {
 				log.Printf("Warning: page forms not ready (apply migration 047): %v", err)
 			}

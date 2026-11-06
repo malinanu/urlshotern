@@ -26,8 +26,26 @@ var micrositeUploadPathPattern = regexp.MustCompile(`^/m/[0-9]{1,20}/[a-f0-9]{64
 
 // ServeMicrositePage handles GET /m/:slug — the public page.
 func (h *MicrositeHandlers) ServeMicrositePage(c *gin.Context) {
-	page, err := h.sites.GetPublishedBySlug(c.Param("slug"))
+	slug := c.Param("slug")
+	page, err := h.sites.GetPublishedBySlug(slug)
 	if err != nil {
+		if errors.Is(err, services.ErrMicrositeNotFound) {
+			if h.microPages != nil {
+				mp, mpErr := h.microPages.GetMicroPageBySlug(slug, true)
+				if mpErr == nil && mp != nil {
+					if !mp.IsPublished {
+						h.publicError(c, services.ErrMicrositeNotFound)
+						return
+					}
+					if h.serveMicroPageHTML(c, mp) {
+						return
+					}
+				}
+			}
+			if h.serveMicroPageHTML(c, nil) {
+				return
+			}
+		}
 		h.publicError(c, err)
 		return
 	}
@@ -88,6 +106,10 @@ func micrositePageCSP(baseURL string) string {
 func (h *MicrositeHandlers) ServeMicrositeVCard(c *gin.Context) {
 	page, err := h.sites.GetPublishedBySlug(c.Param("slug"))
 	if err != nil {
+		if errors.Is(err, services.ErrMicrositeNotFound) && h.microPageHandlers != nil {
+			h.microPageHandlers.DownloadVCard(c)
+			return
+		}
 		h.publicError(c, err)
 		return
 	}
@@ -396,4 +418,40 @@ func firstNonEmptyStr(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+
+// serveMicroPageHTML serves the static SPA for micro-pages (/m/:slug)
+func (h *MicrositeHandlers) serveMicroPageHTML(c *gin.Context, mp *models.MicroPageResponse) bool {
+	placeholderPath := filepath.Join("./static", "m", "_placeholder.html")
+	if _, err := os.Stat(placeholderPath); err == nil {
+		if mp == nil {
+			c.Header("Cache-Control", "public, max-age=60")
+			c.File(placeholderPath)
+			return true
+		}
+
+		data, err := os.ReadFile(placeholderPath)
+		if err == nil {
+			content := string(data)
+			if mp.Title != "" {
+				escapedTitle := html.EscapeString(mp.Title + " | Digital vCard")
+				content = strings.Replace(content, "<title>Micro-Page Not Found | Trunc</title>", "<title>"+escapedTitle+"</title>", 1)
+				content = strings.Replace(content, "<title>Micro-Landing Pages | Trunc</title>", "<title>"+escapedTitle+"</title>", 1)
+			}
+			c.Header("Cache-Control", "public, max-age=60")
+			c.Header("X-Content-Type-Options", "nosniff")
+			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(content))
+			return true
+		}
+	}
+
+	indexPath := filepath.Join("./static", "index.html")
+	if _, err := os.Stat(indexPath); err == nil {
+		c.Header("Cache-Control", "public, max-age=60")
+		c.File(indexPath)
+		return true
+	}
+
+	return false
 }

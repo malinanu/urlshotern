@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { MicroPage } from '@/types/micropage';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { MicroPageRenderer } from '@/components/micropages/MicroPageRenderer';
@@ -18,7 +19,19 @@ interface PublicMicroPageClientProps {
   initialData?: MicroPage | null;
 }
 
-export default function PublicMicroPageClient({ slug, initialData }: PublicMicroPageClientProps) {
+export default function PublicMicroPageClient({ slug: propSlug, initialData }: PublicMicroPageClientProps) {
+  const params = useParams();
+  const slugFromParam = (params?.slug as string) || '';
+  const slugFromPath = typeof window !== 'undefined'
+    ? (window.location.pathname.replace(/^\/m\//, '').split('/')[0] || '')
+    : '';
+
+  const activeSlug = (slugFromParam && slugFromParam !== '_placeholder')
+    ? slugFromParam
+    : (slugFromPath && slugFromPath !== '_placeholder')
+      ? slugFromPath
+      : propSlug;
+
   const [page, setPage] = useState<MicroPage | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
   const [notFound, setNotFound] = useState(false);
@@ -26,11 +39,14 @@ export default function PublicMicroPageClient({ slug, initialData }: PublicMicro
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!initialData) {
+    if (!initialData || (activeSlug && activeSlug !== '_placeholder' && initialData.slug !== activeSlug)) {
+      if (!activeSlug || activeSlug === '_placeholder') {
+        return;
+      }
       const fetchPage = async () => {
         try {
           setLoading(true);
-          const res = await fetch(API_ENDPOINTS.micropages.public(slug));
+          const res = await fetch(API_ENDPOINTS.micropages.public(activeSlug));
           if (!res.ok) {
             setNotFound(true);
             return;
@@ -46,12 +62,12 @@ export default function PublicMicroPageClient({ slug, initialData }: PublicMicro
 
       fetchPage();
     }
-  }, [slug, initialData]);
+  }, [activeSlug, initialData]);
 
   const handleLinkClick = (linkId: string, url: string) => {
     // Fire-and-forget click metric tracking
     try {
-      const clickEndpoint = API_ENDPOINTS.micropages.click(slug, linkId);
+      const clickEndpoint = API_ENDPOINTS.micropages.click(activeSlug, linkId);
       if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
         navigator.sendBeacon(clickEndpoint);
       } else {
@@ -64,10 +80,10 @@ export default function PublicMicroPageClient({ slug, initialData }: PublicMicro
 
   const handleSaveContact = () => {
     // Trigger vCard download endpoint
-    const vcardUrl = API_ENDPOINTS.micropages.vcard(slug);
+    const vcardUrl = API_ENDPOINTS.micropages.vcard(activeSlug);
     const link = document.createElement('a');
     link.href = vcardUrl;
-    link.setAttribute('download', `${slug}.vcf`);
+    link.setAttribute('download', `${activeSlug}.vcf`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
