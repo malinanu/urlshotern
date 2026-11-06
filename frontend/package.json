@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env SKIP_LINT=true TURBOPACK=0 next build",
+    "build": "cross-env SKIP_LINT=true next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "analyze": "cross-env ANALYZE=true npm run build",
