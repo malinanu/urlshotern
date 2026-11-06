@@ -84,10 +84,10 @@ export function QRCode({
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-gray-100 rounded-lg p-4 ${className}`}>
+      <div className={`flex items-center justify-center bg-surface-container dark:bg-zinc-900 rounded-xl p-4 border border-outline-variant/30 ${className}`}>
         <div className="text-center">
-          <QrCodeIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">{error}</p>
+          <QrCodeIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground font-mono">{error}</p>
         </div>
       </div>
     );
@@ -97,14 +97,14 @@ export function QRCode({
     <div className={`relative group ${className}`}>
       <canvas 
         ref={canvasRef}
-        className="rounded-lg shadow-sm border border-gray-200"
+        className="rounded-xl shadow-sm border border-outline-variant/30"
         style={{ maxWidth: '100%', height: 'auto' }}
       />
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-all duration-200 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100">
         <button
           onClick={downloadQR}
           aria-label="Download QR code"
-          className="bg-white text-gray-700 px-3 py-2 rounded-lg shadow-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium"
+          className="bg-surface-container-lowest dark:bg-zinc-800 text-foreground px-3 py-2 rounded-xl shadow-lg border border-outline-variant/30 hover:bg-surface-container transition-all flex items-center gap-2 text-xs font-semibold"
         >
           <ArrowDownTrayIcon className="h-4 w-4" />
           Download
@@ -162,46 +162,48 @@ export function QRCodeModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+      <div className="bg-surface-container-lowest dark:bg-zinc-950 border border-outline-variant/30 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden text-on-surface">
+        <div className="flex items-center justify-between p-5 border-b border-outline-variant/20">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-base font-bold text-foreground font-hanken">{title}</h3>
             {description && (
-              <p className="text-sm text-gray-500 mt-1">{description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate max-w-xs">{description}</p>
             )}
           </div>
           <button
             onClick={onClose}
             aria-label="Close QR code modal"
-            className="text-gray-400 hover:text-gray-500 transition-colors"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 transition-colors"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
         <div className="p-6">
           <div className="flex justify-center mb-6">
-            <QRCode {...qrProps} className="max-w-full" />
+            <div className="p-4 bg-white rounded-2xl border border-outline-variant/20 shadow-inner flex items-center justify-center">
+              <QRCode {...qrProps} className="max-w-full" />
+            </div>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-4">
-              Scan this QR code with your phone to quickly access the URL
+            <p className="text-xs text-muted-foreground mb-5">
+              Scan this interactive dynamic QR code to instantly route to destination
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <button
                 onClick={downloadQR}
-                className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-primary hover:bg-primary-600 active:scale-[0.98] text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2"
               >
-                <ArrowDownTrayIcon className="h-4 w-4" />
-                Download QR Code
+                <ArrowDownTrayIcon className="h-4 w-4 stroke-[2.5]" />
+                Download PNG
               </button>
               
               <button
                 onClick={onClose}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                className="flex-1 bg-surface-container dark:bg-zinc-900 hover:bg-surface-container-high text-foreground border border-outline-variant/30 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all"
               >
                 Close
               </button>

@@ -1,8 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --surface: 220 33% 98%;
+  --surface-lowest: 0 0% 100%;
+  --surface-low: 220 30% 96%;
+  --surface-container: 220 28% 94%;
+  --surface-high: 220 24% 91%;
+  --surface-highest: 220 20% 88%;
+  --on-surface: 220 25% 12%;
+  --outline-variant: 220 16% 85%;
   --background: 0 0% 100%;
   --foreground: 210 25% 7.8431%;
   --card: 180 6.6667% 97.0588%;
@@ -60,6 +70,14 @@
 }
 
 .dark {
+  --surface: 222 30% 9%;
+  --surface-lowest: 222 35% 6%;
+  --surface-low: 222 25% 12%;
+  --surface-container: 222 22% 15%;
+  --surface-high: 222 18% 18%;
+  --surface-highest: 222 16% 22%;
+  --on-surface: 220 20% 92%;
+  --outline-variant: 222 14% 28%;
   --background: 0 0% 0%;
   --foreground: 200 6.6667% 91.1765%;
   --card: 228 9.8039% 10%;
