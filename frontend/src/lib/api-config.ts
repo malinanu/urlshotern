@@ -222,6 +222,18 @@ export const API_ENDPOINTS = {
     update: `${API_BASE_URL}/api/v1/branding`,
   },
 
+  // Micro-Landing Page & Digital vCard endpoints
+  micropages: {
+    create: `${API_BASE_URL}/api/v1/micropages`,
+    list:   `${API_BASE_URL}/api/v1/micropages`,
+    get:    (id: number | string) => `${API_BASE_URL}/api/v1/micropages/${id}`,
+    update: (id: number | string) => `${API_BASE_URL}/api/v1/micropages/${id}`,
+    delete: (id: number | string) => `${API_BASE_URL}/api/v1/micropages/${id}`,
+    public: (slug: string) => `${API_BASE_URL}/api/v1/micropages/public/${slug}`,
+    vcard:  (slug: string) => `${API_BASE_URL}/api/v1/micropages/public/${slug}/vcard`,
+    click:  (slug: string, linkId: string) => `${API_BASE_URL}/api/v1/micropages/public/${slug}/click/${linkId}`,
+  },
+
   // Health check endpoints
   health: {
     check: `${API_BASE_URL}/health`,

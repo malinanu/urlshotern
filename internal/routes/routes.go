@@ -119,7 +119,7 @@ func SetupRoutes(
 	}
 
 	// Static file serving for frontend (must be last to not interfere with API routes)
-	setupStaticRoutes(router)
+	setupStaticRoutes(router, handler)
 }
 
 // setupPublicRoutes configures public routes
@@ -178,6 +178,13 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 
 	// OG metadata fetch (public — used by create form to auto-fill fields)
 	router.GET("/api/v1/fetch-metadata", handler.FetchURLMetadata)
+
+	// Public MicroPage and Digital vCard routes
+	if handler.MicroPageHandlers != nil {
+		router.GET("/api/v1/micropages/public/:slug", handler.MicroPageHandlers.GetPublicMicroPage)
+		router.GET("/api/v1/micropages/public/:slug/vcard", handler.MicroPageHandlers.DownloadVCard)
+		router.POST("/api/v1/micropages/public/:slug/click/:linkId", handler.MicroPageHandlers.TrackMicroLinkClick)
+	}
 }
 
 // setupAuthRoutes configures authentication routes
@@ -256,6 +263,15 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	api.GET("/my-urls", handler.GetUserURLs)
 	api.DELETE("/my-urls/:shortCode", handler.DeleteURL)
 	api.PUT("/my-urls/:shortCode", handler.UpdateURL)
+
+	// MicroPage management
+	if handler.MicroPageHandlers != nil {
+		api.POST("/micropages", handler.MicroPageHandlers.CreateMicroPage)
+		api.GET("/micropages", handler.MicroPageHandlers.ListUserMicroPages)
+		api.GET("/micropages/:id", handler.MicroPageHandlers.GetMicroPage)
+		api.PUT("/micropages/:id", handler.MicroPageHandlers.UpdateMicroPage)
+		api.DELETE("/micropages/:id", handler.MicroPageHandlers.DeleteMicroPage)
+	}
 	
 	// Enhanced analytics for authenticated users
 	billing := handler.GetBillingService()
@@ -703,7 +719,7 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 }
 
 // setupStaticRoutes configures static file serving for the frontend
-func setupStaticRoutes(router *gin.Engine) {
+func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler) {
 	// Serve static files from the /static directory
 	router.Static("/static", "./static")
 
@@ -743,6 +759,8 @@ func setupStaticRoutes(router *gin.Engine) {
 		"/not-found",
 		"/blog",
 		"/campaigns",
+		"/micropages",
+		"/m",
 	}
 
 	for _, route := range frontendRoutes {
@@ -773,6 +791,19 @@ func setupStaticRoutes(router *gin.Engine) {
 		subRouteHandler := func(c *gin.Context) {
 			c.Header("Cache-Control", "public, max-age=3600")
 			subPath := c.Param("path")
+
+			// Intercept direct vCard downloads (/m/:slug/vcard or /m/:slug/contact.vcf)
+			// without requiring conflicting wildcard + param route patterns in Gin
+			if routePath == "/m" && handler != nil && handler.MicroPageHandlers != nil {
+				trimmed := strings.Trim(subPath, "/")
+				parts := strings.Split(trimmed, "/")
+				if len(parts) == 2 && (parts[1] == "vcard" || parts[1] == "contact.vcf") {
+					c.Params = append(c.Params, gin.Param{Key: "slug", Value: parts[0]})
+					handler.MicroPageHandlers.DownloadVCard(c)
+					return
+				}
+			}
+
 			fullPath := routePath + subPath
 
 			// Try to serve the specific HTML file for this sub-route

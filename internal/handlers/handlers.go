@@ -49,6 +49,7 @@ type Handler struct {
 	TeamHandlers           *TeamHandlers
 	GlobalSettingsHandlers *GlobalSettingsHandlers
 	CampaignHandlers       *CampaignHandlers
+	MicroPageHandlers      *MicroPageHandlers
 }
 
 // NewHandler creates a new handler instance
@@ -59,6 +60,10 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 	// Create CMS service and handler
 	cmsService := services.NewCMSService(db)
 	cmsHandlers := NewCMSHandlers(cmsService, apiKeyService)
+
+	// Create MicroPage service and handler
+	microPageService := services.NewMicroPageService(db)
+	microPageHandlers := NewMicroPageHandlers(microPageService)
 
 	// Create billing service and handlers
 	billingHandler := NewBillingHandler(gormDB, config)
@@ -92,6 +97,7 @@ func NewHandler(shortenerService *services.ShortenerService, analyticsService *s
 		DomainHandlers:         NewDomainHandlers(domainService),
 		BrandingHandlers:       NewBrandingHandler(brandingService),
 		TeamHandlers:           teamHandlers,
+		MicroPageHandlers:      microPageHandlers,
 		GlobalSettingsHandlers: func() *GlobalSettingsHandlers {
 			if globalSettingsService != nil {
 				return NewGlobalSettingsHandlers(globalSettingsService)

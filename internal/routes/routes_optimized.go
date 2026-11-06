@@ -52,7 +52,7 @@ func SetupOptimizedRoutes(
 	setupProtectedRoutes(router, handler, authMiddleware)
 
 	// Static file serving for frontend (must be last)
-	setupStaticRoutes(router)
+	setupStaticRoutes(router, handler)
 }
 
 // Performance notes:

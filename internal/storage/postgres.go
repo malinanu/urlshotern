@@ -349,6 +349,42 @@ func (p *PostgresStorage) initCMSTables() error {
 			visited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_page_visits_page_id ON page_visits(page_id)`,
+
+		// Micro-landing pages and digital vCards
+		`CREATE TABLE IF NOT EXISTS micropages (
+			id BIGSERIAL PRIMARY KEY,
+			user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			slug VARCHAR(100) UNIQUE NOT NULL,
+			title VARCHAR(255) NOT NULL,
+			bio TEXT DEFAULT '',
+			avatar_url TEXT DEFAULT '',
+			cover_url TEXT DEFAULT '',
+			theme VARCHAR(50) DEFAULT 'executive-obsidian',
+			custom_css TEXT DEFAULT '',
+			config JSONB DEFAULT '{}',
+			vcard_data JSONB DEFAULT '{}',
+			social_links JSONB DEFAULT '[]',
+			links JSONB DEFAULT '[]',
+			is_published BOOLEAN DEFAULT TRUE,
+			view_count BIGINT DEFAULT 0,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_micropages_user_id ON micropages(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_micropages_slug ON micropages(slug)`,
+
+		// Micro-page click tracking
+		`CREATE TABLE IF NOT EXISTS micropage_clicks (
+			id BIGSERIAL PRIMARY KEY,
+			micropage_id BIGINT NOT NULL REFERENCES micropages(id) ON DELETE CASCADE,
+			link_id VARCHAR(100) NOT NULL,
+			clicked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			ip_address INET,
+			user_agent TEXT,
+			referrer TEXT,
+			country_code CHAR(2)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_micropage_clicks_page_id ON micropage_clicks(micropage_id)`,
 	}
 
 	for _, query := range queries {
