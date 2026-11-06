@@ -1,0 +1,49 @@
+/* Departure board: links are departures; the newest one is boarding now */
+body.s-board{background:var(--card);color:var(--text)}
+.s-board .bg-image,.s-board .bg-overlay{display:none}
+.s-board ::selection{background:var(--accent);color:var(--accent-text)}
+.s-board .page{max-width:560px;padding:0 0 32px}
+.s-board .grp{display:flex;flex-direction:column}
+
+/* station name plate */
+.s-board .bd-plate{padding:22px 18px 18px;border-bottom:2px solid var(--text)}
+.s-board .profile{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"av name" "av role" "bio bio";column-gap:14px;row-gap:2px;align-items:center;text-align:left}
+.s-board .avatar{grid-area:av;width:52px;height:52px;border-radius:4px;border:0}
+.s-board .avatar-fallback{background:var(--accent);color:var(--accent-text);font-size:22px}
+.s-board .profile h1{grid-area:name;margin:0;font-size:clamp(20px,6vw,26px);font-weight:700;text-transform:uppercase;letter-spacing:.02em;line-height:1.1;align-self:end}
+.s-board .verified{width:18px;height:18px;color:var(--accent)}
+.s-board .pronouns{display:none}
+.s-board .role,.s-board .location{grid-area:role;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);align-self:start}
+.s-board .company-logo{display:none}
+.s-board .bio{grid-area:bio;margin-top:14px;font-size:13px;line-height:1.6;color:var(--muted)}
+
+/* the board */
+.s-board .bd-board{padding:6px 0 0}
+.s-board .links{display:flex;flex-direction:column;gap:0}
+.s-board .links .btn{display:grid;grid-template-columns:1fr auto;grid-template-areas:"dest status" "via via";align-items:baseline;gap:2px 12px;min-height:58px;padding:13px 18px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:var(--text);text-align:left;font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.s-board .links .btn img.thumb{display:none}
+.s-board .l-dest{grid-area:dest;overflow-wrap:anywhere}
+.s-board .l-via{grid-area:via;font-size:11px;font-weight:400;letter-spacing:.08em;color:var(--muted);text-transform:lowercase}
+.s-board .l-status{grid-area:status;font-size:11px;letter-spacing:.08em;padding:3px 7px;border-radius:2px;background:var(--accent-text);color:var(--accent)}
+.s-board .links .btn:hover .l-dest{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:2px}
+.s-board .links .btn-primary{background:var(--accent);color:var(--accent-text);font-size:19px;min-height:84px;padding:18px}
+.s-board .links .btn-primary .l-via{color:var(--accent-text);opacity:.75}
+.s-board .links .btn-primary .l-dest{animation:flap .62s steps(9,end) both}
+@keyframes flap{0%{clip-path:inset(0 100% 0 0);transform:translateY(-3px)}60%{transform:none}100%{clip-path:inset(0 0 0 0)}}
+
+/* contacts and platforms as board rows */
+.s-board .contacts{display:flex;flex-direction:column;gap:0}
+.s-board .contact{flex-direction:row;justify-content:flex-start;gap:12px;min-height:54px;padding:12px 18px;border-bottom:1px solid var(--line);color:var(--text);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.s-board .contact span.ico{width:30px;height:30px;border-radius:3px;background:none;border:1.5px solid var(--line);color:var(--accent)}
+.s-board .contact span.ico .icon{width:16px;height:16px}
+.s-board .socials{justify-content:flex-start;gap:8px;padding:16px 18px}
+.s-board .circle{width:auto;min-width:44px;height:36px;padding:0 10px;border-radius:3px;border:1.5px solid var(--text);background:none;color:var(--text);font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.s-board .circle:hover{background:var(--text);color:var(--card)}
+.s-board .text{padding:14px 18px;font-size:13px;line-height:1.6;color:var(--muted)}
+.s-board .image{padding:12px 18px}
+.s-board .divider{margin:0;border-top-color:var(--text)}
+.s-board .btn-primary:not(.links .btn){margin:14px 18px 0;width:auto;border-radius:3px;text-transform:uppercase;letter-spacing:.04em}
+.s-board .btn:focus-visible,.s-board .contact:focus-visible,.s-board .circle:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+
+.s-board .badge{margin-top:28px}
+.s-board .badge a{background:none;box-shadow:none;border:1px solid var(--line);border-radius:3px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:11px}

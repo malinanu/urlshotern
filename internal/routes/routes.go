@@ -119,7 +119,11 @@ func SetupRoutes(
 	}
 
 	// Static file serving for frontend (must be last to not interfere with API routes)
-	setupStaticRoutes(router, handler)
+	var extraFrontendRoutes []string
+	if handler.MicrositeHandlers != nil {
+		extraFrontendRoutes = append(extraFrontendRoutes, "/microsites")
+	}
+	setupStaticRoutes(router, handler, extraFrontendRoutes...)
 }
 
 // setupPublicRoutes configures public routes
@@ -158,6 +162,11 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 
 	// Public CMS pages
 	router.GET("/api/v1/pages/:slug", handler.CMSHandlers.GetStaticPage)
+
+	// Microsites — public pages, vCard downloads, click beacon (ENABLE_MICROSITES only)
+	if handler.MicrositeHandlers != nil {
+		setupMicrositePublicRoutes(router, handler.MicrositeHandlers)
+	}
 
 	// Contact form
 	router.POST("/api/v1/contact",
@@ -686,6 +695,11 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 		customDomain.GET("/:id/status", handler.DomainHandlers.GetDomainStatus)
 	}
 
+	// Microsite builder API (ENABLE_MICROSITES only)
+	if handler.MicrositeHandlers != nil {
+		setupMicrositeRoutes(api, handler.MicrositeHandlers)
+	}
+
 	// Team collaboration routes (Pro+ feature)
 	teams := api.Group("/teams")
 	teams.Use(handler.BillingHandlers.CheckFeatureAccess("custom_domain")) // Pro+ gate (same tier as custom domains)
@@ -718,8 +732,54 @@ func setupBillingRoutes(api *gin.RouterGroup, handler *handlers.Handler) {
 	api.GET("/api-keys/:id/stats", handler.APIKeyHandlers.GetAPIKeyStats)
 }
 
-// setupStaticRoutes configures static file serving for the frontend
-func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler) {
+// setupMicrositePublicRoutes registers the public /m/<slug> page routes.
+func setupMicrositePublicRoutes(router *gin.Engine, h *handlers.MicrositeHandlers) {
+	router.GET("/m/:slug", h.ServeMicrositePage)
+	router.GET("/m/:slug/vcard", h.ServeMicrositeVCard)
+	router.GET("/m/:slug/ics", h.ServeMicrositeICS)
+	router.POST("/m/:slug/submit",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		h.SubmitMicrositeForm,
+	)
+	router.GET("/m-static/:file", h.ServeMicrositeScript)
+	router.GET("/m-static/fonts/:file", h.ServeMicrositeFont)
+	router.GET("/uploads/m/*path", h.ServeMicrositeUpload)
+	router.POST("/api/v1/m/:slug/event",
+		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
+		h.RecordMicrositeEvent,
+	)
+}
+
+// setupMicrositeRoutes registers the authenticated page builder API.
+func setupMicrositeRoutes(api *gin.RouterGroup, h *handlers.MicrositeHandlers) {
+	sites := api.Group("/microsites")
+	own := h.OwnershipMiddleware() // caller must own :id
+
+	sites.GET("", h.ListMicrosites)
+	sites.POST("", h.CreateMicrosite)
+	sites.GET("/templates", h.ListMicrositeTemplates)
+	sites.GET("/templates/:template/preview", h.PreviewMicrositeTemplate)
+	sites.GET("/slug-available", h.CheckMicrositeSlug)
+	sites.POST("/preview", h.PreviewMicrosite)
+	sites.GET("/assets", h.ListMicrositeAssets)
+	sites.DELETE("/assets/:assetId", h.DeleteMicrositeAsset)
+
+	sites.GET("/:id", own, h.GetMicrosite)
+	sites.PUT("/:id", own, h.UpdateMicrosite)
+	sites.DELETE("/:id", own, h.DeleteMicrosite)
+	sites.POST("/:id/publish", own, h.PublishMicrosite)
+	sites.POST("/:id/unpublish", own, h.UnpublishMicrosite)
+	sites.GET("/:id/analytics", own, h.GetMicrositeAnalytics)
+	sites.POST("/:id/assets", own, h.UploadMicrositeAsset)
+	sites.POST("/:id/short-link", own, h.CreateMicrositeShortLink)
+	sites.GET("/:id/submissions", own, h.ListMicrositeSubmissions)
+	sites.GET("/:id/submissions/export", own, h.ExportMicrositeSubmissions)
+	sites.DELETE("/:id/submissions/:sid", own, h.DeleteMicrositeSubmission)
+}
+
+// setupStaticRoutes configures static file serving for the frontend.
+// extraRoutes are appended to the built-in frontend route list.
+func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler, extraRoutes ...string) {
 	// Serve static files from the /static directory
 	router.Static("/static", "./static")
 
@@ -762,6 +822,7 @@ func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler) {
 		"/micropages",
 		"/m",
 	}
+	frontendRoutes = append(frontendRoutes, extraRoutes...)
 
 	for _, route := range frontendRoutes {
 		routePath := route // Local copy to avoid closure issues

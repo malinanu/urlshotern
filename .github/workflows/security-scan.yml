@@ -1,12 +1,8 @@
 name: Security Scanning
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-  schedule:
-    - cron: '0 2 * * *'
+  # Manual only: nightly and per-push runs used up the account's Actions minutes
+  workflow_dispatch:
 
 env:
   GO_VERSION: '1.24'

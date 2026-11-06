@@ -22,6 +22,7 @@ A high-performance URL shortener service built with Go, featuring Redis caching,
 - 🌐 Custom short code support
 - 📈 RESTful API with JSON responses
 - ⚖️ Rate limiting and abuse protection
+- 📇 Micro-landing pages & digital vCards at `/m/<slug>` (opt-in via `ENABLE_MICROSITES`, see [docs/MICROSITES.md](docs/MICROSITES.md))
 
 ## Quick Start
 
@@ -312,6 +313,7 @@ MIT License - see LICENSE file for details.
 - [SECURITY_UPDATE.md](SECURITY_UPDATE.md) - Latest security updates and fixes
 - [docs/MIGRATIONS.md](docs/MIGRATIONS.md) - Database migration guide
 - [docs/ROLLBACK_PROCEDURES.md](docs/ROLLBACK_PROCEDURES.md) - Rollback procedures
+- [docs/MICROSITES.md](docs/MICROSITES.md) - Micro-landing pages & digital vCards (enabling, routes, safety)
 - [docker/README_PGBOUNCER.md](docker/README_PGBOUNCER.md) - Connection pooling guide
 
 ## Support

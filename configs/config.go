@@ -92,6 +92,11 @@ type Config struct {
 
 	// Admin Panel Control
 	EnableAdminRoutes bool // Enable admin routes at /api/v1/admin/* (default: false for security)
+
+	// Microsites (micro-landing pages + digital vCards at /m/<slug>)
+	EnableMicrosites        bool   // Register /m/*, /api/v1/microsites/* and /api/v1/m/* (default: false)
+	MicrositeUploadPath     string // Local directory for uploaded page images
+	MicrositeMaxUploadBytes int64  // Maximum accepted image upload size in bytes
 }
 
 func LoadConfig() (*Config, error) {
@@ -174,6 +179,11 @@ func LoadConfig() (*Config, error) {
 
 		// Admin Panel Control (default: false for security)
 		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
+
+		// Microsites (default: off until explicitly enabled)
+		EnableMicrosites:        getEnvAsBool("ENABLE_MICROSITES", false),
+		MicrositeUploadPath:     getEnv("MICROSITE_UPLOAD_PATH", "./uploads"),
+		MicrositeMaxUploadBytes: getEnvAsInt64("MICROSITE_MAX_UPLOAD_BYTES", 2*1024*1024),
 	}
 
 	return config, nil

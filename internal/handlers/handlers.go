@@ -50,6 +50,7 @@ type Handler struct {
 	GlobalSettingsHandlers *GlobalSettingsHandlers
 	CampaignHandlers       *CampaignHandlers
 	MicroPageHandlers      *MicroPageHandlers
+	MicrositeHandlers      *MicrositeHandlers // nil unless ENABLE_MICROSITES=true
 }
 
 // NewHandler creates a new handler instance

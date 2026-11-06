@@ -1,0 +1,76 @@
+{{define "block"}}
+{{if eq .Type "profile_header"}}{{with .Profile}}
+<header class="profile">
+  {{if .AvatarURL}}<img class="avatar" src="{{.AvatarURL}}" alt="{{.DisplayName}}" width="104" height="104">{{else if .Initial}}<div class="avatar avatar-fallback" aria-hidden="true">{{.Initial}}</div>{{end}}
+  {{if .DisplayName}}<h1>{{.DisplayName}}{{if .Verified}}<svg class="icon verified" viewBox="0 0 24 24" role="img" aria-label="Verified"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>{{end}}</h1>{{end}}
+  {{if .Pronouns}}<span class="pronouns">{{.Pronouns}}</span>{{end}}
+  {{if .Role}}<p class="role">{{.Role}}</p>{{end}}
+  {{if .CompanyLogoURL}}<img class="company-logo" src="{{.CompanyLogoURL}}" alt="{{.Company}}">{{end}}
+  {{if .Location}}<span class="location"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{.Location}}</span>{{end}}
+  {{if .Bio}}<p class="bio">{{.Bio}}</p>{{end}}
+</header>
+{{end}}{{end}}
+{{if eq .Type "vcard_action"}}{{with .VCard}}
+<a class="btn btn-primary" href="{{.Href}}" rel="nofollow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>{{.ButtonText}}</a>
+{{end}}{{end}}
+{{if eq .Type "contact_buttons"}}
+<nav class="contacts" aria-label="Contact">
+{{range .Contacts}}<a class="contact" href="{{.Href}}" data-track="{{.Kind}}" data-block="{{.BlockID}}" data-item="{{.ID}}"{{if .External}} target="_blank" rel="noopener noreferrer"{{end}}><span class="ico">{{.Icon}}</span>{{.Label}}</a>
+{{end}}</nav>
+{{end}}
+{{if eq .Type "link_list"}}
+<nav class="links" aria-label="Links">
+{{range .Links}}<a class="btn{{if .Highlight}} btn-primary{{end}}" href="{{.Href}}" data-track="click" data-block="{{.BlockID}}" data-item="{{.ID}}"{{if .External}} target="_blank" rel="noopener noreferrer"{{end}}>{{if .Thumb}}<img class="thumb" src="{{.Thumb}}" alt="" width="36" height="36">{{end}}{{if .Via}}<span class="l-dest">{{.Label}}</span>{{if .Status}}<span class="l-status">{{.Status}}</span>{{end}}<span class="l-via">{{.Via}}</span>{{else}}{{.Label}}{{end}}</a>
+{{end}}</nav>
+{{end}}
+{{if eq .Type "social_icons"}}
+<nav class="socials" aria-label="Social profiles">
+{{range .Socials}}<a class="circle" href="{{.Href}}" data-track="click" data-block="{{.BlockID}}" data-item="{{.ID}}" target="_blank" rel="noopener noreferrer me" aria-label="{{.Name}}" title="{{.Name}}">{{if .Icon}}{{.Icon}}{{else}}{{.Monogram}}{{end}}</a>
+{{end}}</nav>
+{{end}}
+{{if eq .Type "text"}}{{with .Text}}<p class="text{{if eq .Align "center"}} center{{end}}">{{.Text}}</p>{{end}}{{end}}
+{{if eq .Type "image"}}{{with .Image}}<figure class="image">{{if .Href}}<a href="{{.Href}}" data-track="click" data-block="{{.BlockID}}" target="_blank" rel="noopener noreferrer"><img src="{{.Src}}" alt="{{.Alt}}" loading="lazy"></a>{{else}}<img src="{{.Src}}" alt="{{.Alt}}" loading="lazy">{{end}}</figure>{{end}}{{end}}
+{{if eq .Type "divider"}}{{if eq .Divider "space"}}<div class="spacer" aria-hidden="true"></div>{{else}}<hr class="divider">{{end}}{{end}}{{template "v2block" .}}
+{{end}}
+{{define "v2block"}}
+{{- if eq .Type "product_card"}}{{with .Product}}{{template "product" .}}{{end}}{{end -}}
+{{- if eq .Type "product_carousel"}}{{with .Carousel}}<section class="carousel" aria-label="{{if .Title}}{{.Title}}{{else}}Products{{end}}">{{if .Title}}<h2 class="sec-title">{{.Title}}</h2>{{end}}<ul class="strip" tabindex="0">{{range .Items}}<li>{{template "product" .}}</li>{{end}}</ul></section>{{end}}{{end -}}
+{{- if eq .Type "event_details"}}{{with .Event}}<section class="event" id="{{.BlockID}}">
+<h2 class="event-title">{{.Title}}</h2>
+<dl class="event-facts">
+{{if .DateText}}<div class="fact fact-date"><dt>Date</dt><dd><time datetime="{{.StartISO}}">{{.DateText}}</time></dd></div>{{end}}
+{{if .TimeText}}<div class="fact fact-time"><dt>Time</dt><dd>{{.TimeText}}{{if .Zone}} <span class="tz">{{.Zone}}</span>{{end}}</dd></div>{{end}}
+{{if .Venue}}<div class="fact fact-venue"><dt>Venue</dt><dd>{{.Venue}}{{if .Address}}<span class="addr">{{.Address}}</span>{{end}}</dd></div>{{else if .Address}}<div class="fact fact-venue"><dt>Where</dt><dd>{{.Address}}</dd></div>{{end}}
+</dl>
+{{if or .TicketHref .CalendarHref}}<div class="event-actions">{{if .TicketHref}}<a class="btn btn-primary" href="{{.TicketHref}}" data-track="click" data-block="{{.BlockID}}" data-item="tickets"{{if .TicketExternal}} target="_blank" rel="noopener noreferrer"{{end}}><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>{{.TicketText}}</a>{{end}}{{if .CalendarHref}}<a class="btn" href="{{.CalendarHref}}" rel="nofollow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>Add to calendar</a>{{end}}</div>{{end}}
+</section>{{end}}{{end -}}
+{{- if eq .Type "countdown"}}{{with .Countdown}}<div class="countdown" data-countdown="{{.TargetISO}}" data-done="{{.DoneText}}" role="timer" aria-live="off">
+{{if .Label}}<p class="cd-label">{{.Label}}</p>{{end}}
+{{if .Done}}<p class="cd-done">{{.DoneText}}</p>{{else}}<p class="cd-value"><time datetime="{{.TargetISO}}"><span class="cd-part"><span class="cd-n" data-u="d">{{.Days}}</span><span class="cd-u">days</span></span><span class="cd-part"><span class="cd-n" data-u="h">{{.Hours}}</span><span class="cd-u">hrs</span></span><span class="cd-part"><span class="cd-n" data-u="m">{{.Minutes}}</span><span class="cd-u">min</span></span><span class="cd-part cd-sec"><span class="cd-n" data-u="s">00</span><span class="cd-u">sec</span></span></time></p>{{end}}
+</div>{{end}}{{end -}}
+{{- if eq .Type "agenda"}}{{with .Agenda}}<section class="agenda" aria-label="{{if .Title}}{{.Title}}{{else}}Agenda{{end}}">{{if .Title}}<h2 class="sec-title">{{.Title}}</h2>{{end}}
+<ol class="timetable">{{range .Items}}<li class="session"><span class="s-time">{{.Time}}</span><span class="s-track trk-{{.TrackIndex}}" aria-hidden="true"></span><div class="s-body">{{if .Detail}}<details><summary><span class="s-title">{{.Title}}</span>{{if .Speaker}}<span class="s-speaker">{{.Speaker}}</span>{{end}}{{if .Track}}<span class="s-trackname">{{.Track}}</span>{{end}}</summary><p class="s-detail">{{.Detail}}</p></details>{{else}}<span class="s-title">{{.Title}}</span>{{if .Speaker}}<span class="s-speaker">{{.Speaker}}</span>{{end}}{{if .Track}}<span class="s-trackname">{{.Track}}</span>{{end}}{{end}}</div></li>{{end}}</ol>
+</section>{{end}}{{end -}}
+{{- if eq .Type "map"}}{{with .Map}}<section class="map" aria-label="{{if .Label}}{{.Label}}{{else}}Location{{end}}">{{if .Label}}<h2 class="sec-title">{{.Label}}</h2>{{end}}
+{{if .Address}}<p class="map-addr"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{.Address}}</p>{{end}}
+{{if .EmbedURL}}<a class="embed-facade map-facade" href="{{.OpenURL}}" target="_blank" rel="noopener noreferrer" data-embed="{{.EmbedURL}}" data-h="300" data-title="Map: {{.Address}}"><span class="facade-label">Show map</span><span class="facade-note">Loads OpenStreetMap</span></a>{{end}}
+<a class="btn" href="{{.DirectionsHref}}" target="_blank" rel="noopener noreferrer" data-track="click" data-block="{{.BlockID}}" data-item="directions">Get directions</a>
+</section>{{end}}{{end -}}
+{{- if or (eq .Type "video") (eq .Type "audio")}}{{with .Embed}}<figure class="media media-{{.Provider}}">
+<a class="embed-facade media-facade" href="{{.WatchURL}}" target="_blank" rel="noopener noreferrer" data-embed="{{.EmbedURL}}"{{if .Height}} data-h="{{.Height}}"{{else}} data-ratio="16/9"{{end}} data-title="{{.Label}}" data-track="video_play" data-block="{{.BlockID}}">{{if .Poster}}<img class="media-poster" src="{{.Poster}}" alt="" loading="lazy">{{end}}<span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="facade-label">{{.Label}}</span><span class="facade-note">Plays from {{.ProviderName}}</span></a>
+</figure>{{end}}{{end -}}
+{{- if eq .Type "form"}}{{with .Form}}<section class="mform" id="{{.BlockID}}">
+{{if .Title}}<h2 class="sec-title">{{.Title}}</h2>{{end}}{{if .Description}}<p class="mform-desc">{{.Description}}</p>{{end}}
+{{if .Sent}}<p class="mform-ok" role="status">{{.SuccessText}}</p>{{else}}{{if .Error}}<p class="mform-err" role="alert">{{.Error}}</p>{{end}}
+<form method="post" action="{{.Action}}" novalidate>
+<input type="hidden" name="b" value="{{.BlockID}}"><input type="hidden" name="t" value="{{.Token}}">
+<div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+{{if .Contact}}<label class="fld"><span>Name</span><input type="text" name="name" autocomplete="name" maxlength="100"></label>{{end}}
+<label class="fld"><span>Email</span><input type="email" name="email" autocomplete="email" maxlength="254" required></label>
+{{if .Contact}}<label class="fld"><span>Message</span><textarea name="message" rows="4" maxlength="2000" required></textarea></label>{{end}}
+{{if .ConsentText}}<p class="mform-consent">{{.ConsentText}}</p>{{end}}
+<button type="submit" class="btn btn-primary"{{if .Disabled}} disabled{{end}}>{{.ButtonText}}</button>
+</form>{{end}}
+</section>{{end}}{{end -}}
+{{end}}
+{{define "product"}}<article class="product" id="{{.DomID}}">{{if .Image}}<div class="product-img"><img src="{{.Image}}" alt="{{.Name}}" loading="lazy"></div>{{end}}<div class="product-body">{{if .Badge}}<span class="burst">{{.Badge}}</span>{{end}}{{if .ItemID}}<h3 class="product-name">{{.Name}}</h3>{{else}}<h2 class="product-name">{{.Name}}</h2>{{end}}{{if .Description}}<p class="product-desc">{{.Description}}</p>{{end}}{{if or .PriceMain .PriceText}}<p class="price">{{if .PriceText}}<span class="p-amt">{{.PriceText}}</span>{{else}}{{if .PriceLead}}<span class="p-cur">{{.PriceLead}}</span>{{end}}<span class="p-amt">{{.PriceMain}}</span>{{if .PriceCents}}<span class="p-cents">{{.PriceSep}}{{.PriceCents}}</span>{{end}}{{if .PriceTail}}<span class="p-cur">{{.PriceTail}}</span>{{end}}{{end}}{{if .ComparePrice}} <s class="p-was">{{.ComparePrice}}</s>{{end}}</p>{{end}}{{if .Href}}<a class="btn btn-primary" href="{{.Href}}" data-track="click" data-block="{{.BlockID}}"{{if .ItemID}} data-item="{{.ItemID}}"{{end}}{{if .External}} target="_blank" rel="noopener noreferrer"{{end}}>{{.ButtonText}}</a>{{end}}</div></article>{{end}}

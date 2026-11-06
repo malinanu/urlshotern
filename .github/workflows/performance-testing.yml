@@ -1,13 +1,7 @@
 name: Performance Testing
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-  schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+  # Manual only: nightly and per-push runs used up the account's Actions minutes
   workflow_dispatch:
     inputs:
       performance_type:

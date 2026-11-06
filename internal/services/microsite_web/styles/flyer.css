@@ -1,0 +1,59 @@
+/* Weekly flyer: the offer and the price lead */
+body.s-flyer{background:var(--card);color:var(--text)}
+.s-flyer .bg-image,.s-flyer .bg-overlay{display:none}
+.s-flyer ::selection{background:var(--accent);color:var(--accent-text)}
+.s-flyer .page{max-width:620px;padding:0 0 32px}
+
+/* masthead band */
+.s-flyer .fl-mast{background:var(--accent);color:var(--accent-text);padding:26px 18px 22px}
+.s-flyer .profile{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name av" "role av" "bio bio";column-gap:14px;align-items:center;text-align:left}
+.s-flyer .avatar{grid-area:av;width:64px;height:64px;border-radius:50%;border:3px solid var(--accent-text)}
+.s-flyer .avatar-fallback{background:var(--accent-text);color:var(--accent);font-size:28px}
+.s-flyer .profile h1{grid-area:name;margin:0;font-size:clamp(40px,13vw,64px);font-weight:800;line-height:.9;text-transform:uppercase;letter-spacing:-.01em;color:var(--accent-text);text-wrap:balance}
+.s-flyer .verified{color:var(--accent-text)}
+.s-flyer .pronouns,.s-flyer .company-logo{display:none}
+.s-flyer .role,.s-flyer .location{grid-area:role;color:var(--accent-text);font-size:17px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.s-flyer .bio{grid-area:bio;margin-top:14px;padding-top:12px;border-top:2px solid var(--accent-text);font-size:22px;font-weight:600;line-height:1.15;text-transform:uppercase}
+
+/* the sheet: a dense grid, first product as the hero */
+.s-flyer .fl-sheet{display:grid;grid-template-columns:1fr 1fr;gap:18px 14px;padding:18px 14px 0}
+.s-flyer .fl-sheet>*{grid-column:1/-1}
+.s-flyer .fl-sheet>.product{grid-column:auto}
+.s-flyer .fl-sheet>.product:first-of-type{grid-column:1/-1}
+.s-flyer .product{gap:8px;border-top:5px solid var(--accent);padding-top:10px}
+.s-flyer .product-img{border-radius:0;aspect-ratio:1/1;background:var(--accent-12)}
+.s-flyer .fl-sheet>.product:first-of-type .product-img{aspect-ratio:4/3}
+.s-flyer .product-name{font-size:20px;font-weight:800;line-height:1;text-transform:uppercase}
+.s-flyer .product-desc{font-size:14px;line-height:1.35;color:var(--muted)}
+.s-flyer .price{gap:1px;margin:0;color:var(--accent-deep)}
+.s-flyer .p-amt{font-size:46px;font-weight:800;line-height:.85;letter-spacing:-.02em}
+.s-flyer .fl-sheet>.product:first-of-type .p-amt{font-size:76px}
+.s-flyer .p-cents{font-size:22px;font-weight:800;line-height:1;margin-top:2px}
+.s-flyer .fl-sheet>.product:first-of-type .p-cents{font-size:32px}
+.s-flyer .p-cur{font-size:18px;font-weight:800;align-self:flex-start;margin-top:2px}
+.s-flyer .p-was{font-size:16px;font-weight:600;color:var(--muted);align-self:flex-end}
+.s-flyer .burst{position:absolute;top:-58px;right:-4px;width:76px;height:76px;display:flex;align-items:center;justify-content:center;padding:14px;border-radius:0;text-align:center;font-size:13px;line-height:1;font-weight:800;letter-spacing:0;color:var(--accent-text);transform:rotate(-8deg);isolation:isolate;background:linear-gradient(var(--accent-deep),var(--accent-deep)) center/70.72% 70.72% no-repeat}
+/* twelve-point burst: three equal squares at 0, 30 and 60deg; geometry, not a traced contour */
+.s-flyer .burst::before,.s-flyer .burst::after{content:"";position:absolute;inset:14.64%;background:var(--accent-deep);z-index:-1;transform:rotate(30deg)}
+.s-flyer .burst::after{transform:rotate(60deg)}
+.s-flyer .burst~.product-name{padding-right:78px} /* long names wrap clear of the badge */
+.s-flyer .fl-sheet>.product:first-of-type .burst{width:100px;height:100px;top:-88px;padding:18px;font-size:16px}
+.s-flyer .product .btn{min-height:46px;border-radius:2px;border:0;font-size:17px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+
+/* this week strip */
+.s-flyer .carousel .sec-title{font-size:30px;font-weight:800;text-transform:uppercase;line-height:1;margin-bottom:12px}
+.s-flyer .carousel .strip{grid-auto-columns:minmax(170px,46%);scrollbar-color:var(--accent) var(--accent-12)}
+.s-flyer .carousel .p-amt{font-size:38px}
+
+/* everything else speaks the flyer's voice */
+.s-flyer .sec-title{font-size:26px;font-weight:800;text-transform:uppercase}
+.s-flyer .btn{border-radius:2px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-size:17px}
+.s-flyer .contacts{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))}
+.s-flyer .contact{font-weight:700;text-transform:uppercase;font-size:13px;color:var(--text)}
+.s-flyer .contact span.ico{border-radius:2px}
+.s-flyer .circle{border-radius:2px;border:2px solid var(--text);background:none;color:var(--text)}
+.s-flyer .text{font-size:17px}
+.s-flyer .fld input,.s-flyer .fld textarea{border-radius:2px;border:2px solid var(--text)}
+.s-flyer .btn:focus-visible,.s-flyer .contact:focus-visible,.s-flyer .circle:focus-visible{outline:3px solid var(--accent-deep);outline-offset:2px}
+.s-flyer .badge{margin-top:24px}
+.s-flyer .badge a{background:none;box-shadow:none;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:.06em}
