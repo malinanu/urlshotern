@@ -254,5 +254,16 @@ jobs:
 
     steps:
     - name: Trigger Portainer stack redeploy
+      continue-on-error: true
       run: |
-        curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+        if [ -z "${{ secrets.PORTAINER_WEBHOOK_URL }}" ]; then
+          echo "⚠️ PORTAINER_WEBHOOK_URL is not set. Skipping automated redeploy."
+          exit 0
+        fi
+        echo "Triggering Portainer webhook..."
+        if curl -fsSL -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"; then
+          echo "✅ Portainer redeploy webhook triggered successfully."
+        else
+          echo "⚠️ Warning: Failed to reach Portainer webhook URL."
+          echo "ℹ️ Please verify PORTAINER_WEBHOOK_URL in repository secrets (ensure hostname has public DNS or use server IP)."
+        fi
