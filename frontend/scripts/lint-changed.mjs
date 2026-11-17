@@ -28,8 +28,9 @@ function resolveBase(arg) {
 }
 
 // Map of file -> Set of added/modified line numbers, from a zero-context diff.
+// -C detects moves and copies, so code moved into a new file isn't counted as new.
 function changedLines(base) {
-  const diff = git('diff', '--relative', '--unified=0', '--diff-filter=ACMR', `${base}...HEAD`, '--', '.');
+  const diff = git('diff', '-C', '--relative', '--unified=0', '--diff-filter=ACMR', `${base}...HEAD`, '--', '.');
   const lines = new Map();
   let file = null;
   for (const line of diff.split('\n')) {
