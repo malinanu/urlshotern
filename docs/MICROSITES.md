@@ -106,6 +106,11 @@ image, divider, **product card**, **product carousel**, **event details**
 (tap-to-load OpenStreetMap when coordinates are set), **video** (YouTube, Vimeo),
 **audio** (Spotify), and **form** (newsletter or contact).
 
+**Digital visiting cards.** Twelve more templates (Zenith, Nova, Atlas, Axiom, Vectra, Pulse,
+Horizon, Verdant, Skyway, Creo, Bravo, Imagine) render a fixed-proportion card with a real QR code
+and PNG/JPG/QR downloads. They use the **QR code** block and three curated palettes, and are shared
+with MicroPages. See [DIGITAL_CARDS.md](DIGITAL_CARDS.md).
+
 ## Routes
 
 Public (no auth):
