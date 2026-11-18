@@ -241,14 +241,12 @@ export function TemplateGallery({
 
 function TileMeta({ C, name, tag, description }: { C: ToneClasses; name: string; tag: string; description: string }) {
   return (
-    <div className="min-h-[5.2rem]">
-      <div className="flex items-center justify-between gap-2">
-        <h5 className={`text-sm font-bold ${C.heading} truncate`}>{name}</h5>
-        <span className={`text-[9px] uppercase tracking-wider font-semibold ${C.chip} rounded-full px-2 py-0.5 flex-shrink-0`}>
-          {tag}
-        </span>
-      </div>
-      <p className={`mt-1 text-[11px] ${C.sub} leading-snug line-clamp-3`}>{description}</p>
+    <div className="min-h-[5.6rem]">
+      <h5 className={`text-sm font-bold ${C.heading}`}>{name}</h5>
+      <span className={`mt-1 inline-block max-w-full truncate align-top text-[9px] uppercase tracking-wider font-semibold ${C.chip} rounded-full px-2 py-0.5`}>
+        {tag}
+      </span>
+      <p className={`mt-1.5 text-[11px] ${C.sub} leading-snug line-clamp-3`}>{description}</p>
     </div>
   );
 }
