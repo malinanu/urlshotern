@@ -1,5 +1,6 @@
 'use client';
 
+import TemplateGallery from '@/components/micropages/TemplateGallery';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -318,7 +319,7 @@ function CreateDialog({
         <fieldset>
           <legend className="text-sm font-medium text-foreground mb-2">Start from</legend>
           <div className="grid gap-2">
-            {templates.map((t) => (
+            {templates.filter((t) => !t.style).map((t) => (
               <label
                 key={t.id}
                 className={`flex gap-3 rounded-lg border p-3 cursor-pointer ${
@@ -333,6 +334,18 @@ function CreateDialog({
               </label>
             ))}
           </div>
+ </fieldset>
+
+        <fieldset>
+          <legend className="text-sm font-medium text-foreground mb-2">Or a digital visiting card</legend>
+          <TemplateGallery
+            value={template}
+            onSelect={(id) => setTemplate(id)}
+            idPrefix="card_"
+            showClassic={false}
+            showPalettes={false}
+            scrollClassName="max-h-[360px]"
+          />
         </fieldset>
 
         <div>

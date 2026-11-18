@@ -42,6 +42,10 @@ func MicrositeStaticScript(path string) ([]byte, bool) {
 		return micrositeCountdownJS, true
 	case MicrositeBeaconPath:
 		return MicrositeBeaconJS, true
+	case MicrositeCardExportJSPath:
+		return micrositeCardExportJS, true
+	case MicrositeHTMLToImageJSPath:
+		return micrositeHTMLToImageJS, true
 	}
 	return nil, false
 }
@@ -436,13 +440,30 @@ func applyV2Layout(view *micrositePageView, theme models.MicrositeTheme, base st
 			view.FontPreloads = append(view.FontPreloads, src)
 		}
 	}
+	card, isCard := CardTemplateByID(theme.Style)
+	if isCard {
+		for i, key := range card.Fonts {
+			f, ok := cardFontFaces[key]
+			if !ok {
+				continue
+			}
+			src := base + MicrositeFontPathPrefix + f.File
+			fmt.Fprintf(&css, `@font-face{font-family:"%s";src:url("%s") format("woff2");font-weight:%s;font-style:normal;font-display:swap}`, f.Family, src, f.Weight)
+			if i < 2 {
+				view.FontPreloads = append(view.FontPreloads, src)
+			}
+		}
+	}
 	if styled || hasAgenda {
 		css.WriteString(styleTokenCSS(theme))
 	}
 	if hasV2 {
 		css.WriteString(micrositeBlocksCSS)
 	}
-	if styled {
+	if isCard {
+		css.WriteString(cardCSS(card))
+		view.BodyClass = "s-card"
+	} else if styled {
 		if b, err := micrositeStyleFS.ReadFile("microsite_web/styles/" + theme.Style + ".css"); err == nil {
 			css.Write(b)
 		}
@@ -456,6 +477,9 @@ func applyV2Layout(view *micrositePageView, theme models.MicrositeTheme, base st
 		}
 		if hasCountdown {
 			view.Scripts = append(view.Scripts, MicrositeCountdownJSPath)
+		}
+		if isCard {
+			view.Scripts = append(view.Scripts, MicrositeCardExportJSPath)
 		}
 	}
 }
