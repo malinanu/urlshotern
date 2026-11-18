@@ -126,3 +126,30 @@ export function paletteSwatch(tpl: CardTemplateDefinition, palette: CardPalette)
 export function cardThemeDefaults(id: CardTemplateId): { bg: string; accent: string; ink: string; onAccent: string } {
   return DEFAULTS[id];
 }
+
+/** What the area behind each template's logo is like, to pick a readable plate for an uploaded logo. */
+const LOGO_ZONE: Record<CardTemplateId, 'light' | 'dark'> = {
+  zenith: 'dark',
+  nova: 'light',
+  atlas: 'light',
+  axiom: 'dark',
+  vectra: 'dark',
+  pulse: 'dark',
+  horizon: 'light',
+  verdant: 'dark',
+  skyway: 'light',
+  creo: 'dark',
+  bravo: 'dark',
+  imagine: 'light',
+};
+
+/**
+ * A dark logo on a dark card (or a white logo on a light one) would vanish, so give it a plate in
+ * the opposite tone. Colourful logos are left as they are.
+ */
+export function suggestLogoPlate(id: CardTemplateId, tone: 'light' | 'dark' | 'mixed'): 'none' | 'light' | 'dark' {
+  const zone = LOGO_ZONE[id];
+  if (tone === 'dark' && zone === 'dark') return 'light';
+  if (tone === 'light' && zone === 'light') return 'dark';
+  return 'none';
+}

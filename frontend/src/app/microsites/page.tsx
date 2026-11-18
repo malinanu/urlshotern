@@ -345,6 +345,7 @@ function CreateDialog({
             showClassic={false}
             showPalettes={false}
             scrollClassName="max-h-[360px]"
+            tone="app"
           />
         </fieldset>
 

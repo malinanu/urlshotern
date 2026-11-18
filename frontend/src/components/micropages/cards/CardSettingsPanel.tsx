@@ -4,7 +4,8 @@ import React, { useRef, useState } from 'react';
 import { ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { MicroPage } from '@/types/micropage';
 import { CardActions } from './CardActions';
-import { getCardTemplate, isHexColor, paletteAccent, paletteSwatch } from './catalog';
+import { getCardTemplate, isHexColor, paletteAccent, paletteSwatch, suggestLogoPlate } from './catalog';
+import { logoTone } from './logoTone';
 import { imageSrc, readCardConfig, toCardData } from './cardData';
 import { uploadCardImage } from './upload';
 import type { CardConfig } from './types';
@@ -45,7 +46,9 @@ export function CardSettingsPanel({ page, onChange, getCard }: CardSettingsPanel
     setUploading(true);
     setUploadError(null);
     try {
-      setCard({ logo_url: await uploadCardImage(file) });
+      const [url, tone] = await Promise.all([uploadCardImage(file), logoTone(file).catch(() => 'mixed' as const)]);
+      // A logo that would disappear into the card gets a plate in the opposite tone.
+      setCard({ logo_url: url, logo_plate: suggestLogoPlate(tpl.id, tone) });
     } catch (e) {
       setUploadError((e as Error).message);
     } finally {

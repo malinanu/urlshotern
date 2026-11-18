@@ -304,7 +304,7 @@
           }
         }
       ],
-      "logo": "light"
+      "logo": "none"
     },
     {
       "id": "horizon",
@@ -442,7 +442,7 @@
           }
         }
       ],
-      "logo": "light"
+      "logo": "none"
     },
     {
       "id": "creo",
@@ -529,7 +529,7 @@
           }
         }
       ],
-      "logo": "light"
+      "logo": "none"
     },
     {
       "id": "imagine",
@@ -568,7 +568,7 @@
           }
         }
       ],
-      "logo": "light"
+      "logo": "none"
     }
   ]
 }
