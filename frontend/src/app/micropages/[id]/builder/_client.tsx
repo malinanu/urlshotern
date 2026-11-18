@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
@@ -11,6 +11,11 @@ import { MicroPage, MicroPageTheme, MicroLinkItem, MicroSocialLink, VCardContact
 import { TEMPLATES } from '@/components/micropages/templates';
 import { MicroPageRenderer } from '@/components/micropages/MicroPageRenderer';
 import { QRCodeModal } from '@/components/QRCode';
+import { TemplateGallery } from '@/components/micropages/TemplateGallery';
+import { CardSettingsPanel } from '@/components/micropages/cards/CardSettingsPanel';
+import { getCardTemplate, isCardTemplateId } from '@/components/micropages/cards/catalog';
+import { readCardConfig, toCardData } from '@/components/micropages/cards/cardData';
+import { uploadCardImage } from '@/components/micropages/cards/upload';
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -26,6 +31,8 @@ import {
   UserCircleIcon,
   IdentificationIcon,
   LinkIcon,
+  ArrowUpTrayIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 
 const SAMPLE_AVATARS = [
@@ -55,7 +62,10 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
 
   // Active builder tab: 1 = Profile, 2 = vCard, 3 = Links
-  const [activeTier, setActiveTier] = useState<1 | 2 | 3>(1);
+  const [activeTier, setActiveTier] = useState<1 | 2 | 3 | 4>(1);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [deviceView, setDeviceView] = useState<'mobile' | 'desktop'>('mobile');
   const [qrOpen, setQrOpen] = useState(false);
 
@@ -245,6 +255,33 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
 
   if (!page) return null;
 
+  const isCard = isCardTemplateId(page.theme);
+  // The Digital Card tab only exists for the twelve card templates.
+  const tier = activeTier === 4 && !isCard ? 1 : activeTier;
+  const getPreviewCard = () => previewRef.current?.querySelector<HTMLElement>('[data-vc]') ?? null;
+
+  const handleSelectTemplate = (themeId: string, paletteId?: string) => {
+    const theme = themeId as MicroPageTheme;
+    const config = { ...(page.config || {}) } as Record<string, unknown>;
+    if (isCardTemplateId(theme)) {
+      config.card = { ...readCardConfig(page), palette: paletteId, accent: undefined };
+    }
+    setPage({ ...page, theme, config });
+  };
+
+  const handleAvatarFile = async (file?: File) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      setPage({ ...page, avatar_url: await uploadCardImage(file) });
+    } catch (e) {
+      setAvatarError((e as Error).message);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const publicUrl = `/m/${page.slug}`;
 
   return (
@@ -340,7 +377,7 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
                 type="button"
                 onClick={() => setActiveTier(1)}
                 className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activeTier === 1
+                  tier === 1
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -353,7 +390,7 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
                 type="button"
                 onClick={() => setActiveTier(2)}
                 className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activeTier === 2
+                  tier === 2
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -366,7 +403,7 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
                 type="button"
                 onClick={() => setActiveTier(3)}
                 className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activeTier === 3
+                  tier === 3
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
@@ -374,10 +411,25 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
                 <LinkIcon className="w-4 h-4" />
                 <span>3. Links & Social</span>
               </button>
+
+              {isCard && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTier(4)}
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                    tier === 4
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <CreditCardIcon className="w-4 h-4" />
+                  <span>4. Digital Card</span>
+                </button>
+              )}
             </div>
 
             {/* Tier 1: Profile & Identity */}
-            {activeTier === 1 && (
+            {tier === 1 && (
               <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-6">
                 <div>
                   <h3 className="text-base font-bold text-white">Tier 1: Profile & Visual Identity</h3>
@@ -440,6 +492,31 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
                     placeholder="https://example.com/avatar.jpg"
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none mb-2"
                   />
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="file"
+                      id="avatar-file"
+                      accept="image/png,image/jpeg"
+                      className="sr-only"
+                      onChange={(e) => {
+                        handleAvatarFile(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                    <label
+                      htmlFor="avatar-file"
+                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white cursor-pointer"
+                    >
+                      <ArrowUpTrayIcon className="w-4 h-4" />
+                      {avatarUploading ? 'Uploading…' : page.avatar_url ? 'Replace photo' : 'Upload photo'}
+                    </label>
+                    <span className="text-[11px] text-slate-500">JPEG or PNG, up to 2 MB</span>
+                  </div>
+                  {avatarError && (
+                    <p role="alert" className="text-[11px] text-rose-400 mb-2">
+                      {avatarError}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-slate-400">Quick picks:</span>
                     {SAMPLE_AVATARS.map((av, idx) => (
@@ -482,47 +559,30 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
                   </div>
                 </div>
 
-                {/* 10 Curated Templates Selector */}
+                {/* Template gallery: 12 digital visiting cards in four collections + 10 classic pages */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                    Curated Template (10 Handcrafted Designs)
+                    Template
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
-                    {TEMPLATES.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setPage({ ...page, theme: t.id })}
-                        className={`text-left p-3.5 rounded-2xl border transition-all flex flex-col justify-between ${
-                          page.theme === t.id
-                            ? 'border-blue-500 bg-blue-500/10 shadow-md ring-1 ring-blue-500'
-                            : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-bold text-white truncate">{t.name}</span>
-                            <span
-                              className="w-3.5 h-3.5 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: t.accentColor }}
-                            />
-                          </div>
-                          <p className="text-[11px] text-slate-400 leading-snug line-clamp-2">
-                            {t.description}
-                          </p>
-                        </div>
-                        <span className="mt-2 text-[10px] uppercase font-semibold tracking-wider text-slate-500">
-                          {t.tag}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  <TemplateGallery
+                    value={page.theme}
+                    onSelect={handleSelectTemplate}
+                    previewData={toCardData(page, getCardTemplate('zenith')!, {
+                      pageUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/m/${page.slug}`,
+                    })}
+                    scrollClassName="max-h-[640px]"
+                  />
                 </div>
               </div>
             )}
 
+            {/* Tier 4: Digital card settings (card templates only) */}
+            {tier === 4 && isCard && (
+              <CardSettingsPanel page={page} onChange={setPage} getCard={getPreviewCard} />
+            )}
+
             {/* Tier 2: Digital vCard Information */}
-            {activeTier === 2 && (
+            {tier === 2 && (
               <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -742,7 +802,7 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
             )}
 
             {/* Tier 3: Interactive Links & Social Icons */}
-            {activeTier === 3 && (
+            {tier === 3 && (
               <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-6">
                 <div>
                   <h3 className="text-base font-bold text-white">Tier 3: Interactive Links & Social Icons</h3>
@@ -896,7 +956,7 @@ export default function MicroPageBuilderClient({ id }: { id: string }) {
           </div>
 
           {/* Right Live Device Preview Pane (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col items-center">
+          <div ref={previewRef} className="lg:col-span-5 flex flex-col items-center">
             {/* Device Switcher */}
             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-1 mb-4">
               <button
