@@ -18,7 +18,7 @@ func testPNG(t *testing.T, w, h int) []byte {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			img.Set(x, y, color.RGBA{R: uint8(x), G: uint8(y), B: 120, A: 255})
+			img.Set(x, y, color.RGBA{R: uint8(x), G: uint8(y), B: 120, A: 255}) // #nosec G115 -- test images are under 256 px
 		}
 	}
 	var buf bytes.Buffer

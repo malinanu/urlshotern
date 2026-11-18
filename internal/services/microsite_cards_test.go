@@ -66,7 +66,7 @@ func TestCardAssetsMatchFrontendSource(t *testing.T) {
 		t.Skip("frontend sources not present")
 	}
 	check := func(frontend, embedded string, got []byte) {
-		want, err := os.ReadFile(frontend)
+		want, err := os.ReadFile(frontend) // #nosec G304 -- fixed paths under the frontend sources
 		if err != nil {
 			t.Errorf("read %s: %v", frontend, err)
 			return
