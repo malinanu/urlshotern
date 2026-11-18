@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "URL Shortener Features — Analytics, Custom Domains, QR Codes & More | Trunc",
-  description: "Explore Trunc's free URL shortener features: real-time click analytics, custom domains, QR code generator, A/B link testing, AI insights, and team collaboration. Better than Bitly, free forever.",
-  keywords: "url shortener with analytics dashboard, url shortener with qr code, custom url shortener, free url shortener with analytics, url shortener features",
+  title: "Features — Digital Business Cards, Short Links, QR Codes & Analytics | Trunc",
+  description: "Make a digital business card from 12 designs, plus short links, QR codes and mobile pages, with analytics for every share. Try a card with your name and create a free account.",
+  keywords: "digital business card, digital visiting card, qr code business card, url shortener with analytics, url shortener with qr code, link in bio page, url shortener features",
   alternates: {
     canonical: 'https://trunc.site/features',
   },
@@ -12,13 +12,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://trunc.site/features',
     siteName: 'Trunc',
-    title: "URL Shortener Features — Analytics, Custom Domains, QR Codes & More | Trunc",
-    description: "Explore Trunc's free URL shortener features: real-time click analytics, custom domains, QR code generator, A/B link testing, AI insights, and team collaboration.",
+    title: "Features — Digital Business Cards, Short Links, QR Codes & Analytics | Trunc",
+    description: "12 digital business card designs, short links, QR codes and mobile pages, with analytics for every share. Free plan, no credit card.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "URL Shortener Features — Analytics, Custom Domains, QR Codes & More | Trunc",
-    description: "Explore Trunc's free URL shortener features: real-time click analytics, custom domains, QR code generator, A/B link testing, and AI insights.",
+    title: "Features — Digital Business Cards, Short Links, QR Codes & Analytics | Trunc",
+    description: "12 digital business card designs, short links, QR codes and mobile pages, with analytics for every share. Free plan, no credit card.",
   },
 };
 
