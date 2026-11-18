@@ -1,3 +1,5 @@
+import { pagesPosts } from './posts-pages';
+
 export type ContentSection =
   | { type: 'p'; text: string }
   | { type: 'h2'; text: string }
@@ -28,6 +30,8 @@ export interface BlogPost {
 }
 
 export const posts: BlogPost[] = [
+  // Newest cluster first: posts[0] is the featured post on /blog.
+  ...pagesPosts,
   {
     slug: 'how-to-shorten-a-url',
     title: 'How to Shorten a URL: The Complete Step-by-Step Guide (2026)',
