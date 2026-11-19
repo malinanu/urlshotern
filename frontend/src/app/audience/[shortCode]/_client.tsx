@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { isTopPlan } from '@/lib/plan-utils';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { AnalyticsTeaser } from '@/components/analytics/AnalyticsTeaser';
 import {
@@ -56,7 +57,7 @@ export default function AudiencePage() {
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const isEnterprise = (user as any)?.account_type === 'enterprise';
+  const isEnterprise = isTopPlan(user?.account_type);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

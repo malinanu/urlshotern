@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { isTopPlan } from '@/lib/plan-utils';
 import ThemeToggle from '@/components/ThemeToggle';
 import {
   BoltIcon,
@@ -352,7 +353,7 @@ export default function WorkspaceLayout({
             </button>
 
             {/* Upgrade CTA */}
-            {user?.account_type !== 'enterprise' && (
+            {!isTopPlan(user?.account_type) && (
               <Link
                 href="/billing"
                 className="hidden md:inline-flex items-center px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold tracking-tight shadow-sm hover:shadow transition-all"
@@ -394,17 +395,19 @@ export default function WorkspaceLayout({
               </div>
               <div>
                 <h3 className="font-bold text-base text-foreground font-hanken">Trunc AI Assistant</h3>
-                <p className="text-xs text-muted-foreground">Automated slug generation & attribution</p>
+                <p className="text-xs text-muted-foreground">
+                  {isTopPlan(user?.account_type) ? 'Included in your plan' : 'Available on Enterprise'}
+                </p>
               </div>
             </div>
             <div className="space-y-3 text-xs text-muted-foreground mb-6">
               <div className="p-3 rounded-xl bg-surface-container dark:bg-zinc-900 border border-outline-variant/20">
-                <div className="font-semibold text-foreground mb-1">⚡ Smart Context Slugs</div>
-                AI analyzes your target page and recommends memorable vanity keywords that improve CTR by up to 34%.
+                <div className="font-semibold text-foreground mb-1">Summaries and alerts</div>
+                What changed in a link&apos;s traffic, in plain language, and a flag when it looks unusual.
               </div>
               <div className="p-3 rounded-xl bg-surface-container dark:bg-zinc-900 border border-outline-variant/20">
-                <div className="font-semibold text-foreground mb-1">🏷️ Campaign Auto-Tagging</div>
-                Automatically extracts UTM tags, channels, and social intent to categorize your link stream.
+                <div className="font-semibold text-foreground mb-1">Recommendations, forecasts and audiences</div>
+                What to try next, where clicks are heading, and who is clicking. Open a link in Analytics to see them.
               </div>
             </div>
             <div className="flex gap-2.5">
@@ -415,11 +418,11 @@ export default function WorkspaceLayout({
                 Close
               </button>
               <Link
-                href="/billing"
+                href={isTopPlan(user?.account_type) ? '/analytics' : '/billing'}
                 onClick={() => setAiModalOpen(false)}
                 className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold text-center hover:opacity-95"
               >
-                Enable AI Features
+                {isTopPlan(user?.account_type) ? 'Open analytics' : 'See Enterprise'}
               </Link>
             </div>
           </div>

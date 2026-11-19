@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { QRCodeModal } from '@/components/QRCode';
 import { getCached, setCached, prefetch } from '@/lib/prefetch-cache';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import { getPlanDisplayName, isTopPlan, normalizePlan } from '@/lib/plan-utils';
 import {
   ChartBarIcon,
   LinkIcon,
@@ -73,6 +74,49 @@ interface DashboardStats {
   month_clicks: number;
 }
 
+/** The parts of GET /api/v1/billing/usage the dashboard shows. -1 means unlimited. */
+interface BillingUsage {
+  subscription?: { plan_type?: string; current_period_end?: string; cancel_at_period_end?: boolean };
+  usage?: { current_urls?: number; monthly_clicks?: number };
+  limits?: { max_urls?: number; max_clicks_month?: number };
+}
+
+/** One usage row: "12 of 1,000" with a bar, or "12 · Unlimited" with no bar. */
+function UsageRow({ label, used, limit, barClass }: { label: string; used?: number; limit?: number; barClass: string }) {
+  const known = typeof used === 'number' && typeof limit === 'number';
+  const unlimited = known && limit < 0;
+  const pct = known && !unlimited && limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className="font-medium text-foreground">{label}</span>
+        <span className="text-muted-foreground font-mono">
+          {!known ? (
+            '—'
+          ) : unlimited ? (
+            <>
+              <strong className="text-foreground">{used.toLocaleString()}</strong> · Unlimited
+            </>
+          ) : (
+            <>
+              <strong className="text-foreground">{used.toLocaleString()}</strong> of {limit.toLocaleString()} used
+            </>
+          )}
+        </span>
+      </div>
+      <div className="w-full h-2 rounded-full bg-surface-container dark:bg-zinc-800 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-500 ${barClass}`} style={{ width: `${pct}%` }}></div>
+      </div>
+    </div>
+  );
+}
+
+function formatDay(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 function DashboardContent() {
   const { user, isAuthenticated, isLoading, getAccessToken, refreshToken } = useAuth();
   const router = useRouter();
@@ -93,6 +137,11 @@ function DashboardContent() {
   });
   const [pageSize, setPageSize] = useState<number>(10);
   const [stats, setStats] = useState<DashboardStats | null>(() => getCached<DashboardStats>('dashboard:stats'));
+  const [billing, setBilling] = useState<BillingUsage | null>(() => getCached<BillingUsage>('dashboard:billing'));
+  // The subscription decides the plan; the user record (kept in sync by billing) covers the first paint.
+  const planSource = billing?.subscription?.plan_type || user?.account_type || '';
+  const planType = normalizePlan(planSource);
+  const onTopPlan = isTopPlan(planType);
   const [loadingUrls, setLoadingUrls] = useState(getCached('dashboard:urls') === null);
 
   // Interaction state
@@ -268,6 +317,13 @@ function DashboardContent() {
         const statsData = await statsResponse.json();
         setStats(statsData);
         setCached('dashboard:stats', statsData);
+      }
+
+      const billingResponse = await makeAuthenticatedRequest(API_ENDPOINTS.billing.usage);
+      if (billingResponse && billingResponse.ok) {
+        const billingData: BillingUsage = await billingResponse.json();
+        setBilling(billingData);
+        setCached('dashboard:billing', billingData);
       }
     } catch (error: unknown) {
       if ((error as { name?: string })?.name !== 'AbortError') {
@@ -857,21 +913,23 @@ function DashboardContent() {
                 </form>
               </div>
 
-              {/* Value Banner Callout */}
-              <div className="mt-6 pt-4 border-t border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <span className="text-muted-foreground">
-                  Get custom vanity links, SLA uptime, and branded edge domains with Trunc Enterprise.
-                </span>
-                <Link
-                  href="/billing"
-                  className="text-primary hover:text-primary-600 font-bold tracking-tight inline-flex items-center gap-1 shrink-0"
-                >
-                  Upgrade now →
-                </Link>
-              </div>
+              {/* Value banner: never shown on the top plan */}
+              {!onTopPlan && (
+                <div className="mt-6 pt-4 border-t border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <span className="text-muted-foreground">
+                    Get AI insights, white-label branding and unlimited team members with Trunc Enterprise.
+                  </span>
+                  <Link
+                    href="/billing"
+                    className="text-primary hover:text-primary-600 font-bold tracking-tight inline-flex items-center gap-1 shrink-0"
+                  >
+                    Upgrade now →
+                  </Link>
+                </div>
+              )}
             </div>
 
-            {/* Right Card (4 cols): AI Workflow Assist */}
+            {/* Right Card (4 cols): AI insights. Included on the top plan, offered on the others. */}
             <div className="lg:col-span-4 rounded-2xl p-6 bg-gradient-to-br from-indigo-900/30 via-surface-container-lowest to-surface-container border border-indigo-500/30 dark:border-indigo-500/20 shadow-sm flex flex-col justify-between relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
               <div>
@@ -881,50 +939,58 @@ function DashboardContent() {
                       <SparklesIcon className="w-4 h-4" />
                     </div>
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-500 font-mono">
-                      AI Workflow Assist
+                      AI insights
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    Pro
+                  <span
+                    className={
+                      onTopPlan
+                        ? 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                    }
+                  >
+                    {onTopPlan ? 'Included' : 'Enterprise'}
                   </span>
                 </div>
 
                 <h3 className="font-extrabold text-lg text-foreground font-hanken mb-2">
-                  Simplify your workflow
+                  {onTopPlan ? 'Your AI tools' : 'Let AI read your traffic'}
                 </h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Boost conversion rates with automated keyword suggestions and automated attribution categorization.
+                  {onTopPlan
+                    ? 'Open any link in Analytics to see these for that link.'
+                    : 'Each link gets a plain-language read-out of what its traffic is doing.'}
                 </p>
 
                 <div className="space-y-3">
-                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-container/60 dark:bg-zinc-900/50 border border-outline-variant/20">
-                    <div className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
-                      ✓
+                  {[
+                    { title: 'Summaries and alerts', body: 'What changed in plain language, and a flag when traffic looks unusual.' },
+                    { title: 'Recommendations and forecasts', body: 'What to try next, and where clicks are heading.' },
+                    { title: 'Audience insights', body: 'Who is clicking, grouped into audiences.' },
+                  ].map((f) => (
+                    <div
+                      key={f.title}
+                      className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-container/60 dark:bg-zinc-900/50 border border-outline-variant/20"
+                    >
+                      <div className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
+                        ✓
+                      </div>
+                      <div className="text-xs">
+                        <strong className="text-foreground block">{f.title}</strong>
+                        <span className="text-[11px] text-muted-foreground">{f.body}</span>
+                      </div>
                     </div>
-                    <div className="text-xs">
-                      <strong className="text-foreground block">Personalize with contextual AI slug</strong>
-                      <span className="text-[11px] text-muted-foreground">Generates catchy, high-CTR slugs in milliseconds.</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-container/60 dark:bg-zinc-900/50 border border-outline-variant/20">
-                    <div className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
-                      ✓
-                    </div>
-                    <div className="text-xs">
-                      <strong className="text-foreground block">Auto-tag and categorize marketing campaign</strong>
-                      <span className="text-[11px] text-muted-foreground">Sorts links by intent, team, and social channel.</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
               <div className="pt-6">
                 <Link
-                  href="/billing"
+                  href={onTopPlan ? '/analytics' : '/billing'}
                   className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-xs font-bold tracking-tight shadow-md transition-all flex items-center justify-center gap-2"
                 >
                   <SparklesIcon className="w-4 h-4" />
-                  <span>Upgrade to Create with AI</span>
+                  <span>{onTopPlan ? 'Open analytics' : 'Upgrade to Enterprise'}</span>
                 </Link>
               </div>
             </div>
@@ -1005,85 +1071,68 @@ function DashboardContent() {
             </div>
           </div>
 
-          {/* Right (6 cols): Monthly Usage & Telemetry */}
+          {/* Right (6 cols): plan and usage, from GET /api/v1/billing/usage */}
           <div className="lg:col-span-6 bg-surface-container-lowest dark:bg-zinc-950 border border-outline-variant/30 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20 mb-4">
                 <div>
-                  <h3 className="font-bold text-sm text-foreground font-hanken">Monthly usage & Telemetry</h3>
-                  <p className="text-xs text-muted-foreground">Current billing cycle • Renews in 18 days</p>
+                  <h3 className="font-bold text-sm text-foreground font-hanken">Your plan and usage</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {!billing
+                      ? 'Loading your plan…'
+                      : planType === 'free'
+                        ? 'Free plan'
+                        : formatDay(billing.subscription?.current_period_end)
+                          ? `${billing.subscription?.cancel_at_period_end ? 'Ends' : 'Renews'} on ${formatDay(billing.subscription?.current_period_end)}`
+                          : 'Current plan'}
+                  </p>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono">
-                  Pro Plan
-                </span>
+                {planSource && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono">
+                    {getPlanDisplayName(planType)}
+                  </span>
+                )}
               </div>
 
-              {/* Telemetry Multi-bars */}
               <div className="space-y-3.5">
-                {/* Short links */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-foreground">Short links</span>
-                    <span className="text-muted-foreground font-mono">
-                      <strong className="text-foreground">{stats?.total_urls ?? urls.length}</strong> of 100 used
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-container dark:bg-zinc-800 overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, ((stats?.total_urls ?? urls.length) / 100) * 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Custom back-halves */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-foreground">Custom back-halves</span>
-                    <span className="text-muted-foreground font-mono">
-                      <strong className="text-foreground">4</strong> of 50 used
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-container dark:bg-zinc-800 overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: '8%' }}></div>
-                  </div>
-                </div>
-
-                {/* Dynamic QR Codes */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-foreground">Dynamic QR Codes</span>
-                    <span className="text-muted-foreground font-mono">
-                      <strong className="text-foreground">8</strong> of 100 used
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-container dark:bg-zinc-800 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '8%' }}></div>
-                  </div>
-                </div>
+                <UsageRow
+                  label="Short links"
+                  used={billing?.usage?.current_urls}
+                  limit={billing?.limits?.max_urls}
+                  barClass="bg-primary"
+                />
+                <UsageRow
+                  label="Clicks this month"
+                  used={billing?.usage?.monthly_clicks}
+                  limit={billing?.limits?.max_clicks_month}
+                  barClass="bg-indigo-500"
+                />
               </div>
             </div>
 
-            {/* Performance Spark Stat */}
             <div className="mt-5 pt-4 border-t border-outline-variant/20 flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-black text-foreground tabular-nums">
-                    {stats?.total_clicks ? stats.total_clicks : 287}
-                  </span>
-                  <span className="text-xs text-muted-foreground">Total Clicks this week</span>
-                  <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.2 rounded font-mono">
-                    +24.8%
-                  </span>
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">Peak traffic: 14:00 - 16:00 UTC</div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-black text-foreground tabular-nums">
+                  {stats ? stats.today_clicks.toLocaleString() : '—'}
+                </span>
+                <span className="text-xs text-muted-foreground">clicks today</span>
               </div>
-              <Link
-                href="/analytics"
-                className="px-3 py-1.5 rounded-xl border border-outline-variant/30 text-xs font-semibold text-foreground hover:bg-surface-container transition-all shrink-0"
-              >
-                View trends
-              </Link>
+              <div className="flex items-center gap-2 shrink-0">
+                {!onTopPlan && billing && (
+                  <Link
+                    href="/billing"
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 transition-all"
+                  >
+                    Compare plans
+                  </Link>
+                )}
+                <Link
+                  href="/analytics"
+                  className="px-3 py-1.5 rounded-xl border border-outline-variant/30 text-xs font-semibold text-foreground hover:bg-surface-container transition-all"
+                >
+                  View trends
+                </Link>
+              </div>
             </div>
           </div>
         </section>
