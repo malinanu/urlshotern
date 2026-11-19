@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trunc</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <header class="brand">
+      <img src="icons/icon-32.png" width="22" height="22" alt="" />
+      <span>Trunc</span>
+      <a id="open-settings" class="link-button" href="options.html" target="_blank">Settings</a>
+    </header>
+
+    <main id="app" aria-live="polite">
+      <p class="muted">Loading…</p>
+    </main>
+
+    <template id="tpl-connect">
+      <section class="panel">
+        <h1>Connect your Trunc account</h1>
+        <p class="muted">Links you shorten here show up in your Trunc dashboard with their clicks.</p>
+        <button type="button" class="primary" data-action="signin">Sign in with Trunc</button>
+        <button type="button" class="secondary" data-action="apikey">Use an API key instead</button>
+        <p class="error" hidden></p>
+      </section>
+    </template>
+
+    <template id="tpl-result">
+      <section class="panel">
+        <label class="label" for="short-url">Short link</label>
+        <div class="row">
+          <input id="short-url" class="mono" readonly />
+          <button type="button" class="primary small" data-action="copy">Copy</button>
+        </div>
+        <p class="muted original"></p>
+        <div class="qr-wrap">
+          <svg class="qr" role="img" aria-label="QR code for the short link"></svg>
+          <button type="button" class="secondary small" data-action="download-qr">Download QR</button>
+        </div>
+      </section>
+    </template>
+
+    <template id="tpl-message">
+      <section class="panel">
+        <p class="message"></p>
+      </section>
+    </template>
+
+    <section id="recent" class="recent" hidden>
+      <h2>Recent links</h2>
+      <ul></ul>
+    </section>
+
+    <footer>
+      <a id="open-dashboard" href="#" target="_blank" rel="noopener">Open dashboard</a>
+    </footer>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
