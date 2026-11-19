@@ -117,9 +117,18 @@ func cleanRedirect(u *url.URL) bool {
 	return false
 }
 
-// NewConnectService registers the four plugins. Canva is only registered when
-// its client secret is configured.
-func NewConnectService(store ConnectStore, keys ConnectKeys, canvaSecret string) *ConnectService {
+// ConnectOptions configures the clients that depend on a deployment.
+type ConnectOptions struct {
+	// CanvaSecret is the client secret shared with Canva; empty disables Canva.
+	CanvaSecret string
+	// ShopifyRedirects are the exact callback URLs of the Shopify app
+	// deployments (<SHOPIFY_APP_URL>/auth/trunc/callback); empty disables it.
+	ShopifyRedirects []string
+}
+
+// NewConnectService registers the plugins. Canva and Shopify are only
+// registered when their deployment settings are configured.
+func NewConnectService(store ConnectStore, keys ConnectKeys, opts ConnectOptions) *ConnectService {
 	s := &ConnectService{store: store, keys: keys, clients: map[string]*ConnectClient{}, now: time.Now}
 	s.clients["trunc-chrome"] = &ConnectClient{
 		ID: "trunc-chrome", Name: "Trunc for Chrome",
@@ -133,13 +142,23 @@ func NewConnectService(store ConnectStore, keys ConnectKeys, canvaSecret string)
 			return strings.Contains(u.Path, "/wp-admin/")
 		},
 	}
-	s.clients["trunc-shopify"] = &ConnectClient{
-		ID: "trunc-shopify", Name: "Trunc for Shopify", AnyHost: true,
-		allow: func(u *url.URL) bool { return true },
+	// The Shopify app is one deployment with a fixed callback, so only that
+	// exact URL is accepted (anything wider would let a phishing link pass).
+	shopify := map[string]bool{}
+	for _, r := range opts.ShopifyRedirects {
+		if u, err := url.Parse(strings.TrimSpace(r)); err == nil && u.Scheme == "https" && cleanRedirect(u) {
+			shopify[u.String()] = true
+		}
 	}
-	if canvaSecret != "" {
+	if len(shopify) > 0 {
+		s.clients["trunc-shopify"] = &ConnectClient{
+			ID: "trunc-shopify", Name: "Trunc for Shopify",
+			allow: func(u *url.URL) bool { return shopify[u.String()] },
+		}
+	}
+	if opts.CanvaSecret != "" {
 		s.clients["trunc-canva"] = &ConnectClient{
-			ID: "trunc-canva", Name: "Trunc for Canva", Confidential: true, secret: canvaSecret,
+			ID: "trunc-canva", Name: "Trunc for Canva", Confidential: true, secret: opts.CanvaSecret,
 			allow: func(u *url.URL) bool { return u.String() == CanvaRedirectURI },
 		}
 	}

@@ -26,7 +26,7 @@ Built on Shopify's [React Router app template](https://github.com/Shopify/shopif
 2. Trunc returns the merchant to `<SHOPIFY_APP_URL>/auth/trunc/callback`. The state finds the shop, and is cleared before anything else.
 3. The code is exchanged server side for the shop's own API key, and the merchant goes back to `https://<shop>/admin/apps/<api key>/app/settings`.
 
-The Trunc server accepts any https redirect for this client and names its host on the consent page. Keys never reach the browser.
+The Trunc server only accepts this client's redirect if it is listed in its `SHOPIFY_CONNECT_REDIRECT_URI` setting, and the client stays off until it is set. Set it to `<SHOPIFY_APP_URL>/auth/trunc/callback`. During development, the CLI's tunnel URL changes each run, so pasting an API key is simpler. Keys never reach the browser.
 
 ## Run it
 
@@ -57,7 +57,7 @@ npx prisma migrate deploy
 TRUNC_BASE_URL=http://localhost:8099 TRUNC_TEST_EMAIL=you@example.com TRUNC_TEST_PASSWORD=… npm test
 ```
 
-`npm test` runs `app/lib/connect.test.ts` against a running Trunc server, using a real account. It covers:
+`npm test` runs `app/lib/connect.test.ts` against a running Trunc server started with `SHOPIFY_CONNECT_REDIRECT_URI=https://trunc-app.example.com/auth/trunc/callback`, using a real account. It covers:
 - the full sign-in, including the authorize step;
 - a reused, expired, cancelled or unknown state;
 - shortening, clicks and plan usage;

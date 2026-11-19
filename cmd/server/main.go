@@ -125,7 +125,10 @@ func main() {
 	handler.CampaignHandlers = handlers.NewCampaignHandlers(campaignService)
 	// Sign in with Trunc for the browser extension and plugins.
 	handler.ConnectHandlers = handlers.NewConnectHandlers(
-		services.NewConnectService(redis, handler.APIKeyHandlers.GetAPIKeyService(), config.CanvaOAuthClientSecret),
+		services.NewConnectService(redis, handler.APIKeyHandlers.GetAPIKeyService(), services.ConnectOptions{
+			CanvaSecret:      config.CanvaOAuthClientSecret,
+			ShopifyRedirects: strings.Split(config.ShopifyConnectRedirectURIs, ","),
+		}),
 	)
 
 	// Microsites (/m/<slug> landing pages + digital vCards) — off unless enabled.

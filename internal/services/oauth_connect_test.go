@@ -74,6 +74,7 @@ func (k *memKeys) DeleteAPIKey(id uuid.UUID, _ int64) error {
 const (
 	testVerifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 	chromeRedir  = "https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/cb"
+	shopifyRedir = "https://trunc-app.example.com/auth/trunc/callback"
 )
 
 func challengeFor(v string) string {
@@ -84,7 +85,7 @@ func challengeFor(v string) string {
 func newConnect() (*ConnectService, *memStore, *memKeys) {
 	st := &memStore{m: map[string]string{}}
 	ks := &memKeys{keys: map[string]*models.APIKey{}}
-	return NewConnectService(st, ks, "canva-secret"), st, ks
+	return NewConnectService(st, ks, ConnectOptions{CanvaSecret: "canva-secret", ShopifyRedirects: []string{shopifyRedir}}), st, ks
 }
 
 func codeFrom(t *testing.T, redirect string) string {
@@ -111,7 +112,7 @@ func TestConnectRedirectRules(t *testing.T) {
 	ok := map[string][]string{
 		"trunc-chrome":    {chromeRedir, "https://ponmlkjihgfedcbaponmlkjihgfedcba.chromiumapp.org/"},
 		"trunc-wordpress": {"https://blog.example.com/wp-admin/admin.php?page=trunc", "http://localhost:8881/wp-admin/admin.php"},
-		"trunc-shopify":   {"https://trunc-app.example.com/auth/trunc/callback"},
+		"trunc-shopify":   {shopifyRedir},
 		"trunc-canva":     {CanvaRedirectURI},
 	}
 	bad := map[string][]string{
@@ -127,9 +128,17 @@ func TestConnectRedirectRules(t *testing.T) {
 			"https://blog.example.com/admin.php", "http://blog.example.com/wp-admin/", "javascript:alert(1)//wp-admin/",
 			"https://blog.example.com/wp-admin/#frag", "https://u:p@blog.example.com/wp-admin/",
 		},
-		"trunc-shopify": {"http://app.example.com/cb", "data:text/html,hi", "//app.example.com/cb"},
-		"trunc-canva":   {"https://www.canva.com/apps/oauth/authorized/x", "https://canva.com/apps/oauth/authorized"},
-		"unknown":       {chromeRedir},
+		"trunc-shopify": {
+			"https://trunc-app.example.com.evil.com/auth/trunc/callback",
+			"https://evil.example/auth/trunc/callback",
+			"https://trunc-app.example.com/auth/trunc/callback/x",
+			"https://trunc-app.example.com/other",
+			"http://trunc-app.example.com/auth/trunc/callback",
+			"https://trunc-app.example.com/auth/trunc/callback#x",
+			"data:text/html,hi",
+		},
+		"trunc-canva": {"https://www.canva.com/apps/oauth/authorized/x", "https://canva.com/apps/oauth/authorized"},
+		"unknown":     {chromeRedir},
 	}
 	for id, list := range ok {
 		for _, r := range list {
@@ -148,9 +157,12 @@ func TestConnectRedirectRules(t *testing.T) {
 }
 
 func TestConnectCanvaDisabledWithoutSecret(t *testing.T) {
-	s := NewConnectService(&memStore{m: map[string]string{}}, &memKeys{keys: map[string]*models.APIKey{}}, "")
+	s := NewConnectService(&memStore{m: map[string]string{}}, &memKeys{keys: map[string]*models.APIKey{}}, ConnectOptions{})
 	if _, _, err := s.Client("trunc-canva", CanvaRedirectURI); err == nil {
 		t.Fatal("Canva must be unavailable without a client secret")
+	}
+	if _, _, err := s.Client("trunc-shopify", shopifyRedir); err == nil {
+		t.Fatal("Shopify must be unavailable without a configured callback")
 	}
 }
 
@@ -241,7 +253,7 @@ func TestConnectAuthorizeErrorsGoBackToApp(t *testing.T) {
 		}
 	}
 	// A plain method is refused for public clients.
-	p := allow("trunc-shopify", "https://app.example.com/cb")
+	p := allow("trunc-shopify", shopifyRedir)
 	p.CodeChallengeMethod = "plain"
 	r, _ := s.Authorize(7, p)
 	if !strings.Contains(r, "error=invalid_request") {
