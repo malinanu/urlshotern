@@ -225,3 +225,10 @@ dist
 # Impeccable design-review captures (local only)
 /.impeccable/review/
 /.impeccable/questions/
+
+# Plugin downloads are built by scripts/build-plugins.sh (Dockerfile.dev), not committed
+/frontend/public/downloads/
+# The broad lib/ and *.png rules above must not hide plugin source
+!trunc-chrome-extension/lib/
+!trunc-chrome-extension/icons/*.png
+!trunc-shopify-app/app/lib/

@@ -3,7 +3,7 @@ FROM golang:1.24.1-alpine
 WORKDIR /app
 
 # Install Node.js, npm, and git for development tools
-RUN apk add --no-cache nodejs npm git
+RUN apk add --no-cache nodejs npm git zip
 
 # Install air for hot reloading (compatible version)
 # Use direct mode to bypass proxy issues
@@ -30,11 +30,23 @@ ARG BASE_URL
 ARG NODE_ENV=production
 # Shows the "Pages" (microsites) navigation; keep in sync with ENABLE_MICROSITES
 ARG NEXT_PUBLIC_ENABLE_MICROSITES=false
+# Store listings for the plugins on /integrations; empty until published
+ARG NEXT_PUBLIC_CHROME_EXTENSION_URL=
+ARG NEXT_PUBLIC_WORDPRESS_PLUGIN_URL=
+ARG NEXT_PUBLIC_SHOPIFY_APP_URL=
+ARG NEXT_PUBLIC_CANVA_APP_URL=
+
+# Package the Chrome extension and WordPress plugin as downloads (/downloads/*.zip)
+RUN sh scripts/build-plugins.sh
 
 # Build frontend for production with environment variables
 RUN cd frontend && \
     NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
     NEXT_PUBLIC_ENABLE_MICROSITES=${NEXT_PUBLIC_ENABLE_MICROSITES} \
+    NEXT_PUBLIC_CHROME_EXTENSION_URL=${NEXT_PUBLIC_CHROME_EXTENSION_URL} \
+    NEXT_PUBLIC_WORDPRESS_PLUGIN_URL=${NEXT_PUBLIC_WORDPRESS_PLUGIN_URL} \
+    NEXT_PUBLIC_SHOPIFY_APP_URL=${NEXT_PUBLIC_SHOPIFY_APP_URL} \
+    NEXT_PUBLIC_CANVA_APP_URL=${NEXT_PUBLIC_CANVA_APP_URL} \
     BASE_URL=${BASE_URL} \
     NODE_ENV=${NODE_ENV} \
     NEXT_TELEMETRY_DISABLED=1 \
