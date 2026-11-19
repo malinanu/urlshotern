@@ -151,8 +151,8 @@ class Trunc_API {
 
         return [
             'total_clicks' => $data['total_clicks'] ?? 0,
-            'countries'    => $data['countries']     ?? [],
-            'daily'        => $data['daily']         ?? [],
+            'countries'    => $data['country_stats'] ?? [],
+            'daily'        => $data['daily_clicks']  ?? [],
         ];
     }
 }
