@@ -52,9 +52,9 @@ export const INTEGRATIONS: Integration[] = [
     steps: [
       'In WordPress, go to Plugins → Add New → Upload Plugin.',
       'Choose the .zip file, install and activate it.',
-      'Go to Settings → Trunc and choose Connect with Trunc.',
+      'Go to Trunc Links → Settings and choose Connect with Trunc.',
     ],
-    storeSteps: ['In WordPress, go to Plugins → Add New and search for Trunc.', 'Activate it, then go to Settings → Trunc and choose Connect with Trunc.'],
+    storeSteps: ['In WordPress, go to Plugins → Add New and search for Trunc.', 'Activate it, then go to Trunc Links → Settings and choose Connect with Trunc.'],
   },
   {
     id: 'shopify',

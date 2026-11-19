@@ -39,15 +39,63 @@ class Trunc_Admin {
             'sanitize_callback' => [ $this, 'sanitize_api_key' ],
             'default'           => '',
         ] );
+        register_setting( 'trunc_server_options', 'trunc_server_url', [
+            'type'              => 'string',
+            'sanitize_callback' => [ $this, 'sanitize_server_url' ],
+            'default'           => '',
+        ] );
+        // A key belongs to one server: changing the server signs the site out.
+        add_action( 'update_option_trunc_server_url', function () {
+            delete_option( 'trunc_api_key' );
+            delete_option( 'trunc_connected_via' );
+        } );
     }
 
-    public function sanitize_api_key( string $value ): string {
-        $key = sanitize_text_field( $value );
+    public function sanitize_api_key( $value ): string {
+        $key = sanitize_text_field( (string) $value );
         // Clear cached usage data when key changes
         if ( $key !== get_option( 'trunc_api_key', '' ) ) {
             delete_transient( 'trunc_usage_' . substr( md5( $key ), 0, 8 ) );
+            update_option( 'trunc_connected_via', $key ? 'apikey' : '', false );
         }
         return $key;
+    }
+
+    /** Keeps only the origin of an https URL (or http://localhost); empty means trunc.site. */
+    public function sanitize_server_url( $value ): string {
+        $value = trim( (string) $value );
+        if ( '' === $value ) {
+            return '';
+        }
+        $parts = wp_parse_url( esc_url_raw( $value ) );
+        $host  = $parts['host'] ?? '';
+        $ok    = ( 'https' === ( $parts['scheme'] ?? '' ) ) || ( 'http' === ( $parts['scheme'] ?? '' ) && in_array( $host, [ 'localhost', '127.0.0.1' ], true ) );
+        if ( ! $host || ! $ok ) {
+            add_settings_error( 'trunc_server_url', 'trunc_server_url', 'Use an https:// address for the Trunc server.' );
+            return get_option( 'trunc_server_url', '' );
+        }
+        $origin = $parts['scheme'] . '://' . $host . ( isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '' );
+        return untrailingslashit( TRUNC_DEFAULT_SERVER ) === $origin ? '' : $origin;
+    }
+
+    /** Messages after Connect with Trunc and Disconnect. */
+    private function render_connect_notice(): void {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only.
+        $notice   = isset( $_GET['trunc_notice'] ) ? sanitize_key( wp_unslash( $_GET['trunc_notice'] ) ) : '';
+        $messages = [
+            'connected'    => [ 'success', 'Your site is connected to Trunc.' ],
+            'disconnected' => [ 'info', 'Disconnected from Trunc.' ],
+            'cancelled'    => [ 'warning', 'Connecting was cancelled.' ],
+            'expired'      => [ 'error', 'That connection attempt expired. Please try again.' ],
+            'failed'       => [ 'error', 'Trunc could not finish connecting your site. Please try again, or paste an API key.' ],
+            'needs_https'  => [ 'error', 'Connect with Trunc needs your site to use https. Paste an API key instead.' ],
+        ];
+        if ( ! isset( $messages[ $notice ] ) ) {
+            return;
+        }
+        [ $type, $text ] = $messages[ $notice ];
+        $class           = 'success' === $type ? 'trunc-notice-success' : ( 'error' === $type ? 'trunc-notice-error' : 'trunc-notice-warning' );
+        echo '<div class="trunc-notice ' . esc_attr( $class ) . '" role="status">' . esc_html( $text ) . '</div>';
     }
 
     public function render_settings_page(): void {
@@ -69,6 +117,8 @@ class Trunc_Admin {
             'free'              => [ 'label' => 'Free',       'class' => 'trunc-badge-free' ],
             'premium'           => [ 'label' => 'Premium',    'class' => 'trunc-badge-premium' ],
             'premium_yearly'    => [ 'label' => 'Premium',    'class' => 'trunc-badge-premium' ],
+            'growth'            => [ 'label' => 'Growth',     'class' => 'trunc-badge-premium' ],
+            'growth_yearly'     => [ 'label' => 'Growth',     'class' => 'trunc-badge-premium' ],
             'enterprise'        => [ 'label' => 'Enterprise', 'class' => 'trunc-badge-enterprise' ],
             'enterprise_yearly' => [ 'label' => 'Enterprise', 'class' => 'trunc-badge-enterprise' ],
         ];
@@ -83,35 +133,63 @@ class Trunc_Admin {
                 <p class="trunc-header-sub">URL Shortener &amp; Analytics</p>
             </div>
 
-            <!-- API Key Card -->
+            <?php $this->render_connect_notice(); ?>
+
+            <!-- Account connection -->
             <div class="trunc-card">
-                <h2 class="trunc-card-title">API Key</h2>
-                <p class="trunc-card-desc">
-                    Get your free API key at
-                    <a href="https://trunc.site/dashboard/api-keys" target="_blank">trunc.site/dashboard/api-keys</a>.
-                </p>
-                <form method="post" action="options.php" id="trunc-settings-form">
-                    <?php settings_fields( 'trunc_options' ); ?>
-                    <div class="trunc-key-row">
-                        <div class="trunc-key-input-wrap">
-                            <input
-                                type="password"
-                                id="trunc-api-key-input"
-                                name="trunc_api_key"
-                                value="<?php echo esc_attr( $api_key ); ?>"
-                                placeholder="us_••••••••••••••••"
-                                class="trunc-key-input"
-                                autocomplete="off"
-                            />
-                            <button type="button" id="trunc-toggle-key" class="trunc-btn-icon" title="Show/hide key">
-                                <span class="dashicons dashicons-visibility"></span>
-                            </button>
+                <h2 class="trunc-card-title">Account</h2>
+                <?php if ( ! empty( $api_key ) ) : ?>
+                    <p class="trunc-card-desc">
+                        Connected to <strong><?php echo esc_html( wp_parse_url( trunc_server(), PHP_URL_HOST ) ); ?></strong>
+                        <?php echo 'signin' === get_option( 'trunc_connected_via', '' ) ? 'with Connect with Trunc.' : 'with an API key.'; ?>
+                    </p>
+                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                        <input type="hidden" name="action" value="trunc_disconnect" />
+                        <?php wp_nonce_field( 'trunc_disconnect' ); ?>
+                        <button type="submit" class="trunc-btn trunc-btn-secondary" id="trunc-disconnect">Disconnect</button>
+                    </form>
+                <?php else : ?>
+                    <p class="trunc-card-desc">Connect your Trunc account to shorten links from WordPress.</p>
+                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                        <input type="hidden" name="action" value="trunc_connect" />
+                        <?php wp_nonce_field( 'trunc_connect' ); ?>
+                        <button type="submit" class="trunc-btn trunc-btn-primary" id="trunc-connect"
+                            <?php disabled( ! Trunc_Connect::site_can_connect() ); ?>>
+                            <span class="dashicons dashicons-admin-links"></span> Connect with Trunc
+                        </button>
+                    </form>
+                    <?php if ( ! Trunc_Connect::site_can_connect() ) : ?>
+                        <p class="trunc-card-desc">Connect with Trunc needs your site to use https. Paste an API key below instead.</p>
+                    <?php endif; ?>
+
+                    <h3 class="trunc-subtitle">Or paste an API key</h3>
+                    <p class="trunc-card-desc">
+                        Create one on your
+                        <a href="<?php echo esc_url( trunc_server() . '/api-keys' ); ?>" target="_blank" rel="noopener">Trunc API keys page</a>.
+                    </p>
+                    <form method="post" action="options.php" id="trunc-settings-form">
+                        <?php settings_fields( 'trunc_options' ); ?>
+                        <div class="trunc-key-row">
+                            <div class="trunc-key-input-wrap">
+                                <input
+                                    type="password"
+                                    id="trunc-api-key-input"
+                                    name="trunc_api_key"
+                                    value=""
+                                    placeholder="us_••••••••••••••••"
+                                    class="trunc-key-input"
+                                    autocomplete="off"
+                                />
+                                <button type="button" id="trunc-toggle-key" class="trunc-btn-icon" title="Show/hide key">
+                                    <span class="dashicons dashicons-visibility"></span>
+                                </button>
+                            </div>
+                            <button type="button" id="trunc-test-btn" class="trunc-btn trunc-btn-secondary">Test Connection</button>
+                            <?php submit_button( 'Save', 'primary', 'submit', false, [ 'class' => 'trunc-btn trunc-btn-primary' ] ); ?>
                         </div>
-                        <button type="button" id="trunc-test-btn" class="trunc-btn trunc-btn-secondary">Test Connection</button>
-                        <?php submit_button( 'Save', 'primary', 'submit', false, [ 'class' => 'trunc-btn trunc-btn-primary' ] ); ?>
-                    </div>
-                    <div id="trunc-test-result"></div>
-                </form>
+                        <div id="trunc-test-result"></div>
+                    </form>
+                <?php endif; ?>
             </div>
 
             <?php if ( $usage_err && ! empty( $api_key ) ) : ?>
@@ -141,7 +219,7 @@ class Trunc_Admin {
                 <!-- URL Usage -->
                 <div class="trunc-usage-block">
                     <div class="trunc-usage-label">
-                        <span>Short URLs this month</span>
+                        <span>Short links</span>
                         <strong><?php echo esc_html( number_format( $usage['current_urls'] ) ); ?> / <?php echo esc_html( $max_urls ); ?></strong>
                     </div>
                     <?php if ( $usage['max_urls'] !== -1 ) : ?>
@@ -179,8 +257,8 @@ class Trunc_Admin {
 
                 <?php if ( $plan_type === 'free' ) : ?>
                 <div class="trunc-upgrade-prompt">
-                    <p>Upgrade to Premium for 1,000 URLs/month, 365-day analytics, API access, and custom domains.</p>
-                    <a href="https://trunc.site/pricing" target="_blank" class="trunc-btn trunc-btn-primary">Upgrade Plan</a>
+                    <p>Premium raises the limit to 1,000 short links and adds a year of analytics history, custom back-halves and your own domain.</p>
+                    <a href="<?php echo esc_url( trunc_server() . '/pricing' ); ?>" target="_blank" rel="noopener" class="trunc-btn trunc-btn-primary">See plans</a>
                 </div>
                 <?php endif; ?>
             </div>
@@ -189,13 +267,27 @@ class Trunc_Admin {
             <?php if ( empty( $api_key ) ) : ?>
             <div class="trunc-card trunc-onboarding-card">
                 <div class="trunc-onboarding-icon">🔗</div>
-                <h3>Get started in 2 steps</h3>
-                <ol class="trunc-steps">
-                    <li>Create a free account at <a href="https://trunc.site/register" target="_blank">trunc.site</a></li>
-                    <li>Copy your API key from <a href="https://trunc.site/dashboard/api-keys" target="_blank">Dashboard → API Keys</a> and paste it above</li>
-                </ol>
+                <h3>No Trunc account yet?</h3>
+                <p class="trunc-card-desc">
+                    <a href="<?php echo esc_url( trunc_server() . '/register' ); ?>" target="_blank" rel="noopener">Create a free account</a>,
+                    then come back and choose Connect with Trunc.
+                </p>
             </div>
             <?php endif; ?>
+
+            <!-- Server -->
+            <div class="trunc-card">
+                <h2 class="trunc-card-title">Server</h2>
+                <p class="trunc-card-desc">Leave this empty to use trunc.site. Changing it disconnects the site.</p>
+                <form method="post" action="options.php">
+                    <?php settings_fields( 'trunc_server_options' ); ?>
+                    <div class="trunc-key-row">
+                        <input type="url" name="trunc_server_url" class="trunc-input" placeholder="https://trunc.site"
+                            value="<?php echo esc_attr( get_option( 'trunc_server_url', '' ) ); ?>" />
+                        <?php submit_button( 'Save', 'secondary', 'submit', false, [ 'class' => 'trunc-btn trunc-btn-secondary' ] ); ?>
+                    </div>
+                </form>
+            </div>
         </div>
         <?php
     }
@@ -206,7 +298,7 @@ class Trunc_Admin {
         if ( empty( $api_key ) ) {
             echo '<div class="trunc-wrap"><div class="trunc-notice trunc-notice-info">';
             echo '<span class="dashicons dashicons-info"></span> ';
-            echo 'Please <a href="' . esc_url( admin_url( 'admin.php?page=trunc-settings' ) ) . '">configure your API key</a> first.';
+            echo 'Please <a href="' . esc_url( admin_url( 'admin.php?page=trunc-settings' ) ) . '">connect your Trunc account</a> first.';
             echo '</div></div>';
             return;
         }
@@ -227,7 +319,7 @@ class Trunc_Admin {
                 </div>
                 <?php if ( ! is_wp_error( $usage ) ) :
                     $plan_labels = [
-                        'free' => 'Free', 'premium' => 'Premium', 'premium_yearly' => 'Premium',
+                        'free' => 'Free', 'premium' => 'Premium', 'premium_yearly' => 'Premium', 'growth' => 'Growth', 'growth_yearly' => 'Growth',
                         'enterprise' => 'Enterprise', 'enterprise_yearly' => 'Enterprise',
                     ];
                     $plan_type = $usage['plan_type'];
@@ -239,7 +331,7 @@ class Trunc_Admin {
                     <span class="trunc-badge <?php echo esc_attr( $badge_class ); ?>"><?php echo esc_html( $plan_name ); ?></span>
                     <span class="trunc-header-usage">
                         <?php echo esc_html( $usage['current_urls'] ); ?> /
-                        <?php echo $usage['max_urls'] === -1 ? '∞' : esc_html( $usage['max_urls'] ); ?> URLs
+                        <?php echo $usage['max_urls'] === -1 ? '∞' : esc_html( $usage['max_urls'] ); ?> short links
                     </span>
                 </div>
                 <?php endif; ?>
@@ -248,14 +340,14 @@ class Trunc_Admin {
             <?php if ( ! is_wp_error( $usage ) && $usage['url_limit_reached'] ) : ?>
             <div class="trunc-notice trunc-notice-error">
                 <span class="dashicons dashicons-warning"></span>
-                You have reached your <?php echo esc_html( $usage['max_urls'] ); ?> URL limit for this month.
-                <a href="https://trunc.site/pricing" target="_blank">Upgrade your plan</a> to shorten more links.
+                You have reached your plan's limit of <?php echo esc_html( $usage['max_urls'] ); ?> short links.
+                <a href="<?php echo esc_url( trunc_server() . '/pricing' ); ?>" target="_blank" rel="noopener">See plans</a> to shorten more.
             </div>
             <?php elseif ( ! is_wp_error( $usage ) && $usage['url_approaching'] ) : ?>
             <div class="trunc-notice trunc-notice-warning">
                 <span class="dashicons dashicons-clock"></span>
-                Approaching your monthly URL limit (<?php echo esc_html( $usage['current_urls'] ); ?> of <?php echo esc_html( $usage['max_urls'] ); ?> used).
-                <a href="https://trunc.site/pricing" target="_blank">Consider upgrading</a>.
+                You have used <?php echo esc_html( $usage['current_urls'] ); ?> of your <?php echo esc_html( $usage['max_urls'] ); ?> short links.
+                <a href="<?php echo esc_url( trunc_server() . '/pricing' ); ?>" target="_blank" rel="noopener">See plans</a>.
             </div>
             <?php endif; ?>
 
@@ -330,7 +422,7 @@ class Trunc_Admin {
                                 <?php echo esc_html( date_i18n( 'M j, Y', strtotime( $link->created_at ) ) ); ?>
                             </td>
                             <td class="trunc-td-actions">
-                                <a href="https://trunc.site/analytics/<?php echo esc_attr( $link->short_code ); ?>" target="_blank" class="trunc-btn trunc-btn-ghost">
+                                <a href="<?php echo esc_url( add_query_arg( 'shortCode', rawurlencode( $link->short_code ), trunc_server() . '/analytics' ) ); ?>" target="_blank" rel="noopener" class="trunc-btn trunc-btn-ghost">
                                     <span class="dashicons dashicons-chart-bar"></span> Analytics
                                 </a>
                             </td>
@@ -378,6 +470,8 @@ class Trunc_Admin {
             'free'              => 'Free',
             'premium'           => 'Premium',
             'premium_yearly'    => 'Premium',
+            'growth'            => 'Growth',
+            'growth_yearly'     => 'Growth',
             'enterprise'        => 'Enterprise',
             'enterprise_yearly' => 'Enterprise',
         ];
@@ -412,7 +506,7 @@ class Trunc_Admin {
         // Check limit before shortening
         $usage = $api->get_usage();
         if ( ! is_wp_error( $usage ) && $usage['url_limit_reached'] ) {
-            wp_send_json_error( 'Monthly URL limit reached. Upgrade your plan at trunc.site/pricing.' );
+            wp_send_json_error( 'You have reached your plan\'s short link limit. See plans at ' . trunc_server() . '/pricing.' );
         }
 
         $result = $api->shorten( $url, $custom_code );

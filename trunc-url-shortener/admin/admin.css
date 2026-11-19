@@ -368,3 +368,8 @@
     display: block;
     margin: 0 auto 12px;
 }
+
+/* Connect with Trunc */
+.trunc-subtitle { font-size: 13px; font-weight: 600; margin: 20px 0 4px; color: #1d2327; }
+.trunc-card form + form { margin-top: 12px; }
+.trunc-btn[disabled] { opacity: .55; cursor: not-allowed; }

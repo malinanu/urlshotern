@@ -2,17 +2,17 @@
 Contributors: trunc
 Tags: url shortener, link management, analytics, short links
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.0.0
-License: GPL-2.0+
+Stable tag: 1.1.0
+License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Shorten URLs and track click analytics with Trunc — right inside your WordPress dashboard.
 
 == Description ==
 
-Connect your WordPress site to your Trunc account to:
+Connect your WordPress site to your Trunc account in one click with **Connect with Trunc** (or paste an API key), then:
 
 * Shorten any URL from the admin dashboard
 * View click counts synced from Trunc analytics
@@ -20,7 +20,7 @@ Connect your WordPress site to your Trunc account to:
 * Insert short links using the `[trunc]` shortcode
 * Use the **Trunc Short Link** Gutenberg block
 
-**This plugin requires a Trunc account.** Sign up for free at [trunc.site](https://trunc.site). The free plan includes 10 short links per month. Premium plans unlock more links, custom domains, and extended analytics.
+**This plugin requires a Trunc account.** Sign up for free at [trunc.site](https://trunc.site). The free plan includes 10 active short links. Paid plans raise the limit and add custom domains and longer analytics history.
 
 == External Services ==
 
@@ -29,27 +29,27 @@ This plugin connects to the Trunc URL shortening service (https://trunc.site) to
 * **Create short links** — When you shorten a URL, the original URL is sent to Trunc's API (`https://trunc.site/api/v1/shorten`) to generate a short code. The short link resolves through Trunc's servers.
 * **Fetch analytics** — When you view click counts, the plugin queries Trunc's analytics API (`https://trunc.site/api/v1/analytics/`) to retrieve click data.
 * **Fetch account/plan info** — The plugin calls (`https://trunc.site/api/v1/billing/usage`) to display your current plan and usage limits in the admin dashboard.
+* **Connect with Trunc** — When you choose Connect with Trunc, your browser opens `https://trunc.site/connect` to approve the site, and the plugin exchanges the one-time code at `https://trunc.site/api/v1/oauth/token` for an API key. Disconnect revokes that key at `https://trunc.site/api/v1/oauth/revoke`.
 
-These requests are made only when you have configured an API key and actively use the plugin. No data is sent automatically or without your input.
+These requests are made only when you connect the plugin and actively use it. No data is sent automatically or without your input. If you run your own Trunc server, the same requests go to the server you set under **Trunc Links → Settings → Server**.
 
-Trunc's Terms of Service: https://trunc.site/legal/terms
-Trunc's Privacy Policy: https://trunc.site/legal/privacy
+Trunc's Terms of Service: https://trunc.site/terms
+Trunc's Privacy Policy: https://trunc.site/privacy
 
 == Installation ==
 
-1. Upload the `trunc-url-shortener` folder to `/wp-content/plugins/`
-2. Activate the plugin through the **Plugins** menu in WordPress
-3. Build the Gutenberg block assets: `npm install && npm run build` (requires Node.js)
-4. Go to **Trunc Links → Settings** and paste your Trunc API key
-5. Start shortening URLs from the **Trunc Links** menu item
+1. In WordPress, go to **Plugins → Add New → Upload Plugin** and upload `trunc-wordpress-plugin.zip` (from trunc.site/integrations), or upload the `trunc-url-shortener` folder to `/wp-content/plugins/`
+2. Activate the plugin through the **Plugins** menu
+3. Go to **Trunc Links → Settings** and choose **Connect with Trunc** (or paste an API key)
+4. Start shortening URLs from the **Trunc Links** menu item
 
-Alternatively, download a pre-built release from the plugin's GitHub repository which includes compiled block assets.
+No build step is needed.
 
 == Frequently Asked Questions ==
 
 = Where do I get an API key? =
 
-Sign up for free at [trunc.site](https://trunc.site) and go to **Dashboard → API Keys**. The free account gives you 10 short links per month at no cost.
+You usually don't need one: choose **Connect with Trunc** and approve the site. To use a key instead, sign up at [trunc.site](https://trunc.site) and create one on the **API keys** page (trunc.site/api-keys).
 
 = Does this plugin work without a Trunc account? =
 
@@ -57,7 +57,7 @@ No. This plugin requires a Trunc account and API key to function. The plugin its
 
 = What plan do I need? =
 
-The free Trunc plan (10 links/month, API access included) is sufficient for basic use. Premium (1,000 links/month, custom domains, 365-day analytics) and Enterprise (unlimited) plans are available at trunc.site/pricing.
+The free Trunc plan (10 active short links, API access included) is enough to start. Premium (1,000 links, custom domains, a year of analytics), Growth and Enterprise (unlimited links) are listed at trunc.site/pricing.
 
 = Does this work on multisite? =
 
@@ -84,7 +84,7 @@ This plugin transmits data to Trunc's servers (https://trunc.site) as described 
 **What data is sent:**
 
 * The original URLs you choose to shorten
-* Your Trunc API key (used only for authentication in request headers, never stored on Trunc's servers beyond authentication)
+* Your Trunc API key (used only for authentication in request headers)
 * Standard HTTP request metadata (IP address, user agent) sent automatically by WordPress's HTTP API
 
 **What data is NOT sent:**
@@ -95,9 +95,9 @@ This plugin transmits data to Trunc's servers (https://trunc.site) as described 
 
 **Data storage:**
 
-Short links (original URL, short code, short URL, click count) are stored locally in your WordPress database in the `wp_trunc_links` table. This data is retained until you delete the plugin's database table.
+Short links (original URL, short code, short URL, click count) are stored locally in your WordPress database in the `wp_trunc_links` table. Deleting the plugin removes this table and the plugin's settings.
 
-For full details on how Trunc handles data, see Trunc's Privacy Policy: https://trunc.site/legal/privacy
+For full details on how Trunc handles data, see Trunc's Privacy Policy: https://trunc.site/privacy
 
 == Screenshots ==
 
@@ -107,10 +107,20 @@ For full details on how Trunc handles data, see Trunc's Privacy Policy: https://
 
 == Changelog ==
 
+= 1.1.0 =
+* Connect with Trunc: connect the site without copying an API key (OAuth with PKCE); Disconnect revokes the key
+* Server setting for self-hosted Trunc
+* The block no longer needs a build step
+* Clearer error messages from the Trunc API, corrected links and limit wording
+* Uninstall removes the plugin's settings and table
+
 = 1.0.0 =
 * Initial release: admin link table, AJAX shortening, analytics sync, plan-aware UI, Gutenberg block, shortcode
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds Connect with Trunc. Existing API keys keep working.
 
 = 1.0.0 =
 Initial release.

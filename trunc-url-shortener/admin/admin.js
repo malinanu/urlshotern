@@ -32,7 +32,7 @@ jQuery(function ($) {
                 showSuccess(
                     $result,
                     'Connected! Plan: ' + d.plan_name + ' — ' +
-                    d.current_urls + ' / ' + d.max_urls + ' URLs used this month.'
+                    d.current_urls + ' / ' + d.max_urls + ' short links used.'
                 );
             } else {
                 showError($result, String(response.data));
