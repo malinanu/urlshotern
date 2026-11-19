@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -28,6 +29,9 @@ func CORSMiddleware() gin.HandlerFunc {
 		"X-Requested-With",
 	}
 	config.AllowCredentials = true
+	// Plugins call the API with an API key in the Authorization header:
+	// the Canva app from its iframe, the Chrome extension from its pages.
+	config.AllowOriginFunc = pluginOrigin
 
 	handler := cors.New(config)
 	return func(c *gin.Context) {
@@ -41,6 +45,11 @@ func CORSMiddleware() gin.HandlerFunc {
 		handler(c)
 	}
 }
+
+var pluginOrigins = regexp.MustCompile(`^(https://app-[a-z0-9]+\.canva-apps\.com|chrome-extension://[a-p]{32})$`)
+
+// pluginOrigin allows the Canva app iframe and the Chrome extension.
+func pluginOrigin(origin string) bool { return pluginOrigins.MatchString(origin) }
 
 // SecurityHeadersMiddleware adds security headers to all responses, including
 // HSTS to enforce HTTPS on the main domain and all subdomains.

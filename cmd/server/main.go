@@ -123,6 +123,10 @@ func main() {
 	authService.SetCampaignService(campaignService)
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService, teamHandlers, globalSettingsService)
 	handler.CampaignHandlers = handlers.NewCampaignHandlers(campaignService)
+	// Sign in with Trunc for the browser extension and plugins.
+	handler.ConnectHandlers = handlers.NewConnectHandlers(
+		services.NewConnectService(redis, handler.APIKeyHandlers.GetAPIKeyService(), config.CanvaOAuthClientSecret),
+	)
 
 	// Microsites (/m/<slug> landing pages + digital vCards) — off unless enabled.
 	// Nothing below runs, and no routes are registered, when the flag is false.

@@ -139,6 +139,13 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 		handler.CheckPassword,
 	)
 
+	// Sign in with Trunc (plugins): consent-page lookup, code exchange, revoke.
+	if handler.ConnectHandlers != nil {
+		router.GET("/api/v1/oauth/client", middleware.RateLimitMiddleware(middleware.DefaultRateLimit), handler.ConnectHandlers.GetClient)
+		router.POST("/api/v1/oauth/token", middleware.RateLimitMiddleware(middleware.AuthRateLimit), handler.ConnectHandlers.Token)
+		router.POST("/api/v1/oauth/revoke", middleware.RateLimitMiddleware(middleware.AuthRateLimit), handler.ConnectHandlers.Revoke)
+	}
+
 	router.POST("/api/v1/shorten",
 		middleware.FlexibleOptionalAuth(authMiddleware, apiKeyService),
 		middleware.RateLimitMiddleware(middleware.DefaultRateLimit),
@@ -333,6 +340,10 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 		middleware.CheckPlanFeature(billing, middleware.FeatureLiveMap),
 		handler.AdvancedAnalyticsHandlers.GetMapAnalytics)
 	api.GET("/dashboard/stats", handler.GetUserDashboardStats)
+	if handler.ConnectHandlers != nil {
+		// The signed-in user approves an app on /connect (JWT only; checked in the handler).
+		api.POST("/oauth/authorize", handler.ConnectHandlers.Authorize)
+	}
 
 	// Billing and subscription routes
 	setupBillingRoutes(api, handler)
@@ -827,7 +838,7 @@ func setupStaticRoutes(router *gin.Engine, handler *handlers.Handler, extraRoute
 		"/bulk", "/conversions", "/api-keys", "/admin",
 		"/billing", "/pages", "/custom-domains",
 		"/forgot-password", "/reset-password", "/verify-email",
-		"/teams", "/ab-tests",
+		"/teams", "/ab-tests", "/connect", "/integrations",
 		"/team-invite",
 		"/not-found",
 		"/blog",

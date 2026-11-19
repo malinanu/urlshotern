@@ -103,7 +103,7 @@ export default function WorkspaceLayout({
   ];
 
   const utilityNavItems = [
-    { id: 'api-keys', label: 'API keys', href: '/api-keys', icon: PuzzlePieceIcon },
+    { id: 'integrations', label: 'Integrations', href: '/integrations', icon: PuzzlePieceIcon },
     { id: 'settings', label: 'Settings', href: '/settings', icon: Cog6ToothIcon },
   ];
 
