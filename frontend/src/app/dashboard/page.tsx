@@ -709,7 +709,12 @@ function DashboardContent() {
     });
   };
 
-  const quotaRemaining = Math.max(0, 100 - (stats?.total_urls ?? urls.length));
+  // The link limit counts active links (billing.go CheckUsageLimits); -1 means unlimited.
+  const linkLimit = billing?.limits?.max_urls;
+  const linksUsed = billing?.usage?.current_urls;
+  const linksUnlimited = typeof linkLimit === 'number' && linkLimit < 0;
+  const quotaRemaining =
+    typeof linkLimit === 'number' && linkLimit >= 0 && typeof linksUsed === 'number' ? Math.max(0, linkLimit - linksUsed) : null;
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -781,10 +786,18 @@ function DashboardContent() {
                       {heroTab === 'short' ? 'Quick create: Short link' : 'Quick create: Dynamic QR Code'}
                     </h2>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>You can create <strong className="text-foreground">{quotaRemaining}</strong> more links this month</span>
-                  </div>
+                  {(linksUnlimited || quotaRemaining !== null) && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                      <span className={`w-2 h-2 rounded-full ${quotaRemaining === 0 ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                      {linksUnlimited ? (
+                        <span>Unlimited short links on your plan</span>
+                      ) : (
+                        <span>
+                          You can create <strong className="text-foreground">{quotaRemaining}</strong> more short links
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Form Elements */}
