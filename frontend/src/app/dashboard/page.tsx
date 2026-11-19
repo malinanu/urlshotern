@@ -1012,75 +1012,61 @@ function DashboardContent() {
 
         {/* SECTION 2: OPERATIONAL WIDGETS (TWO COLUMNS) */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left (6 cols): Connect Your Account */}
+          {/* Left (6 cols): tools that work today. Integrations get a tile here once they can be installed. */}
           <div className="lg:col-span-6 bg-surface-container-lowest dark:bg-zinc-950 border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between pb-4 border-b border-outline-variant/20 mb-4">
-              <div>
-                <h3 className="font-bold text-sm text-foreground font-hanken">Connect your account</h3>
-                <p className="text-xs text-muted-foreground">Supercharge your link creation inside your favorite tools</p>
-              </div>
-              <span className="text-xs text-primary font-semibold font-mono">3 integrations</span>
+            <div className="pb-4 border-b border-outline-variant/20 mb-4">
+              <h3 className="font-bold text-sm text-foreground font-hanken">Use Trunc from your own tools</h3>
+              <p className="text-xs text-muted-foreground">Create and manage links from your code, scripts and spreadsheets.</p>
             </div>
 
             <div className="space-y-3">
-              {/* Chrome Extension */}
-              <div className="p-3.5 rounded-xl bg-surface-container dark:bg-zinc-900/60 border border-outline-variant/20 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center font-bold text-xs shrink-0">
-                    CR
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-foreground">Chrome Extension</div>
-                    <div className="text-[11px] text-muted-foreground truncate">1-click short links from your browser bar</div>
-                  </div>
-                </div>
-                <a
-                  href="https://chrome.google.com/webstore"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-800 hover:border-primary/50 text-foreground text-xs font-semibold shrink-0 transition-all"
+              {[
+                {
+                  badge: 'API',
+                  tone: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+                  title: 'API keys',
+                  body: 'Create a key to shorten links from your own apps',
+                  cta: 'Manage keys',
+                  href: '/api-keys',
+                },
+                {
+                  badge: 'DOC',
+                  tone: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
+                  title: 'API docs',
+                  body: 'Endpoints and examples for the REST API',
+                  cta: 'Read docs',
+                  href: '/api-docs',
+                },
+                {
+                  badge: 'CSV',
+                  tone: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                  title: 'Bulk shortening',
+                  body: 'Upload a .csv or .txt list, shorten every link at once, export the results',
+                  cta: 'Open',
+                  href: '/bulk',
+                },
+              ].map((t) => (
+                <div
+                  key={t.href}
+                  className="p-3.5 rounded-xl bg-surface-container dark:bg-zinc-900/60 border border-outline-variant/20 flex items-center justify-between gap-3"
                 >
-                  Install extension
-                </a>
-              </div>
-
-              {/* Canva */}
-              <div className="p-3.5 rounded-xl bg-surface-container dark:bg-zinc-900/60 border border-outline-variant/20 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 flex items-center justify-center font-bold text-xs shrink-0">
-                    CV
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center font-bold text-[10px] shrink-0 ${t.tone}`}>
+                      {t.badge}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-foreground">{t.title}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{t.body}</div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-foreground">Canva Integration</div>
-                    <div className="text-[11px] text-muted-foreground truncate">Export custom QR codes & branded banners</div>
-                  </div>
+                  <Link
+                    href={t.href}
+                    className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-800 hover:border-primary/50 text-foreground text-xs font-semibold shrink-0 transition-all"
+                  >
+                    {t.cta}
+                  </Link>
                 </div>
-                <button
-                  onClick={() => alert('Canva integration is configured for your team workspace.')}
-                  className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-800 hover:border-primary/50 text-foreground text-xs font-semibold shrink-0 transition-all"
-                >
-                  Connect
-                </button>
-              </div>
-
-              {/* Shopify */}
-              <div className="p-3.5 rounded-xl bg-surface-container dark:bg-zinc-900/60 border border-outline-variant/20 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center font-bold text-xs shrink-0">
-                    SP
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-foreground">Shopify Storefront</div>
-                    <div className="text-[11px] text-muted-foreground truncate">Attribution telemetry & product link routing</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => alert('Shopify attribution bridge is active.')}
-                  className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-800 hover:border-primary/50 text-foreground text-xs font-semibold shrink-0 transition-all"
-                >
-                  Setup
-                </button>
-              </div>
+              ))}
             </div>
           </div>
 
