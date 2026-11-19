@@ -1,148 +1,70 @@
-# Trunc URL Shortener — Shopify App
+# Trunc URL Shortener for Shopify
 
-A Shopify embedded app that lets merchants shorten product, collection, and page URLs using [Trunc](https://trunc.site), manage short links, and view click analytics — all from within the Shopify admin.
+An embedded Shopify app: merchants make short links to their products, collections and pages with [Trunc](https://trunc.site), and see the clicks behind each one, without leaving the Shopify admin.
 
-## Features
+Built on Shopify's [React Router app template](https://github.com/Shopify/shopify-app-template-react-router). The older Remix template is archived. The UI uses Polaris web components.
 
-- Shorten any Shopify store URL from the embedded admin app
-- Optional custom short codes (e.g. `summer-sale`)
-- View all short links with click counts per store
-- Analytics breakdown: total clicks, top 10 countries, 14-day daily chart
-- Per-merchant link isolation (each shop sees only its own links)
-- Links open full Trunc analytics for deeper insights
+## What it does
 
-## Requirements
+- **Short links:**
+  - Shorten any URL, with an optional custom back-half.
+  - **Pick a product** builds the product's URL on the shop's primary storefront domain.
+  - Copy links, and see the shop's links in a table.
+- **Clicks:** total clicks, the last 14 days, and top countries for each link, with a link to the full analytics on Trunc.
+- **Settings:**
+  - **Sign in with Trunc**: OAuth 2.0 with PKCE, client id `trunc-shopify`.
+  - Or paste an API key; it is checked before it is saved.
+  - Shows the plan and usage.
+  - **Disconnect** revokes a signed-in key.
+- **Privacy webhooks:**
+  - `customers/data_request` and `customers/redact`: the app stores no customer data.
+  - `shop/redact`: deletes the shop's settings, links and sessions.
 
-- Node.js 18+
-- A [Shopify Partner](https://partners.shopify.com) account
-- A free [Trunc](https://trunc.site) account and API key
+## How Sign in with Trunc works here
 
-## Setup
+1. In Settings, **Sign in with Trunc** stores a one-time `state` and PKCE verifier on the shop's `ShopSettings` row (10 minutes). It then opens `<TRUNC_BASE_URL>/connect` in the top window, because Trunc's page can't run inside the admin iframe.
+2. Trunc returns the merchant to `<SHOPIFY_APP_URL>/auth/trunc/callback`. The state finds the shop, and is cleared before anything else.
+3. The code is exchanged server side for the shop's own API key, and the merchant goes back to `https://<shop>/admin/apps/<api key>/app/settings`.
 
-### 1. Scaffold the app
+The Trunc server accepts any https redirect for this client and names its host on the consent page. Keys never reach the browser.
 
-```bash
-npm install -g @shopify/cli
-shopify app create node --name trunc-url-shortener
-cd trunc-url-shortener
-```
+## Run it
 
-### 2. Add the Trunc files
-
-Copy the files from this repository into the scaffolded app:
-
-```bash
-# API client
-cp app/lib/trunc.server.ts <your-app>/app/lib/
-
-# Routes (replace the generated index route)
-cp app/routes/app._index.tsx <your-app>/app/routes/
-cp "app/routes/app.analytics.\$code.tsx" <your-app>/app/routes/
-```
-
-Add the `Link` model to `prisma/schema.prisma`:
-
-```prisma
-model Link {
-  id          Int      @id @default(autoincrement())
-  shop        String
-  originalUrl String
-  shortCode   String   @unique
-  shortUrl    String
-  clicks      Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  @@index([shop])
-}
-```
-
-### 3. Configure environment
-
-Add to `.env`:
-
-```env
-TRUNC_API_KEY=us_your_api_key_here
-```
-
-Get your API key at [trunc.site/dashboard/api-keys](https://trunc.site/dashboard/api-keys).
-
-### 4. Run the database migration
+You need Node 22.12+, a [Shopify Partner](https://partners.shopify.com) account and a development store.
 
 ```bash
-npx prisma migrate dev --name add_link_table
+npm install
+npm run config:link   # pick or create the app in your Partner account
+npm run dev           # Shopify CLI: tunnel, env vars, install link
 ```
 
-### 5. Start development
+Environment:
+
+| Variable | Purpose |
+| --- | --- |
+| `TRUNC_BASE_URL` | Trunc server. Defaults to `https://trunc.site`. |
+| `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_URL`, `SCOPES` | Set by the Shopify CLI in development; set them yourself in production. |
+
+The database is Prisma with SQLite (`prisma/dev.sqlite`). `npm run setup` runs `prisma generate` and `migrate deploy`.
+
+## Checks
 
 ```bash
-shopify app dev
+npm run typecheck
+npm run lint
+npm run build
+npx prisma migrate deploy
+TRUNC_BASE_URL=http://localhost:8099 TRUNC_TEST_EMAIL=you@example.com TRUNC_TEST_PASSWORD=… npm test
 ```
 
-This opens a tunnel, installs the app on your development store, and launches the embedded admin UI.
+`npm test` runs `app/lib/connect.test.ts` against a running Trunc server, using a real account. It covers:
+- the full sign-in, including the authorize step;
+- a reused, expired, cancelled or unknown state;
+- shortening, clicks and plan usage;
+- revoke on disconnect, and pasted keys;
+- `shop/redact`;
+- the callback route's redirect.
 
-## File Structure
+## Publishing
 
-```
-trunc-shopify-app/
-├── app/
-│   ├── lib/
-│   │   └── trunc.server.ts              # Trunc API client (server-side only)
-│   └── routes/
-│       ├── app._index.tsx               # Dashboard: shorten form + link table
-│       └── app.analytics.$code.tsx      # Analytics detail page
-└── prisma/
-    └── schema.prisma                    # Session + Link models
-```
-
-The remaining app scaffolding (`shopify.server.ts`, `db.server.ts`, `root.tsx`, `shopify.app.toml`) is generated by `shopify app create node`.
-
-## Usage
-
-### Shorten a URL
-
-1. Open the app from your Shopify admin
-2. Enter any URL (product, collection, blog post, external)
-3. Optionally set a custom short code
-4. Click **Shorten** — the short link appears in the table below
-
-### View Analytics
-
-Click **Analytics** on any link to see:
-- Total click count (synced live from Trunc)
-- Top 10 countries by clicks
-- Daily click breakdown for the last 14 days
-- Link to the full Trunc analytics dashboard
-
-## API
-
-The app communicates with the Trunc API at `https://trunc.site/api/v1`.
-
-| Action | Endpoint | Method |
-|--------|----------|--------|
-| Shorten URL | `/shorten` | POST |
-| Get analytics | `/analytics/{shortCode}` | GET |
-
-Authentication uses your API key as a Bearer token set via the `TRUNC_API_KEY` environment variable. The key is never exposed to the browser — all Trunc API calls are server-side only.
-
-## Deployment
-
-```bash
-shopify app deploy
-```
-
-This deploys the app to Shopify's infrastructure and updates your app in the Partner dashboard.
-
-To submit for the Shopify App Store:
-1. Go to your [Shopify Partner Dashboard](https://partners.shopify.com)
-2. Select the app → **Submit for review**
-3. Complete the listing (description, screenshots, support email)
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Remix (via Shopify CLI template) |
-| UI | Shopify Polaris + App Bridge |
-| Auth | Shopify OAuth (handled by CLI scaffold) |
-| Database | Prisma + SQLite (dev) / PostgreSQL (prod) |
-| API | Trunc REST API v1 |
+See `docs/INTEGRATIONS.md` in the Trunc repository for the App Store checklist.
