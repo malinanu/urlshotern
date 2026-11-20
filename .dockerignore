@@ -20,3 +20,7 @@ Thumbs.db
 *~
 .vscode
 .idea
+**/node_modules
+# Built and published on their own platforms; not part of the server image
+trunc-shopify-app
+trunc-canva-app

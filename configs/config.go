@@ -97,6 +97,14 @@ type Config struct {
 	EnableMicrosites        bool   // Register /m/*, /api/v1/microsites/* and /api/v1/m/* (default: false)
 	MicrositeUploadPath     string // Local directory for uploaded page images
 	MicrositeMaxUploadBytes int64  // Maximum accepted image upload size in bytes
+
+	// Sign in with Trunc: the Canva app is a confidential OAuth client. Leave
+	// empty to keep it disabled (the other plugins use PKCE and need no secret).
+	CanvaOAuthClientSecret string
+	// Exact callback URL(s) of the Shopify app deployment, comma separated
+	// (<SHOPIFY_APP_URL>/auth/trunc/callback). Empty keeps Sign in with Trunc
+	// off for the Shopify app; pasted API keys still work.
+	ShopifyConnectRedirectURIs string
 }
 
 func LoadConfig() (*Config, error) {
@@ -181,9 +189,11 @@ func LoadConfig() (*Config, error) {
 		EnableAdminRoutes: getEnvAsBool("ENABLE_ADMIN_ROUTES", false),
 
 		// Microsites (default: off until explicitly enabled)
-		EnableMicrosites:        getEnvAsBool("ENABLE_MICROSITES", false),
-		MicrositeUploadPath:     getEnv("MICROSITE_UPLOAD_PATH", "./uploads"),
-		MicrositeMaxUploadBytes: getEnvAsInt64("MICROSITE_MAX_UPLOAD_BYTES", 2*1024*1024),
+		EnableMicrosites:           getEnvAsBool("ENABLE_MICROSITES", false),
+		CanvaOAuthClientSecret:     getEnv("CANVA_OAUTH_CLIENT_SECRET", ""),
+		ShopifyConnectRedirectURIs: getEnv("SHOPIFY_CONNECT_REDIRECT_URI", ""),
+		MicrositeUploadPath:        getEnv("MICROSITE_UPLOAD_PATH", "./uploads"),
+		MicrositeMaxUploadBytes:    getEnvAsInt64("MICROSITE_MAX_UPLOAD_BYTES", 2*1024*1024),
 	}
 
 	return config, nil

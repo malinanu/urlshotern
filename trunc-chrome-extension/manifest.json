@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Trunc — URL Shortener",
+  "short_name": "Trunc",
+  "version": "1.0.0",
+  "description": "Shorten the page you are on, copy the link, show its QR code, and see your recent Trunc links.",
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "action": {
+    "default_title": "Shorten with Trunc",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "options_page": "options.html",
+  "permissions": ["activeTab", "storage", "contextMenus", "identity", "offscreen", "clipboardWrite"],
+  "host_permissions": ["https://trunc.site/*"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Alt+Shift+S" }, "description": "Shorten the current page" }
+  },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'" }
+}

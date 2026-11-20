@@ -9,6 +9,7 @@ import { QRCodeModal } from '@/components/QRCode';
 import { getCached, setCached, prefetch } from '@/lib/prefetch-cache';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { getPlanDisplayName, isTopPlan, normalizePlan } from '@/lib/plan-utils';
+import { INTEGRATIONS, installAction } from '@/lib/integrations';
 import {
   ChartBarIcon,
   LinkIcon,
@@ -1012,42 +1013,38 @@ function DashboardContent() {
 
         {/* SECTION 2: OPERATIONAL WIDGETS (TWO COLUMNS) */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left (6 cols): tools that work today. Integrations get a tile here once they can be installed. */}
+          {/* Left (6 cols): plugins and API, all installable today (see lib/integrations.ts) */}
           <div className="lg:col-span-6 bg-surface-container-lowest dark:bg-zinc-950 border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
-            <div className="pb-4 border-b border-outline-variant/20 mb-4">
-              <h3 className="font-bold text-sm text-foreground font-hanken">Use Trunc from your own tools</h3>
-              <p className="text-xs text-muted-foreground">Create and manage links from your code, scripts and spreadsheets.</p>
+            <div className="flex items-center justify-between gap-3 pb-4 border-b border-outline-variant/20 mb-4">
+              <div>
+                <h3 className="font-bold text-sm text-foreground font-hanken">Use Trunc from your own tools</h3>
+                <p className="text-xs text-muted-foreground">Shorten links from your browser, your site or your code.</p>
+              </div>
+              <Link href="/integrations" className="text-xs text-primary font-semibold hover:underline shrink-0">
+                All integrations →
+              </Link>
             </div>
 
             <div className="space-y-3">
               {[
+                ...INTEGRATIONS.filter((i) => installAction(i)).slice(0, 2).map((i) => {
+                  const a = installAction(i)!;
+                  return { key: i.id, badge: i.badge, tone: i.tone, title: i.name, body: i.summary, cta: a.external ? 'Install' : 'Download', href: a.href, external: a.external, download: !a.external };
+                }),
                 {
+                  key: 'api',
                   badge: 'API',
-                  tone: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+                  tone: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
                   title: 'API keys',
-                  body: 'Create a key to shorten links from your own apps',
+                  body: 'Create a key to shorten links from your own apps and scripts',
                   cta: 'Manage keys',
                   href: '/api-keys',
-                },
-                {
-                  badge: 'DOC',
-                  tone: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
-                  title: 'API docs',
-                  body: 'Endpoints and examples for the REST API',
-                  cta: 'Read docs',
-                  href: '/api-docs',
-                },
-                {
-                  badge: 'CSV',
-                  tone: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-                  title: 'Bulk shortening',
-                  body: 'Upload a .csv or .txt list, shorten every link at once, export the results',
-                  cta: 'Open',
-                  href: '/bulk',
+                  external: false,
+                  download: false,
                 },
               ].map((t) => (
                 <div
-                  key={t.href}
+                  key={t.key}
                   className="p-3.5 rounded-xl bg-surface-container dark:bg-zinc-900/60 border border-outline-variant/20 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -1059,12 +1056,14 @@ function DashboardContent() {
                       <div className="text-[11px] text-muted-foreground truncate">{t.body}</div>
                     </div>
                   </div>
-                  <Link
+                  <a
                     href={t.href}
+                    {...(t.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    {...(t.download ? { download: '' } : {})}
                     className="px-3 py-1.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-800 hover:border-primary/50 text-foreground text-xs font-semibold shrink-0 transition-all"
                   >
                     {t.cta}
-                  </Link>
+                  </a>
                 </div>
               ))}
             </div>

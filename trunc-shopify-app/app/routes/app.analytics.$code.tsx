@@ -1,186 +1,96 @@
-import { json, redirect, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import {
-  Page,
-  Layout,
-  Card,
-  DataTable,
-  Text,
-  BlockStack,
-  InlineStack,
-  Button,
-  Badge,
-  Divider,
-  Box,
-} from "@shopify/polaris";
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { redirect, useLoaderData } from "react-router";
+import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import { getAnalytics } from "../lib/trunc.server";
-import { prisma } from "../db.server";
+import db from "../db.server";
+import { getConnection } from "../lib/shop.server";
+import { getAnalytics, truncBaseUrl, TruncError } from "../lib/trunc.server";
 
-export async function loader({ request, params }: LoaderFunctionArgs) {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
-  const code = params.code!;
+  const { apiKey } = await getConnection(db, session.shop);
+  if (!apiKey) throw redirect("/app/settings");
 
-  const settings = await prisma.shopSettings.findUnique({
-    where: { shop: session.shop },
-  });
-  if (!settings?.apiKey) return redirect("/app/settings");
+  const code = params.code || "";
+  // Only links this shop created are shown here.
+  const link = await db.link.findUnique({ where: { shop_shortCode: { shop: session.shop, shortCode: code } } });
+  if (!link) throw redirect("/app");
 
-  const link = await prisma.link.findFirst({
-    where: { shop: session.shop, shortCode: code },
-  });
-  if (!link) throw new Response("Not Found", { status: 404 });
+  try {
+    const stats = await getAnalytics(apiKey, code);
+    return { link: { shortUrl: link.shortUrl, originalUrl: link.originalUrl }, stats, error: null, fullUrl: `${truncBaseUrl()}/analytics?shortCode=${encodeURIComponent(code)}` };
+  } catch (err) {
+    return {
+      link: { shortUrl: link.shortUrl, originalUrl: link.originalUrl },
+      stats: null,
+      error: err instanceof TruncError ? err.message : "Could not load clicks.",
+      fullUrl: `${truncBaseUrl()}/analytics?shortCode=${encodeURIComponent(code)}`,
+    };
+  }
+};
 
-  const analytics = await getAnalytics(settings.apiKey, code);
-
-  await prisma.link.update({
-    where: { id: link.id },
-    data: { clicks: analytics.total_clicks },
-  });
-
-  return json({ link, analytics });
-}
-
-export default function AnalyticsPage() {
-  const { link, analytics } = useLoaderData<typeof loader>();
-
-  const countryRows = [...analytics.countries]
-    .sort((a, b) => b.clicks - a.clicks)
-    .slice(0, 10)
-    .map((c) => [c.country, c.clicks.toLocaleString()]);
-
-  const dailyRows = analytics.daily
-    .slice(-14)
-    .map((d) => [d.date, d.clicks.toLocaleString()]);
-
-  const maxDailyClicks = Math.max(...analytics.daily.map((d) => d.clicks), 1);
+export default function LinkAnalytics() {
+  const { link, stats, error, fullUrl } = useLoaderData<typeof loader>();
+  const last14 = stats ? stats.daily.slice(-14) : [];
+  const max = Math.max(1, ...last14.map((d) => d.clicks));
 
   return (
-    <Page
-      title="Link Analytics"
-      subtitle={link.shortUrl}
-      backAction={{ content: "All Links", url: "/app" }}
-      primaryAction={{
-        content: "View on Trunc",
-        url: `https://trunc.site/analytics/${link.shortCode}`,
-        external: true,
-      }}
-    >
-      <Layout>
-        {/* Stats Row */}
-        <Layout.Section>
-          <InlineStack gap="400" wrap>
-            {[
-              { label: "Total Clicks", value: analytics.total_clicks.toLocaleString() },
-              { label: "Countries",    value: analytics.countries.length.toString() },
-              { label: "Last 14 Days", value: analytics.daily.slice(-14).reduce((s, d) => s + d.clicks, 0).toLocaleString() },
-            ].map((stat) => (
-              <Card key={stat.label}>
-                <Box minWidth="140px">
-                  <BlockStack gap="100">
-                    <Text as="p" variant="bodySm" tone="subdued">{stat.label}</Text>
-                    <Text as="p" variant="heading2xl" fontWeight="bold">{stat.value}</Text>
-                  </BlockStack>
-                </Box>
-              </Card>
-            ))}
-          </InlineStack>
-        </Layout.Section>
+    <s-page heading={link.shortUrl.replace(/^https?:\/\//, "")}>
+      <s-link slot="breadcrumb-actions" href="/app">
+        Short links
+      </s-link>
+      <s-button slot="primary-action" href={fullUrl} target="_blank">
+        Full analytics on Trunc
+      </s-button>
 
-        {/* Daily Chart (simple table) */}
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Daily Clicks — Last 14 Days</Text>
-              <Divider />
-              {dailyRows.length > 0 ? (
-                <BlockStack gap="100">
-                  {analytics.daily.slice(-14).map((d) => {
-                    const barPct = Math.round((d.clicks / maxDailyClicks) * 100);
-                    return (
-                      <InlineStack key={d.date} gap="300" blockAlign="center" wrap={false}>
-                        <Text as="span" variant="bodySm" tone="subdued" alignment="end">
-                          <span style={{ display: "inline-block", minWidth: 80 }}>{d.date}</span>
-                        </Text>
-                        <div style={{ flex: 1, background: "#f0f0f1", borderRadius: 4, height: 10 }}>
-                          <div
-                            style={{
-                              width: `${barPct}%`,
-                              height: "100%",
-                              background: "#2271b1",
-                              borderRadius: 4,
-                              minWidth: barPct > 0 ? 4 : 0,
-                            }}
-                          />
-                        </div>
-                        <Text as="span" variant="bodySm" fontWeight="semibold">
-                          <span style={{ display: "inline-block", minWidth: 40, textAlign: "right" }}>
-                            {d.clicks.toLocaleString()}
-                          </span>
-                        </Text>
-                      </InlineStack>
-                    );
-                  })}
-                </BlockStack>
-              ) : (
-                <Text as="p" tone="subdued">No daily data yet.</Text>
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
+      <s-section>
+        <s-paragraph>Goes to {link.originalUrl}</s-paragraph>
+        {error && <s-banner tone="critical">{error}</s-banner>}
+        {stats && (
+          <s-stack gap="base">
+            <s-heading>{stats.totalClicks.toLocaleString()} clicks</s-heading>
+            {stats.lastClickAt && <s-text color="subdued">Last click {new Date(stats.lastClickAt).toLocaleString()}</s-text>}
+          </s-stack>
+        )}
+      </s-section>
 
-        {/* Countries */}
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Top Countries</Text>
-              <Divider />
-              {countryRows.length > 0 ? (
-                <DataTable
-                  columnContentTypes={["text", "numeric"]}
-                  headings={["Country", "Clicks"]}
-                  rows={countryRows}
+      {stats && last14.length > 0 && (
+        <s-section heading="Last 14 days">
+          <s-stack gap="small-200">
+            {last14.map((d) => (
+              <s-stack key={d.date} direction="inline" gap="base" alignItems="center">
+                <s-text>{d.date}</s-text>
+                <div
+                  aria-hidden
+                  style={{ height: 8, borderRadius: 4, background: "#2c6ecb", width: `${Math.max(2, (d.clicks / max) * 240)}px` }}
                 />
-              ) : (
-                <Text as="p" tone="subdued">No country data yet.</Text>
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
+                <s-text>{d.clicks}</s-text>
+              </s-stack>
+            ))}
+          </s-stack>
+        </s-section>
+      )}
 
-        {/* Link Details */}
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Link Details</Text>
-              <Divider />
-              <BlockStack gap="200">
-                <BlockStack gap="050">
-                  <Text as="p" variant="bodySm" tone="subdued">Short URL</Text>
-                  <a href={link.shortUrl} target="_blank" rel="noopener noreferrer">
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">{link.shortUrl}</Text>
-                  </a>
-                </BlockStack>
-                <BlockStack gap="050">
-                  <Text as="p" variant="bodySm" tone="subdued">Destination</Text>
-                  <Text as="p" variant="bodyMd">{link.originalUrl}</Text>
-                </BlockStack>
-                <BlockStack gap="050">
-                  <Text as="p" variant="bodySm" tone="subdued">Created</Text>
-                  <Text as="p" variant="bodyMd">
-                    {new Date(link.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric", month: "long", day: "numeric",
-                    })}
-                  </Text>
-                </BlockStack>
-                <InlineStack>
-                  <Badge>{link.clicks.toLocaleString()} total clicks</Badge>
-                </InlineStack>
-              </BlockStack>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+      {stats && stats.countries.length > 0 && (
+        <s-section heading="Top countries">
+          <s-table>
+            <s-table-header-row>
+              <s-table-header>Country</s-table-header>
+              <s-table-header>Clicks</s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {stats.countries.slice(0, 10).map((c) => (
+                <s-table-row key={c.country_code}>
+                  <s-table-cell>{c.country_code || "Unknown"}</s-table-cell>
+                  <s-table-cell>{c.clicks}</s-table-cell>
+                </s-table-row>
+              ))}
+            </s-table-body>
+          </s-table>
+        </s-section>
+      )}
+    </s-page>
   );
 }
+
+export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);

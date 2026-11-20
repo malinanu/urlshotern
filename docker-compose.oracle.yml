@@ -14,6 +14,11 @@ services:
         - BASE_URL=${BASE_URL:-https://trunc.site}
         - NODE_ENV=production
         - NEXT_PUBLIC_ENABLE_MICROSITES=${ENABLE_MICROSITES:-false}
+        # Store listings for the plugins on /integrations (leave empty until published)
+        - NEXT_PUBLIC_CHROME_EXTENSION_URL=${CHROME_EXTENSION_URL:-}
+        - NEXT_PUBLIC_WORDPRESS_PLUGIN_URL=${WORDPRESS_PLUGIN_URL:-}
+        - NEXT_PUBLIC_SHOPIFY_APP_URL=${SHOPIFY_APP_URL:-}
+        - NEXT_PUBLIC_CANVA_APP_URL=${CANVA_APP_URL:-}
     container_name: urlshortener-app
     ports:
       - "8082:8080"
@@ -90,6 +95,10 @@ services:
 
       # Microsites (/m/<slug> landing pages + vCards) — off unless enabled
       - ENABLE_MICROSITES=${ENABLE_MICROSITES:-false}
+      # Sign in with Trunc for the Canva app (the client stays off while empty)
+      - CANVA_OAUTH_CLIENT_SECRET=${CANVA_OAUTH_CLIENT_SECRET:-}
+      # Sign in with Trunc for the Shopify app: its exact callback URL(s), comma separated
+      - SHOPIFY_CONNECT_REDIRECT_URI=${SHOPIFY_CONNECT_REDIRECT_URI:-}
       - MICROSITE_UPLOAD_PATH=/app/uploads
 
     volumes:

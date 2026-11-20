@@ -9,7 +9,22 @@ class Trunc_API {
 
     public function __construct( string $api_key ) {
         $this->api_key  = $api_key;
-        $this->base_url = TRUNC_API_BASE;
+        $this->base_url = trunc_api_base();
+    }
+
+    /** The readable message from a Trunc error response. */
+    private static function error_message( $data, int $status, string $fallback ): string {
+        if ( 401 === $status ) {
+            return 'Trunc did not accept the API key. Connect again in Trunc Links → Settings.';
+        }
+        if ( is_array( $data ) ) {
+            foreach ( array( 'message', 'error_description', 'error' ) as $field ) {
+                if ( ! empty( $data[ $field ] ) && is_string( $data[ $field ] ) ) {
+                    return $data[ $field ];
+                }
+            }
+        }
+        return $fallback;
     }
 
     /**
@@ -43,7 +58,7 @@ class Trunc_API {
         $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
         if ( $code !== 200 && $code !== 201 ) {
-            $msg = $data['error'] ?? 'Unknown API error';
+            $msg = self::error_message( $data, (int) $code, 'Trunc could not shorten that link.' );
             return new WP_Error( 'trunc_api_error', $msg, [ 'status' => $code ] );
         }
 
@@ -82,7 +97,7 @@ class Trunc_API {
         $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
         if ( $code !== 200 ) {
-            $msg = $data['error'] ?? 'Could not fetch account info';
+            $msg = self::error_message( $data, (int) $code, 'Could not fetch account info' );
             return new WP_Error( 'trunc_api_error', $msg, [ 'status' => $code ] );
         }
 
@@ -130,14 +145,14 @@ class Trunc_API {
         $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
         if ( $code !== 200 ) {
-            $msg = $data['error'] ?? 'Unknown API error';
+            $msg = self::error_message( $data, (int) $code, 'Could not load analytics for that link.' );
             return new WP_Error( 'trunc_api_error', $msg, [ 'status' => $code ] );
         }
 
         return [
             'total_clicks' => $data['total_clicks'] ?? 0,
-            'countries'    => $data['countries']     ?? [],
-            'daily'        => $data['daily']         ?? [],
+            'countries'    => $data['country_stats'] ?? [],
+            'daily'        => $data['daily_clicks']  ?? [],
         ];
     }
 }

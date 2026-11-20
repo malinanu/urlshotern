@@ -355,3 +355,13 @@ func (r *RedisStorage) IncrWindow(key string, window time.Duration) (int64, erro
 func (r *RedisStorage) SetNX(key string, value interface{}, ttl time.Duration) (bool, error) {
 	return r.client.SetNX(r.ctx, key, value, ttl).Result()
 }
+
+// GetDel returns the value of key and deletes it in one step (Redis 6.2+),
+// so a value can be read only once. A missing key returns ("", nil).
+func (r *RedisStorage) GetDel(key string) (string, error) {
+	v, err := r.client.GetDel(r.ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return v, err
+}

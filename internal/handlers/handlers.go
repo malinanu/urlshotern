@@ -51,6 +51,7 @@ type Handler struct {
 	CampaignHandlers          *CampaignHandlers
 	MicroPageHandlers         *MicroPageHandlers
 	MicrositeHandlers         *MicrositeHandlers // nil unless ENABLE_MICROSITES=true
+	ConnectHandlers           *ConnectHandlers   // "Sign in with Trunc" for the plugins
 }
 
 // NewHandler creates a new handler instance

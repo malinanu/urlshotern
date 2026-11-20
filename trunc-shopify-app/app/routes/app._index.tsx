@@ -1,287 +1,178 @@
-import {
-  json,
-  redirect,
-  type ActionFunctionArgs,
-  type LoaderFunctionArgs,
-} from "@remix-run/node";
-import {
-  useLoaderData,
-  useActionData,
-  Form,
-  useNavigation,
-  Link,
-} from "@remix-run/react";
-import {
-  Page,
-  Layout,
-  Card,
-  TextField,
-  Button,
-  DataTable,
-  Banner,
-  InlineStack,
-  BlockStack,
-  Text,
-  Badge,
-  ProgressBar,
-  Divider,
-  Tooltip,
-  EmptyState,
-} from "@shopify/polaris";
-import { shortenUrl, validateAndGetUsage, type UsageResult } from "../lib/trunc.server";
-import { prisma } from "../db.server";
+import { useEffect, useState } from "react";
+import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { Form, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
+import db from "../db.server";
+import { getConnection } from "../lib/shop.server";
+import { getUsage, shortenUrl, TruncError, type UsageResult } from "../lib/trunc.server";
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { session } = await authenticate.admin(request);
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session, admin } = await authenticate.admin(request);
+  const { apiKey } = await getConnection(db, session.shop);
+  if (!apiKey) throw redirect("/app/settings");
 
-  const settings = await prisma.shopSettings.findUnique({
-    where: { shop: session.shop },
-  });
-
-  // No API key — send to settings
-  if (!settings?.apiKey) {
-    return redirect("/app/settings");
-  }
-
-  const links = await prisma.link.findMany({
-    where: { shop: session.shop },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const links = await db.link.findMany({ where: { shop: session.shop }, orderBy: { createdAt: "desc" }, take: 50 });
 
   let usage: UsageResult | null = null;
   try {
-    usage = await validateAndGetUsage(settings.apiKey);
+    usage = await getUsage(apiKey);
   } catch {
-    // Non-fatal — show links without plan info
+    // Show the links even if Trunc is unreachable.
   }
 
-  return json({ links, usage, apiKey: settings.apiKey });
-}
-
-export async function action({ request }: ActionFunctionArgs) {
-  const { session } = await authenticate.admin(request);
-
-  const settings = await prisma.shopSettings.findUnique({
-    where: { shop: session.shop },
-  });
-  if (!settings?.apiKey) return redirect("/app/settings");
-
-  const form = await request.formData();
-  const url        = String(form.get("url") ?? "").trim();
-  const customCode = String(form.get("customCode") ?? "").trim();
-
-  if (!url) return json({ error: "URL is required" }, { status: 400 });
-
-  // Check limit before hitting the API
+  // The storefront's own domain, so product links point at it.
+  let storefront = `https://${session.shop}`;
   try {
-    const usage = await validateAndGetUsage(settings.apiKey);
-    if (usage.url_limit_reached) {
-      return json(
-        { error: `Monthly limit of ${usage.max_urls} URLs reached. Upgrade at trunc.site/pricing.` },
-        { status: 422 }
-      );
-    }
+    const res = await admin.graphql(`#graphql
+      query TruncShopDomain { shop { primaryDomain { url } } }`);
+    const json = await res.json();
+    storefront = json.data?.shop?.primaryDomain?.url || storefront;
   } catch {
-    // Let the shorten call itself return any auth/limit errors
+    // Fall back to the myshopify.com domain.
   }
 
-  try {
-    const result = await shortenUrl(settings.apiKey, url, customCode || undefined);
-    await prisma.link.create({
-      data: {
-        shop: session.shop,
-        originalUrl: url,
-        shortCode: result.short_code,
-        shortUrl: result.short_url,
-        clicks: 0,
-      },
-    });
-    return redirect("/app");
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return json({ error: message }, { status: 500 });
-  }
-}
-
-const PLAN_BADGE: Record<string, { tone: "info" | "success" | "warning"; label: string }> = {
-  free:               { tone: "info",    label: "Free" },
-  premium:            { tone: "success", label: "Premium" },
-  premium_yearly:     { tone: "success", label: "Premium" },
-  enterprise:         { tone: "warning", label: "Enterprise" },
-  enterprise_yearly:  { tone: "warning", label: "Enterprise" },
+  return {
+    links: links.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
+    usage,
+    storefront: storefront.replace(/\/+$/, ""),
+  };
 };
 
-function UsageSummary({ usage }: { usage: UsageResult }) {
-  const b       = PLAN_BADGE[usage.plan_type] ?? { tone: "info" as const, label: usage.plan_type };
-  const urlPct  = usage.max_urls === -1 ? 0 : Math.min(100, usage.url_pct);
-  const maxStr  = usage.max_urls === -1 ? "∞" : usage.max_urls.toLocaleString();
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const { apiKey } = await getConnection(db, session.shop);
+  if (!apiKey) throw redirect("/app/settings");
+
+  const form = await request.formData();
+  const url = String(form.get("url") ?? "").trim();
+  const customCode = String(form.get("customCode") ?? "").trim();
+  if (!/^https?:\/\//i.test(url)) return { error: "Enter a full web address, starting with https://." };
+
+  try {
+    const result = await shortenUrl(apiKey, url, customCode || undefined);
+    await db.link.upsert({
+      where: { shop_shortCode: { shop: session.shop, shortCode: result.short_code } },
+      create: { shop: session.shop, originalUrl: url, shortCode: result.short_code, shortUrl: result.short_url },
+      update: {},
+    });
+    return { shortUrl: result.short_url };
+  } catch (err) {
+    return { error: err instanceof TruncError ? err.message : "Trunc could not shorten that link." };
+  }
+};
+
+function limitText(u: UsageResult): string {
+  return u.maxUrls < 0 ? `${u.currentUrls} short links · unlimited` : `${u.currentUrls} of ${u.maxUrls} short links`;
+}
+
+export default function Links() {
+  const { links, usage, storefront } = useLoaderData<typeof loader>();
+  const result = useActionData<typeof action>();
+  const nav = useNavigation();
+  const shopify = useAppBridge();
+  const [url, setUrl] = useState("");
+  const busy = nav.state === "submitting";
+
+  useEffect(() => {
+    if (result && "shortUrl" in result && result.shortUrl) {
+      shopify.toast.show("Short link created");
+    }
+  }, [result, shopify]);
+
+  const pickProduct = async () => {
+    const picked = await shopify.resourcePicker({ type: "product", action: "select", multiple: false });
+    const handle = (picked?.[0] as { handle?: string } | undefined)?.handle;
+    if (handle) setUrl(`${storefront}/products/${handle}`);
+  };
+
+  const copy = async (text: string) => {
+    await navigator.clipboard.writeText(text).catch(() => undefined);
+    shopify.toast.show("Copied");
+  };
 
   return (
-    <InlineStack gap="400" blockAlign="center" wrap={false}>
-      <Badge tone={b.tone}>{b.label}</Badge>
-      <BlockStack gap="050">
-        <InlineStack gap="100" blockAlign="center">
-          <Text as="span" variant="bodySm" tone="subdued">URLs:</Text>
-          <Text as="span" variant="bodySm" fontWeight="semibold">
-            {usage.current_urls} / {maxStr}
-          </Text>
-        </InlineStack>
-        {usage.max_urls !== -1 && (
-          <div style={{ width: 120 }}>
-            <ProgressBar
-              progress={urlPct}
-              tone={urlPct >= 90 ? "critical" : urlPct >= 70 ? "highlight" : "success"}
-              size="small"
+    <s-page heading="Short links">
+      {usage && (
+        <s-badge slot="primary-action" tone={usage.urlLimitReached ? "critical" : "info"}>
+          {usage.planName} · {limitText(usage)}
+        </s-badge>
+      )}
+
+      <s-section heading="Shorten a link">
+        <Form method="post">
+          <s-stack gap="base">
+            <s-url-field
+              label="Web address"
+              name="url"
+              value={url}
+              placeholder={`${storefront}/products/…`}
+              onInput={(e: Event) => setUrl((e.currentTarget as HTMLInputElement).value)}
             />
-          </div>
+            <s-text-field
+              label="Custom back-half (optional)"
+              name="customCode"
+              details="Letters, numbers and dashes. Available on Premium and above."
+            />
+            {result && "error" in result && result.error && <s-banner tone="critical">{result.error}</s-banner>}
+            {result && "shortUrl" in result && result.shortUrl && (
+              <s-banner tone="success" heading="Short link ready">
+                <s-stack direction="inline" gap="base">
+                  <s-link href={result.shortUrl} target="_blank">
+                    {result.shortUrl}
+                  </s-link>
+                  <s-button onClick={() => copy(result.shortUrl!)}>Copy</s-button>
+                </s-stack>
+              </s-banner>
+            )}
+            <s-stack direction="inline" gap="base">
+              <s-button type="submit" variant="primary" {...(busy ? { loading: true } : {})}>
+                Shorten
+              </s-button>
+              <s-button onClick={pickProduct}>Pick a product</s-button>
+            </s-stack>
+          </s-stack>
+        </Form>
+      </s-section>
+
+      <s-section heading="Your links">
+        {links.length === 0 ? (
+          <s-paragraph>No links yet. Shorten a product or page above.</s-paragraph>
+        ) : (
+          <s-table>
+            <s-table-header-row>
+              <s-table-header>Short link</s-table-header>
+              <s-table-header>Goes to</s-table-header>
+              <s-table-header>Created</s-table-header>
+              <s-table-header></s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {links.map((l) => (
+                <s-table-row key={l.id}>
+                  <s-table-cell>
+                    <s-link href={l.shortUrl} target="_blank">
+                      {l.shortUrl.replace(/^https?:\/\//, "")}
+                    </s-link>
+                  </s-table-cell>
+                  <s-table-cell>{l.originalUrl}</s-table-cell>
+                  <s-table-cell>{new Date(l.createdAt).toLocaleDateString()}</s-table-cell>
+                  <s-table-cell>
+                    <s-stack direction="inline" gap="small-200">
+                      <s-button variant="tertiary" onClick={() => copy(l.shortUrl)}>
+                        Copy
+                      </s-button>
+                      <s-link href={`/app/analytics/${encodeURIComponent(l.shortCode)}`}>Clicks</s-link>
+                    </s-stack>
+                  </s-table-cell>
+                </s-table-row>
+              ))}
+            </s-table-body>
+          </s-table>
         )}
-      </BlockStack>
-      <Link to="/app/settings">
-        <Button variant="plain" size="slim">Settings</Button>
-      </Link>
-    </InlineStack>
+      </s-section>
+    </s-page>
   );
 }
 
-export default function Index() {
-  const { links, usage } = useLoaderData<typeof loader>();
-  const actionData       = useActionData<typeof action>();
-  const nav              = useNavigation();
-  const isSubmitting     = nav.state === "submitting";
-
-  const limitReached = usage?.url_limit_reached ?? false;
-  const approaching  = usage?.url_approaching   ?? false;
-
-  const rows = links.map((l) => [
-    <Tooltip content={l.shortUrl} key={`url-${l.id}`}>
-      <a href={l.shortUrl} target="_blank" rel="noopener noreferrer">
-        {l.shortUrl}
-      </a>
-    </Tooltip>,
-    <Tooltip content={l.originalUrl} key={`orig-${l.id}`}>
-      <Text as="span" variant="bodySm" tone="subdued">
-        {l.originalUrl.length > 50 ? l.originalUrl.slice(0, 50) + "…" : l.originalUrl}
-      </Text>
-    </Tooltip>,
-    <Badge key={`clicks-${l.id}`}>{l.clicks.toLocaleString()}</Badge>,
-    <Text as="span" variant="bodySm" key={`date-${l.id}`}>
-      {new Date(l.createdAt).toLocaleDateString()}
-    </Text>,
-    <Link to={`/app/analytics/${l.shortCode}`} key={`action-${l.id}`}>
-      <Button size="slim" variant="plain">Analytics</Button>
-    </Link>,
-  ]);
-
-  return (
-    <Page
-      title="Trunc URL Shortener"
-      titleMetadata={usage ? <UsageSummary usage={usage} /> : undefined}
-    >
-      <Layout>
-        <Layout.Section>
-          <BlockStack gap="400">
-            {/* Limit alerts */}
-            {limitReached && (
-              <Banner
-                tone="critical"
-                title="Monthly URL limit reached"
-                action={{ content: "Upgrade plan", url: "https://trunc.site/pricing", external: true }}
-              >
-                <Text as="p">
-                  You have used all {usage!.max_urls} URLs for this month.
-                  Upgrade to continue shortening links.
-                </Text>
-              </Banner>
-            )}
-
-            {approaching && !limitReached && (
-              <Banner
-                tone="warning"
-                title="Approaching URL limit"
-                action={{ content: "View plans", url: "https://trunc.site/pricing", external: true }}
-              >
-                <Text as="p">
-                  {usage!.current_urls} of {usage!.max_urls} URLs used this month.
-                </Text>
-              </Banner>
-            )}
-
-            {/* Error from action */}
-            {actionData?.error && (
-              <Banner tone="critical" title="Could not shorten URL">
-                <Text as="p">{actionData.error}</Text>
-              </Banner>
-            )}
-
-            {/* Shorten Form */}
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">Shorten a URL</Text>
-                <Form method="post">
-                  <BlockStack gap="300">
-                    <TextField
-                      label="URL to shorten"
-                      name="url"
-                      type="url"
-                      placeholder="https://mystore.myshopify.com/products/summer-sale"
-                      autoComplete="off"
-                      disabled={limitReached}
-                    />
-                    <TextField
-                      label="Custom code (optional)"
-                      name="customCode"
-                      placeholder="summer-sale"
-                      autoComplete="off"
-                      helpText="Leave blank for an auto-generated code"
-                      disabled={limitReached}
-                    />
-                    <InlineStack>
-                      <Button
-                        submit
-                        variant="primary"
-                        loading={isSubmitting}
-                        disabled={limitReached}
-                      >
-                        Shorten URL
-                      </Button>
-                    </InlineStack>
-                  </BlockStack>
-                </Form>
-              </BlockStack>
-            </Card>
-
-            {/* Links Table */}
-            <Card>
-              <BlockStack gap="300">
-                <InlineStack align="space-between">
-                  <Text as="h2" variant="headingMd">Your Short Links</Text>
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {links.length} link{links.length !== 1 ? "s" : ""}
-                  </Text>
-                </InlineStack>
-                <Divider />
-                {links.length > 0 ? (
-                  <DataTable
-                    columnContentTypes={["text", "text", "text", "text", "text"]}
-                    headings={["Short URL", "Destination", "Clicks", "Created", ""]}
-                    rows={rows}
-                    truncate
-                  />
-                ) : (
-                  <EmptyState
-                    heading="No links yet"
-                    image=""
-                  >
-                    <Text as="p">Shorten your first URL above to get started.</Text>
-                  </EmptyState>
-                )}
-              </BlockStack>
-            </Card>
-          </BlockStack>
-        </Layout.Section>
-      </Layout>
-    </Page>
-  );
-}
+export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);

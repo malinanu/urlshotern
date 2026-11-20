@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trunc settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options">
+    <header class="brand">
+      <img src="icons/icon-32.png" width="24" height="24" alt="" />
+      <span>Trunc</span>
+    </header>
+    <h1>Settings</h1>
+    <p class="muted">Shorten any page from the toolbar button, the right-click menu, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>.</p>
+
+    <section class="card" aria-labelledby="account-h">
+      <h2 id="account-h">Account</h2>
+      <p id="status" class="status" aria-live="polite">Checking…</p>
+      <div id="connected" hidden>
+        <button type="button" class="secondary" id="disconnect">Disconnect</button>
+      </div>
+      <div id="disconnected" hidden>
+        <button type="button" class="primary" id="signin">Sign in with Trunc</button>
+        <form id="key-form" class="key-form">
+          <label class="label" for="api-key" style="margin-top:16px">Or paste an API key</label>
+          <div class="row">
+            <input id="api-key" class="mono" autocomplete="off" spellcheck="false" placeholder="us_…" />
+            <button type="submit" class="secondary">Save key</button>
+          </div>
+          <p class="muted">Create one on <a id="keys-link" href="https://trunc.site/api-keys" target="_blank" rel="noopener">your API keys page</a>.</p>
+        </form>
+      </div>
+      <p id="account-error" class="error" hidden></p>
+    </section>
+
+    <section class="card" aria-labelledby="server-h">
+      <h2 id="server-h">Server</h2>
+      <p class="muted">Leave this as trunc.site unless you run your own Trunc server.</p>
+      <form id="server-form">
+        <div class="row">
+          <input id="server-url" type="url" placeholder="https://trunc.site" />
+          <button type="submit" class="secondary">Save</button>
+        </div>
+        <p id="server-msg" class="muted" aria-live="polite"></p>
+      </form>
+    </section>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
