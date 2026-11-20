@@ -209,6 +209,7 @@ func setupPublicRoutes(router *gin.Engine, handler *handlers.Handler, authMiddle
 
 	// Public MicroPage and Digital vCard routes
 	if handler.MicroPageHandlers != nil {
+		router.GET("/uploads/mp/*path", handler.MicroPageHandlers.ServeCardImage)
 		router.GET("/api/v1/micropages/public/:slug", handler.MicroPageHandlers.GetPublicMicroPage)
 		router.GET("/api/v1/micropages/public/:slug/vcard", handler.MicroPageHandlers.DownloadVCard)
 		router.POST("/api/v1/micropages/public/:slug/click/:linkId", handler.MicroPageHandlers.TrackMicroLinkClick)
@@ -295,6 +296,7 @@ func setupProtectedRoutes(router *gin.Engine, handler *handlers.Handler, authMid
 	// MicroPage management
 	if handler.MicroPageHandlers != nil {
 		api.POST("/micropages", handler.MicroPageHandlers.CreateMicroPage)
+		api.POST("/micropages/assets", handler.MicroPageHandlers.UploadCardImage)
 		api.GET("/micropages", handler.MicroPageHandlers.ListUserMicroPages)
 		api.GET("/micropages/:id", handler.MicroPageHandlers.GetMicroPage)
 		api.PUT("/micropages/:id", handler.MicroPageHandlers.UpdateMicroPage)

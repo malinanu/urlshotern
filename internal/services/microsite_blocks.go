@@ -307,6 +307,25 @@ func normalizeProfileHeader(d models.ProfileHeaderData, field string, _ bool) (m
 	if d.CompanyLogoURL, err = SanitizeMicrositeImageURL(d.CompanyLogoURL, field+".company_logo_url"); err != nil {
 		return d, err
 	}
+	if len(d.Tags) > maxProfileTags {
+		return d, validationErr(field+".tags", "at most %d labels", maxProfileTags)
+	}
+	tags := make([]string, 0, len(d.Tags))
+	for i, t := range d.Tags {
+		t, err := cleanText(t, 24, false, fmt.Sprintf("%s.tags[%d]", field, i))
+		if err != nil {
+			return d, err
+		}
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+	d.Tags = tags
+	switch d.LogoPlate {
+	case "", "auto", "light", "dark", "none":
+	default:
+		return d, validationErr(field+".logo_plate", "must be auto, light, dark or none")
+	}
 	return d, nil
 }
 
@@ -589,6 +608,17 @@ func normalizeTheme(t models.MicrositeTheme, draft bool) (models.MicrositeTheme,
 	}
 	if !MicrositeStyles[t.Style] {
 		return t, validationErr("theme.style", "unsupported style %q", t.Style)
+	}
+	// Digital cards have curated palettes; other styles have none.
+	if card, ok := CardTemplateByID(t.Style); ok {
+		if t.Palette == "" {
+			t.Palette = card.Palettes[0].ID
+		}
+		if _, ok := card.palette(t.Palette); !ok {
+			return t, validationErr("theme.palette", "unsupported palette %q", t.Palette)
+		}
+	} else {
+		t.Palette = ""
 	}
 	return t, nil
 }

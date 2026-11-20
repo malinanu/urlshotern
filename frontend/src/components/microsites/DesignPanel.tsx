@@ -14,6 +14,7 @@ import {
   type MicrositeTheme,
 } from '@/lib/microsites';
 import { ColorField, ImageField, SelectField, TextAreaField, TextField, ToggleField } from './fields';
+import { CARD_COLLECTIONS, cardThemeDefaults, getCardTemplate, paletteAccent, paletteSwatch, templatesInCollection } from '@/components/micropages/cards/catalog';
 
 interface Props {
   theme: MicrositeTheme;
@@ -88,10 +89,27 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
   const style: TemplateStyle = theme.style ?? 'classic';
   const styled = style !== 'classic';
   const styleInfo = TEMPLATE_STYLES.find((s) => s.id === style);
+  const card = getCardTemplate(style);
   // Switching style keeps the owner's colors; the style's palette is one click away.
+  // Digital cards bring their own colours, because the card's design depends on them.
   const changeStyle = (id: TemplateStyle) => {
+    const cardTpl = getCardTemplate(id);
+    if (cardTpl) {
+      const d = cardThemeDefaults(cardTpl.id);
+      onTheme({
+        ...theme,
+        style: id,
+        font: 'system',
+        palette: cardTpl.palettes[0].id,
+        accent: d.accent,
+        card_fill: d.bg,
+        text: d.ink,
+        button_text: d.onAccent,
+      });
+      return;
+    }
     const next = TEMPLATE_STYLES.find((s) => s.id === id);
-    onTheme({ ...theme, style: id, font: next?.theme.font ?? theme.font });
+    onTheme({ ...theme, style: id, font: next?.theme.font ?? theme.font, palette: undefined });
   };
   const paletteDiffers =
     styled &&
@@ -134,12 +152,84 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
             Use the {styleInfo.name.toLowerCase()} colors
           </button>
         )}
-        {styled && (
+        {styled && !card && (
           <p className="text-xs text-muted-foreground">
             This style sets its own background, corners and shadows. Your colors and font still apply.
           </p>
         )}
       </Section>
+
+      <Section title="Digital visiting cards">
+        <div className="grid gap-4">
+          {CARD_COLLECTIONS.map((c) => (
+            <div key={c.id}>
+              <p className="text-xs font-semibold text-foreground">{c.name}</p>
+              <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label={c.name}>
+                {templatesInCollection(c.id).map((t) => {
+                  const d = cardThemeDefaults(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={style === t.id}
+                      onClick={() => changeStyle(t.id)}
+                      className={`text-left rounded-lg border px-3 py-2 ${
+                        style === t.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <span
+                          aria-hidden="true"
+                          className="h-3 w-3 rounded-sm border border-border"
+                          style={{ background: `linear-gradient(135deg, ${d.bg} 50%, ${d.accent} 50%)` }}
+                        />
+                        {t.name}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">{t.category}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          A card shows your Profile, Save Contact, Contact buttons, Social icons and QR code blocks. Other blocks appear under it.
+        </p>
+      </Section>
+
+      {card && (
+        <Section title="Card colours">
+          <div className="flex flex-wrap gap-2">
+            {card.palettes.map((p) => {
+              const sw = paletteSwatch(card, p);
+              const on = (theme.palette ?? card.palettes[0].id) === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setTheme({ palette: p.id, accent: paletteAccent(card, p.id) })}
+                  className={`flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border text-xs font-medium ${
+                    on ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <span
+                    className="h-5 w-5 rounded-full border border-border"
+                    style={{ background: `linear-gradient(135deg, ${sw.bg} 50%, ${sw.accent} 50%)` }}
+                  />
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+          <ColorField label="Accent" value={theme.accent} onChange={(v) => setTheme({ accent: v })} />
+          <p className="text-xs text-muted-foreground">
+            The layout and typography belong to the template. Colours are limited to its palettes plus one accent so the card stays readable.
+          </p>
+        </Section>
+      )}
 
       {!styled && (
       <>
@@ -241,6 +331,7 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
       </>
       )}
 
+      {!card && (
       <Section title="Colors">
         <div className="grid grid-cols-2 gap-3">
           <ColorField label={style === 'board' ? 'Board' : 'Card'} value={theme.card_fill} onChange={(v) => setTheme({ card_fill: v })} />
@@ -249,7 +340,9 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
           <ColorField label="Button text" value={theme.button_text} onChange={(v) => setTheme({ button_text: v })} />
         </div>
       </Section>
+      )}
 
+      {!card && (
       <Section title={styled ? 'Typography' : 'Typography & shapes'}>
         <SelectField label="Font" value={theme.font} onChange={(v) => setTheme({ font: v })} options={FONTS.map((f) => ({ value: f.id, label: f.name }))} />
         {!styled && (
@@ -287,6 +380,7 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
         </>
         )}
       </Section>
+      )}
 
       <Section title="Sharing & search">
         <TextField label="Page title (browser tab & link previews)" value={settings.seo_title} onChange={(v) => setSettings({ seo_title: v })} maxLength={70} />

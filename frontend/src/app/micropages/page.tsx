@@ -9,6 +9,8 @@ import { API_ENDPOINTS } from '@/lib/api-config';
 import { getAccessToken } from '@/utils/tokenValidation';
 import { MicroPage, MicroPageTheme } from '@/types/micropage';
 import { TEMPLATES } from '@/components/micropages/templates';
+import { TemplateGallery } from '@/components/micropages/TemplateGallery';
+import { getCardTemplate, isCardTemplateId } from '@/components/micropages/cards/catalog';
 import { QRCodeModal } from '@/components/QRCode';
 import {
   PlusIcon,
@@ -37,6 +39,7 @@ export default function MicroPagesDashboard() {
   const [newTitle, setNewTitle] = useState('');
   const [newSlug, setNewSlug] = useState('');
   const [selectedTheme, setSelectedTheme] = useState<MicroPageTheme>('executive-obsidian');
+  const [selectedPalette, setSelectedPalette] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -67,8 +70,8 @@ export default function MicroPagesDashboard() {
 
       const data = await res.json();
       setPages(data.pages || []);
-    } catch (err: any) {
-      setError(err.message || 'Error loading micro-pages');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Error loading micro-pages');
     } finally {
       setLoading(false);
     }
@@ -106,6 +109,9 @@ export default function MicroPagesDashboard() {
         title: newTitle.trim(),
         slug: newSlug.trim().toLowerCase(),
         theme: selectedTheme,
+        config: isCardTemplateId(selectedTheme)
+          ? { card: { palette: selectedPalette || getCardTemplate(selectedTheme)?.palettes[0].id } }
+          : undefined,
         bio: `Hi, I'm ${newTitle.trim()}. Connect with me below!`,
         vcard: {
           first_name: newTitle.trim().split(' ')[0] || newTitle.trim(),
@@ -176,8 +182,8 @@ export default function MicroPagesDashboard() {
       }
 
       setPages((prev) => prev.filter((p) => p.id !== id));
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete micro-page');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Failed to delete micro-page');
     }
   };
 
@@ -274,7 +280,9 @@ export default function MicroPagesDashboard() {
           /* Cards Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pages.map((p) => {
+              const cardTpl = getCardTemplate(p.theme);
               const templateInfo = TEMPLATES.find((t) => t.id === p.theme) || TEMPLATES[0];
+              const templateName = cardTpl ? cardTpl.name : templateInfo.name;
               const publicUrl = `/m/${p.slug}`;
 
               return (
@@ -291,7 +299,7 @@ export default function MicroPagesDashboard() {
                         <div className={`w-full h-full opacity-60 ${templateInfo.previewBg}`} />
                       )}
                       <span className="absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white border border-white/10">
-                        {templateInfo.name}
+                        {templateName}
                       </span>
                     </div>
 
@@ -417,7 +425,7 @@ export default function MicroPagesDashboard() {
         {/* Modal: Create Micro-Page */}
         {isCreateOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full max-h-[94vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h3 className="text-xl font-bold text-white">New Micro-Page & Digital vCard</h3>
@@ -471,31 +479,16 @@ export default function MicroPagesDashboard() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                    Curated Template (10 Options)
+                    Template: 12 digital visiting cards and 10 classic pages
                   </label>
-                  <div className="grid grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
-                    {TEMPLATES.map((t) => (
-                      <button
-                        type="button"
-                        key={t.id}
-                        onClick={() => setSelectedTheme(t.id)}
-                        className={`text-left p-3 rounded-xl border transition-all flex flex-col justify-between ${
-                          selectedTheme === t.id
-                            ? 'border-blue-500 bg-blue-500/10 shadow-sm'
-                            : 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-white truncate">{t.name}</span>
-                          <span
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: t.accentColor }}
-                          />
-                        </div>
-                        <div className="text-[10px] text-slate-400 line-clamp-1">{t.tag}</div>
-                      </button>
-                    ))}
-                  </div>
+                  <TemplateGallery
+                    value={selectedTheme}
+                    onSelect={(theme, paletteId) => {
+                      setSelectedTheme(theme as MicroPageTheme);
+                      setSelectedPalette(paletteId);
+                    }}
+                    scrollClassName="max-h-[44vh]"
+                  />
                 </div>
 
                 <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">

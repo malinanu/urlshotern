@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { MicroPage } from '@/types/micropage';
 import { API_ENDPOINTS } from '@/lib/api-config';
+import Link from 'next/link';
 import { MicroPageRenderer } from '@/components/micropages/MicroPageRenderer';
+import { isCardTemplateId } from '@/components/micropages/cards/catalog';
 import { QRCodeModal } from '@/components/QRCode';
 import {
   QrCodeIcon,
-  ShareIcon,
   CheckIcon,
   ClipboardDocumentIcon,
   ArrowDownTrayIcon,
@@ -64,7 +65,7 @@ export default function PublicMicroPageClient({ slug: propSlug, initialData }: P
     }
   }, [activeSlug, initialData]);
 
-  const handleLinkClick = (linkId: string, url: string) => {
+  const handleLinkClick = (linkId: string) => {
     // Fire-and-forget click metric tracking
     try {
       const clickEndpoint = API_ENDPOINTS.micropages.click(activeSlug, linkId);
@@ -116,12 +117,12 @@ export default function PublicMicroPageClient({ slug: propSlug, initialData }: P
         <p className="mt-2 text-sm text-slate-400 max-w-sm">
           The link you visited might have been moved, removed, or is set to private.
         </p>
-        <a
+        <Link
           href="/"
           className="mt-6 px-5 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 transition-all"
         >
           Create Your Own vCard
-        </a>
+        </Link>
       </div>
     );
   }
@@ -130,7 +131,8 @@ export default function PublicMicroPageClient({ slug: propSlug, initialData }: P
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-start bg-slate-950 text-white relative">
-      {/* Floating Share / Action Top Bar */}
+      {/* Floating Share / Action Top Bar (card templates have their own actions under the card) */}
+      {!isCardTemplateId(page.theme) && (
       <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
         <button
           type="button"
@@ -159,6 +161,7 @@ export default function PublicMicroPageClient({ slug: propSlug, initialData }: P
           <ArrowDownTrayIcon className="w-4 h-4 text-blue-400" />
         </button>
       </div>
+      )}
 
       {/* Main Renderer Container */}
       <div className="w-full max-w-md min-h-screen shadow-2xl flex flex-col">

@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { MicroPage, MicroLinkItem, MicroSocialLink, VCardContact, MicroPageTheme } from '@/types/micropage';
+import { CardPageView } from './cards/CardPageView';
+import { isCardTemplateId } from './cards/catalog';
 
 interface MicroPageRendererProps {
   page: Partial<MicroPage>;
@@ -88,6 +90,19 @@ export function MicroPageRenderer({
   onSaveContact,
   className = '',
 }: MicroPageRendererProps) {
+  // The twelve digital visiting card templates render as fixed-proportion cards.
+  if (isCardTemplateId(page.theme)) {
+    return (
+      <CardPageView
+        page={page}
+        isPreview={isPreview}
+        onLinkClick={onLinkClick}
+        onSaveContact={onSaveContact}
+        className={className}
+      />
+    );
+  }
+
   const theme: MicroPageTheme = page.theme || 'executive-obsidian';
   const vcard = page.vcard;
   const links: MicroLinkItem[] = page.links || [];

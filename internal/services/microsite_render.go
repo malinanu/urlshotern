@@ -15,6 +15,8 @@ import (
 )
 
 var (
+	//go:embed microsite_web/card.html.tmpl
+	micrositeCardTemplate string
 	//go:embed microsite_web/page.html.tmpl
 	micrositePageTemplate string
 	//go:embed microsite_web/blocks.html.tmpl
@@ -25,7 +27,7 @@ var (
 	//go:embed microsite_web/beacon.js
 	MicrositeBeaconJS []byte
 
-	micrositeTmpl = template.Must(template.Must(template.New("page").Parse(micrositePageTemplate)).Parse(micrositeBlocksTemplate))
+	micrositeTmpl = template.Must(template.Must(template.Must(template.New("page").Parse(micrositePageTemplate)).Parse(micrositeBlocksTemplate)).Parse(micrositeCardTemplate))
 )
 
 // MicrositeBeaconPath is where the beacon script is served.
@@ -53,7 +55,8 @@ type MicrositeRenderOptions struct {
 	Slug      string
 	Title     string
 	ShowBadge bool
-	Preview   bool // builder preview: no tracking script, links open nothing
+	Preview   bool  // builder preview: no tracking script, links open nothing
+	PageID    int64 // the page's id (digital card identity number); 0 in previews
 
 	// Forms (v2). FormsEnabled is false when the owner's plan lacks forms; form
 	// blocks are then not rendered. FormToken signs a render-time token.
@@ -91,6 +94,10 @@ type micrositePageView struct {
 	ExtraCSS     template.CSS
 	FontPreloads []string
 	Scripts      []string
+
+	// Card is set for the twelve digital visiting card styles; Blocks then holds only the
+	// blocks shown under the card.
+	Card *cardView
 }
 
 type micrositeBlockView struct {
@@ -104,6 +111,7 @@ type micrositeBlockView struct {
 	Text     *models.TextData
 	Image    *imageView
 	Divider  string
+	QRURL    string // qr_code block: custom destination (empty = the page address)
 
 	Product   *productView
 	Carousel  *carouselView
@@ -124,6 +132,8 @@ type profileView struct {
 type vcardButtonView struct {
 	ButtonText string
 	Href       string
+	// Contact details, shown on digital cards.
+	Phone, Email, Website, Address string
 }
 
 type linkView struct {
@@ -143,6 +153,7 @@ type contactView struct {
 	ID       string
 	Kind     string
 	Label    string
+	Value    string // the raw number or address (digital cards show it)
 	Href     template.URL
 	Icon     template.HTML
 	External bool
@@ -151,6 +162,7 @@ type contactView struct {
 type socialView struct {
 	BlockID  string
 	ID       string
+	Platform string
 	Name     string
 	Href     string
 	Icon     template.HTML
@@ -231,6 +243,9 @@ func RenderMicrosite(content models.MicrositeContent, opts MicrositeRenderOption
 		}
 	}
 
+	if tpl, ok := CardTemplateByID(theme.Style); ok {
+		view.Card, view.Blocks = buildCardView(tpl, theme, view.Blocks, base, opts)
+	}
 	applyV2Layout(&view, theme, base)
 
 	var buf bytes.Buffer
@@ -264,7 +279,13 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 		if opts.Slug != "" {
 			href = "/m/" + url.PathEscape(opts.Slug) + "/vcard?b=" + url.QueryEscape(b.ID)
 		}
-		bv.VCard = &vcardButtonView{ButtonText: d.ButtonText, Href: href}
+		bv.VCard = &vcardButtonView{
+			ButtonText: d.ButtonText, Href: href,
+			Phone:   firstNonEmpty(d.PhoneMobile, d.PhoneWork),
+			Email:   firstNonEmpty(d.EmailWork, d.EmailPersonal),
+			Website: d.Website,
+			Address: joinNonEmpty(", ", d.Street, d.City, d.Region, d.PostalCode, d.Country),
+		}
 
 	case models.LinkListData:
 		for _, it := range d.Items {
@@ -294,7 +315,7 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 				continue
 			}
 			bv.Contacts = append(bv.Contacts, contactView{
-				BlockID: b.ID, ID: it.ID, Kind: it.Kind,
+				BlockID: b.ID, ID: it.ID, Kind: it.Kind, Value: it.Value,
 				Label:    firstNonEmpty(it.Label, contactLabels[it.Kind]),
 				Href:     template.URL(href), // #nosec G203 -- built from validated phone/email values
 				Icon:     micrositeIcons[it.Kind],
@@ -309,7 +330,7 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 				continue
 			}
 			bv.Socials = append(bv.Socials, socialView{
-				BlockID: b.ID, ID: it.ID, Href: href,
+				BlockID: b.ID, ID: it.ID, Href: href, Platform: it.Platform,
 				Name:     MicrositeSocialPlatforms[it.Platform],
 				Icon:     micrositeIcons[it.Platform],
 				Monogram: micrositeMonograms[it.Platform],
@@ -336,6 +357,9 @@ func buildBlockView(b models.MicrositeBlock, base string, opts MicrositeRenderOp
 
 	case models.DividerData:
 		bv.Divider = d.Style
+
+	case models.QRCodeData:
+		bv.QRURL = d.URL
 
 	default:
 		ok := buildV2BlockView(&bv, data, base, opts)

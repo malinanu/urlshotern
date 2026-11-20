@@ -79,7 +79,36 @@ export default function BlockForm({ block, micrositeId, onChange, canUseForms }:
           </div>
           <TextAreaField label="Bio" value={d.bio} onChange={(v) => set({ bio: v })} maxLength={500} />
           <ImageField label="Company logo" value={d.company_logo_url} onChange={(v) => set({ company_logo_url: v })} micrositeId={micrositeId} />
+          <SelectField
+            label="Logo background (digital cards)"
+            value={d.logo_plate ?? 'auto'}
+            onChange={(v) => set({ logo_plate: v })}
+            options={[
+              { value: 'auto', label: 'Automatic' },
+              { value: 'light', label: 'Light plate (for dark logos)' },
+              { value: 'dark', label: 'Dark plate (for white logos)' },
+              { value: 'none', label: 'None' },
+            ]}
+          />
+          <TagsField value={Array.isArray(d.tags) ? (d.tags as string[]) : []} onChange={(tags) => set({ tags })} />
           <ToggleField label="Show verified badge" checked={d.verified} onChange={(v) => set({ verified: v })} />
+        </div>
+      );
+
+    case 'qr_code':
+      return (
+        <div className="grid gap-3">
+          <p className="text-xs text-muted-foreground">
+            Digital cards show a QR code generated from this page&apos;s address. Enter a web address below to send scans somewhere
+            else instead.
+          </p>
+          <TextField
+            label="QR code destination (optional)"
+            value={d.url}
+            onChange={(v) => set({ url: v })}
+            maxLength={400}
+            placeholder="https://example.com"
+          />
         </div>
       );
 
@@ -465,5 +494,28 @@ function ItemList({
         </button>
       )}
     </div>
+  );
+}
+
+/** Up to four short labels, typed as a comma-separated list. */
+function TagsField({ value, onChange }: { value: string[]; onChange: (tags: string[]) => void }) {
+  const [text, setText] = useState(value.join(', '));
+  return (
+    <TextField
+      label="Specialisation labels (up to 4, separated by commas)"
+      value={text}
+      onChange={(v) => {
+        setText(v);
+        onChange(
+          v
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+            .slice(0, 4)
+        );
+      }}
+      maxLength={120}
+      placeholder="Branding, Strategy, Identity"
+    />
   );
 }

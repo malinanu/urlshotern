@@ -1,0 +1,169 @@
+/* 03 ATLAS: warm premium corporate. Cream and sand, gold hairlines, serif and sans. */
+.vc-atlas {
+  --vc-bg: #f5ecdc;
+  --vc-ink: #3a2e22;
+  --vc-mute: #7d6d58;
+  --vc-accent: #b48a3c;
+  --vc-accent2: #d7b76f;
+  --vc-surface: #ecdfc6;
+  --vc-line: rgba(58, 46, 34, 0.18);
+  --vc-on-accent: #fffaf0;
+  --vc-plate: #fffaf0;
+  --vc-qr: #3a2e22;
+  --vc-head: "Playfair Display", Georgia, serif;
+  --vc-body: "Source Sans 3", system-ui, sans-serif;
+}
+.vc-atlas .vc-d1,
+.vc-atlas .vc-d2,
+.vc-atlas .vc-d3 {
+  display: block;
+}
+.vc-atlas .vc-d1 {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 21em;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vc-accent2) 58%, var(--vc-bg)), color-mix(in srgb, var(--vc-accent2) 28%, var(--vc-bg)));
+  border-radius: 0 0 50% 50% / 0 0 4.5em 4.5em;
+}
+.vc-atlas .vc-d2 {
+  inset: 1.4em;
+  border: 0.1em solid var(--vc-accent);
+  opacity: 0.55;
+}
+.vc-atlas .vc-d3 {
+  inset: 2em;
+  border: 0.1em solid color-mix(in srgb, var(--vc-accent) 25%, transparent);
+}
+
+.vc-atlas .vc-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4.4em 4.6em 4em;
+}
+.vc-atlas .vc-top {
+  justify-content: center;
+  height: 4.2em;
+}
+.vc-atlas .vc-logo {
+  height: 3.8em;
+}
+.vc-atlas .vc-brand {
+  display: block;
+  font-family: var(--vc-head);
+  font-size: 1.7em;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vc-ink);
+}
+.vc-atlas .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-atlas .vc-photo {
+  width: 18.6em;
+  height: 18.6em;
+  margin-top: 1.8em;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.55em var(--vc-bg), 0 0 0 0.75em var(--vc-accent);
+}
+.vc-atlas .vc-mono {
+  background: var(--vc-surface);
+  color: var(--vc-accent);
+  font-weight: 500;
+}
+.vc-atlas .vc-who {
+  width: 100%;
+  margin-top: 2.2em;
+  padding-bottom: 1em;
+  border-bottom: 0.1em solid var(--vc-line);
+  text-align: center;
+}
+.vc-atlas .vc-name {
+  font-size: calc(4.2em * var(--nm, 1));
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--vc-ink);
+}
+.vc-atlas .vc-role {
+  margin-top: 0.8em;
+  font-size: 1.3em;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-atlas .vc-co {
+  margin-top: 0.4em;
+  font-size: 1.6em;
+  font-family: var(--vc-head);
+  color: var(--vc-mute);
+}
+.vc-atlas .vc-about {
+  width: 100%;
+  margin-top: 1em;
+  font-size: 1.35em;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--vc-mute);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.vc-atlas .vc-list {
+  width: 100%;
+  margin-top: 1.4em;
+  padding: 0.3em 1.6em;
+  border-radius: 1.2em;
+  background: var(--vc-surface);
+}
+.vc-atlas .vc-list li + li {
+  border-top: 0.1em solid var(--vc-line);
+}
+.vc-atlas .vc-row {
+  padding: 0.5em 0;
+}
+.vc-atlas .vc-ico {
+  width: 2.5em;
+  height: 2.5em;
+  color: var(--vc-accent);
+}
+.vc-atlas .vc-ico svg {
+  width: 72%;
+  height: 72%;
+}
+.vc-atlas .vc-val {
+  font-size: 1.45em;
+  color: var(--vc-ink);
+}
+.vc-atlas .vc-soc {
+  justify-content: center;
+  margin-top: 1.3em;
+}
+.vc-atlas .vc-s {
+  width: 3.2em;
+  height: 3.2em;
+  border: 0.1em solid var(--vc-accent);
+  color: var(--vc-accent);
+}
+.vc-atlas .vc-foot {
+  flex-direction: column;
+  gap: 1.1em;
+  margin-top: auto;
+  padding-top: 1.4em;
+}
+.vc-atlas .vc-qr {
+  order: 1;
+  width: 11em;
+  box-shadow: 0 0 0 0.1em var(--vc-accent);
+}
+.vc-atlas .vc-cta {
+  order: 2;
+  width: 29em;
+  border-radius: 0.3em;
+  font-family: var(--vc-head);
+  font-size: 1.45em;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  padding: 1em 1em;
+}

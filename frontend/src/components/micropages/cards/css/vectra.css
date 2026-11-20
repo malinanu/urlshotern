@@ -1,0 +1,186 @@
+/* 05 VECTRA: sophisticated futuristic minimalism. Graphite, silver, fine lines, layered shapes. */
+.vc-vectra {
+  --vc-bg: #121418;
+  --vc-ink: #eceff3;
+  --vc-mute: #939ba7;
+  --vc-accent: #c9ced6;
+  --vc-accent2: #8b929d;
+  --vc-surface: #1a1d22;
+  --vc-line: color-mix(in srgb, var(--vc-accent) 20%, transparent);
+  --vc-on-accent: #101216;
+  --vc-plate: #eef0f3;
+  --vc-qr: #101216;
+  --vc-head: "Sora", system-ui, sans-serif;
+  --vc-body: "Sora", system-ui, sans-serif;
+}
+.vc-vectra .vc-d1,
+.vc-vectra .vc-d2,
+.vc-vectra .vc-d3,
+.vc-vectra .vc-d4 {
+  display: none;
+}
+.vc-vectra .vc-d1 {
+  top: 0;
+  right: 0;
+  width: 36em;
+  height: 32em;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--vc-accent) 14%, transparent), color-mix(in srgb, var(--vc-accent) 2%, transparent));
+  clip-path: polygon(38% 0, 100% 0, 100% 100%);
+}
+.vc-vectra .vc-d2 {
+  top: 0;
+  right: 0;
+  width: 26em;
+  height: 24em;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--vc-accent) 20%, transparent), color-mix(in srgb, var(--vc-accent) 3%, transparent));
+  clip-path: polygon(0 0, 100% 0, 100% 82%);
+}
+.vc-vectra .vc-d3 {
+  top: 0;
+  bottom: 0;
+  left: 3.4em;
+  width: 0.1em;
+  background: repeating-linear-gradient(180deg, var(--vc-line) 0 2.4em, transparent 2.4em 2.8em);
+}
+.vc-vectra .vc-d4 {
+  display: none;
+}
+
+.vc-vectra .vc-in {
+  display: flex;
+  flex-direction: column;
+  padding: 4.2em 4.4em 3.8em 6.6em;
+}
+.vc-vectra .vc-top { order: 0; height: 3.8em; }
+.vc-vectra .vc-who { order: 1; }
+.vc-vectra .vc-photo { order: 2; }
+.vc-vectra .vc-about { order: 3; }
+.vc-vectra .vc-tags { order: 4; }
+.vc-vectra .vc-list { order: 5; }
+.vc-vectra .vc-soc { order: 6; }
+.vc-vectra .vc-foot { order: 7; }
+.vc-vectra .vc-logo {
+  height: 3.4em;
+}
+.vc-vectra .vc-brand {
+  display: block;
+  font-size: 1.4em;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+.vc-vectra .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-vectra .vc-who {
+  margin-top: 2.4em;
+}
+.vc-vectra .vc-name {
+  font-size: calc(4.5em * var(--nm, 1));
+  font-weight: 300;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+}
+.vc-vectra .vc-role {
+  margin-top: 1em;
+  font-size: 1.15em;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-vectra .vc-co {
+  margin-top: 0.5em;
+  font-size: 1.3em;
+  color: var(--vc-mute);
+}
+.vc-vectra .vc-photo {
+  width: 100%;
+  height: 21em;
+  margin-top: 2.2em;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 3.2em), calc(100% - 3.2em) 100%, 0 100%);
+}
+.vc-vectra .vc-photo img {
+  filter: saturate(0.75) contrast(1.06);
+  object-position: 50% 28%;
+}
+.vc-vectra .vc-mono {
+  background: linear-gradient(135deg, #232730, #171a20);
+  color: var(--vc-accent);
+  font-weight: 300;
+}
+.vc-vectra .vc-about {
+  margin-top: 1.6em;
+  font-size: 1.25em;
+  line-height: 1.55;
+  color: var(--vc-mute);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.vc-vectra .vc-list {
+  margin-top: 1.5em;
+}
+.vc-vectra .vc-list li + li {
+  border-top: 0.1em solid var(--vc-line);
+}
+.vc-vectra .vc-row {
+  padding: 0.5em 0;
+}
+.vc-vectra .vc-ico {
+  width: 2.2em;
+  height: 2.2em;
+  color: var(--vc-accent2);
+}
+.vc-vectra .vc-ico svg {
+  width: 84%;
+  height: 84%;
+  stroke-width: 1.4;
+}
+.vc-vectra .vc-val {
+  font-size: 1.25em;
+}
+.vc-vectra .vc-soc {
+  margin-top: 1.3em;
+  gap: 0.7em;
+}
+.vc-vectra .vc-s {
+  width: 3.2em;
+  height: 3.2em;
+  border-radius: 0.4em;
+  border: 0.1em solid var(--vc-line);
+  color: var(--vc-accent);
+}
+.vc-vectra .vc-foot {
+  display: grid;
+  grid-template-columns: 12em 1fr;
+  gap: 0.8em 2.2em;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1.4em;
+}
+.vc-vectra .vc-qr {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 12em;
+  box-shadow: 0 0 0 0.1em var(--vc-accent2);
+}
+.vc-vectra .vc-cta {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  font-size: 1.35em;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  padding: 1.15em 1.2em;
+  clip-path: polygon(1.2em 0, 100% 0, calc(100% - 1.2em) 100%, 0 100%);
+}
+.vc-vectra .vc-scan {
+  display: block;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  font-size: 1em;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--vc-mute);
+}

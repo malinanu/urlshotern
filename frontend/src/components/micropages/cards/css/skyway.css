@@ -1,0 +1,212 @@
+/* 09 SKYWAY: international business professional. Sky blue, white, soft navy, airy clouds. */
+.vc-skyway {
+  --vc-bg: #f3f9ff;
+  --vc-ink: #0d2c4f;
+  --vc-mute: #54708e;
+  --vc-accent: #1672c4;
+  --vc-accent2: #6db7f0;
+  --vc-surface: #ffffff;
+  --vc-line: rgba(13, 44, 79, 0.12);
+  --vc-on-accent: #ffffff;
+  --vc-plate: #ffffff;
+  --vc-qr: #0d2c4f;
+  --vc-sky1: #4fb0f1;
+  --vc-sky2: #9fd3f8;
+  --vc-head: "Red Hat Display", system-ui, sans-serif;
+  --vc-body: "Red Hat Display", system-ui, sans-serif;
+}
+.vc-skyway .vc-d1,
+.vc-skyway .vc-d2,
+.vc-skyway .vc-d3,
+.vc-skyway .vc-d4 {
+  display: block;
+}
+.vc-skyway .vc-d1 {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28em;
+  background: linear-gradient(180deg, var(--vc-sky1) 0%, var(--vc-sky2) 52%, var(--vc-bg) 100%);
+}
+.vc-skyway .vc-d2 {
+  top: 7em;
+  left: -5em;
+  width: 24em;
+  height: 9em;
+  background: radial-gradient(circle at 22% 62%, #fff 0 3.2em, transparent 3.3em),
+    radial-gradient(circle at 48% 42%, #fff 0 4.4em, transparent 4.5em),
+    radial-gradient(circle at 74% 64%, #fff 0 3.4em, transparent 3.5em),
+    linear-gradient(#fff, #fff) 12% 78% / 76% 2.2em no-repeat;
+  opacity: 0.9;
+}
+.vc-skyway .vc-d3 {
+  top: 14em;
+  right: -6em;
+  width: 21em;
+  height: 8em;
+  background: radial-gradient(circle at 26% 62%, #fff 0 2.6em, transparent 2.7em),
+    radial-gradient(circle at 52% 40%, #fff 0 3.6em, transparent 3.7em),
+    radial-gradient(circle at 76% 64%, #fff 0 2.8em, transparent 2.9em),
+    linear-gradient(#fff, #fff) 14% 78% / 72% 1.8em no-repeat;
+  opacity: 0.8;
+}
+.vc-skyway .vc-d4 {
+  top: 4em;
+  right: 4em;
+  width: 17em;
+  height: 9em;
+  border: 0.22em dotted rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  transform: rotate(-14deg);
+}
+
+.vc-skyway .vc-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3.8em 4.4em 3.8em;
+}
+.vc-skyway .vc-top {
+  justify-content: center;
+  height: 4.2em;
+}
+.vc-skyway .vc-logo {
+  height: 3.6em;
+}
+.vc-skyway .vc-brand {
+  display: block;
+  font-size: 1.8em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.vc-skyway .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-skyway .vc-photo {
+  width: 18em;
+  height: 18em;
+  margin-top: 1.8em;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.6em #fff, 0 1em 2.6em rgba(13, 44, 79, 0.28);
+}
+.vc-skyway .vc-mono {
+  background: color-mix(in srgb, var(--vc-accent) 12%, #fff);
+  color: var(--vc-accent);
+  font-weight: 800;
+}
+.vc-skyway .vc-who {
+  margin-top: 2.2em;
+  text-align: center;
+}
+.vc-skyway .vc-name {
+  font-size: calc(4.4em * var(--nm, 1));
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  color: var(--vc-ink);
+}
+.vc-skyway .vc-role {
+  margin-top: 0.8em;
+  font-size: 1.3em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-skyway .vc-co {
+  margin-top: 0.4em;
+  font-size: 1.5em;
+  font-weight: 500;
+  color: var(--vc-mute);
+}
+.vc-skyway .vc-about {
+  max-width: 44em;
+  margin-top: 1.2em;
+  font-size: 1.35em;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--vc-mute);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.vc-skyway .vc-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7em;
+  width: 100%;
+  margin-top: 1.5em;
+}
+.vc-skyway .vc-list li:nth-child(n + 3) {
+  grid-column: 1 / -1;
+}
+.vc-skyway .vc-row {
+  gap: 0.9em;
+  padding: 0.8em 1em 0.8em 0.8em;
+  border-radius: 1.2em;
+  background: var(--vc-surface);
+  box-shadow: 0 0.2em 1em rgba(13, 44, 79, 0.08);
+}
+.vc-skyway .vc-ico {
+  width: 2.8em;
+  height: 2.8em;
+  border-radius: 0.9em;
+  background: color-mix(in srgb, var(--vc-accent) 12%, #fff);
+  color: var(--vc-accent);
+}
+.vc-skyway .vc-val {
+  font-size: 1.3em;
+  font-weight: 500;
+}
+.vc-skyway .vc-soc {
+  justify-content: center;
+  margin-top: 1.3em;
+}
+.vc-skyway .vc-s {
+  width: 3.3em;
+  height: 3.3em;
+  background: #fff;
+  color: var(--vc-accent);
+  box-shadow: 0 0.2em 0.9em rgba(13, 44, 79, 0.12);
+}
+.vc-skyway .vc-foot {
+  display: grid;
+  grid-template-columns: 1fr 11.8em;
+  grid-template-areas: "cta qr" "scan qr";
+  gap: 0.8em 2em;
+  align-items: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 1.4em;
+}
+.vc-skyway .vc-qr {
+  grid-area: qr;
+  width: 11.8em;
+  border-radius: 1.4em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.3em #fff, 0 0.6em 1.8em rgba(13, 44, 79, 0.2);
+}
+.vc-skyway .vc-cta {
+  grid-area: cta;
+  align-self: end;
+  border-radius: 99em;
+  background: linear-gradient(90deg, var(--vc-accent), color-mix(in srgb, var(--vc-accent) 82%, #fff));
+  font-size: 1.4em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 1.05em 1em;
+  box-shadow: 0 0.5em 1.4em color-mix(in srgb, var(--vc-accent) 35%, transparent);
+}
+.vc-skyway .vc-scan {
+  display: block;
+  grid-area: scan;
+  align-self: start;
+  font-size: 1.05em;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--vc-mute);
+}

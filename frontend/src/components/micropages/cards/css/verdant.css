@@ -1,0 +1,194 @@
+/* 08 VERDANT: premium natural identity. Forest green, emerald and muted gold, botanical line art. */
+.vc-verdant {
+  --vc-bg: #0e2a1e;
+  --vc-ink: #f2eee1;
+  --vc-mute: #a9bcb0;
+  --vc-accent: #c8a45e;
+  --vc-accent2: #2fae78;
+  --vc-surface: #143a2a;
+  --vc-line: rgba(200, 164, 94, 0.36);
+  --vc-on-accent: #0e2a1e;
+  --vc-plate: #f5f0e2;
+  --vc-qr: #0e2a1e;
+  --vc-glow: #1c4c37;
+  --vc-head: "Lora", Georgia, serif;
+  --vc-body: "Jost", system-ui, sans-serif;
+  --vc-sprig: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140' fill='none' stroke='%23c8a45e' stroke-width='1.3' stroke-linecap='round'><path d='M14 130C48 98 84 66 126 14'/><g fill='%23c8a45e' fill-opacity='.2'><path d='M34 110c-14-2-21-11-21-21 12 0 21 7 21 21z'/><path d='M52 94c12-9 14-21 9-30-9 7-14 19-9 30z'/><path d='M72 76c-14-2-21-11-21-21 12 0 21 7 21 21z'/><path d='M90 60c12-9 14-21 9-30-9 7-14 19-9 30z'/><path d='M108 42c-14-2-21-11-21-21 12 0 21 7 21 21z'/></g></svg>");
+  background: radial-gradient(90% 46% at 50% 0%, var(--vc-glow) 0%, transparent 100%), var(--vc-bg);
+}
+.vc-verdant .vc-d1,
+.vc-verdant .vc-d2,
+.vc-verdant .vc-d3 {
+  display: block;
+}
+.vc-verdant .vc-d1 {
+  top: 0;
+  right: 0;
+  width: 30em;
+  height: 30em;
+  opacity: 0.55;
+  -webkit-mask-image: linear-gradient(225deg, #000 20%, transparent 70%);
+  mask-image: linear-gradient(225deg, #000 20%, transparent 70%);
+}
+.vc-verdant .vc-d1::before,
+.vc-verdant .vc-d2::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--vc-accent);
+  -webkit-mask: var(--vc-sprig) 0 0 / 14em 14em;
+  mask: var(--vc-sprig) 0 0 / 14em 14em;
+}
+.vc-verdant .vc-d2 {
+  bottom: 0;
+  left: 0;
+  width: 26em;
+  height: 26em;
+  transform: scale(-1, -1);
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(225deg, #000 15%, transparent 70%);
+  mask-image: linear-gradient(225deg, #000 15%, transparent 70%);
+}
+.vc-verdant .vc-d3 {
+  inset: 1.6em;
+  border: 0.1em solid var(--vc-line);
+  border-radius: 1.6em;
+}
+
+.vc-verdant .vc-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4.4em 4.6em 4.2em;
+}
+.vc-verdant .vc-top {
+  justify-content: center;
+  height: 4.2em;
+}
+.vc-verdant .vc-logo {
+  height: 3.8em;
+}
+.vc-verdant .vc-brand {
+  display: block;
+  font-family: var(--vc-head);
+  font-size: 1.7em;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-verdant .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-verdant .vc-photo {
+  width: 17.4em;
+  height: 20.4em;
+  margin-top: 1.8em;
+  border-radius: 99em 99em 0.6em 0.6em;
+  box-shadow: 0 0 0 0.5em var(--vc-bg), 0 0 0 0.7em var(--vc-accent);
+}
+.vc-verdant .vc-mono {
+  background: var(--vc-surface);
+  color: var(--vc-accent);
+  font-weight: 500;
+}
+.vc-verdant .vc-who {
+  margin-top: 2.2em;
+  text-align: center;
+}
+.vc-verdant .vc-name {
+  font-size: calc(4.2em * var(--nm, 1));
+  font-weight: 600;
+  line-height: 1.08;
+}
+.vc-verdant .vc-role {
+  margin-top: 0.9em;
+  font-size: 1.25em;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-verdant .vc-co {
+  margin-top: 0.5em;
+  font-size: 1.5em;
+  color: var(--vc-mute);
+}
+.vc-verdant .vc-about {
+  max-width: 43em;
+  margin-top: 1.3em;
+  font-size: 1.35em;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--vc-mute);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.vc-verdant .vc-list {
+  width: 40em;
+  margin-top: 1.5em;
+}
+.vc-verdant .vc-row {
+  padding: 0.3em 0;
+}
+.vc-verdant .vc-ico {
+  width: 2.9em;
+  height: 2.9em;
+  border: 0.1em solid var(--vc-line);
+  border-radius: 50%;
+  color: var(--vc-accent);
+}
+.vc-verdant .vc-val {
+  font-size: 1.4em;
+  color: var(--vc-ink);
+}
+.vc-verdant .vc-soc {
+  justify-content: center;
+  margin-top: 1.3em;
+}
+.vc-verdant .vc-s {
+  width: 3.3em;
+  height: 3.3em;
+  background: rgba(200, 164, 94, 0.14);
+  color: var(--vc-accent);
+}
+.vc-verdant .vc-foot {
+  display: grid;
+  grid-template-columns: 12em 1fr;
+  gap: 0.8em 2.2em;
+  align-items: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 1.4em;
+}
+.vc-verdant .vc-qr {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 12em;
+  border-radius: 1.4em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.14em var(--vc-accent);
+}
+.vc-verdant .vc-cta {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  border-radius: 99em;
+  background: var(--vc-accent);
+  font-family: var(--vc-head);
+  font-size: 1.45em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  padding: 1em 0.8em;
+}
+.vc-verdant .vc-scan {
+  display: block;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  font-size: 1.05em;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--vc-mute);
+}

@@ -1,0 +1,198 @@
+/* 02 NOVA: contemporary minimal luxury. Ivory, pearl and champagne, a big portrait, lots of air. */
+.vc-nova {
+  --vc-bg: #f7f2e9;
+  --vc-ink: #2a2723;
+  --vc-mute: #7a7266;
+  --vc-accent: #a98b5b;
+  --vc-accent2: #d8c6a3;
+  --vc-surface: #fbf9f4;
+  --vc-line: rgba(42, 39, 35, 0.14);
+  --vc-on-accent: #fbf9f4;
+  --vc-plate: #fbf9f4;
+  --vc-qr: #2a2723;
+  --vc-head: "Jost", system-ui, sans-serif;
+  --vc-body: "Jost", system-ui, sans-serif;
+}
+.vc-nova .vc-d1,
+.vc-nova .vc-d2,
+.vc-nova .vc-d3 {
+  display: block;
+}
+.vc-nova .vc-d1 {
+  right: -15em;
+  bottom: -15em;
+  width: 46em;
+  height: 46em;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle at center, transparent 0 3.2em, color-mix(in srgb, var(--vc-accent) 20%, transparent) 3.2em 3.3em);
+}
+.vc-nova .vc-d2 {
+  left: -12em;
+  top: 34em;
+  width: 32em;
+  height: 32em;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--vc-accent2) 40%, transparent), transparent 68%);
+}
+.vc-nova .vc-d3 {
+  inset: 34em 0 0 0;
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--vc-accent) 10%, transparent) 0 0.1em, transparent 0.1em);
+  background-size: 2.6em 2.6em;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 55%);
+  mask-image: linear-gradient(180deg, #000, transparent 55%);
+}
+
+.vc-nova .vc-in {
+  display: flex;
+  flex-direction: column;
+  padding: 37em 4.4em 3.8em;
+}
+.vc-nova .vc-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 34em;
+  border-radius: 0 0 4.8em 4.8em;
+}
+.vc-nova .vc-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 16, 10, 0.22), transparent 28%);
+}
+.vc-nova .vc-mono {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--vc-accent2) 60%, #fff), var(--vc-accent2));
+  color: #fbf9f4;
+  font-weight: 300;
+}
+.vc-nova .vc-top {
+  position: absolute;
+  top: 2.6em;
+  left: 3em;
+  height: auto;
+  padding: 0.8em 1.5em;
+  border-radius: 99em;
+  background: rgba(251, 249, 244, 0.92);
+  z-index: 2;
+}
+.vc-nova .vc-logo {
+  height: 2.8em;
+}
+.vc-nova .vc-brand {
+  display: block;
+  font-size: 1.3em;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+.vc-nova .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-nova .vc-name {
+  font-size: calc(4.9em * var(--nm, 1));
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+}
+.vc-nova .vc-role {
+  margin-top: 0.9em;
+  font-size: 1.25em;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-nova .vc-co {
+  margin-top: 0.5em;
+  font-size: 1.45em;
+  color: var(--vc-mute);
+}
+.vc-nova .vc-about {
+  max-width: 46em;
+  margin-top: 1.4em;
+  font-size: 1.35em;
+  line-height: 1.5;
+  color: var(--vc-mute);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.vc-nova .vc-list {
+  margin-top: 1.7em;
+  border-top: 0.1em solid var(--vc-line);
+}
+.vc-nova .vc-list li {
+  border-bottom: 0.1em solid var(--vc-line);
+}
+.vc-nova .vc-row {
+  padding: 0.74em 0;
+  gap: 1em;
+}
+.vc-nova .vc-ico {
+  display: none;
+}
+.vc-nova .vc-lab {
+  display: block;
+  flex: none;
+  width: 7.4em;
+  font-size: 1.05em;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-nova .vc-val {
+  font-size: 1.4em;
+}
+.vc-nova .vc-soc {
+  margin-top: 1.3em;
+  gap: 0.6em;
+}
+.vc-nova .vc-s {
+  width: 3em;
+  height: 3em;
+  border-radius: 0;
+  color: var(--vc-ink);
+}
+.vc-nova .vc-s svg {
+  width: 62%;
+  height: 62%;
+}
+.vc-nova .vc-foot {
+  display: grid;
+  grid-template-columns: 1fr 11.6em;
+  grid-template-areas: "cta qr" "scan qr";
+  gap: 0.8em 2em;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1.4em;
+}
+.vc-nova .vc-qr {
+  grid-area: qr;
+  width: 11.6em;
+  border-radius: 1.3em;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.1em var(--vc-line);
+}
+.vc-nova .vc-cta {
+  grid-area: cta;
+  justify-self: start;
+  align-self: end;
+  border-radius: 99em;
+  background: var(--vc-ink);
+  color: var(--vc-on-accent);
+  font-size: 1.35em;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  padding: 1.15em 1.7em;
+}
+.vc-nova .vc-scan {
+  display: block;
+  grid-area: scan;
+  align-self: start;
+  padding-left: 1.6em;
+  font-size: 1.05em;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--vc-mute);
+}
