@@ -52,6 +52,7 @@ const (
 	maxPriceRunes      = 24
 	formKindNewsletter = "newsletter"
 	formKindContact    = "contact"
+	maxProfileTags     = 4
 )
 
 // decodeV2BlockData handles the v2 block types. ok is false for unknown types.
@@ -120,6 +121,13 @@ func decodeV2BlockData(blockType string, raw json.RawMessage, field string, draf
 			return nil, true, validationErr(field, "invalid form data")
 		}
 		v, err := normalizeForm(d, field)
+		return v, true, err
+	case models.BlockTypeQRCode:
+		var d models.QRCodeData
+		if err := json.Unmarshal(raw, &d); err != nil {
+			return nil, true, validationErr(field, "invalid QR code data")
+		}
+		v, err := normalizeQRCode(d, field)
 		return v, true, err
 	}
 	return nil, false, nil
@@ -451,4 +459,24 @@ func formBlockIDs(c models.MicrositeContent) map[string]bool {
 		}
 	}
 	return ids
+}
+
+// normalizeQRCode validates the QR code destination. Empty means the page's own address.
+func normalizeQRCode(d models.QRCodeData, field string) (models.QRCodeData, error) {
+	d.URL = strings.TrimSpace(d.URL)
+	if d.URL == "" {
+		return d, nil
+	}
+	href, err := SanitizeMicrositeLinkURL(d.URL, field+".url")
+	if err != nil {
+		return d, err
+	}
+	if !strings.HasPrefix(href, "http://") && !strings.HasPrefix(href, "https://") {
+		return d, validationErr(field+".url", "must be a web address starting with http:// or https://")
+	}
+	if len(href) > 400 {
+		return d, validationErr(field+".url", "is too long for a QR code (max 400 characters)")
+	}
+	d.URL = href
+	return d, nil
 }

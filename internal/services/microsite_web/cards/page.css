@@ -1,0 +1,62 @@
+/* Digital card page chrome (Microsites only). The card itself is styled by base.css and <template>.css. */
+body.s-card {
+  background: #0c0d12;
+  color: #f1f2f6;
+  min-height: 100vh;
+}
+body.s-card .page {
+  max-width: 480px;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.vcwrap {
+  width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -14px rgba(0, 0, 0, 0.6);
+}
+.vc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.vc-actions[hidden] {
+  display: none;
+}
+.vc-actions button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+.vc-actions button:last-of-type {
+  grid-column: 1 / -1;
+}
+.vc-actions button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.vc-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.vc-actions .vc-msg {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #fda4af;
+}
+.vc-actions .vc-msg:empty {
+  display: none;
+}
+body.s-card .vc-extras {
+  border-radius: 18px;
+}
+body.s-card .badge a {
+  color: rgba(255, 255, 255, 0.6);
+}

@@ -1,0 +1,210 @@
+/* 04 AXIOM: high-tech executive. Charcoal and midnight, electric cyan and blue, angular geometry. */
+.vc-axiom {
+  --vc-bg: #090c13;
+  --vc-ink: #e8f1f8;
+  --vc-mute: #8fa2b5;
+  --vc-accent: #22d3ee;
+  --vc-accent2: #3b82f6;
+  --vc-surface: #101827;
+  --vc-line: rgba(34, 211, 238, 0.3);
+  --vc-on-accent: #031318;
+  --vc-plate: #eaf6fb;
+  --vc-qr: #06121a;
+  --vc-head: "Chakra Petch", system-ui, sans-serif;
+  --vc-body: "Sora", system-ui, sans-serif;
+}
+.vc-axiom .vc-d1,
+.vc-axiom .vc-d2,
+.vc-axiom .vc-d3,
+.vc-axiom .vc-d4 {
+  display: block;
+}
+.vc-axiom .vc-d1 {
+  inset: 0;
+  background-image: linear-gradient(color-mix(in srgb, var(--vc-accent) 8%, transparent) 0.1em, transparent 0.1em),
+    linear-gradient(90deg, color-mix(in srgb, var(--vc-accent) 8%, transparent) 0.1em, transparent 0.1em);
+  background-size: 3.6em 3.6em;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 72%);
+  mask-image: linear-gradient(180deg, #000, transparent 72%);
+}
+.vc-axiom .vc-d2 {
+  top: -14em;
+  left: -12em;
+  width: 44em;
+  height: 44em;
+  background: radial-gradient(circle, color-mix(in srgb, var(--vc-accent) 22%, transparent), transparent 64%);
+}
+.vc-axiom .vc-d3 {
+  top: 0;
+  right: 0;
+  width: 19em;
+  height: 0.7em;
+  background: linear-gradient(90deg, transparent, var(--vc-accent2) 35%, var(--vc-accent));
+  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
+}
+.vc-axiom .vc-d4 {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 0.35em;
+  background: linear-gradient(90deg, var(--vc-accent), var(--vc-accent2) 45%, transparent 85%);
+}
+
+.vc-axiom .vc-in {
+  grid-template-columns: 22em 1fr;
+  grid-template-rows: auto auto auto auto auto 1fr;
+  grid-template-areas: "top top" "photo who" "about about" "list list" "soc soc" "foot foot";
+  align-content: start;
+  column-gap: 2.6em;
+  padding: 3.8em 4.2em 3.8em;
+}
+.vc-axiom .vc-top {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  height: 4em;
+}
+.vc-axiom .vc-logo {
+  height: 3.6em;
+}
+.vc-axiom .vc-brand {
+  display: block;
+  font-family: var(--vc-head);
+  font-size: 1.8em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.vc-axiom .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-axiom .vc-tag {
+  display: block;
+  margin-left: auto;
+  padding: 0.6em 1em;
+  border: 0.1em solid var(--vc-line);
+  font-size: 1em;
+  letter-spacing: 0.16em;
+  color: var(--vc-accent);
+  white-space: nowrap;
+}
+.vc-axiom .vc-photo {
+  width: 22em;
+  height: 27em;
+  margin-top: 2em;
+  overflow: visible;
+  filter: drop-shadow(0 0 1.4em color-mix(in srgb, var(--vc-accent) 40%, transparent));
+}
+.vc-axiom .vc-photo img,
+.vc-axiom .vc-photo .vc-mono {
+  clip-path: polygon(0 0, calc(100% - 5.333cqw) 0, 100% 5.333cqw, 100% 100%, 5.333cqw 100%, 0 calc(100% - 5.333cqw));
+}
+.vc-axiom .vc-photo::before {
+  content: "";
+  position: absolute;
+  inset: -0.35em;
+  background: linear-gradient(140deg, var(--vc-accent), var(--vc-accent2) 60%, color-mix(in srgb, var(--vc-accent2) 55%, #000));
+  clip-path: polygon(0 0, calc(100% - 5.667cqw) 0, 100% 5.667cqw, 100% 100%, 5.667cqw 100%, 0 calc(100% - 5.667cqw));
+  z-index: -1;
+}
+.vc-axiom .vc-mono {
+  background: #0c1422;
+  color: var(--vc-accent);
+  font-weight: 700;
+}
+.vc-axiom .vc-who {
+  align-self: end;
+  margin-top: 2em;
+}
+.vc-axiom .vc-name {
+  font-size: calc(3.9em * var(--nm, 1));
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.vc-axiom .vc-role {
+  margin-top: 1em;
+  font-size: 1.15em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+.vc-axiom .vc-co {
+  margin-top: 0.5em;
+  font-size: 1.35em;
+  color: var(--vc-ink);
+}
+.vc-axiom .vc-about {
+  margin-top: 2em;
+  padding-left: 1.2em;
+  border-left: 0.25em solid var(--vc-accent);
+  font-size: 1.25em;
+  line-height: 1.55;
+  color: var(--vc-mute);
+}
+.vc-axiom .vc-list {
+  margin-top: 1.7em;
+  gap: 0.5em;
+}
+.vc-axiom .vc-row {
+  padding: 0.5em 1.2em 0.5em 0.8em;
+  background: var(--vc-surface);
+  border: 0.1em solid var(--vc-line);
+  clip-path: polygon(0 0, calc(100% - 1.2em) 0, 100% 1.2em, 100% 100%, 0 100%);
+}
+.vc-axiom .vc-ico {
+  width: 2.5em;
+  height: 2.5em;
+  color: var(--vc-accent);
+}
+.vc-axiom .vc-val {
+  font-size: 1.25em;
+}
+.vc-axiom .vc-soc {
+  margin-top: 1.4em;
+  gap: 0.7em;
+}
+.vc-axiom .vc-s {
+  width: 3.4em;
+  height: 3.4em;
+  border-radius: 0;
+  border: 0.1em solid var(--vc-line);
+  color: var(--vc-accent);
+  clip-path: polygon(0 0, calc(100% - 0.9em) 0, 100% 0.9em, 100% 100%, 0 100%);
+}
+.vc-axiom .vc-foot {
+  display: grid;
+  grid-template-columns: 1fr 12.4em;
+  gap: 0.8em 2em;
+  align-items: center;
+  align-self: end;
+  margin-top: 1.6em;
+}
+.vc-axiom .vc-qr {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 12.4em;
+  border: 0.14em solid var(--vc-accent);
+  clip-path: polygon(0 0, calc(100% - 1.4em) 0, 100% 1.4em, 100% 100%, 1.4em 100%, 0 calc(100% - 1.4em));
+}
+.vc-axiom .vc-cta {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  background: linear-gradient(90deg, var(--vc-accent), var(--vc-accent2));
+  font-family: var(--vc-head);
+  font-size: 1.5em;
+  letter-spacing: 0.14em;
+  padding: 1em 2.2em 1em 1em;
+  clip-path: polygon(0 0, calc(100% - 1.5em) 0, 100% 100%, 0 100%);
+}
+.vc-axiom .vc-scan {
+  display: block;
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  font-size: 1.05em;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--vc-mute);
+}

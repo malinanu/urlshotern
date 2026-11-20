@@ -139,7 +139,7 @@ func (h *MicrositeHandlers) ListMicrosites(c *gin.Context) {
 
 // ListMicrositeTemplates handles GET /api/v1/microsites/templates
 func (h *MicrositeHandlers) ListMicrositeTemplates(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"templates": services.MicrositeTemplates})
+	c.JSON(http.StatusOK, gin.H{"templates": services.MicrositeTemplates, "collections": services.CardCollections()})
 }
 
 // PreviewMicrositeTemplate handles GET /api/v1/microsites/templates/:template/preview.

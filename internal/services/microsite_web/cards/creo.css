@@ -1,0 +1,212 @@
+/* 10 CREO: creative premium identity. Deep purple, violet-coral-orange gradients, flowing shapes. */
+.vc-creo {
+  --vc-bg: #1b0836;
+  --vc-ink: #fdf7ff;
+  --vc-mute: #d0bcea;
+  --vc-accent: #ff7a59;
+  --vc-accent2: #8b5cf6;
+  --vc-surface: rgba(255, 255, 255, 0.08);
+  --vc-line: rgba(255, 255, 255, 0.24);
+  --vc-on-accent: #2a0a1a;
+  --vc-plate: #fff7f2;
+  --vc-qr: #1b0836;
+  --vc-head: "Syne", system-ui, sans-serif;
+  --vc-body: "Jost", system-ui, sans-serif;
+  --vc-g2: #ff5c8a;
+  --vc-g3: #ff9f43;
+  --vc-grad: linear-gradient(135deg, var(--vc-accent2), var(--vc-g2) 55%, var(--vc-g3));
+}
+.vc-creo .vc-d1,
+.vc-creo .vc-d2,
+.vc-creo .vc-d3,
+.vc-creo .vc-d4 {
+  display: block;
+}
+.vc-creo .vc-d1 {
+  top: -9em;
+  right: -11em;
+  width: 40em;
+  height: 40em;
+  border-radius: 62% 38% 55% 45% / 48% 58% 42% 52%;
+  background: var(--vc-grad);
+}
+.vc-creo .vc-d2 {
+  bottom: -13em;
+  left: -13em;
+  width: 36em;
+  height: 36em;
+  border-radius: 48% 52% 40% 60% / 55% 45% 55% 45%;
+  background: linear-gradient(315deg, color-mix(in srgb, var(--vc-accent2) 80%, #000), color-mix(in srgb, var(--vc-accent2) 55%, var(--vc-g2)) 60%, var(--vc-accent));
+  opacity: 0.85;
+}
+.vc-creo .vc-d3 {
+  top: 26em;
+  left: -8em;
+  width: 22em;
+  height: 22em;
+  border-radius: 50%;
+  border: 0.16em solid color-mix(in srgb, var(--vc-g3) 55%, transparent);
+}
+.vc-creo .vc-d4 {
+  top: 3.4em;
+  right: 4.2em;
+  width: 11em;
+  height: 6em;
+  background: radial-gradient(circle, var(--vc-g3) 0.24em, transparent 0.28em);
+  background-size: 1.5em 1.5em;
+  opacity: 0.85;
+}
+
+.vc-creo .vc-in {
+  grid-template-columns: 1fr 21.4em;
+  grid-template-rows: auto auto auto auto auto auto 1fr;
+  grid-template-areas: "top top" "who photo" "tags photo" "about about" "list list" "soc soc" "foot foot";
+  align-content: start;
+  column-gap: 1.6em;
+  padding: 3.8em 4.2em 3.8em;
+}
+.vc-creo .vc-top {
+  grid-column: 1 / -1;
+  height: 4em;
+}
+.vc-creo .vc-logo {
+  height: 3.6em;
+}
+.vc-creo .vc-brand {
+  display: block;
+  font-size: 1.8em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.vc-creo .vc-logo ~ .vc-brand {
+  display: none;
+}
+.vc-creo .vc-photo {
+  width: 21.4em;
+  height: 24em;
+  margin-top: 1.2em;
+  border-radius: 58% 42% 50% 50% / 44% 54% 46% 56%;
+  box-shadow: 0 0 0 0.4em rgba(255, 255, 255, 0.9);
+}
+.vc-creo .vc-mono {
+  background: color-mix(in srgb, var(--vc-bg) 82%, #fff);
+  color: color-mix(in srgb, var(--vc-accent) 55%, #fff);
+  font-weight: 800;
+}
+.vc-creo .vc-who {
+  align-self: end;
+  margin-top: 1.2em;
+}
+.vc-creo .vc-name {
+  font-size: calc(3.5em * var(--nm, 1));
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.vc-creo .vc-role {
+  margin-top: 0.9em;
+  font-size: 1.25em;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--vc-accent) 55%, #fff);
+}
+.vc-creo .vc-co {
+  margin-top: 0.4em;
+  font-size: 1.4em;
+  color: var(--vc-mute);
+}
+.vc-creo .vc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  align-self: start;
+  margin-top: 1.1em;
+}
+.vc-creo .vc-tags li {
+  padding: 0.5em 1em;
+  border-radius: 99em;
+  border: 0.12em solid transparent;
+  background: linear-gradient(color-mix(in srgb, var(--vc-bg) 86%, #fff), color-mix(in srgb, var(--vc-bg) 86%, #fff)) padding-box, var(--vc-grad) border-box;
+  font-size: 1.1em;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.vc-creo .vc-about {
+  margin-top: 1.6em;
+  font-size: 1.35em;
+  line-height: 1.5;
+  color: var(--vc-mute);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.vc-creo .vc-list {
+  margin-top: 1.4em;
+  gap: 0.15em;
+}
+.vc-creo .vc-row {
+  padding: 0.35em 0;
+}
+.vc-creo .vc-ico {
+  width: 2.8em;
+  height: 2.8em;
+  border-radius: 0.9em;
+  background: var(--vc-grad);
+  color: #fff;
+}
+.vc-creo .vc-val {
+  font-size: 1.4em;
+}
+.vc-creo .vc-soc {
+  margin-top: 1.3em;
+}
+.vc-creo .vc-s {
+  width: 3.3em;
+  height: 3.3em;
+  border: 0.12em solid var(--vc-line);
+  background: var(--vc-surface);
+  color: #fff;
+}
+.vc-creo .vc-foot {
+  display: grid;
+  grid-template-columns: 12em 1fr;
+  gap: 0.8em 2.2em;
+  align-items: center;
+  align-self: end;
+  margin-top: 1.4em;
+}
+.vc-creo .vc-qr {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 12em;
+  border: 0.35em solid transparent;
+  border-radius: 1.5em;
+  background: linear-gradient(var(--vc-plate), var(--vc-plate)) padding-box, var(--vc-grad) border-box;
+  overflow: hidden;
+}
+.vc-creo .vc-cta {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  border-radius: 99em;
+  background: linear-gradient(90deg, var(--vc-g2), var(--vc-g3));
+  font-family: var(--vc-head);
+  font-size: 1.35em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1.05em 0.8em;
+  box-shadow: 0 0.5em 1.8em color-mix(in srgb, var(--vc-g2) 40%, transparent);
+}
+.vc-creo .vc-scan {
+  display: block;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  font-size: 1.05em;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--vc-mute);
+}
