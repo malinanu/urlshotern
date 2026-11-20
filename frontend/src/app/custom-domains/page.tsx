@@ -18,7 +18,7 @@ import {
   SparklesIcon,
   ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
-import { PLAN_NAMES } from '@/lib/plan-utils';
+import { PLAN_NAMES, planAtLeast } from '@/lib/plan-utils';
 
 interface CustomDomain {
   id: number;
@@ -182,8 +182,7 @@ export default function CustomDomainsPage() {
     });
   };
 
-  const hasDomainAccess =
-    user?.account_type === 'premium' || user?.account_type === 'enterprise';
+  const hasDomainAccess = planAtLeast(user?.account_type, 'premium');
 
   if (!user) {
     return (

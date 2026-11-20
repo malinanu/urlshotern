@@ -4,6 +4,7 @@ import React from 'react';
 import { AIInsightCard, type InsightType } from './AIInsightCard';
 import { AnalyticsTeaser } from './AnalyticsTeaser';
 import { useAuth } from '@/contexts/AuthContext';
+import { isTopPlan } from '@/lib/plan-utils';
 
 interface AIInsightsPanelProps {
   shortCode: string;
@@ -85,7 +86,7 @@ export function AIInsightsPanel({ shortCode }: AIInsightsPanelProps) {
     );
   }
 
-  const isEnterprise = (user as any)?.account_type === 'enterprise';
+  const isEnterprise = isTopPlan(user?.account_type);
 
   if (!isEnterprise) {
     return (

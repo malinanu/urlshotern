@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { ClipboardDocumentIcon, CheckIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
+import { planAtLeast } from '@/lib/plan-utils';
 import { QRCodeModal } from '@/components/QRCode';
 import { API_ENDPOINTS } from '@/lib/api-config';
 
@@ -63,7 +64,7 @@ export default function URLShortener({ onUrlCreated }: URLShortenerProps) {
   const [selectedTeamID, setSelectedTeamID] = useState<number | null>(null);
   const { user, getAccessToken, isAuthenticated, refreshToken } = useAuth();
 
-  const isPro = user?.account_type === 'premium' || user?.account_type === 'enterprise';
+  const isPro = planAtLeast(user?.account_type, 'premium');
 
   useEffect(() => {
     if (!isPro) return;

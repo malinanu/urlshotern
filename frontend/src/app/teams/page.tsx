@@ -15,7 +15,7 @@ import {
   ClockIcon,
   LinkIcon,
 } from '@heroicons/react/24/outline';
-import { PLAN_NAMES } from '@/lib/plan-utils';
+import { PLAN_NAMES, planAtLeast } from '@/lib/plan-utils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -85,7 +85,7 @@ export default function TeamsPage() {
   const [teamLinks, setTeamLinks] = useState<TeamLink[]>([]);
   const [linksLoading, setLinksLoading] = useState(false);
 
-  const isPro = user?.account_type === 'premium' || user?.account_type === 'enterprise';
+  const isPro = planAtLeast(user?.account_type, 'premium');
 
   const authHeaders = useCallback(
     () => ({ Authorization: `Bearer ${getAccessToken()}`, 'Content-Type': 'application/json' }),
