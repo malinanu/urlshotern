@@ -6,6 +6,8 @@
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+import type { CardTemplateId } from '@/components/micropages/cards/types';
+
 /** Build-time switch; mirrors the backend ENABLE_MICROSITES flag. */
 export const MICROSITES_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MICROSITES === 'true';
 
@@ -26,7 +28,8 @@ export type BlockType =
   | 'map'
   | 'video'
   | 'audio'
-  | 'form';
+  | 'form'
+  | 'qr_code';
 
 /**
  * Block payloads are validated and normalized server-side (see
@@ -53,10 +56,12 @@ export interface MicrositeBackground {
 }
 
 /** Template styles; "classic" is the original centered card. */
-export type TemplateStyle = 'classic' | 'letterpress' | 'board' | 'flyer' | 'programme';
+export type TemplateStyle = 'classic' | 'letterpress' | 'board' | 'flyer' | 'programme' | CardTemplateId;
 
 export interface MicrositeTheme {
   style?: TemplateStyle;
+  /** Digital card colour palette id (see the card catalog). */
+  palette?: string;
   background: MicrositeBackground;
   card_fill: string;
   accent: string;
@@ -125,6 +130,13 @@ export interface MicrositeTemplateInfo {
   id: string;
   name: string;
   description: string;
+  /** Digital visiting cards only. */
+  collection?: string;
+  category?: string;
+  audience?: string;
+  style?: string;
+  cta?: string;
+  accent?: string;
 }
 
 export interface MicrositeCount {
@@ -255,6 +267,13 @@ export const BLOCK_CATALOG: BlockCatalogEntry[] = [
   { type: 'text', name: 'Text', description: 'A paragraph of plain text', group: 'basics', create: () => ({ text: '', align: 'center' }) },
   { type: 'image', name: 'Image', description: 'A picture, optionally linked', group: 'basics', create: () => ({ url: '', alt: '' }) },
   { type: 'divider', name: 'Divider', description: 'A line or spacing', group: 'basics', create: () => ({ style: 'line' }) },
+  {
+    type: 'qr_code',
+    name: 'QR code',
+    description: 'A scannable QR code, shown on digital cards',
+    group: 'contact',
+    create: () => ({ url: '' }),
+  },
   {
     type: 'vcard_action',
     name: 'Save Contact',

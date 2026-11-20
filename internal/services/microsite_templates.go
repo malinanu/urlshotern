@@ -25,6 +25,11 @@ var MicrositeTemplates = []models.MicrositeTemplateInfo{
 	{ID: MicrositeTemplateBlank, Name: "Blank", Description: "Start from an empty page in the classic style."},
 }
 
+func init() {
+	// The twelve digital visiting cards are offered after the original templates.
+	MicrositeTemplates = append(MicrositeTemplates, CardTemplateInfos()...)
+}
+
 // IsMicrositeTemplate reports whether id is a known template.
 func IsMicrositeTemplate(id string) bool {
 	for _, t := range MicrositeTemplates {
@@ -61,6 +66,10 @@ func BuildMicrositeTemplate(templateID, displayName, timezone string) models.Mic
 		timezone = "UTC"
 	}
 	content := models.MicrositeContent{Theme: DefaultMicrositeTheme(), Blocks: []models.MicrositeBlock{}}
+
+	if card, ok := cardStyleOfTemplate(templateID); ok {
+		return cardSampleContent(card, displayName)
+	}
 
 	switch templateID {
 	case MicrositeTemplateExecutive:

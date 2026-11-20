@@ -23,7 +23,7 @@
 <body{{if .BodyClass}} class="{{.BodyClass}}"{{end}}>
 {{if .BgImage}}<img class="bg-image" src="{{.BgImage}}" alt=""><div class="bg-overlay"></div>{{end}}
 <main class="page">
-{{if .Groups}}{{range .Groups}}<div class="{{.Class}}">{{range .Blocks}}{{template "block" .}}{{end}}</div>{{end}}{{else}}<div class="card">
+{{if .Card}}<div class="vcwrap">{{template "vcard" .Card}}</div>{{if .Card.Actions}}<div class="vc-actions" hidden data-slug="{{.Card.Slug}}"><button type="button" data-dl="png">Download PNG</button><button type="button" data-dl="jpg">Download JPG</button><button type="button" data-dl="qr">Download QR code</button></div>{{end}}{{if .Blocks}}<div class="card vc-extras">{{range .Blocks}}{{template "block" .}}{{end}}</div>{{end}}{{else if .Groups}}{{range .Groups}}<div class="{{.Class}}">{{range .Blocks}}{{template "block" .}}{{end}}</div>{{end}}{{else}}<div class="card">
 {{range .Blocks}}{{template "block" .}}{{else}}
 <p class="empty">This page has no content yet.</p>
 {{end}}

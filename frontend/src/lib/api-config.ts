@@ -261,6 +261,7 @@ export const API_ENDPOINTS = {
     public: (slug: string) => `${API_BASE_URL}/api/v1/micropages/public/${slug}`,
     vcard:  (slug: string) => `${API_BASE_URL}/api/v1/micropages/public/${slug}/vcard`,
     click:  (slug: string, linkId: string) => `${API_BASE_URL}/api/v1/micropages/public/${slug}/click/${linkId}`,
+    assets: `${API_BASE_URL}/api/v1/micropages/assets`,
   },
 
   // Health check endpoints

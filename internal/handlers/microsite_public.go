@@ -51,6 +51,7 @@ func (h *MicrositeHandlers) ServeMicrositePage(c *gin.Context) {
 	}
 	opts := services.MicrositeRenderOptions{
 		BaseURL:      h.baseURL,
+		PageID:       page.ID,
 		Slug:         page.Slug,
 		Title:        page.Title,
 		ShowBadge:    page.ShowBadge,

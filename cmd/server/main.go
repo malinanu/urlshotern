@@ -124,6 +124,23 @@ func main() {
 	handler := handlers.NewHandler(shortenerService, analyticsService, advancedAnalyticsService, conversionTrackingService, abTestingService, realtimeAnalyticsService, attributionService, authHandlers, analyticsHandlers, db, gormDB, config, adminRBACHandlers, botDetectionService, aiInsightsService, domainService, brandingService, teamHandlers, globalSettingsService)
 	handler.CampaignHandlers = handlers.NewCampaignHandlers(campaignService)
 
+	// Digital card photo and logo uploads (MicroPages). Independent of ENABLE_MICROSITES.
+	if handler.MicroPageHandlers != nil {
+		if cardStore, err := services.NewLocalAssetStore(config.MicrositeUploadPath); err != nil {
+			log.Printf("Warning: card image uploads disabled — upload directory unavailable: %v", err)
+		} else {
+			handler.MicroPageHandlers.SetImageService(
+				services.NewCardImageService(cardStore, config.MicrositeMaxUploadBytes),
+				cardStore.Root(),
+			)
+			authService.OnAccountDeleted(func(userID int64) {
+				if err := cardStore.DeleteUserFiles(userID); err != nil {
+					log.Printf("Warning: failed to remove card uploads for user %d: %v", userID, err)
+				}
+			})
+		}
+	}
+
 	// Microsites (/m/<slug> landing pages + digital vCards) — off unless enabled.
 	// Nothing below runs, and no routes are registered, when the flag is false.
 	if config.EnableMicrosites {

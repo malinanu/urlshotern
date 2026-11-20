@@ -1,3 +1,5 @@
+import type { CardTemplateId } from '@/components/micropages/cards/types';
+
 export type MicroPageTheme =
   | 'executive-obsidian'
   | 'california-minimalist'
@@ -8,7 +10,8 @@ export type MicroPageTheme =
   | 'cobalt-steel'
   | 'editorial-monocle'
   | 'neo-brutalist'
-  | 'aura-holographic';
+  | 'aura-holographic'
+  | CardTemplateId;
 
 export interface VCardContact {
   first_name: string;

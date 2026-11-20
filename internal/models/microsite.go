@@ -21,6 +21,7 @@ const (
 	BlockTypeText           = "text"
 	BlockTypeImage          = "image"
 	BlockTypeDivider        = "divider"
+	BlockTypeQRCode         = "qr_code"
 
 	// v2 blocks
 	BlockTypeProductCard     = "product_card"
@@ -89,15 +90,16 @@ type MicrositeContent struct {
 // validated values; raw CSS is never accepted.
 type MicrositeTheme struct {
 	Background   MicrositeBackground `json:"background"`
-	CardFill     string              `json:"card_fill"`       // #rrggbb
-	Accent       string              `json:"accent"`          // #rrggbb
-	ButtonText   string              `json:"button_text"`     // #rrggbb, text on accent buttons
-	Text         string              `json:"text"`            // #rrggbb
-	Font         string              `json:"font"`            // system | serif | mono | rounded | humanist | geometric
-	ButtonRadius string              `json:"button_radius"`   // sharp | rounded | pill
-	Shadow       string              `json:"shadow"`          // none | soft | strong
-	AvatarBorder string              `json:"avatar_border"`   // none | thin | thick
-	Style        string              `json:"style,omitempty"` // classic | letterpress | board | flyer | programme
+	CardFill     string              `json:"card_fill"`         // #rrggbb
+	Accent       string              `json:"accent"`            // #rrggbb
+	ButtonText   string              `json:"button_text"`       // #rrggbb, text on accent buttons
+	Text         string              `json:"text"`              // #rrggbb
+	Font         string              `json:"font"`              // system | serif | mono | rounded | humanist | geometric
+	ButtonRadius string              `json:"button_radius"`     // sharp | rounded | pill
+	Shadow       string              `json:"shadow"`            // none | soft | strong
+	AvatarBorder string              `json:"avatar_border"`     // none | thin | thick
+	Style        string              `json:"style,omitempty"`   // classic | letterpress | board | flyer | programme | a digital card id (zenith, nova, ...)
+	Palette      string              `json:"palette,omitempty"` // digital card colour palette id (see the card catalog)
 }
 
 // MicrositeBackground describes the page background.
@@ -143,6 +145,15 @@ type ProfileHeaderData struct {
 	Bio            string `json:"bio,omitempty"`
 	Location       string `json:"location,omitempty"`
 	Verified       bool   `json:"verified,omitempty"`
+	// Tags are short specialisation labels (up to 4) that some card styles show.
+	Tags []string `json:"tags,omitempty"`
+	// LogoPlate is the background behind the company logo on cards: auto | light | dark | none.
+	LogoPlate string `json:"logo_plate,omitempty"`
+}
+
+// QRCodeData is the QR code on a digital card. An empty URL means the page's own address.
+type QRCodeData struct {
+	URL string `json:"url,omitempty"`
 }
 
 // VCardActionData is the "Save Contact" button and the contact it exports.
@@ -244,6 +255,26 @@ type UpdateMicrositeRequest struct {
 
 // MicrositeTemplateInfo describes a starter template.
 type MicrositeTemplateInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// Digital visiting cards only.
+	Collection string `json:"collection,omitempty"` // collection id, e.g. premium-minimal
+	Category   string `json:"category,omitempty"`   // short style label, e.g. "Executive luxury"
+	Audience   string `json:"audience,omitempty"`
+	Style      string `json:"style,omitempty"`
+	CTA        string `json:"cta,omitempty"`
+	Accent     string `json:"accent,omitempty"`
+}
+
+// MicrositeTemplateCatalog is the template list plus the card collections.
+type MicrositeTemplateCatalog struct {
+	Templates   []MicrositeTemplateInfo `json:"templates"`
+	Collections []MicrositeCollection   `json:"collections"`
+}
+
+// MicrositeCollection groups digital card templates in the picker.
+type MicrositeCollection struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

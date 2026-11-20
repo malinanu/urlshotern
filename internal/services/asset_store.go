@@ -96,11 +96,17 @@ func (s *LocalAssetStore) Delete(relPath string) error {
 	return nil
 }
 
-// DeleteUserFiles removes every file stored for a user (m/<userID>/).
+// DeleteUserFiles removes every file stored for a user: page images (m/<userID>/)
+// and digital card photos and logos (mp/<userID>/).
 func (s *LocalAssetStore) DeleteUserFiles(userID int64) error {
-	dir, err := s.resolve(fmt.Sprintf("m/%d", userID))
-	if err != nil {
-		return err
+	for _, prefix := range []string{"m", "mp"} {
+		dir, err := s.resolve(fmt.Sprintf("%s/%d", prefix, userID))
+		if err != nil {
+			return err
+		}
+		if err := os.RemoveAll(dir); err != nil {
+			return err
+		}
 	}
-	return os.RemoveAll(dir)
+	return nil
 }

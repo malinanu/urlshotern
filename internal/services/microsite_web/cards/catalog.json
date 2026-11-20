@@ -1,0 +1,574 @@
+{
+  "collections": [
+    {
+      "id": "premium-minimal",
+      "name": "Premium & Minimal",
+      "description": "Quiet confidence for executives and independent professionals."
+    },
+    {
+      "id": "modern-futuristic",
+      "name": "Modern & Futuristic",
+      "description": "Sharp, high-tech identities for builders and innovators."
+    },
+    {
+      "id": "elegant-corporate",
+      "name": "Elegant & Corporate",
+      "description": "Trusted, polished cards for teams, travel and sustainability."
+    },
+    {
+      "id": "creative-colourful",
+      "name": "Creative & Colourful",
+      "description": "Bold colour and personality for makers and growth-minded owners."
+    }
+  ],
+  "templates": [
+    {
+      "id": "zenith",
+      "name": "Zenith",
+      "collection": "premium-minimal",
+      "category": "Executive luxury",
+      "description": "Matte black with champagne gold and sharp geometric slabs. Built to signal authority.",
+      "audience": "CEOs, founders, managing directors and senior executives",
+      "cta": "LET'S CONNECT",
+      "fonts": [
+        "cormorant-garamond",
+        "jost"
+      ],
+      "palettes": [
+        {
+          "id": "champagne",
+          "name": "Champagne",
+          "vars": {}
+        },
+        {
+          "id": "rose-gold",
+          "name": "Rose gold",
+          "vars": {
+            "accent": "#d8a08c",
+            "accent2": "#f2cfc0",
+            "line": "rgba(216,160,140,0.42)",
+            "onAccent": "#1d0f0b",
+            "plate": "#f7ece6",
+            "qr": "#1d0f0b"
+          }
+        },
+        {
+          "id": "platinum",
+          "name": "Platinum",
+          "vars": {
+            "accent": "#b9c0cc",
+            "accent2": "#e8ebf0",
+            "line": "rgba(185,192,204,0.4)",
+            "onAccent": "#101216",
+            "plate": "#eef0f3",
+            "qr": "#101216"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "nova",
+      "name": "Nova",
+      "collection": "premium-minimal",
+      "category": "Contemporary minimal",
+      "description": "Warm ivory and champagne with a large portrait, soft geometry and plenty of air.",
+      "audience": "Marketing directors, consultants, entrepreneurs and freelancers",
+      "cta": "CONNECT WITH ME",
+      "fonts": [
+        "jost"
+      ],
+      "palettes": [
+        {
+          "id": "ivory",
+          "name": "Ivory",
+          "vars": {}
+        },
+        {
+          "id": "pearl",
+          "name": "Pearl grey",
+          "vars": {
+            "bg": "#eceff3",
+            "surface": "#f7f8fa",
+            "plate": "#f7f8fa",
+            "ink": "#232a36",
+            "mute": "#6b7482",
+            "accent": "#5f7194",
+            "accent2": "#c9d0de",
+            "line": "rgba(35,42,54,0.14)",
+            "onAccent": "#f7f8fa",
+            "qr": "#232a36"
+          }
+        },
+        {
+          "id": "blush",
+          "name": "Blush",
+          "vars": {
+            "bg": "#f7ece8",
+            "surface": "#fcf6f3",
+            "plate": "#fcf6f3",
+            "ink": "#2d2321",
+            "mute": "#80706b",
+            "accent": "#a8695b",
+            "accent2": "#e7c9bf",
+            "line": "rgba(45,35,33,0.14)",
+            "onAccent": "#fcf6f3",
+            "qr": "#2d2321"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "collection": "premium-minimal",
+      "category": "Warm premium corporate",
+      "description": "Cream and sand with fine gold rules, a serif and sans pairing and a round portrait.",
+      "audience": "Consultants, financial advisers, architects and lawyers",
+      "cta": "LET'S CONNECT",
+      "fonts": [
+        "playfair-display",
+        "source-sans-3"
+      ],
+      "palettes": [
+        {
+          "id": "cream",
+          "name": "Cream and gold",
+          "vars": {}
+        },
+        {
+          "id": "terracotta",
+          "name": "Terracotta",
+          "vars": {
+            "bg": "#f6e9df",
+            "surface": "#efd9c9",
+            "plate": "#fff6ee",
+            "ink": "#3d2418",
+            "mute": "#855f4c",
+            "accent": "#b5573a",
+            "accent2": "#dc9f84",
+            "line": "rgba(61,36,24,0.18)",
+            "onAccent": "#fff6ee",
+            "qr": "#3d2418"
+          }
+        },
+        {
+          "id": "olive",
+          "name": "Olive",
+          "vars": {
+            "bg": "#eef0e2",
+            "surface": "#dfe3c9",
+            "plate": "#fbfcf2",
+            "ink": "#2b3018",
+            "mute": "#656b4a",
+            "accent": "#6f7a2e",
+            "accent2": "#b5bd7a",
+            "line": "rgba(43,48,24,0.18)",
+            "onAccent": "#fbfcf2",
+            "qr": "#2b3018"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "axiom",
+      "name": "Axiom",
+      "collection": "modern-futuristic",
+      "category": "High-tech executive",
+      "description": "Charcoal and midnight with electric cyan, angular frames and a digital identity number.",
+      "audience": "Technology founders, developers and IT consultants",
+      "cta": "EXPLORE MY WORK",
+      "fonts": [
+        "chakra-petch-500",
+        "chakra-petch-700",
+        "sora"
+      ],
+      "palettes": [
+        {
+          "id": "cyan",
+          "name": "Electric cyan",
+          "vars": {}
+        },
+        {
+          "id": "magenta",
+          "name": "Magenta",
+          "vars": {
+            "accent": "#f472b6",
+            "accent2": "#8b5cf6",
+            "line": "rgba(244,114,182,0.32)",
+            "onAccent": "#1d0613",
+            "plate": "#fbeaf3",
+            "qr": "#1d0613"
+          }
+        },
+        {
+          "id": "lime",
+          "name": "Lime",
+          "vars": {
+            "accent": "#a3e635",
+            "accent2": "#22c55e",
+            "line": "rgba(163,230,53,0.3)",
+            "onAccent": "#0a1604",
+            "plate": "#f3fae3",
+            "qr": "#0a1604"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "vectra",
+      "name": "Vectra",
+      "collection": "modern-futuristic",
+      "category": "Futuristic minimalism",
+      "description": "Dark graphite with silver details, fine lines and layered abstract shapes.",
+      "audience": "Product managers, innovation leaders and corporate executives",
+      "cta": "CONNECT",
+      "fonts": [
+        "sora"
+      ],
+      "palettes": [
+        {
+          "id": "silver",
+          "name": "Silver",
+          "vars": {}
+        },
+        {
+          "id": "titanium",
+          "name": "Titanium blue",
+          "vars": {
+            "accent": "#9fbbdc",
+            "accent2": "#6a88ad",
+            "onAccent": "#0e141c",
+            "plate": "#eaf0f7",
+            "qr": "#0e141c"
+          }
+        },
+        {
+          "id": "brass",
+          "name": "Brass",
+          "vars": {
+            "accent": "#d6b878",
+            "accent2": "#9d8454",
+            "onAccent": "#17130a",
+            "plate": "#f4ecda",
+            "qr": "#17130a"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "pulse",
+      "name": "Pulse",
+      "collection": "modern-futuristic",
+      "category": "Dynamic digital identity",
+      "description": "Midnight blue with electric blue, violet and magenta flowing shapes and pill buttons.",
+      "audience": "Digital strategists, sales leaders and startup founders",
+      "cta": "EXPLORE",
+      "fonts": [
+        "bricolage-grotesque"
+      ],
+      "palettes": [
+        {
+          "id": "electric",
+          "name": "Electric",
+          "vars": {}
+        },
+        {
+          "id": "sunset",
+          "name": "Sunset",
+          "vars": {
+            "bg": "#1a0d1f",
+            "accent": "#e5484d",
+            "accent2": "#f2711c",
+            "g3": "#d6409f",
+            "line": "rgba(255,150,140,0.38)",
+            "plate": "#fff3f1",
+            "qr": "#1a0d1f"
+          }
+        },
+        {
+          "id": "aurora",
+          "name": "Aurora",
+          "vars": {
+            "bg": "#07182a",
+            "accent": "#0e9f8e",
+            "accent2": "#5b5fe0",
+            "g3": "#0ea5c6",
+            "line": "rgba(110,200,220,0.38)",
+            "plate": "#effafa",
+            "qr": "#07182a"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "horizon",
+      "name": "Horizon",
+      "collection": "elegant-corporate",
+      "category": "Professional corporate",
+      "description": "Clean white and soft blue with navy type, labelled contact details and line icons.",
+      "audience": "Corporate teams, consultants and sales professionals",
+      "cta": "CONNECT",
+      "fonts": [
+        "work-sans"
+      ],
+      "palettes": [
+        {
+          "id": "navy",
+          "name": "Navy",
+          "vars": {}
+        },
+        {
+          "id": "teal",
+          "name": "Teal",
+          "vars": {
+            "ink": "#0b3a3a",
+            "mute": "#4f7473",
+            "accent": "#0f8f8a",
+            "accent2": "#6fd0cb",
+            "surface": "#e8f6f5",
+            "line": "rgba(11,58,58,0.14)",
+            "qr": "#0b3a3a"
+          }
+        },
+        {
+          "id": "graphite",
+          "name": "Graphite",
+          "vars": {
+            "ink": "#1b2433",
+            "mute": "#5b6678",
+            "accent": "#3a4a63",
+            "accent2": "#9aa8bf",
+            "surface": "#eef0f4",
+            "line": "rgba(27,36,51,0.14)",
+            "qr": "#1b2433"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "verdant",
+      "name": "Verdant",
+      "collection": "elegant-corporate",
+      "category": "Premium natural",
+      "description": "Deep forest green with muted gold, botanical line art and an arched portrait.",
+      "audience": "Sustainability, hospitality, wellness and lifestyle brands",
+      "cta": "JOIN OUR MISSION",
+      "fonts": [
+        "lora",
+        "jost"
+      ],
+      "palettes": [
+        {
+          "id": "forest",
+          "name": "Forest",
+          "vars": {}
+        },
+        {
+          "id": "lagoon",
+          "name": "Lagoon",
+          "vars": {
+            "bg": "#0b2b2e",
+            "surface": "#11393c",
+            "glow": "#164b4f",
+            "accent2": "#2ab5a5",
+            "qr": "#0b2b2e",
+            "onAccent": "#0b2b2e"
+          }
+        },
+        {
+          "id": "moss",
+          "name": "Moss",
+          "vars": {
+            "bg": "#1e2a14",
+            "surface": "#2a3a1c",
+            "glow": "#34491f",
+            "accent": "#d0b565",
+            "accent2": "#86b04a",
+            "qr": "#1e2a14",
+            "onAccent": "#1e2a14"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "skyway",
+      "name": "Skyway",
+      "collection": "elegant-corporate",
+      "category": "International business",
+      "description": "Sky blue and white with soft clouds, structured details and a journey-ready call to action.",
+      "audience": "Travel, logistics, tourism and international service providers",
+      "cta": "PLAN YOUR JOURNEY",
+      "fonts": [
+        "red-hat-display"
+      ],
+      "palettes": [
+        {
+          "id": "sky",
+          "name": "Open sky",
+          "vars": {}
+        },
+        {
+          "id": "ocean",
+          "name": "Ocean",
+          "vars": {
+            "bg": "#eef5fc",
+            "sky1": "#2f7fd1",
+            "sky2": "#8fc1ee",
+            "accent": "#0f5aa8",
+            "accent2": "#4a9ae0"
+          }
+        },
+        {
+          "id": "sunrise",
+          "name": "Sunrise",
+          "vars": {
+            "bg": "#fff6f1",
+            "sky1": "#f59e8b",
+            "sky2": "#fbd6c4",
+            "ink": "#3a1d12",
+            "mute": "#8a5a45",
+            "accent": "#c2410c",
+            "accent2": "#f59e5b",
+            "line": "rgba(58,29,18,0.12)",
+            "qr": "#3a1d12"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "creo",
+      "name": "Creo",
+      "collection": "creative-colourful",
+      "category": "Creative premium",
+      "description": "Deep purple with violet, coral and orange gradients, an organic portrait and specialty labels.",
+      "audience": "Creative directors, agencies, designers and branding professionals",
+      "cta": "LET'S COLLABORATE",
+      "fonts": [
+        "syne",
+        "jost"
+      ],
+      "palettes": [
+        {
+          "id": "violet",
+          "name": "Violet",
+          "vars": {}
+        },
+        {
+          "id": "ember",
+          "name": "Ember",
+          "vars": {
+            "bg": "#260a12",
+            "accent": "#ff8a5c",
+            "accent2": "#e11d48",
+            "g2": "#fb7185",
+            "g3": "#fbbf24",
+            "plate": "#fff4ee",
+            "qr": "#260a12"
+          }
+        },
+        {
+          "id": "lagoon",
+          "name": "Lagoon",
+          "vars": {
+            "bg": "#07162e",
+            "accent": "#38e0c0",
+            "accent2": "#3b82f6",
+            "g2": "#22d3ee",
+            "g3": "#a3e635",
+            "onAccent": "#04201a",
+            "plate": "#effbf8",
+            "qr": "#07162e"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "bravo",
+      "name": "Bravo",
+      "collection": "creative-colourful",
+      "category": "Bold business personality",
+      "description": "Warm cream with cobalt, orange and black colour blocks and oversized type.",
+      "audience": "Sales executives, real estate agents and small business owners",
+      "cta": "LET'S GROW TOGETHER",
+      "fonts": [
+        "archivo-black",
+        "hanken-grotesk"
+      ],
+      "palettes": [
+        {
+          "id": "cobalt",
+          "name": "Cobalt",
+          "vars": {}
+        },
+        {
+          "id": "emerald",
+          "name": "Emerald",
+          "vars": {
+            "bg": "#f4f0e1",
+            "accent": "#ffb703",
+            "accent2": "#0b7a5a"
+          }
+        },
+        {
+          "id": "crimson",
+          "name": "Crimson",
+          "vars": {
+            "bg": "#f7efe6",
+            "accent": "#ff9f1c",
+            "accent2": "#c1121f"
+          }
+        }
+      ],
+      "logo": "none"
+    },
+    {
+      "id": "imagine",
+      "name": "Imagine",
+      "collection": "creative-colourful",
+      "category": "Contemporary creative",
+      "description": "Bright yellow against deep charcoal with electric blue accents and an asymmetric layout.",
+      "audience": "Brand strategists, content creators and innovative businesses",
+      "cta": "LET'S CREATE",
+      "fonts": [
+        "familjen-grotesk"
+      ],
+      "palettes": [
+        {
+          "id": "yellow",
+          "name": "Yellow",
+          "vars": {}
+        },
+        {
+          "id": "coral",
+          "name": "Coral",
+          "vars": {
+            "accent": "#ff6b57",
+            "accent2": "#3b82f6",
+            "onAccent": "#17181c"
+          }
+        },
+        {
+          "id": "mint",
+          "name": "Mint",
+          "vars": {
+            "bg": "#14181a",
+            "accent": "#5eead4",
+            "accent2": "#7c3aed",
+            "onAccent": "#0b1a17"
+          }
+        }
+      ],
+      "logo": "none"
+    }
+  ]
+}
