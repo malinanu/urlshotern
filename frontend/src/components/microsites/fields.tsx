@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '@/lib/api-config';
 import { apiFetch, assetSrc, isApiError } from '@/lib/microsites';
 
 const inputClass =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40';
+  'w-full rounded-xl border border-outline-variant/30 bg-surface-container dark:bg-zinc-900 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40';
 
 export function TextField({
   label,
@@ -132,7 +132,7 @@ export function ToggleField({
         checked={!!checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 rounded border-border"
+        className="mt-0.5 h-4 w-4 rounded border-outline-variant/30"
       />
       <label htmlFor={id} className={`text-sm ${disabled ? 'text-muted-foreground' : 'text-foreground'}`}>
         {label}
@@ -204,7 +204,7 @@ export function ColorField({ label, value, onChange }: { label: string; value?: 
             setText(e.target.value);
             onChange(e.target.value);
           }}
-          className="h-9 w-10 rounded border border-border bg-background p-0.5 cursor-pointer"
+          className="h-9 w-10 rounded border border-outline-variant/30 bg-surface-container dark:bg-zinc-900 p-0.5 cursor-pointer"
         />
         <input
           id={id}
@@ -267,7 +267,7 @@ export function ImageField({
       <div className="flex items-center gap-2">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={assetSrc(value)} alt="" className="h-9 w-9 rounded object-cover border border-border shrink-0" />
+          <img src={assetSrc(value)} alt="" className="h-9 w-9 rounded object-cover border border-outline-variant/30 shrink-0" />
         ) : null}
         <input
           id={id}
@@ -280,7 +280,7 @@ export function ImageField({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+          className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-outline-variant/30 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 disabled:opacity-50"
         >
           <ArrowUpTrayIcon className="h-4 w-4" />
           {uploading ? 'Uploading…' : 'Upload'}
@@ -293,7 +293,7 @@ export function ImageField({
           onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
         />
       </div>
-      {error && <p role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}
       {value && (
         <button type="button" onClick={() => onChange('')} className="mt-1 text-xs text-muted-foreground hover:text-foreground">
           Remove image

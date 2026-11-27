@@ -36,7 +36,7 @@ function formatDay(d: string) {
 
 function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3">
+    <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 px-4 py-3">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-foreground tabular-nums">{value}</p>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -47,7 +47,7 @@ function StatTile({ label, value, hint }: { label: string; value: string; hint?:
 function BarList({ title, rows, labelFor }: { title: string; rows: MicrositeCount[]; labelFor?: (l: string) => string }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
+    <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 p-4">
       <h3 className="text-sm font-semibold text-foreground mb-3">{title}</h3>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No data yet.</p>
@@ -59,7 +59,7 @@ function BarList({ title, rows, labelFor }: { title: string; rows: MicrositeCoun
                 <span className="text-foreground truncate">{labelFor ? labelFor(r.label) : r.label}</span>
                 <span className="text-muted-foreground tabular-nums">{r.count.toLocaleString()}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-1.5 rounded-full bg-surface-container dark:bg-zinc-900 overflow-hidden">
                 <div className="h-full rounded-full viz-bar" style={{ width: `${(r.count / max) * 100}%` }} />
               </div>
             </li>
@@ -102,14 +102,14 @@ export default function TrackPanel({ micrositeId, maxDays }: { micrositeId: numb
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">Performance</h2>
-        <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/50" role="group" aria-label="Date range">
+        <div className="inline-flex rounded-xl border border-outline-variant/30 p-0.5 bg-surface-container dark:bg-zinc-900" role="group" aria-label="Date range">
           {ranges.map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => setDays(r)}
               aria-pressed={days === r}
-              className={`px-3 py-1 text-xs font-medium rounded-md ${days === r ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-3 py-1 text-xs font-medium rounded-lg ${days === r ? 'bg-surface-container-lowest dark:bg-zinc-950 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {r} days
             </button>
@@ -117,7 +117,7 @@ export default function TrackPanel({ micrositeId, maxDays }: { micrositeId: numb
         </div>
       </div>
 
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
       {data && (
         <>
@@ -137,7 +137,7 @@ export default function TrackPanel({ micrositeId, maxDays }: { micrositeId: numb
             </div>
           )}
 
-          <section className="rounded-xl border border-border bg-card p-4">
+          <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-foreground">Views and unique visitors</h3>
               <button type="button" onClick={() => setShowTable((v) => !v)} className="text-xs text-primary hover:underline">
@@ -158,7 +158,7 @@ export default function TrackPanel({ micrositeId, maxDays }: { micrositeId: numb
                   </thead>
                   <tbody className="tabular-nums text-foreground">
                     {[...(data.daily ?? [])].reverse().map((d) => (
-                      <tr key={d.date} className="border-t border-border">
+                      <tr key={d.date} className="border-t border-outline-variant/30">
                         <td className="py-1">{d.date}</td>
                         <td className="py-1 text-right">{d.views}</td>
                         <td className="py-1 text-right">{d.unique_visitors}</td>
@@ -203,7 +203,7 @@ export default function TrackPanel({ micrositeId, maxDays }: { micrositeId: numb
           </div>
         </>
       )}
-      {!data && !error && <div className="h-64 rounded-xl border border-border bg-card animate-pulse" />}
+      {!data && !error && <div className="h-64 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 animate-pulse" />}
     </div>
   );
 }

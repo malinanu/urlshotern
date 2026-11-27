@@ -13,6 +13,8 @@ interface Props {
   title: string;
   slug: string;
   content: MicrositeContent;
+  /** Vertical space taken above and below the frame; the frame scales to fit the rest of the window. */
+  reserve?: number;
 }
 
 /**
@@ -21,12 +23,13 @@ interface Props {
  * access), so preview and published output cannot drift and page styles can't
  * leak into the dashboard.
  */
-export default function PreviewFrame({ title, slug, content }: Props) {
+export default function PreviewFrame({ title, slug, content, reserve = 0 }: Props) {
   const { getAccessToken } = useAuth();
   const [html, setHtml] = useState('');
   const [validation, setValidation] = useState<{ field: string; message: string } | null>(null);
   const [device, setDevice] = useState<Device>('mobile');
   const [box, setBox] = useState(0);
+  const [viewport, setViewport] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
 
@@ -58,13 +61,23 @@ export default function PreviewFrame({ title, slug, content }: Props) {
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!reserve) return;
+    const onResize = () => setViewport(window.innerHeight);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [reserve]);
+
   const width = WIDTHS[device];
-  const scale = box > 0 ? Math.min(1, (box - 16) / width) : 1;
   const height = device === 'mobile' ? 780 : 860;
+  const fitWidth = box > 0 ? (box - 16) / width : 1;
+  const fitHeight = reserve && viewport ? Math.max(360, viewport - reserve) / height : 1;
+  const scale = Math.min(1, fitWidth, fitHeight);
 
   return (
     <div className="flex flex-col items-center gap-3 h-full">
-      <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/50" role="group" aria-label="Preview device">
+      <div className="inline-flex rounded-xl border border-outline-variant/30 p-0.5 bg-surface-container dark:bg-zinc-900" role="group" aria-label="Preview device">
         {(
           [
             ['mobile', DevicePhoneMobileIcon, 'Phone'],
@@ -78,7 +91,7 @@ export default function PreviewFrame({ title, slug, content }: Props) {
             onClick={() => setDevice(d)}
             aria-pressed={device === d}
             aria-label={label}
-            className={`p-1.5 rounded-md ${device === d ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`p-1.5 rounded-lg ${device === d ? 'bg-surface-container-lowest dark:bg-zinc-950 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Icon className="h-4 w-4" />
           </button>
@@ -86,7 +99,7 @@ export default function PreviewFrame({ title, slug, content }: Props) {
       </div>
 
       {validation && (
-        <p role="status" className="w-full rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+        <p role="status" className="w-full rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
           Not saved — {describeValidation(validation.field, validation.message, content.blocks)}
         </p>
       )}
@@ -94,13 +107,13 @@ export default function PreviewFrame({ title, slug, content }: Props) {
       <div ref={containerRef} className="w-full flex justify-center overflow-hidden">
         <div style={{ width: width * scale, height: height * scale }}>
           <div
-            className={`origin-top-left overflow-hidden bg-white ${device === 'mobile' ? 'rounded-[2.25rem] border-[10px] border-gray-900 shadow-2xl' : 'rounded-xl border border-border shadow-lg'}`}
+            className={`origin-top-left overflow-hidden bg-white ${device === 'mobile' ? 'rounded-[2.25rem] border-[10px] border-gray-900 dark:border-zinc-700 shadow-2xl ring-1 ring-black/5 dark:ring-white/10' : 'rounded-xl border border-outline-variant/30 shadow-lg'}`}
             style={{ width, height, transform: `scale(${scale})` }}
           >
             {html ? (
               <iframe title="Page preview" srcDoc={html} sandbox="" className="w-full h-full border-0" />
             ) : (
-              <div className="w-full h-full animate-pulse bg-muted" />
+              <div className="w-full h-full animate-pulse bg-surface-container dark:bg-zinc-900" />
             )}
           </div>
         </div>

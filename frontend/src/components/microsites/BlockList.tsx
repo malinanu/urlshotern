@@ -51,7 +51,7 @@ export default function BlockList({ blocks, selectedId, micrositeId, onSelect, o
 
   if (blocks.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+      <p className="rounded-xl border border-dashed border-outline-variant/30 p-6 text-center text-sm text-muted-foreground">
         No blocks yet. Add one from the catalog.
       </p>
     );
@@ -143,7 +143,7 @@ function SortableBlock({
     <li
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg border bg-card ${open ? 'border-primary' : 'border-border'} ${isDragging ? 'shadow-lg z-10 relative' : ''}`}
+      className={`rounded-xl border bg-surface-container-lowest dark:bg-zinc-950 ${open ? 'border-primary' : 'border-outline-variant/30'} ${isDragging ? 'shadow-lg z-10 relative' : ''}`}
     >
       <div className="flex items-center gap-1 px-2 py-2">
         <button
@@ -167,14 +167,14 @@ function SortableBlock({
         <button
           type="button"
           onClick={() => confirm(`Remove the ${name} block?`) && onRemove()}
-          className="p-1 text-muted-foreground hover:text-red-600"
+          className="p-1 text-muted-foreground hover:text-destructive"
           aria-label={`Remove ${name}`}
         >
           <TrashIcon className="h-4 w-4" />
         </button>
       </div>
       {open && (
-        <div className="border-t border-border px-3 py-3">
+        <div className="border-t border-outline-variant/30 px-3 py-3">
           <BlockForm block={block} micrositeId={micrositeId} onChange={onChange} canUseForms={canUseForms} />
         </div>
       )}
