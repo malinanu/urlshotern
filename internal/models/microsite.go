@@ -51,15 +51,15 @@ const (
 
 // Microsite is a user-owned micro-landing page served at /m/<slug>.
 type Microsite struct {
-	ID          int64             `json:"id"`
-	UserID      int64             `json:"user_id"`
-	Slug        string            `json:"slug"`
-	Title       string            `json:"title"`
-	Template    string            `json:"template"`
-	Status      string            `json:"status"`
-	Draft       MicrositeContent  `json:"draft"`
-	Published   *MicrositeContent `json:"published,omitempty"`
-	Version     int               `json:"version"`
+	ID        int64             `json:"id"`
+	UserID    int64             `json:"user_id"`
+	Slug      string            `json:"slug"`
+	Title     string            `json:"title"`
+	Template  string            `json:"template"`
+	Status    string            `json:"status"`
+	Draft     MicrositeContent  `json:"draft"`
+	Published *MicrositeContent `json:"published,omitempty"`
+	Version   int               `json:"version"`
 	// PublishedVersion is the draft version that was last published.
 	PublishedVersion *int `json:"published_version,omitempty"`
 	// HasUnpublishedChanges is true when a published page's draft was edited
@@ -76,15 +76,15 @@ const MicrositeViewDays = 14
 
 // MicrositeSummary is the list-view representation of a microsite.
 type MicrositeSummary struct {
-	ID                    int64      `json:"id"`
-	Slug                  string     `json:"slug"`
-	Title                 string     `json:"title"`
-	Template              string     `json:"template"`
-	Status                string     `json:"status"`
-	Version               int        `json:"version"`
-	HasUnpublishedChanges bool       `json:"has_unpublished_changes"`
-	ShortCode             *string    `json:"short_code,omitempty"`
-	Views30d              int64      `json:"views_30d"`
+	ID                    int64   `json:"id"`
+	Slug                  string  `json:"slug"`
+	Title                 string  `json:"title"`
+	Template              string  `json:"template"`
+	Status                string  `json:"status"`
+	Version               int     `json:"version"`
+	HasUnpublishedChanges bool    `json:"has_unpublished_changes"`
+	ShortCode             *string `json:"short_code,omitempty"`
+	Views30d              int64   `json:"views_30d"`
 	// Views14d holds MicrositeViewDays daily view counts (UTC days), oldest first,
 	// ending today.
 	Views14d       []int64    `json:"views_14d"`
