@@ -1,31 +1,27 @@
 'use client';
 
-import TemplateGallery from '@/components/micropages/TemplateGallery';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import {
-  DevicePhoneMobileIcon,
-  PlusIcon,
-  TrashIcon,
-  ArrowTopRightOnSquareIcon,
-  SparklesIcon,
-  EyeIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
-import Layout from '@/components/layout/Layout';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import WorkspaceLayout from '@/components/layout/WorkspaceLayout';
+import { QRCodeModal } from '@/components/QRCode';
+import ConfirmDialog from '@/components/workspace/ConfirmDialog';
+import { Button, Segmented, Skeleton, buttonClass, cx, focusRing, panelClass } from '@/components/workspace/ui';
+import PageCard from '@/components/microsites/list/PageCard';
+import PagesStarter from '@/components/microsites/list/PagesStarter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { API_ENDPOINTS } from '@/lib/api-config';
-import { PLAN_NAMES } from '@/lib/plan-utils';
 import {
+  PAGE_KINDS,
   apiFetch,
-  browserTimeZone,
   isApiError,
+  pageKind,
   type Microsite,
   type MicrositeEntitlements,
   type MicrositeSummary,
-  type MicrositeTemplateInfo,
+  type PageKind,
 } from '@/lib/microsites';
 
 interface ListResponse {
@@ -34,37 +30,52 @@ interface ListResponse {
   base_url: string;
 }
 
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 32);
-}
+type KindFilter = 'all' | PageKind;
+type StatusFilter = 'all' | 'published' | 'draft';
+type SortKey = 'edited' | 'views' | 'name';
+
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: 'edited', label: 'Last edited' },
+  { value: 'views', label: 'Most viewed' },
+  { value: 'name', label: 'Name' },
+];
 
 export default function MicrositesPage() {
+  return (
+    <Suspense fallback={null}>
+      <PagesList />
+    </Suspense>
+  );
+}
+
+function PagesList() {
   const router = useRouter();
+  const params = useSearchParams();
   const { isLoading: authLoading } = useRequireAuth();
   const { user, getAccessToken } = useAuth();
+
   const [data, setData] = useState<ListResponse | null>(null);
-  const [templates, setTemplates] = useState<MicrositeTemplateInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [showCreate, setShowCreate] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string; href?: string } | null>(null);
+
+  const [query, setQuery] = useState(() => params.get('q') ?? '');
+  const [kind, setKind] = useState<KindFilter>('all');
+  const [status, setStatus] = useState<StatusFilter>('all');
+  const [sort, setSort] = useState<SortKey>('edited');
+
+  const [qrPage, setQrPage] = useState<MicrositeSummary | null>(null);
+  const [deleting, setDeleting] = useState<MicrositeSummary | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const load = useCallback(async () => {
-    setError('');
+    setLoadError('');
     try {
-      const token = getAccessToken();
-      const [list, tmpl] = await Promise.all([
-        apiFetch<ListResponse>(API_ENDPOINTS.microsites.list, token),
-        apiFetch<{ templates: MicrositeTemplateInfo[] }>(API_ENDPOINTS.microsites.templates, token),
-      ]);
+      const list = await apiFetch<ListResponse>(API_ENDPOINTS.microsites.list, getAccessToken());
       setData(list);
-      setTemplates(tmpl.templates);
     } catch (e) {
-      setError(isApiError(e) ? e.message : 'Could not load your pages.');
+      setLoadError(isApiError(e) ? e.message : 'Could not load your pages.');
     } finally {
       setLoading(false);
     }
@@ -74,385 +85,367 @@ export default function MicrositesPage() {
     if (user) load();
   }, [user, load]);
 
-  const handleDelete = async (site: MicrositeSummary) => {
-    if (!confirm(`Delete "${site.title}"? Its address (/m/${site.slug}) will stop working.`)) return;
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const pages = useMemo(() => data?.microsites ?? [], [data]);
+  const ent = data?.entitlements;
+  const baseUrl = data?.base_url ?? '/m/';
+
+  const counts = useMemo(() => {
+    const c: Record<KindFilter, number> = { all: pages.length, card: 0, links: 0, shop: 0, event: 0, other: 0 };
+    for (const p of pages) c[pageKind(p.template)]++;
+    return c;
+  }, [pages]);
+
+  const totals = useMemo(
+    () => ({
+      published: pages.filter((p) => p.status === 'published').length,
+      views: pages.reduce((n, p) => n + p.views_30d, 0),
+      leads: pages.reduce((n, p) => n + (p.submissions_30d ?? 0), 0),
+    }),
+    [pages]
+  );
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = pages.filter(
+      (p) =>
+        (kind === 'all' || pageKind(p.template) === kind) &&
+        (status === 'all' || p.status === status) &&
+        (!q || p.title.toLowerCase().includes(q) || p.slug.includes(q))
+    );
+    const by: Record<SortKey, (a: MicrositeSummary, b: MicrositeSummary) => number> = {
+      edited: (a, b) => b.updated_at.localeCompare(a.updated_at),
+      views: (a, b) => b.views_30d - a.views_30d || b.updated_at.localeCompare(a.updated_at),
+      name: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+    };
+    return [...list].sort(by[sort]);
+  }, [pages, kind, status, query, sort]);
+
+  const filtered = query.trim() !== '' || kind !== 'all' || status !== 'all';
+  const clearFilters = () => {
+    setQuery('');
+    setKind('all');
+    setStatus('all');
+  };
+
+  const duplicate = async (page: MicrositeSummary) => {
     try {
-      await apiFetch(API_ENDPOINTS.microsites.delete(site.id), getAccessToken(), { method: 'DELETE' });
+      const copy = await apiFetch<Microsite>(API_ENDPOINTS.microsites.duplicate(page.id), getAccessToken(), { method: 'POST' });
+      setNotice({ tone: 'ok', text: `Made a copy at /m/${copy.slug}.`, href: `/microsites/edit?id=${copy.id}` });
       await load();
     } catch (e) {
-      setError(isApiError(e) ? e.message : 'Could not delete the page.');
+      setNotice({ tone: 'error', text: isApiError(e) ? e.message : 'Could not duplicate the page.' });
     }
   };
 
-  if (authLoading || !user) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <p className="text-muted-foreground">Loading…</p>
-        </div>
-      </Layout>
-    );
-  }
+  const togglePublish = async (page: MicrositeSummary) => {
+    const publish = page.status !== 'published';
+    try {
+      await apiFetch(
+        publish ? API_ENDPOINTS.microsites.publish(page.id) : API_ENDPOINTS.microsites.unpublish(page.id),
+        getAccessToken(),
+        { method: 'POST' }
+      );
+      setNotice({ tone: 'ok', text: publish ? `“${page.title}” is live.` : `“${page.title}” is offline. Its address now shows “not found”.` });
+      await load();
+    } catch (e) {
+      setNotice({
+        tone: 'error',
+        text: isApiError(e) ? `Could not ${publish ? 'publish' : 'unpublish'}: ${e.message}` : 'Something went wrong. Try again.',
+        href: publish ? `/microsites/edit?id=${page.id}` : undefined,
+      });
+    }
+  };
 
-  const ent = data?.entitlements;
-  const limitLabel = ent ? (ent.max_pages === -1 ? 'Unlimited pages' : `${ent.used_pages} of ${ent.max_pages} pages used`) : '';
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      await apiFetch(API_ENDPOINTS.microsites.delete(deleting.id), getAccessToken(), { method: 'DELETE' });
+      setNotice({ tone: 'ok', text: `Deleted “${deleting.title}”.` });
+      setDeleting(null);
+      await load();
+    } catch (e) {
+      setDeleteError(isApiError(e) ? e.message : 'Could not delete the page.');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const canCreate = !!ent?.can_create_more;
+  const firstRun = !loading && !loadError && pages.length === 0;
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-background py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <DevicePhoneMobileIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Pages</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Business cards, link-in-bio, shop and event pages{limitLabel && ` · ${limitLabel}`}
-                </p>
-              </div>
-            </div>
-            {ent && ent.can_create_more && (
-              <button
-                onClick={() => setShowCreate(true)}
-                className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium transition-colors"
-              >
-                <PlusIcon className="h-4 w-4" />
-                <span>Create page</span>
-              </button>
+    <WorkspaceLayout
+      activeNav="pages"
+      pageCount={pages.length || undefined}
+      onCreateClick={() => router.push(canCreate || !ent ? '/microsites/new' : '/billing')}
+      searchQuery={query}
+      onSearchChange={setQuery}
+      searchPlaceholder="Search pages by name or address… (⌘K)"
+    >
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-hanken text-2xl font-bold tracking-tight text-foreground">Pages</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {loading || authLoading
+              ? 'Business cards, link-in-bio, shop and event pages.'
+              : pages.length === 0
+                ? 'Business cards, link-in-bio, shop and event pages, each with its own link and QR code.'
+                : `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} · ${totals.published} published · ${totals.views.toLocaleString()} ${
+                    totals.views === 1 ? 'view' : 'views'
+                  }${totals.leads ? ` and ${totals.leads} ${totals.leads === 1 ? 'lead' : 'leads'}` : ''} in the last 30 days`}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {ent && <UsageMeter used={ent.used_pages} max={ent.max_pages} />}
+          {ent && !canCreate ? (
+            <Link href="/billing" className={buttonClass('secondary', 'md')}>
+              <SparklesIcon className="h-4 w-4 text-primary" />
+              Upgrade for more pages
+            </Link>
+          ) : (
+            <Link href="/microsites/new" className={buttonClass('primary', 'md')} aria-disabled={!ent}>
+              <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+              New page
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {notice && (
+        <div
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+          className={cx(
+            'mb-4 flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium',
+            notice.tone === 'ok'
+              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+              : 'border-destructive/20 bg-destructive/10 text-destructive'
+          )}
+        >
+          <span className="min-w-0">
+            {notice.text}{' '}
+            {notice.href && (
+              <Link href={notice.href} className="underline underline-offset-2">
+                {notice.tone === 'ok' ? 'Open it' : 'Open the editor'}
+              </Link>
             )}
+          </span>
+          <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className={cx('rounded-md p-1 opacity-70 hover:opacity-100', focusRing)}>
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {loadError ? (
+        <div className={cx(panelClass, 'flex flex-col items-start gap-3 p-6')} role="alert">
+          <p className="text-sm font-medium text-foreground">{loadError}</p>
+          <Button onClick={() => { setLoading(true); load(); }}>
+            <ArrowPathIcon className="h-4 w-4" />
+            Try again
+          </Button>
+        </div>
+      ) : firstRun ? (
+        <PagesStarter getToken={getAccessToken} name={user?.name?.trim() || user?.email?.split('@')[0] || ''} />
+      ) : (
+        <>
+          {/* Toolbar */}
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="-mx-1 overflow-x-auto px-1 pb-1 lg:pb-0">
+              <Segmented<KindFilter>
+                label="Page type"
+                value={kind}
+                onChange={setKind}
+                options={[
+                  { value: 'all', label: 'All', count: counts.all },
+                  ...PAGE_KINDS.map((k) => ({ value: k.id as KindFilter, label: k.plural, count: counts[k.id] })),
+                ]}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Segmented<StatusFilter>
+                label="Status"
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: 'all', label: 'Any status' },
+                  { value: 'published', label: 'Published' },
+                  { value: 'draft', label: 'Drafts' },
+                ]}
+              />
+              <label className="sr-only" htmlFor="pages-sort">
+                Sort pages
+              </label>
+              <select
+                id="pages-sort"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className={cx(
+                  'h-8 rounded-xl border border-outline-variant/30 bg-surface-container dark:bg-zinc-900 pl-3 pr-8 text-xs font-semibold text-foreground',
+                  focusRing
+                )}
+              >
+                {SORTS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {error && (
-            <div role="alert" className="mb-6 rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-300">
-              {error}
-            </div>
-          )}
-
-          {ent && !ent.can_create_more && (
-            <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-border bg-card px-5 py-4">
-              <SparklesIcon className="h-5 w-5 text-primary shrink-0" />
-              <p className="text-sm text-muted-foreground flex-1">
-                You&apos;ve used all {ent.max_pages} page{ent.max_pages === 1 ? '' : 's'} on your plan. Upgrade to{' '}
-                <strong className="text-foreground">{PLAN_NAMES.premium}</strong> for more pages.
-              </p>
-              <Link href="/billing" className="text-sm font-medium text-primary hover:underline">
-                Upgrade plan
-              </Link>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[0, 1].map((i) => (
-                <div key={i} className="h-36 rounded-xl border border-border bg-card animate-pulse" />
-              ))}
-            </div>
-          ) : data && data.microsites.length === 0 ? (
-            <div className="bg-card border border-border rounded-xl p-12 text-center">
-              <div className="mx-auto w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <DevicePhoneMobileIcon className="h-7 w-7 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Create your first page</h2>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Share one link that lets people save your contact in a tap, call or message you, and find all your links.
-              </p>
-              <button
-                onClick={() => setShowCreate(true)}
-                className="inline-flex items-center space-x-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors"
-              >
-                <PlusIcon className="h-4 w-4" />
-                <span>Create page</span>
+          {query.trim() && (
+            <p className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <MagnifyingGlassIcon className="h-3.5 w-3.5" />
+              {shown.length} {shown.length === 1 ? 'page matches' : 'pages match'} “{query.trim()}”
+              <button type="button" onClick={() => setQuery('')} className={cx('rounded font-semibold text-primary hover:underline', focusRing)}>
+                Clear search
               </button>
-            </div>
-          ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {data?.microsites.map((site) => (
-                <li key={site.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="font-semibold text-foreground truncate">{site.title}</h2>
-                      <p className="text-sm text-muted-foreground truncate font-mono">/m/{site.slug}</p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        site.status === 'published'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {site.status === 'published' ? 'Published' : 'Draft'}
-                    </span>
+            </p>
+          )}
+
+          {loading || authLoading ? (
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-busy="true" aria-label="Loading pages">
+              {Array.from({ length: 4 }, (_, i) => (
+                <li key={i} className={cx(panelClass, 'overflow-hidden')}>
+                  <div className="flex h-[232px] justify-center bg-surface-container/60 dark:bg-zinc-900/50 pt-5">
+                    <Skeleton className="h-[258px] w-[150px] rounded-[18px]" />
                   </div>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <EyeIcon className="h-4 w-4" />
-                    {site.views_30d.toLocaleString()} views in the last 30 days
-                  </p>
-                  <div className="flex items-center gap-2 mt-auto pt-2">
-                    <Link
-                      href={`/microsites/edit?id=${site.id}`}
-                      className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium"
-                    >
-                      Edit
-                    </Link>
-                    <Link
-                      href={`/microsites/edit?id=${site.id}&tab=track`}
-                      className="px-3 py-1.5 border border-border rounded-lg hover:bg-muted text-sm font-medium text-foreground"
-                    >
-                      Analytics
-                    </Link>
-                    {site.status === 'published' && data && (
-                      <a
-                        href={`${data.base_url}${site.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 text-muted-foreground hover:text-foreground"
-                        aria-label={`Open /m/${site.slug}`}
-                      >
-                        <ArrowTopRightOnSquareIcon className="h-5 w-5" />
-                      </a>
-                    )}
-                    <button
-                      onClick={() => handleDelete(site)}
-                      className="ml-auto p-1.5 text-muted-foreground hover:text-red-600"
-                      aria-label={`Delete ${site.title}`}
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
+                  <div className="space-y-3 p-4">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
                   </div>
                 </li>
               ))}
             </ul>
+          ) : shown.length === 0 ? (
+            <EmptyFilter kind={kind} filtered={filtered} onClear={clearFilters} canCreate={canCreate} />
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {shown.map((page) => (
+                <PageCard
+                  key={page.id}
+                  page={page}
+                  baseUrl={baseUrl}
+                  getToken={getAccessToken}
+                  canDuplicate={canCreate}
+                  actions={{
+                    onQR: setQrPage,
+                    onDuplicate: duplicate,
+                    onTogglePublish: togglePublish,
+                    onDelete: (p) => {
+                      setDeleteError('');
+                      setDeleting(p);
+                    },
+                  }}
+                />
+              ))}
+            </ul>
           )}
-        </div>
-      </div>
-
-      {showCreate && (
-        <CreateDialog
-          templates={templates}
-          baseUrl={data?.base_url ?? '/m/'}
-          defaultName={user.name}
-          onClose={() => setShowCreate(false)}
-          onCreated={(site) => router.push(`/microsites/edit?id=${site.id}`)}
-        />
+        </>
       )}
-    </Layout>
+
+      <QRCodeModal
+        isOpen={!!qrPage}
+        onClose={() => setQrPage(null)}
+        value={qrPage ? `${baseUrl}${qrPage.slug}?src=qr` : ''}
+        title={qrPage ? `QR code for ${qrPage.title}` : 'QR code'}
+        description="Scans are counted as “QR code” traffic in the page’s analytics."
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        title={`Delete “${deleting?.title ?? ''}”?`}
+        confirmLabel="Delete page"
+        busy={deleteBusy}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleting(null)}
+      >
+        <p>
+          <span className="font-mono text-foreground">{baseUrl.replace(/^https?:\/\//, '')}{deleting?.slug}</span> will stop working, and
+          anyone who scans its QR code will see “not found”. The address becomes free for anyone to claim.
+        </p>
+      </ConfirmDialog>
+    </WorkspaceLayout>
   );
 }
 
-function CreateDialog({
-  templates,
-  baseUrl,
-  defaultName,
-  onClose,
-  onCreated,
-}: {
-  templates: MicrositeTemplateInfo[];
-  baseUrl: string;
-  defaultName?: string;
-  onClose: () => void;
-  onCreated: (site: Microsite) => void;
-}) {
-  const { getAccessToken } = useAuth();
-  const [template, setTemplate] = useState(templates[0]?.id ?? 'executive_card');
-  const [title, setTitle] = useState(defaultName ?? '');
-  const [slug, setSlug] = useState(slugify(defaultName ?? ''));
-  const [slugTouched, setSlugTouched] = useState(false);
-  const [slugStatus, setSlugStatus] = useState<{ available: boolean; reason?: string } | null>(null);
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!slugTouched) setSlug(slugify(title));
-  }, [title, slugTouched]);
-
-  useEffect(() => {
-    if (slug.length < 3) {
-      setSlugStatus(null);
-      return;
-    }
-    const t = setTimeout(async () => {
-      try {
-        const res = await apiFetch<{ available: boolean; reason?: string }>(
-          `${API_ENDPOINTS.microsites.slugAvailable}?slug=${encodeURIComponent(slug)}`,
-          getAccessToken()
-        );
-        setSlugStatus(res);
-      } catch {
-        setSlugStatus(null);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [slug, getAccessToken]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      const site = await apiFetch<Microsite>(API_ENDPOINTS.microsites.create, getAccessToken(), {
-        method: 'POST',
-        body: JSON.stringify({ title: title.trim(), slug, template, timezone: browserTimeZone() }),
-      });
-      onCreated(site);
-    } catch (err) {
-      setError(isApiError(err) ? err.message : 'Could not create the page.');
-      setSubmitting(false);
-    }
-  };
-
+function UsageMeter({ used, max }: { used: number; max: number }) {
+  if (max === -1) {
+    return <span className="text-xs font-medium text-muted-foreground">Unlimited pages</span>;
+  }
+  const pct = Math.min(100, Math.round((used / Math.max(1, max)) * 100));
+  const full = used >= max;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-page-title">
-      <form
-        onSubmit={submit}
-        className="w-full max-w-lg md:max-w-4xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl bg-card border border-border shadow-xl p-6 grid gap-5 md:grid-cols-[1fr_300px] md:gap-6"
-      >
-        <div className="space-y-5 min-w-0">
-        <div className="flex items-center justify-between">
-          <h2 id="create-page-title" className="text-lg font-semibold text-foreground">Create a page</h2>
-          <button type="button" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Close">
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+    <div className="flex items-center gap-2.5" title={`${used} of ${max} pages on your plan`}>
+      <div className="text-right">
+        <div className="text-xs font-semibold tabular-nums text-foreground">
+          {used} of {max} pages
         </div>
-
-        <fieldset>
-          <legend className="text-sm font-medium text-foreground mb-2">Start from</legend>
-          <div className="grid gap-2">
-            {templates.filter((t) => !t.style).map((t) => (
-              <label
-                key={t.id}
-                className={`flex gap-3 rounded-lg border p-3 cursor-pointer ${
-                  template === t.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
-                }`}
-              >
-                <input type="radio" name="template" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} className="mt-1" />
-                <span>
-                  <span className="block text-sm font-medium text-foreground">{t.name}</span>
-                  <span className="block text-xs text-muted-foreground">{t.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
- </fieldset>
-
-        <fieldset>
-          <legend className="text-sm font-medium text-foreground mb-2">Or a digital visiting card</legend>
-          <TemplateGallery
-            value={template}
-            onSelect={(id) => setTemplate(id)}
-            idPrefix="card_"
-            showClassic={false}
-            showPalettes={false}
-            scrollClassName="max-h-[360px]"
-            tone="app"
-          />
-        </fieldset>
-
-        <div>
-          <label htmlFor="page-title" className="block text-sm font-medium text-foreground mb-1">Page name</label>
-          <input
-            id="page-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={120}
-            required
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-          />
+        <div
+          className="mt-1 h-1.5 w-28 overflow-hidden rounded-full bg-surface-container-high dark:bg-zinc-800"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={max}
+          aria-valuenow={used}
+          aria-label="Pages used on your plan"
+        >
+          <div className={cx('h-full rounded-full', full ? 'bg-amber-500' : 'bg-primary')} style={{ width: `${pct}%` }} />
         </div>
-
-        <div>
-          <label htmlFor="page-slug" className="block text-sm font-medium text-foreground mb-1">Address</label>
-          <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden">
-            <span className="px-3 py-2 text-sm text-muted-foreground bg-muted border-r border-border whitespace-nowrap">{baseUrl.replace(/^https?:\/\//, '')}</span>
-            <input
-              id="page-slug"
-              value={slug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 32));
-              }}
-              required
-              minLength={3}
-              className="flex-1 min-w-0 px-3 py-2 text-sm text-foreground bg-transparent outline-none font-mono"
-              aria-describedby="slug-status"
-            />
-          </div>
-          <p id="slug-status" className="mt-1 text-xs min-h-[1rem]" aria-live="polite">
-            {slugStatus &&
-              (slugStatus.available ? (
-                <span className="text-green-600">Available</span>
-              ) : (
-                <span className="text-red-600">{slugStatus.reason ?? 'Already taken'}</span>
-              ))}
-          </p>
-        </div>
-
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted">
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting || slugStatus?.available === false || slug.length < 3}
-            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-          >
-            {submitting ? 'Creating…' : 'Create page'}
-          </button>
-        </div>
-        </div>
-        <TemplatePreview template={template} name={title} />
-      </form>
+      </div>
     </div>
   );
 }
 
-/** Server-rendered sample of a template, shown in a sandboxed, scaled iframe. */
-function TemplatePreview({ template, name }: { template: string; name: string }) {
-  const { getAccessToken } = useAuth();
-  const [html, setHtml] = useState<Record<string, string>>({});
-  const [debouncedName, setDebouncedName] = useState(name);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedName(name.trim()), 400);
-    return () => clearTimeout(t);
-  }, [name]);
-
-  const key = `${template}|${debouncedName}`;
-  useEffect(() => {
-    if (html[key] !== undefined) return;
-    let cancelled = false;
-    const q = new URLSearchParams({ name: debouncedName, tz: browserTimeZone() });
-    apiFetch<{ html: string }>(`${API_ENDPOINTS.microsites.templatePreview(template)}?${q}`, getAccessToken())
-      .then((res) => {
-        if (!cancelled) setHtml((h) => ({ ...h, [key]: res.html }));
-      })
-      .catch(() => {
-        if (!cancelled) setHtml((h) => ({ ...h, [key]: '' }));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [key, template, debouncedName, html, getAccessToken]);
-
-  const doc = html[key];
-  const width = 390;
-  const scale = 300 / width;
+function EmptyFilter({
+  kind,
+  filtered,
+  onClear,
+  canCreate,
+}: {
+  kind: KindFilter;
+  filtered: boolean;
+  onClear: () => void;
+  canCreate: boolean;
+}) {
+  const info = kind === 'all' ? null : PAGE_KINDS.find((k) => k.id === kind);
+  const onlyKind = info && filtered;
   return (
-    <div className="hidden md:block" aria-hidden="true">
-      <p className="text-sm font-medium text-foreground mb-2">Preview</p>
-      <div className="rounded-[1.75rem] border-[8px] border-gray-900 overflow-hidden bg-white shadow-lg" style={{ width: 300 + 16, height: 600 }}>
-        <div style={{ width, height: 584 / scale, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          {doc ? (
-            <iframe title="Template preview" srcDoc={doc} sandbox="" tabIndex={-1} className="w-full h-full border-0" />
-          ) : (
-            <div className="w-full h-full animate-pulse bg-muted" />
-          )}
-        </div>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">Sample content. You can change every word, color and block.</p>
+    <div className={cx(panelClass, 'flex flex-col items-center gap-3 px-6 py-14 text-center')}>
+      {onlyKind ? (
+        <>
+          <p className="font-hanken text-base font-bold text-foreground">No {info.plural.toLowerCase()} match</p>
+          <p className="max-w-sm text-sm text-muted-foreground">{info.description}</p>
+          <div className="mt-1 flex flex-wrap justify-center gap-2">
+            {canCreate && (
+              <Link href={`/microsites/new?kind=${info.id}`} className={buttonClass('primary', 'sm')}>
+                <PlusIcon className="h-4 w-4" />
+                New {info.name.toLowerCase()}
+              </Link>
+            )}
+            <Button size="sm" onClick={onClear}>
+              Clear filters
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="font-hanken text-base font-bold text-foreground">No pages match these filters</p>
+          <Button size="sm" onClick={onClear}>
+            Clear filters
+          </Button>
+        </>
+      )}
     </div>
   );
 }

@@ -25,28 +25,43 @@ import {
   XMarkIcon,
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
   CreditCardIcon,
 } from '@heroicons/react/24/outline';
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
   activeNav?: string;
+  /** Shown as the Links badge; hidden while unknown. */
   linkCount?: number;
+  /** Shown as the Pages badge when the user has pages. */
+  pageCount?: number;
+  /** Full-width content area (the page editor). */
+  wide?: boolean;
+  /** Start with the desktop sidebar collapsed to an icon rail; the user can expand it. */
+  collapsedNav?: boolean;
   onCreateClick?: () => void;
   onNavClick?: (navId: string) => void;
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
+  /** Called on Enter when the screen does not control the search box itself. */
+  onSearchSubmit?: (val: string) => void;
   searchPlaceholder?: string;
 }
 
 export default function WorkspaceLayout({
   children,
   activeNav = 'home',
-  linkCount = 14,
+  linkCount,
+  pageCount,
+  wide = false,
+  collapsedNav = false,
   onCreateClick,
   onNavClick,
   searchQuery,
   onSearchChange,
+  onSearchSubmit,
   searchPlaceholder = 'Search workspace, links, or campaigns... (⌘K)',
 }: WorkspaceLayoutProps) {
   const { user, logout } = useAuth();
@@ -55,6 +70,10 @@ export default function WorkspaceLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [navCompact, setNavCompact] = useState(collapsedNav);
+  const [localQuery, setLocalQuery] = useState('');
+  const searchControlled = onSearchChange !== undefined;
+  const collapsible = collapsedNav;
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,17 +105,22 @@ export default function WorkspaceLayout({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const displayName = user?.name || 'Malin J.';
-  const displayOrg = (user as { company_name?: string } | null)?.company_name || 'trunc-team';
-  const userInitials = (user?.name
-    ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'MJ');
+  const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'Account';
+  const displayOrg = (user as { company_name?: string } | null)?.company_name || '';
+  const userInitials =
+    displayName
+      .split(/[\s._-]+/)
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '?';
 
   const mainNavItems = [
     { id: 'home', label: 'Home', href: '/dashboard', icon: HomeIcon, badge: null },
-    { id: 'links', label: 'Links', href: '/dashboard#links', icon: LinkIcon, badge: String(linkCount) },
+    { id: 'links', label: 'Links', href: '/dashboard#links', icon: LinkIcon, badge: linkCount !== undefined ? String(linkCount) : null },
     { id: 'qr', label: 'QR Codes', href: '/dashboard?tab=qr', icon: QrCodeIcon, badge: 'Try it' },
-    { id: 'pages', label: 'Pages', href: '/microsites', icon: DocumentDuplicateIcon, badge: 'Try it' },
+    { id: 'pages', label: 'Pages', href: '/microsites', icon: DocumentDuplicateIcon, badge: pageCount ? String(pageCount) : 'Try it' },
     { id: 'analytics', label: 'Analytics', href: '/analytics', icon: ChartBarIcon, badge: 'Try it' },
     { id: 'campaigns', label: 'Campaigns', href: '/dashboard#campaigns', icon: MegaphoneIcon, badge: null },
     { id: 'domains', label: 'Custom domains', href: '/custom-domains', icon: GlobeAltIcon, badge: null },
@@ -112,23 +136,25 @@ export default function WorkspaceLayout({
     router.push('/login');
   };
 
-  const navContent = (
+  const renderNav = (compact: boolean) => (
     <div className="flex flex-col h-full bg-surface-container-lowest dark:bg-[#0c1017] border-r border-outline-variant/30 text-on-surface">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-5 border-b border-outline-variant/20 gap-3">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+      <div className={`h-16 flex items-center border-b border-outline-variant/20 gap-3 ${compact ? 'justify-center px-2' : 'px-5'}`}>
+        <Link href="/dashboard" className="flex items-center gap-2.5 group" aria-label="Trunc workspace home">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-blue-500 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
             <BoltIcon className="w-5 h-5" />
           </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-base tracking-tight text-foreground font-hanken">Trunc</span>
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider -mt-0.5">Workspace</span>
-          </div>
+          {!compact && (
+            <div className="flex flex-col">
+              <span className="font-extrabold text-base tracking-tight text-foreground font-hanken">Trunc</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider -mt-0.5">Workspace</span>
+            </div>
+          )}
         </Link>
       </div>
 
       {/* Create New Action */}
-      <div className="p-4">
+      <div className={compact ? 'p-3' : 'p-4'}>
         <button
           onClick={() => {
             if (onCreateClick) {
@@ -144,18 +170,24 @@ export default function WorkspaceLayout({
               }
             }
           }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary hover:bg-primary-600 active:scale-[0.98] text-white text-sm font-semibold shadow-sm transition-all"
+          title={compact ? 'Create new' : undefined}
+          aria-label={compact ? 'Create new' : undefined}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary hover:bg-primary-600 active:scale-[0.98] text-white text-sm font-semibold shadow-sm transition-all ${compact ? 'px-0' : 'px-4'}`}
         >
           <PlusIcon className="w-4 h-4 stroke-[2.5]" />
-          <span>Create new</span>
+          {!compact && <span>Create new</span>}
         </button>
       </div>
 
       {/* Navigation Cluster */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-        <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 font-mono">
-          Overview
-        </div>
+      <nav className={`flex-1 overflow-y-auto py-2 space-y-1 ${compact ? 'px-2' : 'px-3'}`} aria-label="Workspace">
+        {compact ? (
+          <div className="h-px bg-outline-variant/20 mx-2 mb-2" aria-hidden="true" />
+        ) : (
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 font-mono">
+            Overview
+          </div>
+        )}
         {mainNavItems.map((item) => {
           const isActive = activeNav ? activeNav === item.id : (item.href === pathname && item.id !== 'links');
           const Icon = item.icon;
@@ -167,7 +199,12 @@ export default function WorkspaceLayout({
                 setMobileMenuOpen(false);
                 onNavClick?.(item.id);
               }}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+              title={compact ? item.label : undefined}
+              aria-label={compact ? item.label : undefined}
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex items-center rounded-xl text-sm font-medium transition-all ${
+                compact ? 'justify-center h-10' : 'justify-between px-3 py-2'
+              } ${
                 isActive
                   ? 'bg-primary/10 text-primary font-semibold dark:bg-primary/20'
                   : 'text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900/60'
@@ -175,14 +212,14 @@ export default function WorkspaceLayout({
             >
               <div className="flex items-center gap-3">
                 <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span>{item.label}</span>
+                {!compact && <span>{item.label}</span>}
               </div>
-              {item.badge && (
+              {!compact && item.badge && (
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     item.badge === 'Try it'
                       ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
-                      : 'bg-primary/10 text-primary font-mono'
+                      : 'bg-primary/10 text-primary font-mono tabular-nums'
                   }`}
                 >
                   {item.badge}
@@ -192,10 +229,14 @@ export default function WorkspaceLayout({
           );
         })}
 
-        <div className="pt-5 pb-1">
-          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 font-mono">
-            System
-          </div>
+        <div className="pt-5 pb-1 space-y-1">
+          {compact ? (
+            <div className="h-px bg-outline-variant/20 mx-2 mb-2" aria-hidden="true" />
+          ) : (
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2 font-mono">
+              System
+            </div>
+          )}
           {utilityNavItems.map((item) => {
             const isActive = pathname === item.href || (item.id === 'settings' && pathname.startsWith('/settings'));
             const Icon = item.icon;
@@ -204,44 +245,76 @@ export default function WorkspaceLayout({
                 key={item.id}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                title={compact ? item.label : undefined}
+                aria-label={compact ? item.label : undefined}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-3 rounded-xl text-sm font-medium transition-all ${
+                  compact ? 'justify-center h-10' : 'px-3 py-2'
+                } ${
                   isActive
                     ? 'bg-primary/10 text-primary font-semibold dark:bg-primary/20'
                     : 'text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900/60'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span>{item.label}</span>
+                {!compact && <span>{item.label}</span>}
               </Link>
             );
           })}
         </div>
-      </div>
+      </nav>
+
+      {/* Collapse toggle (desktop rail only) */}
+      {collapsible && (
+        <div className={`hidden lg:flex ${compact ? 'justify-center px-2' : 'px-3'} pb-2`}>
+          <button
+            type="button"
+            onClick={() => setNavCompact((v) => !v)}
+            title={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={`flex items-center gap-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900/60 transition-colors ${compact ? 'h-9 w-9 justify-center' : 'px-3 py-2'}`}
+          >
+            {compact ? <ChevronDoubleRightIcon className="w-4 h-4" /> : <ChevronDoubleLeftIcon className="w-4 h-4" />}
+            {!compact && <span>Collapse</span>}
+          </button>
+        </div>
+      )}
 
       {/* User Footer Tab */}
-      <div className="p-3 border-t border-outline-variant/20 relative" ref={userMenuRef}>
-        <button
-          onClick={() => setUserMenuOpen(!userMenuOpen)}
-          className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container dark:hover:bg-zinc-900 transition-colors text-left"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-              {userInitials}
+      <div className={`border-t border-outline-variant/20 relative ${compact ? 'p-2' : 'p-3'}`} ref={compact ? undefined : userMenuRef}>
+        {compact ? (
+          <Link
+            href="/settings"
+            title={`${displayName} (${user?.email || 'Account'})`}
+            aria-label="Account settings"
+            className="mx-auto w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm"
+          >
+            {userInitials}
+          </Link>
+        ) : (
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-surface-container dark:hover:bg-zinc-900 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+                {userInitials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-foreground truncate">{displayName}</div>
+                {displayOrg && <div className="text-[11px] text-muted-foreground truncate font-mono">{displayOrg}</div>}
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-foreground truncate">{displayName}</div>
-              <div className="text-[11px] text-muted-foreground truncate font-mono">{displayOrg}</div>
-            </div>
-          </div>
-          <ChevronDownIcon className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
-        </button>
+            <ChevronDownIcon className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+          </button>
+        )}
 
         {/* User Popup Menu */}
-        {userMenuOpen && (
+        {!compact && userMenuOpen && (
           <div className="absolute bottom-16 left-3 right-3 bg-surface-container-lowest dark:bg-zinc-950 border border-outline-variant/30 rounded-xl shadow-xl py-2 z-50 text-xs">
             <div className="px-3 py-2 border-b border-outline-variant/20">
               <div className="font-semibold text-foreground">{displayName}</div>
-              <div className="text-muted-foreground truncate">{user?.email || 'user@trunc.site'}</div>
+              {user?.email && <div className="text-muted-foreground truncate">{user.email}</div>}
             </div>
             <Link
               href="/settings"
@@ -276,8 +349,10 @@ export default function WorkspaceLayout({
   return (
     <div className="min-h-screen bg-surface-container-lowest dark:bg-[#07090e] text-on-surface flex font-sans">
       {/* Desktop Left Rail (w-60) */}
-      <aside className="hidden lg:flex w-60 flex-col shrink-0 sticky top-0 h-screen z-30">
-        {navContent}
+      <aside
+        className={`hidden lg:flex ${navCompact ? 'w-[72px]' : 'w-60'} flex-col shrink-0 sticky top-0 h-screen z-30 transition-[width] duration-200`}
+      >
+        {renderNav(navCompact)}
       </aside>
 
       {/* Mobile Backdrop & Drawer */}
@@ -288,7 +363,7 @@ export default function WorkspaceLayout({
             onClick={() => setMobileMenuOpen(false)}
           />
           <div className="fixed inset-y-0 left-0 w-64 shadow-2xl z-10 animate-in slide-in-from-left duration-200">
-            {navContent}
+            {renderNav(false)}
           </div>
         </div>
       )}
@@ -315,12 +390,19 @@ export default function WorkspaceLayout({
               <input
                 ref={searchInputRef}
                 type="text"
-                value={searchQuery ?? ''}
-                onChange={(e) => onSearchChange?.(e.target.value)}
+                value={searchControlled ? (searchQuery ?? '') : localQuery}
+                onChange={(e) => (searchControlled ? onSearchChange?.(e.target.value) : setLocalQuery(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !searchControlled && onSearchSubmit) {
+                    e.preventDefault();
+                    onSearchSubmit(localQuery.trim());
+                  }
+                }}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-14 py-2 rounded-xl text-xs bg-surface-container dark:bg-zinc-900/80 border border-outline-variant/30 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all font-sans"
+                aria-label={searchPlaceholder.replace(/\s*\(⌘K\)\s*$/, '')}
+                className="w-full pl-9 pr-3 sm:pr-14 py-2 rounded-xl text-xs bg-surface-container dark:bg-zinc-900/80 border border-outline-variant/30 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all font-sans"
               />
-              <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 right-0 pr-2.5 hidden sm:flex items-center pointer-events-none">
                 <kbd className="inline-flex items-center px-1.5 py-0.5 rounded border border-outline-variant/40 bg-surface-container-high dark:bg-zinc-800 text-[10px] font-mono text-muted-foreground">
                   ⌘K
                 </kbd>
@@ -335,9 +417,10 @@ export default function WorkspaceLayout({
 
             {/* Help / Docs */}
             <Link
-              href="/faq"
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 transition-colors"
-              title="Help & Documentation"
+              href="/contact"
+              className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 transition-colors"
+              title="Help and support"
+              aria-label="Help and support"
             >
               <QuestionMarkCircleIcon className="w-5 h-5" />
             </Link>
@@ -374,7 +457,7 @@ export default function WorkspaceLayout({
         </header>
 
         {/* Scrollable Canvas Body */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto">
+        <main className={`flex-1 px-4 sm:px-6 lg:px-8 py-6 w-full mx-auto ${wide ? 'max-w-none' : 'max-w-7xl'}`}>
           {children}
         </main>
       </div>
