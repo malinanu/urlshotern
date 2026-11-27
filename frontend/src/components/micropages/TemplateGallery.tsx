@@ -54,6 +54,27 @@ const TONES = {
     eyebrow: 'text-primary',
     usePrimary: 'bg-primary hover:bg-primary/90 text-primary-foreground shadow',
   },
+  /** The workspace (sidebar) screens, matching the dashboard. */
+  workspace: {
+    heading: 'text-foreground',
+    sub: 'text-muted-foreground',
+    body: 'text-foreground',
+    muted2: 'text-muted-foreground',
+    tile: 'border-outline-variant/30 bg-surface-container/50 dark:bg-zinc-900/50',
+    tileOn: 'border-primary ring-1 ring-primary bg-primary/5',
+    pill: 'bg-surface-container dark:bg-zinc-900 border-outline-variant/30 text-muted-foreground hover:text-foreground',
+    pillOn: 'bg-primary border-primary text-white',
+    chip: 'text-muted-foreground bg-surface-container dark:bg-zinc-900',
+    btn: 'bg-surface-container-lowest dark:bg-zinc-900 hover:bg-surface-container dark:hover:bg-zinc-800 border border-outline-variant/30 text-foreground',
+    btnPrimary: 'bg-primary hover:bg-primary-600 border-primary text-white',
+    btnOn: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400',
+    panel: 'bg-surface-container-lowest dark:bg-zinc-950 border border-outline-variant/30',
+    close: 'text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900',
+    swatchOn: 'border-primary bg-primary/5 text-foreground',
+    swatch: 'border-outline-variant/30 text-muted-foreground hover:bg-surface-container dark:hover:bg-zinc-900',
+    eyebrow: 'text-primary',
+    usePrimary: 'bg-primary hover:bg-primary-600 text-white shadow',
+  },
 } as const;
 type Tone = keyof typeof TONES;
 type ToneClasses = (typeof TONES)[Tone];
@@ -74,8 +95,10 @@ interface TemplateGalleryProps {
   previewData?: CardData;
   /** Limits the grid height (it scrolls inside). */
   scrollClassName?: string;
-  /** Colour set: 'dark' for MicroPages, 'app' for the light Microsites UI. */
+  /** Colour set: 'dark' for MicroPages, 'app' for light screens, 'workspace' for the sidebar workspace. */
   tone?: Tone;
+  /** Open on one collection (the selected template's, else the first) instead of All. */
+  startOnCollection?: boolean;
 }
 
 const SAMPLE_PAGE: Partial<MicroPage> = {
@@ -115,9 +138,15 @@ export function TemplateGallery({
   previewData,
   scrollClassName = 'max-h-[58vh]',
   tone = 'dark',
+  startOnCollection = false,
 }: TemplateGalleryProps) {
   const C = TONES[tone];
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>(() => {
+    if (!startOnCollection) return 'all';
+    const id = value.startsWith(idPrefix) ? value.slice(idPrefix.length) : value;
+    const owner = CARD_COLLECTIONS.find((c) => templatesInCollection(c.id).some((t) => t.id === id));
+    return (owner ?? CARD_COLLECTIONS[0]).id as Filter;
+  });
   const [preview, setPreview] = useState<string | null>(null);
   const data = useMemo(() => sampleFor(previewData), [previewData]);
 
@@ -148,7 +177,7 @@ export function TemplateGallery({
         ))}
       </div>
 
-      <div className={`${scrollClassName} overflow-y-auto pr-1 space-y-7`}>
+      <div className={`${scrollClassName} ${scrollClassName ? 'overflow-y-auto pr-1' : ''} space-y-7`}>
         {CARD_COLLECTIONS.filter((c) => showCollection(c.id)).map((c) => (
           <section key={c.id} aria-labelledby={`coll-${c.id}`}>
             <div className="mb-3">

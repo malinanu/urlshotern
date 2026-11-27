@@ -103,24 +103,37 @@ func (s *MicrositeService) Ready() error {
 }
 
 const micrositeColumns = `id, user_id, slug, title, template, status, draft, published, version,
-	short_code, published_at, created_at, updated_at`
+	published_version, short_code, published_at, created_at, updated_at`
 
 type rowScanner interface {
 	Scan(dest ...interface{}) error
 }
 
+// hasUnpublishedChanges reports whether a published page's draft was saved
+// after the version that is live. Pages published before migration 048 have
+// no recorded version and count as up to date.
+func hasUnpublishedChanges(status string, version int, publishedVersion *int) bool {
+	return status == "published" && publishedVersion != nil && version > *publishedVersion
+}
+
 func scanMicrosite(row rowScanner) (*models.Microsite, error) {
 	var (
-		m         models.Microsite
-		draft     []byte
-		published []byte
-		shortCode sql.NullString
-		pubAt     sql.NullTime
+		m          models.Microsite
+		draft      []byte
+		published  []byte
+		pubVersion sql.NullInt64
+		shortCode  sql.NullString
+		pubAt      sql.NullTime
 	)
 	if err := row.Scan(&m.ID, &m.UserID, &m.Slug, &m.Title, &m.Template, &m.Status, &draft, &published,
-		&m.Version, &shortCode, &pubAt, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		&m.Version, &pubVersion, &shortCode, &pubAt, &m.CreatedAt, &m.UpdatedAt); err != nil {
 		return nil, err
 	}
+	if pubVersion.Valid {
+		v := int(pubVersion.Int64)
+		m.PublishedVersion = &v
+	}
+	m.HasUnpublishedChanges = hasUnpublishedChanges(m.Status, m.Version, m.PublishedVersion)
 	if len(draft) > 0 {
 		if err := json.Unmarshal(draft, &m.Draft); err != nil {
 			return nil, fmt.Errorf("decode draft: %w", err)
@@ -145,13 +158,18 @@ func scanMicrosite(row rowScanner) (*models.Microsite, error) {
 	return &m, nil
 }
 
-// List returns a user's pages, newest first, with 30-day view counts.
+// List returns a user's pages, newest first, with 30-day view and form
+// submission counts and a daily view series for the last MicrositeViewDays days.
 func (s *MicrositeService) List(userID int64) ([]models.MicrositeSummary, error) {
 	rows, err := s.db.Query(`
-		SELECT m.id, m.slug, m.title, m.template, m.status, m.short_code, m.published_at, m.updated_at,
+		SELECT m.id, m.slug, m.title, m.template, m.status, m.version, m.published_version,
+		       m.short_code, m.published_at, m.updated_at,
 		       (SELECT COUNT(*) FROM microsite_events e
 		         WHERE e.microsite_id = m.id AND e.event_type = 'view' AND e.is_bot = FALSE
-		           AND e.occurred_at >= NOW() - INTERVAL '30 days') AS views_30d
+		           AND e.occurred_at >= NOW() - INTERVAL '30 days') AS views_30d,
+		       (SELECT COUNT(*) FROM microsite_submissions f
+		         WHERE f.microsite_id = m.id
+		           AND f.created_at >= NOW() - INTERVAL '30 days') AS submissions_30d
 		  FROM microsites m
 		 WHERE m.user_id = $1 AND m.deleted_at IS NULL
 		 ORDER BY m.updated_at DESC`, userID)
@@ -161,14 +179,21 @@ func (s *MicrositeService) List(userID int64) ([]models.MicrositeSummary, error)
 	defer rows.Close()
 
 	out := []models.MicrositeSummary{}
+	index := map[int64]int{}
 	for rows.Next() {
 		var (
-			ms        models.MicrositeSummary
-			shortCode sql.NullString
-			pubAt     sql.NullTime
+			ms         models.MicrositeSummary
+			pubVersion sql.NullInt64
+			shortCode  sql.NullString
+			pubAt      sql.NullTime
 		)
-		if err := rows.Scan(&ms.ID, &ms.Slug, &ms.Title, &ms.Template, &ms.Status, &shortCode, &pubAt, &ms.UpdatedAt, &ms.Views30d); err != nil {
+		if err := rows.Scan(&ms.ID, &ms.Slug, &ms.Title, &ms.Template, &ms.Status, &ms.Version, &pubVersion,
+			&shortCode, &pubAt, &ms.UpdatedAt, &ms.Views30d, &ms.Submissions30d); err != nil {
 			return nil, err
+		}
+		if pubVersion.Valid {
+			v := int(pubVersion.Int64)
+			ms.HasUnpublishedChanges = hasUnpublishedChanges(ms.Status, ms.Version, &v)
 		}
 		if shortCode.Valid {
 			ms.ShortCode = &shortCode.String
@@ -176,9 +201,58 @@ func (s *MicrositeService) List(userID int64) ([]models.MicrositeSummary, error)
 		if pubAt.Valid {
 			ms.PublishedAt = &pubAt.Time
 		}
+		ms.Views14d = make([]int64, models.MicrositeViewDays)
+		index[ms.ID] = len(out)
 		out = append(out, ms)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(out) == 0 {
+		return out, nil
+	}
+
+	// One grouped query for every page's daily views. Days are UTC dates.
+	daily, err := s.db.Query(`
+		SELECT e.microsite_id, (e.occurred_at AT TIME ZONE 'UTC')::date AS day, COUNT(*)
+		  FROM microsite_events e
+		  JOIN microsites m ON m.id = e.microsite_id
+		 WHERE m.user_id = $1 AND m.deleted_at IS NULL
+		   AND e.event_type = 'view' AND e.is_bot = FALSE
+		   AND e.occurred_at >= (date_trunc('day', NOW() AT TIME ZONE 'UTC') - make_interval(days => $2)) AT TIME ZONE 'UTC'
+		 GROUP BY 1, 2`, userID, models.MicrositeViewDays-1)
+	if err != nil {
+		return nil, mapMicrositeDBError(err)
+	}
+	defer daily.Close()
+	today := time.Now().UTC()
+	for daily.Next() {
+		var (
+			id    int64
+			day   time.Time
+			count int64
+		)
+		if err := daily.Scan(&id, &day, &count); err != nil {
+			return nil, err
+		}
+		if i, ok := index[id]; ok {
+			addDailyViews(out[i].Views14d, today, day, count)
+		}
+	}
+	return out, daily.Err()
+}
+
+// addDailyViews adds count to the slot for day in series, whose last slot is
+// today (UTC). Days outside the series are ignored.
+func addDailyViews(series []int64, today, day time.Time, count int64) {
+	t := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	d := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
+	ago := int(t.Sub(d).Hours() / 24)
+	i := len(series) - 1 - ago
+	if ago < 0 || i < 0 {
+		return
+	}
+	series[i] += count
 }
 
 // Get returns a live (not deleted) page by ID.
@@ -245,6 +319,59 @@ func (s *MicrositeService) Create(userID int64, req models.CreateMicrositeReques
 		return nil, mapMicrositeDBError(err)
 	}
 	return m, nil
+}
+
+// duplicateSlugCandidates returns the addresses tried, in order, for a copy of
+// slug: "<slug>-copy", then "<slug>-copy-2" … "<slug>-copy-20". The base is
+// shortened so each candidate fits the 32-character limit.
+func duplicateSlugCandidates(slug string) []string {
+	out := make([]string, 0, 20)
+	for n := 1; n <= 20; n++ {
+		suffix := "-copy"
+		if n > 1 {
+			suffix = fmt.Sprintf("-copy-%d", n)
+		}
+		base := slug
+		if room := 32 - len(suffix); len(base) > room {
+			base = strings.TrimRight(base[:room], "-")
+		}
+		out = append(out, base+suffix)
+	}
+	return out
+}
+
+// Duplicate copies a page's draft into a new draft page owned by userID,
+// titled "Copy of …" at the first free "-copy" address. Plan limits are
+// checked by the caller.
+func (s *MicrositeService) Duplicate(id, userID int64) (*models.Microsite, error) {
+	src, err := s.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	draft, err := json.Marshal(src.Draft)
+	if err != nil {
+		return nil, err
+	}
+	title := "Copy of " + src.Title
+	if r := []rune(title); len(r) > 120 {
+		title = string(r[:120])
+	}
+	for _, slug := range duplicateSlugCandidates(src.Slug) {
+		if _, err := NormalizeMicrositeSlug(slug); err != nil {
+			continue
+		}
+		m, err := scanMicrosite(s.db.QueryRow(`
+			INSERT INTO microsites (user_id, slug, title, template, draft)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING `+micrositeColumns, userID, slug, title, src.Template, draft))
+		if err == nil {
+			return m, nil
+		}
+		if err = mapMicrositeDBError(err); !errors.Is(err, ErrMicrositeSlugTaken) {
+			return nil, err
+		}
+	}
+	return nil, ErrMicrositeSlugTaken
 }
 
 // UpdateDraft saves title/slug/content changes to the draft. The stored
@@ -343,7 +470,7 @@ func (s *MicrositeService) Publish(id int64) (*models.Microsite, error) {
 	}
 	m, err := scanMicrosite(s.db.QueryRow(`
 		UPDATE microsites
-		   SET published = $1, status = 'published', published_at = NOW(), updated_at = NOW()
+		   SET published = $1, published_version = version, status = 'published', published_at = NOW(), updated_at = NOW()
 		 WHERE id = $2 AND deleted_at IS NULL
 		RETURNING `+micrositeColumns, snapshot, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -360,7 +487,7 @@ func (s *MicrositeService) Publish(id int64) (*models.Microsite, error) {
 func (s *MicrositeService) Unpublish(id int64) (*models.Microsite, error) {
 	m, err := scanMicrosite(s.db.QueryRow(`
 		UPDATE microsites
-		   SET published = NULL, status = 'draft', updated_at = NOW()
+		   SET published = NULL, published_version = NULL, status = 'draft', updated_at = NOW()
 		 WHERE id = $1 AND deleted_at IS NULL
 		RETURNING `+micrositeColumns, id))
 	if errors.Is(err, sql.ErrNoRows) {

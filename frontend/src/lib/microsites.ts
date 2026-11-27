@@ -98,6 +98,10 @@ export interface Microsite {
   draft: MicrositeContent;
   published?: MicrositeContent;
   version: number;
+  /** The draft version that is live, when published. */
+  published_version?: number;
+  /** Published, and the draft was edited after that. */
+  has_unpublished_changes: boolean;
   short_code?: string;
   published_at?: string;
   created_at: string;
@@ -111,10 +115,74 @@ export interface MicrositeSummary {
   title: string;
   template: string;
   status: 'draft' | 'published';
+  version: number;
+  has_unpublished_changes: boolean;
   short_code?: string;
   views_30d: number;
+  /** 14 daily view counts (UTC days), oldest first, ending today. */
+  views_14d: number[];
+  /** Form submissions in the last 30 days. */
+  submissions_30d: number;
   published_at?: string;
   updated_at: string;
+}
+
+/** What a page is for, derived from the template it started from. */
+export type PageKind = 'card' | 'links' | 'shop' | 'event' | 'other';
+
+export const PAGE_KINDS: { id: PageKind; name: string; plural: string; description: string }[] = [
+  { id: 'card', name: 'Business card', plural: 'Business cards', description: 'Your contact details, saved to a phone in one tap.' },
+  { id: 'links', name: 'Link-in-bio', plural: 'Link-in-bio', description: 'One link for your profiles that leads to everything else.' },
+  { id: 'shop', name: 'Shop', plural: 'Shops', description: 'A few products with prices and buy buttons.' },
+  { id: 'event', name: 'Event', plural: 'Events', description: 'Date, venue, schedule, tickets and add-to-calendar.' },
+  { id: 'other', name: 'Custom page', plural: 'Custom', description: 'Start from an empty page and add any blocks.' },
+];
+
+/** The template each page type starts from in the create flow. */
+export const KIND_TEMPLATE: Record<PageKind, string> = {
+  card: 'executive_card',
+  links: 'creator_links',
+  shop: 'product_showcase',
+  event: 'event_page',
+  other: 'blank',
+};
+
+export function pageKind(template: string): PageKind {
+  if (template === 'executive_card' || template.startsWith('card_')) return 'card';
+  if (template === 'creator_links') return 'links';
+  if (template === 'product_showcase') return 'shop';
+  if (template === 'event_page') return 'event';
+  return 'other';
+}
+
+/** Page status as the owner sees it. */
+export type PageState = 'draft' | 'published' | 'changes';
+
+export function pageState(p: { status: 'draft' | 'published'; has_unpublished_changes?: boolean }): PageState {
+  if (p.status !== 'published') return 'draft';
+  return p.has_unpublished_changes ? 'changes' : 'published';
+}
+
+export const PAGE_STATE_LABEL: Record<PageState, string> = {
+  draft: 'Draft',
+  published: 'Published',
+  changes: 'Unpublished changes',
+};
+
+/** "just now", "5 min ago", "3 h ago", "2 days ago", then a date. */
+export function timeAgo(iso: string | undefined, now: number = Date.now()): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const s = Math.max(0, Math.round((now - t) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} h ago`;
+  const d = Math.round(h / 24);
+  if (d < 7) return d === 1 ? 'yesterday' : `${d} days ago`;
+  return new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: d > 300 ? 'numeric' : undefined });
 }
 
 export interface MicrositeEntitlements {

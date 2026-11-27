@@ -39,15 +39,15 @@ function Segmented<T extends string>({
   return (
     <fieldset>
       <legend className="block text-xs font-medium text-muted-foreground mb-1">{label}</legend>
-      <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/50">
+      <div className="inline-flex rounded-xl border border-outline-variant/30 p-0.5 bg-surface-container dark:bg-zinc-900">
         {options.map((o) => (
           <button
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
             aria-pressed={value === o.value}
-            className={`px-3 py-1 text-xs font-medium rounded-md ${
-              value === o.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            className={`px-3 py-1 text-xs font-medium rounded-lg ${
+              value === o.value ? 'bg-surface-container-lowest dark:bg-zinc-950 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {o.label}
@@ -127,14 +127,14 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
               role="radio"
               aria-checked={style === s.id}
               onClick={() => changeStyle(s.id)}
-              className={`text-left rounded-lg border px-3 py-2 ${
-                style === s.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+              className={`text-left rounded-xl border px-3 py-2 ${
+                style === s.id ? 'border-primary bg-primary/5' : 'border-outline-variant/30 hover:bg-surface-container dark:hover:bg-zinc-900'
               }`}
             >
               <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <span
                   aria-hidden="true"
-                  className="h-3 w-3 rounded-sm border border-border"
+                  className="h-3 w-3 rounded-sm border border-outline-variant/30"
                   style={{ background: s.theme.accent ?? theme.accent }}
                 />
                 {s.name}
@@ -174,14 +174,14 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
                       role="radio"
                       aria-checked={style === t.id}
                       onClick={() => changeStyle(t.id)}
-                      className={`text-left rounded-lg border px-3 py-2 ${
-                        style === t.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+                      className={`text-left rounded-xl border px-3 py-2 ${
+                        style === t.id ? 'border-primary bg-primary/5' : 'border-outline-variant/30 hover:bg-surface-container dark:hover:bg-zinc-900'
                       }`}
                     >
                       <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                         <span
                           aria-hidden="true"
-                          className="h-3 w-3 rounded-sm border border-border"
+                          className="h-3 w-3 rounded-sm border border-outline-variant/30"
                           style={{ background: `linear-gradient(135deg, ${d.bg} 50%, ${d.accent} 50%)` }}
                         />
                         {t.name}
@@ -212,11 +212,11 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
                   aria-pressed={on}
                   onClick={() => setTheme({ palette: p.id, accent: paletteAccent(card, p.id) })}
                   className={`flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border text-xs font-medium ${
-                    on ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground hover:bg-muted'
+                    on ? 'border-primary bg-primary/5 text-foreground' : 'border-outline-variant/30 text-muted-foreground hover:bg-surface-container dark:hover:bg-zinc-900'
                   }`}
                 >
                   <span
-                    className="h-5 w-5 rounded-full border border-border"
+                    className="h-5 w-5 rounded-full border border-outline-variant/30"
                     style={{ background: `linear-gradient(135deg, ${sw.bg} 50%, ${sw.accent} 50%)` }}
                   />
                   {p.name}
@@ -244,7 +244,7 @@ export default function DesignPanel({ theme, settings, entitlements, micrositeId
               title={p.name}
             >
               <span
-                className="h-12 rounded-lg border border-border group-hover:ring-2 group-hover:ring-primary/40"
+                className="h-12 rounded-xl border border-outline-variant/30 group-hover:ring-2 group-hover:ring-primary/40"
                 style={{ background: presetSwatch(p.theme.background as MicrositeBackground) }}
               />
               <span className="text-[11px] text-muted-foreground">{p.name}</span>

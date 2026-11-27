@@ -796,6 +796,8 @@ func setupMicrositeRoutes(api *gin.RouterGroup, h *handlers.MicrositeHandlers) {
 	sites.POST("/:id/publish", own, h.PublishMicrosite)
 	sites.POST("/:id/unpublish", own, h.UnpublishMicrosite)
 	sites.GET("/:id/analytics", own, h.GetMicrositeAnalytics)
+	sites.GET("/:id/thumbnail", own, h.GetMicrositeThumbnail)
+	sites.POST("/:id/duplicate", own, h.DuplicateMicrosite)
 	sites.POST("/:id/assets", own, h.UploadMicrositeAsset)
 	sites.POST("/:id/short-link", own, h.CreateMicrositeShortLink)
 	sites.GET("/:id/submissions", own, h.ListMicrositeSubmissions)

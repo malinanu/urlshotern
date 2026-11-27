@@ -3,17 +3,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Menu, MenuButton, MenuItem, MenuItems, Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import {
-  ArrowLeftIcon,
   ArrowTopRightOnSquareIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClipboardDocumentIcon,
+  EllipsisHorizontalIcon,
+  EyeIcon,
+  EyeSlashIcon,
   LinkIcon,
   LockClosedIcon,
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
   PlusIcon,
   QrCodeIcon,
+  ShareIcon,
+  Squares2X2Icon,
 } from '@heroicons/react/24/outline';
 import { QRCodeModal } from '@/components/QRCode';
+import ConfirmDialog from '@/components/workspace/ConfirmDialog';
+import { Badge, Button, IconButton, Segmented, StatusDot, cx, focusRing } from '@/components/workspace/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import {
@@ -28,6 +38,9 @@ import {
   type MicrositeBlock,
   type MicrositeContent,
   type MicrositeEntitlements,
+  PAGE_KINDS,
+  pageKind,
+  pageState,
 } from '@/lib/microsites';
 import BlockList from './BlockList';
 import DesignPanel from './DesignPanel';
@@ -35,8 +48,14 @@ import InboxPanel from './InboxPanel';
 import PreviewFrame from './PreviewFrame';
 import TrackPanel from './TrackPanel';
 
-type Tab = 'build' | 'design' | 'track' | 'inbox';
-const TABS: Tab[] = ['build', 'design', 'track', 'inbox'];
+type Tab = 'build' | 'design' | 'analytics' | 'inbox';
+const TABS: Tab[] = ['build', 'design', 'analytics', 'inbox'];
+const TAB_LABELS: Record<Tab, string> = { build: 'Build', design: 'Design', analytics: 'Analytics', inbox: 'Inbox' };
+
+function parseTab(raw: string | null): Tab {
+  if (raw === 'track') return 'analytics'; // old links
+  return TABS.includes(raw as Tab) ? (raw as Tab) : 'build';
+}
 type SaveState = 'saved' | 'saving' | 'unsaved' | 'error' | 'conflict';
 
 const SAVE_LABELS: Record<SaveState, string> = {
@@ -51,7 +70,7 @@ export default function MicrositeEditor() {
   const router = useRouter();
   const params = useSearchParams();
   const id = Number(params.get('id'));
-  const tab = (TABS.includes(params.get('tab') as Tab) ? params.get('tab') : 'build') as Tab;
+  const tab = parseTab(params.get('tab'));
   const { getAccessToken } = useAuth();
 
   const [site, setSite] = useState<Microsite | null>(null);
@@ -66,6 +85,8 @@ export default function MicrositeEditor() {
   const [notice, setNotice] = useState('');
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit');
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
 
   // Refs give the debounced save the latest values without re-creating it.
   const titleRef = useRef(title);
@@ -111,7 +132,17 @@ export default function MicrositeEditor() {
           body: JSON.stringify({ version: versionRef.current, title: titleRef.current, content: contentRef.current }),
         });
         versionRef.current = res.version;
-        setSite((s) => (s ? { ...s, version: res.version, title: res.title, updated_at: res.updated_at } : s));
+        setSite((s) =>
+          s
+            ? {
+                ...s,
+                version: res.version,
+                title: res.title,
+                updated_at: res.updated_at,
+                has_unpublished_changes: res.has_unpublished_changes,
+              }
+            : s
+        );
         setSaveError('');
         setSaveState(revision.current === rev ? 'saved' : 'unsaved');
         return true;
@@ -180,12 +211,23 @@ export default function MicrositeEditor() {
         return;
       }
       const res = await apiFetch<Microsite>(API_ENDPOINTS.microsites.publish(id), getAccessToken(), { method: 'POST' });
-      setSite((s) => (s ? { ...s, status: res.status, published_at: res.published_at, published: res.published } : s));
-      setNotice('Published! Your page is live.');
+      setSite((s) =>
+        s
+          ? {
+              ...s,
+              status: res.status,
+              published_at: res.published_at,
+              published: res.published,
+              published_version: res.published_version,
+              has_unpublished_changes: res.has_unpublished_changes,
+            }
+          : s
+      );
+      setNotice('Published. Your page is live.');
     } catch (e) {
       setNotice(
         isApiError(e)
-          ? `Can't publish yet — ${describeValidation(e.field, e.message, contentRef.current?.blocks ?? [])}`
+          ? `Can't publish yet: ${describeValidation(e.field, e.message, contentRef.current?.blocks ?? [])}`
           : 'Could not publish.'
       );
     } finally {
@@ -194,13 +236,16 @@ export default function MicrositeEditor() {
   };
 
   const unpublish = async () => {
-    if (!confirm('Take this page offline? Its link will show “not found” until you publish again.')) return;
     try {
       const res = await apiFetch<Microsite>(API_ENDPOINTS.microsites.unpublish(id), getAccessToken(), { method: 'POST' });
-      setSite((s) => (s ? { ...s, status: res.status } : s));
+      setSite((s) =>
+        s ? { ...s, status: res.status, published_version: undefined, has_unpublished_changes: false } : s
+      );
       setNotice('Page is now offline.');
     } catch (e) {
       setNotice(isApiError(e) ? e.message : 'Could not unpublish.');
+    } finally {
+      setConfirmUnpublish(false);
     }
   };
 
@@ -236,102 +281,184 @@ export default function MicrositeEditor() {
   }
 
   if (!site || !content) {
-    return <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">Loading…</div>;
+    return <EditorSkeleton />;
   }
 
   const published = site.status === 'published';
+  const state = pageState(site);
   const shortUrl = site.short_code ? site.public_url.replace(/\/m\/.*$/, `/${site.short_code}`) : '';
+  const shownUrl = site.public_url.replace(/^https?:\/\//, '');
+  const kind = pageKind(site.template);
+  const kindName = PAGE_KINDS.find((k) => k.id === kind)?.name ?? 'Page';
+  const canUseForms = !!entitlements?.can_use_forms;
+  const editing = tab === 'build' || tab === 'design';
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <div className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
-          <Link href="/microsites" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeftIcon className="h-4 w-4" />
-            Pages
-          </Link>
-          <input
-            value={title}
-            onChange={(e) => editTitle(e.target.value)}
-            maxLength={120}
-            aria-label="Page name"
-            className="min-w-0 flex-1 sm:flex-none sm:w-56 rounded-md bg-transparent px-2 py-1 text-base font-semibold text-foreground hover:bg-muted focus:bg-muted focus:outline-none"
-          />
-          <div className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-sm">
-            <span className="font-mono text-muted-foreground truncate max-w-[14rem]">{site.public_url.replace(/^https?:\/\//, '')}</span>
-            <button type="button" onClick={copyLink} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Copy page link">
-              {copied ? <CheckIcon className="h-4 w-4 text-green-600" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
-            </button>
-            <button type="button" onClick={() => setShowQR(true)} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Show QR code">
-              <QrCodeIcon className="h-4 w-4" />
-            </button>
-            {published && (
-              <a href={site.public_url} target="_blank" rel="noopener noreferrer" className="p-1 text-muted-foreground hover:text-foreground" aria-label="Open live page">
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-              </a>
-            )}
-          </div>
+    <div className="-mx-4 -mt-6 sm:-mx-6 lg:-mx-8">
+      {/* Editor header: sits under the workspace header */}
+      <div className="sticky top-16 z-20 border-b border-outline-variant/20 bg-surface-container-lowest/95 backdrop-blur-md dark:bg-[#07090e]/95">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-3 sm:px-6 lg:px-8">
+          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 text-sm">
+            <Link href="/microsites" className={cx('shrink-0 rounded text-muted-foreground hover:text-foreground', focusRing)}>
+              Pages
+            </Link>
+            <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <input
+              value={title}
+              onChange={(e) => editTitle(e.target.value)}
+              maxLength={120}
+              aria-label="Page name"
+              className="min-w-0 w-40 sm:w-56 rounded-lg bg-transparent px-1.5 py-0.5 font-hanken text-base font-bold text-foreground hover:bg-surface-container focus:bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary/40 dark:hover:bg-zinc-900 dark:focus:bg-zinc-900"
+            />
+          </nav>
+          <StatusDot state={state} className="shrink-0" />
+          <Badge tone="muted" className="hidden md:inline-flex">
+            {kindName}
+          </Badge>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
             <span
               role="status"
-              className={`text-xs ${saveState === 'error' || saveState === 'conflict' ? 'text-red-600' : 'text-muted-foreground'}`}
+              className={cx(
+                'hidden text-xs sm:inline',
+                saveState === 'error' || saveState === 'conflict' ? 'text-destructive' : 'text-muted-foreground'
+              )}
             >
               {SAVE_LABELS[saveState]}
             </span>
-            {published && (
-              <button type="button" onClick={unpublish} className="text-sm text-muted-foreground hover:text-foreground">
-                Unpublish
-              </button>
+
+            <div className="hidden items-center rounded-xl border border-outline-variant/30 bg-surface-container dark:bg-zinc-900 xl:flex">
+              <span className="max-w-[16rem] truncate px-3 font-mono text-xs text-muted-foreground">{shownUrl}</span>
+              <IconButton size="sm" label={copied ? 'Link copied' : 'Copy page link'} onClick={copyLink}>
+                {copied ? <CheckIcon className="h-4 w-4 text-emerald-500" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+              </IconButton>
+            </div>
+
+            <SharePopover
+              publicUrl={site.public_url}
+              shortUrl={shortUrl}
+              published={published}
+              copied={copied}
+              onCopy={copyLink}
+              onQR={() => setShowQR(true)}
+              onCreateShortLink={createShortLink}
+            />
+
+            {published && state === 'published' && saveState === 'saved' && !publishing ? (
+              <span
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-700 dark:text-emerald-400"
+                title="The live page matches your latest changes"
+              >
+                <CheckIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Up to date</span>
+              </span>
+            ) : (
+              <Button variant="primary" onClick={publish} disabled={publishing || saveState === 'conflict'}>
+                {publishing ? 'Publishing…' : !published ? 'Publish' : 'Update live page'}
+              </Button>
             )}
-            <button
-              type="button"
-              onClick={publish}
-              disabled={publishing || saveState === 'conflict'}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm font-medium disabled:opacity-50"
-            >
-              {publishing ? 'Publishing…' : published ? 'Update live page' : 'Publish'}
-            </button>
+
+            <Menu as="div">
+              <MenuButton
+                aria-label="More page actions"
+                className={cx(
+                  'inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface-container hover:text-foreground dark:hover:bg-zinc-900',
+                  focusRing
+                )}
+              >
+                <EllipsisHorizontalIcon className="h-5 w-5" />
+              </MenuButton>
+              <MenuItems
+                anchor="bottom end"
+                className="z-50 w-56 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-1 text-sm shadow-xl [--anchor-gap:6px] focus:outline-none dark:bg-zinc-950"
+              >
+                {published && (
+                  <MenuItem>
+                    <a href={site.public_url} target="_blank" rel="noopener noreferrer" className={menuItemClass}>
+                      <ArrowTopRightOnSquareIcon className="h-4 w-4 text-muted-foreground" /> Open live page
+                    </a>
+                  </MenuItem>
+                )}
+                <MenuItem>
+                  <button type="button" onClick={() => setShowQR(true)} className={menuItemClass}>
+                    <QrCodeIcon className="h-4 w-4 text-muted-foreground" /> QR code
+                  </button>
+                </MenuItem>
+                {published && (
+                  <MenuItem>
+                    <button type="button" onClick={() => setConfirmUnpublish(true)} className={menuItemClass}>
+                      <EyeSlashIcon className="h-4 w-4 text-muted-foreground" /> Unpublish
+                    </button>
+                  </MenuItem>
+                )}
+                <div className="my-1 h-px bg-outline-variant/20" />
+                <MenuItem>
+                  <Link href="/microsites" className={menuItemClass}>
+                    <Squares2X2Icon className="h-4 w-4 text-muted-foreground" /> All pages
+                  </Link>
+                </MenuItem>
+              </MenuItems>
+            </Menu>
           </div>
         </div>
 
-        <nav className="max-w-[1600px] mx-auto px-4 flex gap-1" aria-label="Editor sections">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              aria-current={tab === t ? 'page' : undefined}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px capitalize ${
-                tab === t ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </nav>
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+          <Segmented<Tab>
+            label="Editor sections"
+            value={tab}
+            onChange={setTab}
+            options={TABS.map((t) => ({ value: t, label: TAB_LABELS[t] }))}
+          />
+          {editing && (
+            <Segmented<'edit' | 'preview'>
+              label="Show"
+              value={mobileView}
+              onChange={setMobileView}
+              className="lg:hidden"
+              options={[
+                {
+                  value: 'edit',
+                  label: (
+                    <>
+                      <PencilSquareIcon className="h-4 w-4" />
+                      <span className="sr-only sm:not-sr-only">Edit</span>
+                    </>
+                  ),
+                },
+                {
+                  value: 'preview',
+                  label: (
+                    <>
+                      <EyeIcon className="h-4 w-4" />
+                      <span className="sr-only sm:not-sr-only">Preview</span>
+                    </>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </div>
       </div>
 
       {(saveError || notice || saveState === 'conflict') && (
-        <div className="max-w-[1600px] mx-auto px-4 pt-4 grid gap-2">
+        <div className="grid gap-2 px-4 pt-4 sm:px-6 lg:px-8">
           {saveState === 'conflict' && (
-            <p role="alert" className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 px-4 py-2 text-sm text-red-700 dark:text-red-300">
+            <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
               This page was changed in another tab or by another session.{' '}
-              <button type="button" onClick={load} className="underline font-medium">
+              <button type="button" onClick={load} className="font-semibold underline underline-offset-2">
                 Reload the latest version
               </button>
             </p>
           )}
           {saveError && saveState === 'error' && (
-            <p role="alert" className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 px-4 py-2 text-sm text-red-700 dark:text-red-300">
+            <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
               {saveError}
             </p>
           )}
           {notice && (
-            <p role="status" className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground flex items-center justify-between gap-3">
+            <p role="status" className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/30 bg-surface-container px-4 py-2.5 text-sm text-foreground dark:bg-zinc-900">
               <span className="break-all">{notice}</span>
-              <button type="button" onClick={() => setNotice('')} className="text-xs text-muted-foreground hover:text-foreground">
+              <button type="button" onClick={() => setNotice('')} className={cx('rounded text-xs text-muted-foreground hover:text-foreground', focusRing)}>
                 Dismiss
               </button>
             </p>
@@ -339,18 +466,23 @@ export default function MicrositeEditor() {
         </div>
       )}
 
-      <div className="max-w-[1600px] mx-auto px-4 py-6">
-        {tab === 'track' ? (
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        {tab === 'analytics' ? (
           <TrackPanel micrositeId={id} maxDays={entitlements?.analytics_days} />
         ) : tab === 'inbox' ? (
-          <InboxPanel micrositeId={id} blocks={content.blocks} canUseForms={!!entitlements?.can_use_forms} />
+          <InboxPanel micrositeId={id} blocks={content.blocks} canUseForms={canUseForms} />
         ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)] xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)_260px]">
-            {/* Left: module config */}
-            <div className="order-2 lg:order-1 min-w-0">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(340px,440px)_minmax(0,1fr)] xl:gap-8">
+            {/* Settings column */}
+            <div className={cx('min-w-0', mobileView === 'preview' && 'hidden lg:block')}>
               {tab === 'build' ? (
                 <div className="grid grid-cols-1 gap-4">
-                  <h2 className="text-sm font-semibold text-foreground">Blocks</h2>
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Blocks <span className="font-normal tabular-nums text-muted-foreground">{content.blocks.length}</span>
+                    </h2>
+                    <BlockPicker onAdd={addBlock} canUseForms={canUseForms} />
+                  </div>
                   <BlockList
                     blocks={content.blocks}
                     selectedId={selected}
@@ -361,12 +493,13 @@ export default function MicrositeEditor() {
                       edit((c) => ({ ...c, blocks: c.blocks.map((b) => (b.id === bid ? { ...b, ...patch } : b)) }))
                     }
                     onRemove={(bid) => edit((c) => ({ ...c, blocks: c.blocks.filter((b) => b.id !== bid) }))}
-                    canUseForms={!!entitlements?.can_use_forms}
+                    canUseForms={canUseForms}
                   />
-                  {/* Catalog shown inline below xl, as a side panel at xl */}
-                  <div className="xl:hidden">
-                    <BlockCatalog onAdd={addBlock} canUseForms={!!entitlements?.can_use_forms} />
-                  </div>
+                  {content.blocks.length > 3 && (
+                    <div className="flex justify-center">
+                      <BlockPicker onAdd={addBlock} canUseForms={canUseForms} />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <DesignPanel
@@ -380,44 +513,12 @@ export default function MicrositeEditor() {
               )}
             </div>
 
-            {/* Center: live canvas */}
-            <div className="order-1 lg:order-2 min-w-0 lg:sticky lg:top-32 lg:self-start">
-              <PreviewFrame title={title} slug={site.slug} content={content} />
+            {/* Live preview stage */}
+            <div className={cx('min-w-0 lg:sticky lg:top-[11.5rem] lg:self-start', mobileView === 'edit' && 'hidden lg:block')}>
+              <div className="rounded-2xl border border-outline-variant/30 bg-surface-container/60 px-3 py-4 [background-image:radial-gradient(hsl(var(--outline-variant)/0.45)_1px,transparent_1px)] [background-size:14px_14px] dark:bg-zinc-900/50">
+                <PreviewFrame title={title} slug={site.slug} content={content} reserve={300} />
+              </div>
             </div>
-
-            {/* Right: catalog & sharing */}
-            <aside className="hidden xl:grid gap-6 order-3 self-start">
-              <BlockCatalog
-                canUseForms={!!entitlements?.can_use_forms}
-                onAdd={(t) => {
-                  if (tab !== 'build') setTab('build');
-                  addBlock(t);
-                }}
-              />
-              <section className="grid gap-2">
-                <h2 className="text-sm font-semibold text-foreground">Share</h2>
-                {shortUrl ? (
-                  <p className="text-sm font-mono text-foreground break-all">{shortUrl.replace(/^https?:\/\//, '')}</p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={createShortLink}
-                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-muted"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                    Create short link
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowQR(true)}
-                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-muted"
-                >
-                  <QrCodeIcon className="h-4 w-4" />
-                  QR code
-                </button>
-              </section>
-            </aside>
           </div>
         )}
       </div>
@@ -427,57 +528,229 @@ export default function MicrositeEditor() {
         onClose={() => setShowQR(false)}
         value={`${site.public_url}?src=qr`}
         title="QR code for your page"
-        description="Scans are counted as “QR code” traffic in Track."
+        description="Scans are counted as “QR code” traffic in Analytics."
       />
+
+      <ConfirmDialog
+        open={confirmUnpublish}
+        title="Take this page offline?"
+        confirmLabel="Unpublish"
+        onConfirm={unpublish}
+        onClose={() => setConfirmUnpublish(false)}
+      >
+        <p>
+          <span className="font-mono text-foreground">{shownUrl}</span> will show “not found” until you publish again. Your draft and
+          analytics stay.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }
 
-function BlockCatalog({ onAdd, canUseForms }: { onAdd: (type: BlockType) => void; canUseForms: boolean }) {
+const menuItemClass =
+  'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-foreground data-[focus]:bg-surface-container dark:data-[focus]:bg-zinc-900';
+
+function EditorSkeleton() {
   return (
-    <section className="grid gap-3">
-      <h2 className="text-sm font-semibold text-foreground">Add a block</h2>
-      {BLOCK_GROUPS.map((g) => {
-        const entries = BLOCK_CATALOG.filter((b) => b.group === g.id);
-        return (
-          <div key={g.id} className="grid gap-1.5">
-            <h3 className="text-xs font-medium text-muted-foreground">{g.name}</h3>
-            <ul className="grid grid-cols-2 xl:grid-cols-1 gap-2">
-              {entries.map((b) => {
-                const locked = b.requiresForms && !canUseForms;
+    <div className="-mx-4 -mt-6 sm:-mx-6 lg:-mx-8" aria-busy="true" aria-label="Loading the editor">
+      <div className="border-b border-outline-variant/20 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="h-5 w-64 animate-pulse rounded-lg bg-surface-container dark:bg-zinc-900" />
+        <div className="mt-3 h-8 w-80 animate-pulse rounded-xl bg-surface-container dark:bg-zinc-900" />
+      </div>
+      <div className="grid gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[440px_1fr] lg:px-8">
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-2xl bg-surface-container dark:bg-zinc-900" />
+          ))}
+        </div>
+        <div className="hidden h-[640px] animate-pulse rounded-2xl bg-surface-container dark:bg-zinc-900 lg:block" />
+      </div>
+    </div>
+  );
+}
+
+function SharePopover({
+  publicUrl,
+  shortUrl,
+  published,
+  copied,
+  onCopy,
+  onQR,
+  onCreateShortLink,
+}: {
+  publicUrl: string;
+  shortUrl: string;
+  published: boolean;
+  copied: boolean;
+  onCopy: () => void;
+  onQR: () => void;
+  onCreateShortLink: () => void;
+}) {
+  const [shortCopied, setShortCopied] = useState(false);
+  const copyShort = () =>
+    navigator.clipboard.writeText(shortUrl).then(() => {
+      setShortCopied(true);
+      setTimeout(() => setShortCopied(false), 1800);
+    });
+  return (
+    <Popover>
+      <PopoverButton
+        className={cx(
+          'inline-flex h-9 items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 text-sm font-semibold text-foreground hover:bg-surface-container dark:bg-zinc-900 dark:hover:bg-zinc-800',
+          focusRing
+        )}
+      >
+        <ShareIcon className="h-4 w-4" />
+        <span className="hidden sm:inline">Share</span>
+      </PopoverButton>
+      <PopoverPanel
+        anchor="bottom end"
+        className="z-50 w-80 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-2xl [--anchor-gap:8px] dark:bg-zinc-950"
+      >
+        <p className="text-sm font-semibold text-foreground">Share this page</p>
+        {!published && <p className="mt-1 text-xs text-muted-foreground">Publish first: until then the link shows “not found”.</p>}
+
+        <label className="mt-3 block text-xs font-semibold text-muted-foreground" htmlFor="share-page-link">
+          Page link
+        </label>
+        <div className="mt-1 flex items-center gap-1 rounded-xl border border-outline-variant/30 bg-surface-container pl-3 dark:bg-zinc-900">
+          <input id="share-page-link" readOnly value={publicUrl.replace(/^https?:\/\//, '')} className="min-w-0 flex-1 bg-transparent py-2 font-mono text-xs text-foreground outline-none" />
+          <IconButton size="sm" label={copied ? 'Copied' : 'Copy page link'} onClick={onCopy}>
+            {copied ? <CheckIcon className="h-4 w-4 text-emerald-500" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+          </IconButton>
+        </div>
+
+        <p className="mt-3 text-xs font-semibold text-muted-foreground">Short link</p>
+        {shortUrl ? (
+          <div className="mt-1 flex items-center gap-1 rounded-xl border border-outline-variant/30 bg-surface-container pl-3 dark:bg-zinc-900">
+            <span className="min-w-0 flex-1 truncate py-2 font-mono text-xs text-foreground">{shortUrl.replace(/^https?:\/\//, '')}</span>
+            <IconButton size="sm" label={shortCopied ? 'Copied' : 'Copy short link'} onClick={copyShort}>
+              {shortCopied ? <CheckIcon className="h-4 w-4 text-emerald-500" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+            </IconButton>
+          </div>
+        ) : (
+          <Button size="sm" className="mt-1 w-full" onClick={onCreateShortLink}>
+            <LinkIcon className="h-4 w-4" />
+            Create a short link
+          </Button>
+        )}
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Button size="sm" onClick={onQR}>
+            <QrCodeIcon className="h-4 w-4" />
+            QR code
+          </Button>
+          {published ? (
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cx(
+                'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 text-xs font-semibold text-foreground hover:bg-surface-container dark:bg-zinc-900 dark:hover:bg-zinc-800',
+                focusRing
+              )}
+            >
+              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              Open
+            </a>
+          ) : (
+            <span className="inline-flex h-8 items-center justify-center rounded-xl text-xs text-muted-foreground">Not live yet</span>
+          )}
+        </div>
+      </PopoverPanel>
+    </Popover>
+  );
+}
+
+function BlockPicker({ onAdd, canUseForms }: { onAdd: (type: BlockType) => void; canUseForms: boolean }) {
+  const [q, setQ] = useState('');
+  const query = q.trim().toLowerCase();
+  return (
+    <Popover>
+      <PopoverButton
+        className={cx(
+          'inline-flex h-8 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-white shadow-sm hover:bg-primary-600',
+          focusRing
+        )}
+      >
+        <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+        Add block
+      </PopoverButton>
+      <PopoverPanel
+        anchor="bottom end"
+        className="z-50 flex max-h-[min(70vh,560px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-2xl [--anchor-gap:8px] dark:bg-zinc-950"
+      >
+        {({ close }) => (
+          <>
+            <div className="border-b border-outline-variant/20 p-3">
+              <div className="relative">
+                <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Find a block"
+                  aria-label="Find a block"
+                  className="w-full rounded-xl border border-outline-variant/30 bg-surface-container py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 dark:bg-zinc-900"
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto p-2">
+              {BLOCK_GROUPS.map((g) => {
+                const entries = BLOCK_CATALOG.filter(
+                  (b) => b.group === g.id && (!query || b.name.toLowerCase().includes(query) || b.description.toLowerCase().includes(query))
+                );
+                if (entries.length === 0) return null;
                 return (
-                  <li key={b.type}>
-                    {locked ? (
-                      <Link
-                        href="/billing"
-                        className="block w-full h-full text-left rounded-lg border border-dashed border-border bg-card px-3 py-2 hover:bg-muted"
-                      >
-                        <span className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
-                          <LockClosedIcon className="h-4 w-4" />
-                          {b.name}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">Pro and Ultra plans. Upgrade to add.</span>
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onAdd(b.type)}
-                        className="w-full h-full text-left rounded-lg border border-border bg-card px-3 py-2 hover:border-primary hover:bg-primary/5"
-                      >
-                        <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                          <PlusIcon className="h-4 w-4 text-primary" />
-                          {b.name}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">{b.description}</span>
-                      </button>
-                    )}
-                  </li>
+                  <div key={g.id} className="mb-2">
+                    <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold text-muted-foreground">{g.name}</p>
+                    <ul className="grid gap-0.5">
+                      {entries.map((b) => {
+                        const locked = b.requiresForms && !canUseForms;
+                        return (
+                          <li key={b.type}>
+                            {locked ? (
+                              <Link
+                                href="/billing"
+                                className={cx('flex items-start gap-2.5 rounded-xl px-2.5 py-2 hover:bg-surface-container dark:hover:bg-zinc-900', focusRing)}
+                              >
+                                <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span>
+                                  <span className="block text-sm font-medium text-muted-foreground">{b.name}</span>
+                                  <span className="block text-xs text-muted-foreground">Premium, Growth and Enterprise. Upgrade to add.</span>
+                                </span>
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onAdd(b.type);
+                                  setQ('');
+                                  close();
+                                }}
+                                className={cx('flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left hover:bg-primary/5', focusRing)}
+                              >
+                                <PlusIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                <span>
+                                  <span className="block text-sm font-medium text-foreground">{b.name}</span>
+                                  <span className="block text-xs text-muted-foreground">{b.description}</span>
+                                </span>
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 );
               })}
-            </ul>
-          </div>
-        );
-      })}
-    </section>
+              {BLOCK_CATALOG.every((b) => query && !b.name.toLowerCase().includes(query) && !b.description.toLowerCase().includes(query)) && (
+                <p className="px-2 py-6 text-center text-sm text-muted-foreground">No block matches “{q.trim()}”.</p>
+              )}
+            </div>
+          </>
+        )}
+      </PopoverPanel>
+    </Popover>
   );
 }

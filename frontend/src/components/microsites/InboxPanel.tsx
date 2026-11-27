@@ -104,7 +104,7 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
             type="button"
             onClick={exportCSV}
             disabled={exporting}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant/30 px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 disabled:opacity-50"
           >
             <ArrowDownTrayIcon className="h-4 w-4" />
             {exporting ? 'Exporting…' : 'Export CSV'}
@@ -113,10 +113,10 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
       </div>
 
       {!canUseForms && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-border bg-card px-5 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 px-5 py-4">
           <LockClosedIcon className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm text-muted-foreground flex-1">
-            Newsletter and contact forms are part of the Pro and Ultra plans.
+            Newsletter and contact forms are part of the Premium, Growth and Enterprise plans.
             {total > 0 && ' Your earlier submissions stay here to read and export.'}
           </p>
           <Link href="/billing" className="text-sm font-medium text-primary hover:underline">
@@ -126,7 +126,7 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
       )}
 
       {error && (
-        <p role="alert" className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/30 px-4 py-2 text-sm text-red-700 dark:text-red-300">
+        <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
@@ -134,11 +134,11 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
       {loading && items.length === 0 ? (
         <div className="grid gap-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-20 rounded-lg border border-border bg-card animate-pulse" />
+            <div key={i} className="h-20 rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 animate-pulse" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-10 text-center">
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 p-10 text-center">
           <InboxIcon className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-3 text-sm text-foreground font-medium">No submissions yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -152,7 +152,7 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
       ) : (
         <ul className="grid gap-2" aria-label="Submissions">
           {items.map((s) => (
-            <li key={s.id} className="rounded-lg border border-border bg-card px-4 py-3">
+            <li key={s.id} className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest dark:bg-zinc-950 px-4 py-3">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <a href={`mailto:${s.email}`} className="text-sm font-medium text-foreground hover:underline break-all">
                   {s.email}
@@ -164,7 +164,7 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
                 <button
                   type="button"
                   onClick={() => remove(s)}
-                  className="p-1 text-muted-foreground hover:text-red-600"
+                  className="p-1 text-muted-foreground hover:text-destructive"
                   aria-label={`Delete submission from ${s.email}`}
                 >
                   <TrashIcon className="h-4 w-4" />
@@ -185,7 +185,7 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
             type="button"
             onClick={() => load(Math.max(0, offset - PAGE))}
             disabled={offset === 0 || loading}
-            className="rounded-lg border border-border px-3 py-1.5 text-foreground hover:bg-muted disabled:opacity-40"
+            className="rounded-xl border border-outline-variant/30 px-3 py-1.5 text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 disabled:opacity-40"
           >
             Newer
           </button>
@@ -196,7 +196,7 @@ export default function InboxPanel({ micrositeId, blocks, canUseForms }: Props) 
             type="button"
             onClick={() => load(offset + PAGE)}
             disabled={offset + PAGE >= total || loading}
-            className="rounded-lg border border-border px-3 py-1.5 text-foreground hover:bg-muted disabled:opacity-40"
+            className="rounded-xl border border-outline-variant/30 px-3 py-1.5 text-foreground hover:bg-surface-container dark:hover:bg-zinc-900 disabled:opacity-40"
           >
             Older
           </button>

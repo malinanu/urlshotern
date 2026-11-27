@@ -12,7 +12,7 @@ interface FormProps {
   block: MicrositeBlock;
   micrositeId: number;
   onChange: (data: Data) => void;
-  /** Whether the owner's plan includes forms (Pro and Ultra). */
+  /** Whether the owner's plan includes forms (Premium, Growth and Enterprise). */
   canUseForms?: boolean;
 }
 
@@ -136,7 +136,7 @@ export default function BlockForm({ block, micrositeId, onChange, canUseForms }:
             <TextField label="Personal email" type="email" value={d.email_personal} onChange={(v) => set({ email_personal: v })} />
           </div>
           <TextField label="Website" type="url" value={d.website} onChange={(v) => set({ website: v })} placeholder="https://" />
-          <details className="rounded-lg border border-border px-3 py-2">
+          <details className="rounded-xl border border-outline-variant/30 px-3 py-2">
             <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Address, note and photo</summary>
             <div className="grid gap-3 mt-3">
               <TextField label="Street" value={d.street} onChange={(v) => set({ street: v })} maxLength={120} />
@@ -399,8 +399,8 @@ export default function BlockForm({ block, micrositeId, onChange, canUseForms }:
       return (
         <div className="grid gap-3">
           {!canUseForms && (
-            <p className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
-              Forms are part of the Pro and Ultra plans. This form stays hidden on your live page until you{' '}
+            <p className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              Forms are part of the Premium, Growth and Enterprise plans. This form stays hidden on your live page until you{' '}
               <Link href="/billing" className="underline font-medium">
                 upgrade
               </Link>
@@ -468,7 +468,7 @@ function ItemList({
   return (
     <div className="grid gap-3">
       {items.map((it, i) => (
-        <div key={it.id ?? i} className="rounded-lg border border-border p-3 grid gap-2">
+        <div key={it.id ?? i} className="rounded-xl border border-outline-variant/30 p-3 grid gap-2">
           {render(it, (patch) => onChange(items.map((x, k) => (k === i ? { ...x, ...patch } : x))))}
           <div className="flex items-center gap-1 justify-end">
             <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label="Move up">
@@ -477,7 +477,7 @@ function ItemList({
             <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30" aria-label="Move down">
               <ArrowDownIcon className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => onChange(items.filter((_, k) => k !== i))} className="p-1 text-muted-foreground hover:text-red-600" aria-label="Remove">
+            <button type="button" onClick={() => onChange(items.filter((_, k) => k !== i))} className="p-1 text-muted-foreground hover:text-destructive" aria-label="Remove">
               <TrashIcon className="h-4 w-4" />
             </button>
           </div>
@@ -487,7 +487,7 @@ function ItemList({
         <button
           type="button"
           onClick={() => onChange([...items, create()])}
-          className="inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+          className="inline-flex items-center justify-center gap-1 rounded-xl border border-dashed border-outline-variant/30 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-container dark:hover:bg-zinc-900"
         >
           <PlusIcon className="h-4 w-4" />
           {addLabel}
