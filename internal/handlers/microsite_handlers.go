@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -304,6 +305,80 @@ func (h *MicrositeHandlers) PreviewMicrosite(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"html": string(html), "validation_error": validation})
+}
+
+// thumbnailETag identifies one rendering of a page for GetMicrositeThumbnail.
+func thumbnailETag(m *models.Microsite) string {
+	var pub int64
+	if m.PublishedAt != nil {
+		pub = m.PublishedAt.Unix()
+	}
+	return fmt.Sprintf(`W/"thumb-%d-%d-%s-%d"`, m.ID, m.Version, m.Status, pub)
+}
+
+// thumbnailContent is what the Pages list shows for a page: the live snapshot
+// when it is published, otherwise the draft.
+func thumbnailContent(m *models.Microsite) models.MicrositeContent {
+	if m.Status == "published" && m.Published != nil {
+		return *m.Published
+	}
+	return m.Draft
+}
+
+// GetMicrositeThumbnail handles GET /api/v1/microsites/:id/thumbnail. It
+// renders the page as the Pages list shows it, for a sandboxed srcdoc iframe.
+// Responses carry a weak ETag and are revalidated on every request.
+func (h *MicrositeHandlers) GetMicrositeThumbnail(c *gin.Context) {
+	m, err := h.sites.Get(c.GetInt64("microsite_id"))
+	if err != nil {
+		writeMicrositeError(c, err)
+		return
+	}
+	etag := thumbnailETag(m)
+	c.Header("ETag", etag)
+	c.Header("Cache-Control", "private, no-cache")
+	if match := c.GetHeader("If-None-Match"); match != "" && match == etag {
+		c.Status(http.StatusNotModified)
+		return
+	}
+	content := thumbnailContent(m)
+	ent := h.sites.Entitlements(m.UserID)
+	html, err := services.RenderMicrosite(content, services.MicrositeRenderOptions{
+		BaseURL:      h.baseURL,
+		Slug:         m.Slug,
+		Title:        m.Title,
+		ShowBadge:    !(content.Settings.HideBadge && ent.CanRemoveBadge),
+		Preview:      true,
+		FormsEnabled: ent.CanUseForms,
+	})
+	if err != nil {
+		writeMicrositeError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"html": string(html), "version": m.Version, "status": m.Status})
+}
+
+// DuplicateMicrosite handles POST /api/v1/microsites/:id/duplicate. The copy
+// is a new draft and counts against the plan's page limit.
+func (h *MicrositeHandlers) DuplicateMicrosite(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	if h.billing != nil {
+		ok, msg, err := h.billing.CanCreatePage(userID)
+		if err != nil {
+			writeMicrositeError(c, err)
+			return
+		}
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "plan_limit_reached", "message": msg})
+			return
+		}
+	}
+	m, err := h.sites.Duplicate(c.GetInt64("microsite_id"), userID)
+	if err != nil {
+		writeMicrositeError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, h.wrap(m))
 }
 
 // GetMicrositeAnalytics handles GET /api/v1/microsites/:id/analytics?days=30
